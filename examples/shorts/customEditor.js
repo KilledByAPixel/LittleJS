@@ -1,4 +1,5 @@
 let player, playerStart;
+const torchRadius = 4; // how far a torch lights, unless the editor sets it
 
 // the dungeon as a Tiled map: a layer of walls, and torches and a start
 function makeLevel()
@@ -42,7 +43,7 @@ class Torch extends EngineObject
     constructor(pos) { super(pos, vec2(1), tile(6)); }
     render()
     {
-        // its light, a soft circle as wide as its radius says
+        // its light, a faint circle as wide as its radius says
         setAdditiveBlendMode(true);
         drawCircle(this.pos, this.radius * 2, this.color.scale(.2, 1));
         setAdditiveBlendMode(false);
@@ -68,7 +69,7 @@ class DungeonEditor extends LevelEditor
         this.showLight = true;
         this.addTool('Room',
         {
-            key: 'r',
+            key: 'b', // R is the editor's, it turns the brush
             hint: 'Room: drag a box, walls on its edge and space inside',
             // the box's corners: where it was pressed, and the mouse now
             onPress: (at)=> { this.room = at.cell && [at.cell, at.cell]; },
@@ -112,7 +113,8 @@ class DungeonEditor extends LevelEditor
 
     drawRoom()
     {
-        if (!this.room) return;
+        // only while the button is held: a right click takes the drag back
+        if (!this.room || !mouseIsDown(0)) return;
         const [low, high] = this.roomBox(), size = high.subtract(low);
         const center = low.add(size.scale(.5)).add(vec2(.5));
         drawRect(center, size.add(vec2(1)), hsl(.15, 1, .5, .3));
@@ -139,7 +141,7 @@ class DungeonEditor extends LevelEditor
         {
             const pos = vec2(object.x/16, level.height - object.y/16);
             const radius = object.properties?.find(
-                (p)=> p.name == 'radius')?.value ?? 4;
+                (p)=> p.name == 'radius')?.value ?? torchRadius;
             drawCircle(pos, radius * 2, hsl(.1, 1, .5, .15),
                 .1, hsl(.1, 1, .6));
         }
@@ -152,7 +154,7 @@ function gameInit()
     objectLayersAddType('PlayerStart', (pos)=> playerStart = pos, {},
         tile(3));
     objectLayersAddType('Torch', Torch,
-        {radius: 4, color: hsl(.1, 1, .6)}, tile(6));
+        {radius: torchRadius, color: hsl(.1, 1, .6)}, tile(6));
     loadLevel();
 
     // the game's editor in place of the plain one, then start in it
@@ -164,7 +166,7 @@ function gameInit()
 
 /* info
 A small dungeon with a level editor made for it. The editor has a Room
-tool, R or its button, that lays out a room by dragging a box: walls go
+tool, B or its button, that lays out a room by dragging a box: walls go
 on its edge and the inside is cleared. Clear takes out every wall, and
 L shows how far each torch lights. Press Play or Escape to walk around
 with the arrow keys, and Escape again to edit.
@@ -191,7 +193,8 @@ is saved in the map and set on the torch when it is made.
 ### The editor class
 `DungeonEditor` adds what this game's designer does most:
 
-- `addTool('Room', tool)` adds a tool with a button and the key R.
+- `addTool('Room', tool)` adds a tool with a button and the key B, as
+  R is one of the editor's own keys.
   While it is on, the left mouse button in the level is the tool's.
   `onPress` and `onDrag` are given `at.cell`, the cell under the mouse,
   and keep the corners of the box. `onRelease` paints it with
@@ -212,8 +215,7 @@ before it opens, and `paletteTiles = [10]` offers only the brick to
 paint by hand.
 
 ## Try it
-- A wider light: in the Torch type's defaults, `radius: 4` to
-  `radius: 7`.
+- A wider light: `torchRadius = 4` to `torchRadius = 7`.
 - Rooms of stone: in `buildRoom`, `edge ? 10 : -1` to `edge ? 1 : -1`.
 - Start playing: take out `levelEditor.open();`, then Escape and 0
   open the editor.

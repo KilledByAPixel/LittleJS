@@ -1,0 +1,84 @@
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { loadEngine } from './vmEngine.mjs';
+
+// The reviews of 2026-10-03, the third pass updated and the fourth: tile sets and maps, a hidden layer of values,
+// the flare's lamp, and a tween looping with no time.
+
+function load()
+{
+    const { run } = loadEngine();
+    run('setHeadlessMode(true)');
+    return run;
+}
+const json = (run, code)=> JSON.parse(run(`JSON.stringify(${code}) ?? 'null'`));
+
+// a tile set of two tiles, the second on another sheet at a place no grid gives
+const setCode = `var sheet = new TextureInfo({width: 64, height: 64}, false), other = new TextureInfo({width: 64, height: 64}, false);
+    var set = new TileInfo(vec2(), vec2(16), sheet, 0, 0);
+    set.tiles = [new TileInfo(vec2(), vec2(16), sheet, 0, 0), new TileInfo(vec2(20, 30), vec2(16), other, 0, 0)];`;
+
+test('a tile set given to a map whose tileset has a margin or a spacing keeps its own tiles', ()=>
+{
+    const run = load();
+    run(setCode + `var [layer] = tileLayersLoad({width: 2, height: 1, tilesets: [{firstgid: 1, spacing: 1, columns: 2}],
+        layers: [{data: [1, 2]}]}, set, 0, undefined, false);
+        var second = editorTileInfo(layer, 1);`);
+    assert.deepEqual(json(run, '[layer.tileInfo.tiles === set.tiles, second.pos.x, second.pos.y, second.textureInfo === other]'),
+        [true, 20, 30, true]);
+});
+
+test('a map with a bad layer under good ones makes none of them, so nothing is left behind by the throw', ()=>
+{
+    const run = load();
+    run('var before = engineObjects.length;');
+    assert.throws(()=> run(`tileLayersLoad({width: 2, height: 1, layers: [{data: [1]}, {data: [1, 0]}]},
+        undefined, 0, undefined, false)`), /tileLayersLoad/);
+    assert.equal(run('engineObjects.length - before'), 0);
+    assert.throws(()=> run(`tileLayersLoad({width: 2, height: 1}, undefined, 0, undefined, false)`), /tileLayersLoad/,
+        'a map with no layers says so in any build');
+});
+
+test('a tile past the end of a sheet read by its columns draws nothing, as a layer of collision values has', ()=>
+{
+    const run = load();
+    run(`var sheet = new TileInfo(vec2(), vec2(16), new TextureInfo({width: 17, height: 16}, false), .5, 0, 1);
+        var layer = new TileLayer(vec2(), vec2(2, 1), sheet), drawn = [];
+        layer.drawLayerTile = (pos, size, tileInfo)=> drawn.push(tileInfo.pos.y);
+        layer.setData(vec2(0, 0), new TileLayerData(0)); layer.setData(vec2(1, 0), new TileLayerData(99));
+        layer.context = {}; drawContext = layer.context; layer.clearLayerRect = ()=> {};
+        for (let x = 0; x < 2; ++x) TileLayer.prototype.drawTileData.call(layer, vec2(x, 0));`);
+    assert.deepEqual(json(run, 'drawn'), [0], 'the first tile, and nothing for 99');
+});
+
+test('the level editor writes no tileset for a tile set, which no Tiled image is, and its palette skips tiles it has not', ()=>
+{
+    const run = load();
+    run(setCode + `var layer = new TileLayer(vec2(), vec2(2), set);
+        levelEditor.paletteTiles = [0, 1, 7];`);
+    assert.deepEqual(json(run, 'editorTilesets(layer)'), []);
+    assert.deepEqual(json(run, 'editorPaletteTiles({live: layer}).map((t)=> t.tile)'), [0, 1]);
+});
+
+test('a light inside a big room, close behind its wall, is hidden by the wall from outside', ()=>
+{
+    const run = load();
+    run(`new Render3DPlugin; render3D.camera.pos = vec3(); render3D.camera.rotation = vec3();
+        render3D.sunDirection = vec3(1, 0, 0); render3D.updateMatrices();
+        var room = new EngineObject3D(vec3(0, 0, -30), render3D.boxMesh); room.scale3D = vec3(40);
+        var lamp = new Light3D(vec3(0, 0, -11), 10, rgb(1, 0, 0)), flare = new LensFlare3D; flare.light = lamp;
+        for (let i = 20; i--;) flare.update();`);
+    assert.equal(run('!!flare.flareLook()'), true);
+    assert.equal(run('flare.visible'), 0, 'a sconce one unit behind the wall of a level mesh');
+});
+
+test('a tween that loops or ping pongs with no time, or less, ends its loops, in a release build where it is not asserted', ()=>
+{
+    const { run } = loadEngine({}, '', 'littlejs.release.js');
+    run('setHeadlessMode(true)');
+    run(`var ends = 0;
+        new Tween(()=> {}, 0, 1, 0).loop(3).then(()=> ++ends);
+        new Tween(()=> {}, 0, 1, -1).pingPong(2).then(()=> ++ends);
+        for (let i = 10; i--;) tweenUpdate(1/60, 1/60);`);
+    assert.equal(run('ends'), 2);
+});

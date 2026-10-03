@@ -260,7 +260,10 @@ function loadSprite(src, frameSize, padding=textureSheetPadding, sourcePadding=0
  *    sheet is all of its tiles; the tiles are numbered from 0 in the order the images are given
  *  - Returns a tile set at once, a TileInfo whose tiles fill in as the images load; wait for them with spritesReady
  *  - Give it to tileLayersLoad, a TileLayer or a TileCollisionLayer as its tile info: tile n draws tiles[n],
- *    wherever it was packed, and the level editor's palette offers each of them
+ *    wherever it was packed, and the level editor's palette offers each of them; frame and index do not read the
+ *    list, use set.tiles[n] for one tile; make the layers after spritesReady, a layer made before draws nothing
+ *  - An image that is not a whole number of tiles gives the whole tiles in it; a sheet with gaps between its tiles
+ *    is not read, cut it into its tiles first
  *  - An image that fails to load, or that no sheet can hold, adds no tiles and says so in the console, so the tiles
  *    of the images after it move up
  *  @param {Array<string>} sources - Image source paths
@@ -297,8 +300,9 @@ function loadTiles(sources, tileSize=tileDefaultSize, padding=textureSheetPaddin
         textureSheetQueueJob('loadTiles ' + src, async ()=>
         {
             await imagePromise;
-            const count = (image.width / size.x | 0) * (image.height / size.y | 0);
-            const added = count && textureSheetAdd(vec2(image.width, image.height), size, padding, 0);
+            // the whole tiles of it, an edge past the last one left out
+            const columns = image.width / size.x | 0, rows = image.height / size.y | 0, count = columns * rows;
+            const added = count && textureSheetAdd(vec2(columns * size.x, rows * size.y), size, padding, 0);
             if (!added)
                 return console.warn('loadTiles: ' + src + (count ? ' does not fit on a texture sheet' :
                     ' failed to load, or is smaller than a tile') + ', its tiles are left out');

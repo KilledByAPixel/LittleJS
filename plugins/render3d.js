@@ -2291,7 +2291,7 @@ function render3DRenderPass(after2D)
     // the material maps' units start white, a 2D plugin may have left its own textures there, and the shadow
     // light's gel goes on its unit for the pass, white when it has none
     render3DSetMapUnits(r.whiteTexture);
-    const gel = render3DShadowCaster()?.gel?.glTexture;
+    const gel = render3DTextureOf(render3DShadowCaster()?.gel)?.glTexture;
     if (gel)
     {
         gl.activeTexture(gl.TEXTURE4);
@@ -4789,10 +4789,12 @@ class Light3D extends EngineObject3D
         /** @property {number} - How fast the glow fades from its middle: 1 by default, .5 a wide haze, 2 a tight
          *  bright core */
         this.glowFalloff = 1;
-        /** @property {TextureInfo|undefined} - A gel: a picture the light shines through, like a stained glass window
-         *  or the leaves of a tree, cast along its cone in its colors, upright as the light looks out; only the
-         *  spotlight that casts the shadows has one, with render3D.shadows on and it as render3D.shadowLight
-         *  @type {TextureInfo|undefined} */
+        /** @property {TextureInfo|TileInfo|undefined} - A gel: a picture the light shines through, like a stained glass
+         *  window or the leaves of a tree, cast along its cone in its colors, upright as the light looks out, the whole
+         *  texture of a TileInfo; only the spotlight that casts the shadows has one, with render3D.shadows on and it
+         *  as render3D.shadowLight, and only on what takes its shadows: an object with receiveShadow off is lit
+         *  without the gel; its alpha is not read, see through panes are dark
+         *  @type {TextureInfo|TileInfo|undefined} */
         this.gel = undefined;
         this.additive = true; // the glow is added on, in the transparent stage; a light with none draws nothing
         /** @type {LensFlare3D|undefined} */

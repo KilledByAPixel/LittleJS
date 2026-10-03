@@ -7,7 +7,7 @@ What changed in each release, newest first. Releases before 1.20.0 are on the
 
 ### New Changes
 
-- Tile sets from separate images: `loadTiles(['grass.png', 'brick.png', 'props.png'], 16)` packs tile images, or several tile sheets, into the texture sheets as one tile set, numbered in the order given, for `tileLayersLoad`, tile layers and the level editor's palette
+- Tile sets from separate images: `loadTiles(['grass.png', 'brick.png', 'props.png'], 16)` packs tile images, or several tile sheets, into the texture sheets as one tile set, numbered in the order given, for `tileLayersLoad`, tile layers and the level editor's palette; an image that is not whole tiles gives the whole tiles in it, and a map's tileset margin or spacing does not replace the set
 - Spotlight gels: `light.gel` is a picture the shadow casting spotlight shines through, cast along its beam in its colors, like a slide or stained glass; with none a scene draws exactly as before. The 3D First Person flashlight has one on G
 
 ### Fixes
@@ -16,12 +16,14 @@ What changed in each release, newest first. Releases before 1.20.0 are on the
 - Small malformed files no longer make a loader run on: an Aseprite tag past its frames keeps to them, a glTF node reached twice and an accessor of millions with no buffer are refused, an LDtk level of millions of cells is refused and a tile or entity with no place is passed by
 - LDtk: an IntGrid layer whose rule tiles are on another tileset keeps its values for collision, its tiles left out with a warning
 - A collision layer named that no layer has says so in release builds too
-- A light's lens flare: its lamp is told from a room around it by how near to the light the ray meets its surface, not by its size, so a globe around the light is its own fixture and a small closed room hides it
+- A light's lens flare: its lamp is a mesh around the light that the ray meets near the light and that is thin, so a globe or a lamp post is its own fixture, while a room or a level mesh hides the light, even one close behind its wall
 - VoxelMap: the inside of a doubleSided face is split along the same diagonal as its outside, so it shows no seam
 - glTF: `parseGLTF(data, baseUrl, files)` finds the `.bin` and image files a `.gltf` names among files given, like a drop's, and a file it can not find is named in the error; the 3D Mesh example takes a `.gltf` dropped with its files or in its folder
 - Example browser: after the arrow keys move through the list, Enter keeps the example they went to, and Escape in the search clears it without also closing the list
 - 3D levels: a color that is not a string, and a number that is NaN or Infinity (1e999 in JSON), are read as the default, in place of an assert or a NaN
-- `tileLayersLoad` says so when a map is not a whole number of cells across and down, or a layer's tiles do not fill it, in release builds too, in place of running on
+- `tileLayersLoad` says so when a map is not a whole number of cells across and down, has no layers, or a layer's tiles do not fill it, in release builds too, in place of running on; every layer is checked before any is made. A game that relied on a release build loading such a map anyway now gets the error
+- A tile past the end of a sheet read by its columns draws nothing, as an LDtk IntGrid layer's values past the art did in the level editor, which asserted
+- A tween that loops or ping pongs with a duration of 0 or less, possible in release builds, ends its loops
 
 ### New Demos
 

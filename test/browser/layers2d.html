@@ -24,7 +24,7 @@ smokeRun(async ()=>
     const image = (...colors)=>
     {
         const canvas = document.createElement('canvas'), context = canvas.getContext('2d');
-        canvas.width = 16 * colors.length, canvas.height = 16;
+        canvas.width = 16 * colors.length + 1, canvas.height = 16; // a pixel past its last tile, which is left out
         colors.forEach((color, i)=> { context.fillStyle = color; context.fillRect(i * 16, 0, 16, 16); });
         return canvas.toDataURL();
     };

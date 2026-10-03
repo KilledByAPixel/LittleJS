@@ -510,14 +510,14 @@ function tweenProperty(target, propertyPath, start, end, duration = 1, options =
 function tweenCarryOvershoot(tween)
 {
     const duration = tween.duration;
-    tween.life = duration ? min(tween.life, 0) % duration + duration : 1e-9;
+    tween.life = duration > 0 ? min(tween.life, 0) % duration + duration : 1e-9;
 }
 
 // How many iterations the update that finished one ran through: that one and every whole one after it
 function tweenPassed(tween)
 {
     const duration = tween.duration;
-    return duration ? 1 + floor(-min(tween.life, 0) / duration) : 1;
+    return duration > 0 ? 1 + floor(-min(tween.life, 0) / duration) : 1; // no time, or less, is one each update
 }
 
 // start the next iteration of a loop or pingPong, the time the last one ran over already spent, true

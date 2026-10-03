@@ -654,7 +654,7 @@ function editorLayerRecord(live)
 function editorTilesets(live)
 {
     const tileInfo = live.tileInfo, image = tileInfo?.textureInfo?.image;
-    if (!image) return [];
+    if (!image || tileInfo.tiles) return []; // a tile set is packed from many images, none of them a Tiled tileset
     const {x: tilewidth, y: tileheight} = tileInfo.size, padding = tileInfo.padding;
     const columns = tileInfo.columns || floor(image.width / (tilewidth + padding*2));
     const rows = floor(image.height / (tileheight + padding*2));
@@ -2182,7 +2182,8 @@ function editorPaletteTiles(layer)
     if (list && live)
     {
         if (layer.palette?.list !== list)
-            layer.palette = {list, tiles: list.map((tile)=> ({tile, tileInfo: editorTileInfo(live, tile)}))};
+            layer.palette = {list, tiles: list.map((tile)=> ({tile, tileInfo: editorTileInfo(live, tile)}))
+                .filter((t)=> t.tileInfo || !live.tileInfo?.tiles)}; // a tile set has only so many
         return layer.palette.tiles;
     }
     // a tile set lists its tiles, each a tile the palette offers
@@ -2260,7 +2261,7 @@ function editorPaletteDrawObjects(canvas)
 function editorPaletteDraw(canvas, layer)
 {
     const tiles = editorPaletteTiles(layer), cell = editorPaletteCell, columns = editorPaletteColumns;
-    const image = layer?.live.tileInfo?.textureInfo?.image, slots = tiles.length + 1;
+    const slots = tiles.length + 1;
     canvas.style.display = tiles.length ? '' : 'none';
     canvas.width = columns * cell;
     canvas.height = ceil(slots / columns) * cell;
@@ -2275,10 +2276,11 @@ function editorPaletteDraw(canvas, layer)
     context.moveTo(8, 8), context.lineTo(cell - 8, cell - 8);
     context.moveTo(cell - 8, 8), context.lineTo(8, cell - 8);
     context.stroke();
-    tiles.forEach(({tileInfo: {pos, size}}, i)=>
+    tiles.forEach(({tileInfo: {pos, size, textureInfo}}, i)=>
     {
-        const slot = i + 1, x = slot % columns * cell, y = (slot / columns | 0) * cell;
-        context.drawImage(image, pos.x, pos.y, size.x, size.y, x + 2, y + 2, cell - 4, cell - 4);
+        // each from its own sheet, a tile set's may be on several
+        const slot = i + 1, x = slot % columns * cell, y = (slot / columns | 0) * cell, image = textureInfo?.image;
+        image && context.drawImage(image, pos.x, pos.y, size.x, size.y, x + 2, y + 2, cell - 4, cell - 4);
     });
 
     // the brush's slot outlined, when it is one tile the palette shows or Erase
@@ -2571,7 +2573,7 @@ function editorPropertiesUpdate(box)
             input.type = 'number';
             input.step = Number.isInteger(defaultValue) ? '1' : 'any';
             input.value = String(value);
-            input.onchange = ()=> { const v = parseFloat(input.value); isNumber(v) && set(v); };
+            input.onchange = ()=> { const v = parseFloat(input.value); isFinite(v) && set(v); }; // 1e999 is not one
         }
         else if (typeof defaultValue === 'string')
         {
@@ -2866,8 +2868,9 @@ function editorRender()
     for (let y = y0; y < y1; ++y)
     {
         const t = editorGidToTile(source.data[x + (height - 1 - y) * width]);
-        if (t && live.getData(vec2(x, y)).tile === undefined)
-            drawTile(live.pos.add(vec2(x + .5, y + .5)), vec2(1), editorTileInfo(live, t.tile), ghost,
+        const tileInfo = t && editorTileInfo(live, t.tile);
+        if (tileInfo && live.getData(vec2(x, y)).tile === undefined)
+            drawTile(live.pos.add(vec2(x + .5, y + .5)), vec2(1), tileInfo, ghost,
                 t.direction * PI/2, t.mirror, undefined, glEnable, false);
     }
 
@@ -2906,8 +2909,9 @@ function editorRender()
         {
             const gid = grid[x + y * w], t = editorGidToTile(gid);
             const center = live.pos.add(editorHover).add(vec2(x + .5, y + .5));
-            if (t)
-                drawTile(center, vec2(1), editorTileInfo(live, t.tile), hsl(0, 0, 1, .7), t.direction * PI/2, t.mirror, undefined, glEnable, false);
+            const tileInfo = t && editorTileInfo(live, t.tile);
+            if (tileInfo)
+                drawTile(center, vec2(1), tileInfo, hsl(0, 0, 1, .7), t.direction * PI/2, t.mirror, undefined, glEnable, false);
             else if (gid === 0)
                 drawRect(center, vec2(1), hsl(0, 1, .5, .3), undefined, undefined, false);
         }

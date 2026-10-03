@@ -143,7 +143,8 @@ const tileLayersTiledFlips = [[0,0], [3,1], [2,1], [3,0], [0,1], [1,0], [2,0], [
  *  @param {number}   [renderOrder] - Render order of the top layer
  *  @param {number|string} [collisionLayer] - Layer to use for collision if any, by its index or its name
  *  @param {boolean}  [draw] - Should the layer be drawn automatically
- *  @return {Array<TileCollisionLayer>}
+ *  @return {Array<TileCollisionLayer>} - It throws for a map that is not whole cells, or a layer whose tiles do not
+ *    fill it, before it makes any layer
  *  @memberof TileLayers */
 function tileLayersLoad(tileMapData, tileInfo=tileLayerDefaultTile(), renderOrder=0, collisionLayer, draw=true)
 {
@@ -165,13 +166,15 @@ function tileLayersLoad(tileMapData, tileInfo=tileLayerDefaultTile(), renderOrde
     const {width: mapWidth, height: mapHeight} = tileMapData;
     if (!(Number.isInteger(mapWidth) && Number.isInteger(mapHeight) && mapWidth > 0 && mapHeight > 0))
         throw new Error(`tileLayersLoad: a map is a whole number of cells across and down, not ${mapWidth} by ${mapHeight}`);
-    ASSERT(tileMapData.layers && tileMapData.layers.length);
+    if (!isArray(tileMapData.layers) || !tileMapData.layers.length)
+        throw new Error('tileLayersLoad: a map has a list of layers');
 
     // a sheet with a margin around its tiles or a spacing between them: the first tile is at the margin and each
     // cell is a tile and a spacing, which is a padding of half the spacing counted from there, by the tileset's
     // own count of columns, since the image's width does not say with a spacing that is not all around
+    // a tile set from loadTiles has each tile where it was packed, whatever the map says of its own image
     const tileset = tileMapData.tilesets?.[0];
-    if (tileInfo && tileset && (tileset.margin > 0 || tileset.spacing > 0))
+    if (tileInfo && !tileInfo.tiles && tileset && (tileset.margin > 0 || tileset.spacing > 0))
     {
         const margin = tileset.margin || 0, spacing = tileset.spacing || 0, size = tileInfo.size;
         const width = tileInfo.textureInfo?.size.x || 0;
@@ -216,19 +219,22 @@ function tileLayersLoad(tileMapData, tileInfo=tileLayerDefaultTile(), renderOrde
         collisionLayer < 0 && console.error('tileLayersLoad: no tile layer is named ' + name + ', none is solid');
     }
 
-    // create tile layers and fill with data
+    // create tile layers and fill with data, every layer's tiles checked first, so a bad one leaves none made
     const tileLayers = [];
     const levelSize = vec2(tileMapData.width, tileMapData.height);
     const layerCount = layers.length;
+    for (const [layerIndex, {dataLayer, color}] of layers.entries())
+    {
+        const tiles = dataLayer.data; // a list of gids, or a typed array of them
+        if (color && (!(isArray(tiles) || ArrayBuffer.isView(tiles)) || dataLayer.data.length !== levelSize.area()))
+            throw new Error(`tileLayersLoad: layer ${dataLayer.name ?? layerIndex} has ${dataLayer.data?.length} tiles for a map of ` +
+                `${levelSize.area()}; infinite maps and compressed layers are not read`);
+    }
     for (let layerIndex=layerCount; layerIndex--;)
     {
         const {dataLayer, color: layerColor, visible} = layers[layerIndex];
         if (!layerColor)
             continue;
-        const tiles = dataLayer.data; // a list of gids, or a typed array of them
-        if (!(isArray(tiles) || ArrayBuffer.isView(tiles)) || dataLayer.data.length !== levelSize.area())
-            throw new Error(`tileLayersLoad: layer ${dataLayer.name ?? layerIndex} has ${dataLayer.data?.length} tiles for a map of ` +
-                `${levelSize.area()}; infinite maps and compressed layers are not read`);
 
         const layerRenderOrder = renderOrder - (layerCount - 1 - layerIndex);
         const tileLayer = new TileCollisionLayer(vec2(), levelSize, tileInfo, layerRenderOrder);
@@ -871,7 +877,11 @@ class TileLayer extends CanvasLayer
 
         // a tile set from loadTiles has each tile where it was packed, a tileset packed by loadSprite keeps its own
         // columns, counted from its first tile, not the sheet's grid
-        const t = this.tileInfo, tileInfo = t && (t.tiles ? t.tiles[d.tile] : t.columns ? t.frame(d.tile) : t.index(d.tile));
+        const t = this.tileInfo;
+        if (t?.columns && !t.tiles && t.textureInfo && t.pos.y + (d.tile / t.columns | 0) * (t.size.y + t.padding*2) +
+            t.size.y > t.textureInfo.size.y)
+            return; // past the end of the sheet, as values kept only for collision can be
+        const tileInfo = t && (t.tiles ? t.tiles[d.tile] : t.columns ? t.frame(d.tile) : t.index(d.tile));
         if (t && !tileInfo) return; // past the end of a tile set, or loading
         this.drawLayerTile(drawPos, cellPixels, tileInfo, d.color, d.direction*PI/2, d.mirror);
     }

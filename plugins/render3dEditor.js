@@ -3335,7 +3335,7 @@ function editor3DSceneUpdate(box)
         input.onchange = ()=>
         {
             const n = parseFloat(input.value);
-            isNumber(n) && n >= 0 ? set(v = n) : input.value = v + ''; // one not taken shows what it has again
+            isFinite(n) && n >= 0 ? set(v = n) : input.value = v + ''; // one not taken shows what it has again
             editor3DStrokeEnd();
             input.blur();
         };
@@ -3424,7 +3424,7 @@ function editor3DPropertiesUpdate(box)
             input.onchange = ()=>
             {
                 const v = inputs.map((i)=> parseFloat(i.value));
-                if (v.every((n)=> isNumber(n)))
+                if (v.every((n)=> isFinite(n)))
                     set(axes.length > 2 ? vec3(v[0], v[1], v[2]) : vec2(v[0], v[1]));
                 else
                     inputs.forEach((i, k)=> i.value = editor3DRound(value[axes[k]]) + '');
@@ -3466,7 +3466,7 @@ function editor3DPropertiesUpdate(box)
             input.type = 'number';
             input.step = 'any';
             input.value = value + '';
-            input.onchange = ()=> { const v = parseFloat(input.value); isNumber(v) && set(v); };
+            input.onchange = ()=> { const v = parseFloat(input.value); isFinite(v) && set(v); };
         }
         else if (typeof defaultValue === 'string')
         {

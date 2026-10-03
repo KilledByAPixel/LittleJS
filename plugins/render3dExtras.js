@@ -1764,13 +1764,15 @@ class LensFlare3D extends EngineObject3D
             if (map.raycast(ray, reach, (type)=> !map.blockType(type).seeThrough))
                 return true;
         // a light's lamp, a mesh around the light, does not hide it: one whose box, in its own space, the light is in,
-        // hit close to the light, as a shade or a globe is; a room or a whole level holds its lights too, and its
-        // walls, farther from them, do hide them from outside
+        // hit close to the light, as a shade or a globe is, and small, its thinnest side no more than twice that; a
+        // room or a whole level holds its lights too, and its walls do hide them from outside, even one close behind
         const inside = (o)=>
         {
             if (!o.mesh || o instanceof HeightMap) return false;
             const matrix = render3DObjectMatrix(o), b = o.mesh.bounds || o.mesh.getBounds();
-            if (!matrix.determinant()) return false;
+            const m = matrix.m, scale = (k)=> hypot(m[k], m[k + 1], m[k + 2]); // each axis's own stretch
+            const thinnest = min((b.max.x - b.min.x) * scale(0), (b.max.y - b.min.y) * scale(4), (b.max.z - b.min.z) * scale(8));
+            if (!matrix.determinant() || thinnest > near * 2) return false;
             const p = matrix.copy().invert().transformPoint(source.pos);
             return p.x >= b.min.x && p.x <= b.max.x && p.y >= b.min.y && p.y <= b.max.y &&
                 p.z >= b.min.z && p.z <= b.max.z;
@@ -1784,7 +1786,7 @@ class LensFlare3D extends EngineObject3D
             if (!(reach - hit.distance <= near && inside(hit.object))) return true;
             candidates = candidates.filter((o)=> o !== hit.object); // its lamp, look past it
         }
-        return false;
+        return true; // lamps on lamps, take it as hidden
     }
 
     /** Ease visible toward whether the sun shows, called automatically each frame; a flare that would not show
