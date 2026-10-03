@@ -1687,8 +1687,9 @@ await loadOBJ(url, smooth) // fetch then parse, in an async gameInit; chain .cen
 // glTF models - the glTF plugin, .gltf with its files beside it or .glb in one file; meshes with their node placement,
 // vertex colors, material colors and base color textures, and node animations; no skins or morph targets, and no
 // Draco or meshopt compressed geometry, which throws saying so
-const model = await loadGLTF(url)   // a GLTFModel, in an async gameInit; or await parseGLTF(data, baseUrl) on bytes or
-                                     // JSON you already have
+const model = await loadGLTF(url)   // a GLTFModel, in an async gameInit; or await parseGLTF(data, baseUrl, files) on
+                                     // bytes or JSON you already have; files, a Map of the .bin and image files a
+                                     // .gltf names, by path or name, like the files of a drop, is looked in first
 model.parts                          // one GLTFPart per primitive of every node: name, mesh in model space, color,
                                      // textureInfo when the material has one and WebGL is on, transparent for a
                                      // blending material or glass (KHR_materials_transmission), which comes in

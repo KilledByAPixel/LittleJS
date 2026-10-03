@@ -18,6 +18,7 @@ What changed in each release, newest first. Releases before 1.20.0 are on the
 - A collision layer named that no layer has says so in release builds too
 - A light's lens flare: its lamp is told from a room around it by how near to the light the ray meets its surface, not by its size, so a globe around the light is its own fixture and a small closed room hides it
 - VoxelMap: the inside of a doubleSided face is split along the same diagonal as its outside, so it shows no seam
+- glTF: `parseGLTF(data, baseUrl, files)` finds the `.bin` and image files a `.gltf` names among files given, like a drop's, and a file it can not find is named in the error; the 3D Mesh example takes a `.gltf` dropped with its files or in its folder
 - Example browser: after the arrow keys move through the list, Enter keeps the example they went to, and Escape in the search clears it without also closing the list
 - 3D levels: a color that is not a string, and a number that is NaN or Infinity (1e999 in JSON), are read as the default, in place of an assert or a NaN
 - `tileLayersLoad` says so when a map is not a whole number of cells across and down, or a layer's tiles do not fill it, in release builds too, in place of running on

@@ -42,28 +42,60 @@ function gameInit()
     new EngineObject3D(vec3(), buildGrid(vec2(20), 10, checker));
     setModel(parseOBJ(houseOBJ));
 
-    // drop an .obj, .glb or .gltf file on the page to see it
+    // drop an .obj, a .glb, or a .gltf with its files or its folder
     const stop = (e)=> e.preventDefault();
     document.addEventListener('dragover', stop);
     document.addEventListener('drop', async (e)=>
     {
         stop(e);
-        const file = e.dataTransfer.files[0];
+        const files = await droppedFiles(e.dataTransfer);
+        const file = [...files.values()].find(
+            (f)=> /\.(obj|glb|gltf)$/i.test(f.name));
         if (!file) return;
         try
         {
             if (/\.obj$/i.test(file.name))
                 setModel(parseOBJ(await file.text()));
-            else
-            {
-                // a glb has everything in one file; a gltf needs its
-                // buffers and images inside it as data uris to work dropped
-                setModel(await parseGLTF(await file.arrayBuffer()));
-            }
+            else // a .gltf finds its .bin and images among the files
+                setModel(await parseGLTF(await file.arrayBuffer(), '',
+                    files));
             modelName = file.name;
         }
         catch (error) { modelName = file.name + ' failed: ' + error.message; }
     });
+}
+
+// every file of a drop, by its path in the dropped folder and by its name,
+// so a .gltf finds the files it names either way
+async function droppedFiles(dataTransfer)
+{
+    const files = new Map;
+    const add = (path, file)=>
+    {
+        files.set(path, file);
+        files.has(file.name) || files.set(file.name, file);
+    };
+    const read = async (entry, path)=>
+    {
+        if (entry.isFile)
+            return add(path + entry.name,
+                await new Promise((ok, fail)=> entry.file(ok, fail)));
+        // a folder's files, read a batch at a time until none are left
+        const reader = entry.createReader(), inside = path && path + '/';
+        for (let batch; (batch = await new Promise((ok, fail)=>
+            reader.readEntries(ok, fail))).length;)
+            for (const child of batch)
+                await read(child, child.isFile ? inside :
+                    inside + child.name);
+    };
+    const entries = [...dataTransfer.items]
+        .map((item)=> item.webkitGetAsEntry?.()).filter((entry)=> entry);
+    for (const entry of entries)
+        await read(entry, '');
+    if (!files.size) // a browser that gives no entries gives the files
+        for (const file of dataTransfer.files)
+            add(file.name, file);
+    return files;
 }
 
 // show a Mesh or a GLTFModel: centered, scaled to size, standing on the floor
@@ -101,7 +133,8 @@ function gameRenderPost()
 
 /* info
 A model viewer. It starts with a small house written as OBJ text in the
-code, and shows any `.obj`, `.glb` or `.gltf` file dropped on the page.
+code, and shows any `.obj` or `.glb` file dropped on the page, or a
+`.gltf` dropped with its `.bin` and image files, or in its folder.
 Space switches between flat and smooth shading. Drag to turn the camera
 and roll the wheel to zoom.
 
@@ -130,10 +163,15 @@ corners, and they are listed counter clockwise seen from outside.
   Basics.
 
 The rest is plain browser code: a `dragover` listener that lets a drop
-happen, and a `drop` listener that reads the file. An `.obj` is read as
-text for `parseOBJ`. Anything else is read as bytes for
-`parseGLTF(data)`, which returns a promise of a `GLTFModel`, so it is
-awaited. An error ends up in the text at the top of the screen.
+happen, and a `drop` listener that reads the files. `droppedFiles`
+gathers every file of the drop into a `Map`, the files inside a dropped
+folder too, each by its path in that folder and by its name. The first
+model among them is shown. An `.obj` is read as text for `parseOBJ`.
+Anything else is read as bytes for `parseGLTF(data, '', files)`, which
+returns a promise of a `GLTFModel`, so it is awaited. A `.glb` holds
+everything, while a `.gltf` names its `.bin` and image files, and the
+third argument is where it finds them. An error, such as a file it
+needs that was not dropped, ends up in the text at the top.
 
 ### setModel
 A file's model can be any size, anywhere. `center()` moves it so the

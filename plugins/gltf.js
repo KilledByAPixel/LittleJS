@@ -371,11 +371,19 @@ async function loadGLTF(url)
 }
 
 /** Parse a model from GLB bytes or glTF JSON, fetching the buffers and images it refers to
+ *  - A .gltf names its .bin and image files, which are fetched from baseUrl, or found among files: what a game
+ *    has in hand, like the files dropped on the page, each by its path in the folder the .gltf is in, or by its name
  *  @param {ArrayBuffer|Object|string} data - GLB bytes, or the glTF JSON as bytes, text or an object
  *  @param {string} [baseUrl] - Where the .bin and image files are, with its trailing slash; loadGLTF passes the file's folder
+ *  @param {Map<string, Blob>} [files] - The files it refers to, by path or name, looked in before fetching
  *  @return {Promise<GLTFModel>}
+ *  @example
+ *  // the files of a drop, a .gltf with its .bin and textures, by name
+ *  const files = new Map([...dataTransfer.files].map((file)=> [file.name, file]));
+ *  const gltf = [...files.values()].find((file)=> file.name.endsWith('.gltf'));
+ *  const model = await parseGLTF(await gltf.text(), '', files);
  *  @memberof GLTF */
-async function parseGLTF(data, baseUrl='')
+async function parseGLTF(data, baseUrl='', files)
 {
     let json = data, glbBuffer;
     if (data instanceof ArrayBuffer)
@@ -419,7 +427,7 @@ async function parseGLTF(data, baseUrl='')
             ASSERT(glbBuffer && !i, 'a buffer without a uri is the GLB chunk, and only the first can be');
             return glbBuffer;
         }
-        return gltfFetch(buffer.uri, baseUrl).then(r=> r.arrayBuffer());
+        return gltfFetch(buffer.uri, baseUrl, files).then(r=> r.arrayBuffer());
     }));
 
     // the textures, decoded together first; none without WebGL, and a failed image only logs; the base color, normal
@@ -438,7 +446,7 @@ async function parseGLTF(data, baseUrl='')
             const image = json.images[source], sampler = json.samplers?.[texture.sampler] || {};
             let blob;
             if (image.uri)
-                blob = await gltfFetch(image.uri, baseUrl).then(r=> r.blob());
+                blob = await gltfFetch(image.uri, baseUrl, files).then(r=> r.blob());
             else
             {
                 const view = json.bufferViews[image.bufferView];
@@ -649,8 +657,19 @@ function gltfSample(channel, time, out)
 }
 
 // fetch a uri beside the model, or decode a data uri without going out
-function gltfFetch(uri, baseUrl)
+function gltfFetch(uri, baseUrl, files)
 {
+    // among the files given: by its path as the model writes it, or by its name, for files dropped loose
+    if (files && !uri.startsWith('data:'))
+    {
+        let path = uri;
+        try { path = decodeURIComponent(uri); } catch {}
+        path = path.replace(/^\.\//, '');
+        const file = files.get(path) ?? files.get(path.slice(path.lastIndexOf('/') + 1));
+        if (file)
+            return Promise.resolve(new Response(file));
+        return Promise.reject(new Error('glTF needs ' + path + ', which is not among the files given'));
+    }
     if (uri.startsWith('data:'))
     {
         const comma = uri.indexOf(','), bytes = atob(uri.slice(comma + 1)), data = new Uint8Array(bytes.length);
@@ -665,7 +684,7 @@ function gltfFetch(uri, baseUrl)
     const url = base ? new URL(uri, base).href : baseUrl + uri;
     return fetch(url).then(r=>
     {
-        if (!r.ok) throw new Error('glTF file not found: ' + url);
+        if (!r.ok) throw new Error('glTF needs ' + uri + ', not found at ' + url);
         return r;
     });
 }

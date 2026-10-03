@@ -92,3 +92,30 @@ test('a model resting at scale 0 still shows it so, as one mesh and as an object
     }
     finally { o.destroy(true); f.destroy(true); engineObjects.length = 0; }
 });
+
+// a .gltf with its buffer in a file of its own, the way an exporter writes it next to the model
+function splitModel(uri)
+{
+    const buffer = new ArrayBuffer(36); // one triangle
+    new Float32Array(buffer).set([-1, -1, 0,  1, -1, 0,  1, 1, 0]);
+    return {model: {asset: {version: '2.0'}, buffers: [{byteLength: 36, uri}], bufferViews: [{buffer: 0, byteLength: 36}],
+        accessors: [{bufferView: 0, componentType: 5126, count: 3, type: 'VEC3'}],
+        meshes: [{primitives: [{attributes: {POSITION: 0}, mode: 4}]}], nodes: [{mesh: 0}], scenes: [{nodes: [0]}]}, buffer};
+}
+
+test('a glTF given the files it refers to, as a drop of its folder gives them, finds them there', async ()=>
+{
+    const {model, buffer} = splitModel('parts/house%20mesh.bin');
+    const files = new Map([['house.gltf', new Blob([JSON.stringify(model)])], ['parts/house mesh.bin', new Blob([buffer])]]);
+    const loaded = await parseGLTF(model, '', files);
+    assert.equal(loaded.parts.length, 1);
+    // dropped as loose files the folder is lost, so a file is found by its name alone too
+    const loose = await parseGLTF(splitModel('parts/house%20mesh.bin').model, '', new Map([['house mesh.bin', new Blob([buffer])]]));
+    assert.equal(loose.parts.length, 1);
+});
+
+test('a glTF whose file is not among those given says which file it needs', async ()=>
+{
+    const {model} = splitModel('scene.bin');
+    await assert.rejects(parseGLTF(model, '', new Map()), /scene\.bin/);
+});
