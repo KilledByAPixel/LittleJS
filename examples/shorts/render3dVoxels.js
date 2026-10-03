@@ -50,7 +50,8 @@ function gameInit()
     map = new VoxelMap(vec3(), vec3(50), sheet);
     map.setBlockType(1, {top:0, side:1, bottom:2});
     for (let i = 5; i < 8; ++i)
-        map.setBlockType(i, i, {seeThrough: i==5, transparent: i>5});
+        map.setBlockType(i, i,
+            {seeThrough: i==5, transparent: i>5, doubleSided: i==6});
 
     // rolling hills of grass over dirt over stone, water in low parts
     for (let x = 48; x--;)
@@ -148,8 +149,9 @@ A block type shows the tile of its own number on every face unless
 - Type 1, grass, has tile 0 on top, 1 on its sides and 2 below.
 - Types 5 to 7 use their own tile. Leaves are `seeThrough`: the texture
   has holes, so blocks beside them keep their faces. Water and glass are
-  `transparent`, drawn blended with what is behind them, and from both
-  sides, so from under the water its surface shows overhead.
+  `transparent`, drawn blended with what is behind them. Water is also
+  `doubleSided`, its faces drawn from inside too, so from under the
+  water its surface shows overhead.
 
 The loops in `gameInit` fill the columns. `h` is the ground height from
 a sine and a cosine, `setVoxel(cell, type)` puts grass on top, two dirt

@@ -89,7 +89,7 @@ class VoxelMap extends EngineObject3D
         /** @type {Array<Vector3>} */
         this.chunkCenters = []; // a chunk mesh's points are around its center, which it is drawn at
         this.chunksChanged = new Set;
-        /** @type {Array<{faces: Array<number>, seeThrough: boolean, transparent: boolean}|undefined>} */
+        /** @type {Array<{faces: Array<number>, seeThrough: boolean, transparent: boolean, doubleSided: boolean}|undefined>} */
         this.blockTypes = [];
         this.tiles = new Map; // tile index to the uvs of its corners
 
@@ -161,27 +161,29 @@ class VoxelMap extends EngineObject3D
      *  @param {number} type - 1 to 255
      *  @param {number|Array<number>|{top?: number, side: number, bottom?: number}} faces - A tile index for every face,
      *    six in the order +x, -x, +y, -y, +z, -z, or the side's with the top and bottom's, which default to the side's
-     *  @param {{seeThrough?: boolean, transparent?: boolean}} [options] - seeThrough for holes in its texture, like
-     *    leaves, so the blocks beside it keep their faces; transparent to blend, like glass or water, drawn in the
-     *    transparent stage from both sides, so water's surface shows from under it, and see-through too */
-    setBlockType(type, faces, {seeThrough=false, transparent=false}={})
+     *  @param {{seeThrough?: boolean, transparent?: boolean, doubleSided?: boolean}} [options] - seeThrough for holes
+     *    in its texture, like leaves, so the blocks beside it keep their faces; transparent to blend, like glass or
+     *    water, drawn in the transparent stage, and see-through too; doubleSided for faces seen from inside the
+     *    block as well, like water, whose surface then shows from under it */
+    setBlockType(type, faces, {seeThrough=false, transparent=false, doubleSided=false}={})
     {
         ASSERT(type >= 1 && type <= 255 && type % 1 === 0, 'a block type is a whole number from 1 to 255', type);
         const f = /** @type {any} */ (faces);
         const list = isNumber(f) ? [f, f, f, f, f, f] : isArray(f) ? f :
             [f.side, f.side, f.top ?? f.side, f.bottom ?? f.side, f.side, f.side];
         ASSERT(list.length === 6 && list.every(isNumber), 'faces is a tile index, six of them, or {top, side, bottom}');
-        this.blockTypes[type] = {faces: list, seeThrough: seeThrough || transparent, transparent};
+        this.blockTypes[type] = {faces: list, seeThrough: seeThrough || transparent, transparent, doubleSided};
         this.rebuild();
     }
 
     /** A block type's faces and how it is seen through
      *  @param {number} type
-     *  @return {{faces: Array<number>, seeThrough: boolean, transparent: boolean}}
+     *  @return {{faces: Array<number>, seeThrough: boolean, transparent: boolean, doubleSided: boolean}}
      *  @ignore */
     blockType(type)
     {
-        return this.blockTypes[type] ||= {faces: [type, type, type, type, type, type], seeThrough: false, transparent: false};
+        return this.blockTypes[type] ||= {faces: [type, type, type, type, type, type], seeThrough: false, transparent: false,
+            doubleSided: false};
     }
 
     /** Build every chunk again, after changing data directly or ambientOcclusion */
@@ -251,12 +253,16 @@ class VoxelMap extends EngineObject3D
                     colors[k] = ao ? RENDER3D_VOXEL_SHADES[shade[i]] : WHITE;
                 }
                 mesh.addStrip(points, normal, uvs, colors);
+
+                // a double sided block shows the face from inside too, its corners the other way round
+                if (block.doubleSided)
+                    mesh.addStrip([points[1], points[0], points[3], points[2]], normal.scale(-1),
+                        [uvs[1], uvs[0], uvs[3], uvs[2]], [colors[1], colors[0], colors[3], colors[2]]);
             }
         }
         this.chunkMeshes[index]?.dispose();
         this.chunkTransparentMeshes[index]?.dispose();
         this.chunkMeshes[index] = opaque.points.length ? opaque : undefined;
-        transparent.doubleSided = true; // seen from inside too, water's surface from under it
         this.chunkTransparentMeshes[index] = transparent.points.length ? transparent : undefined;
         this.chunkCenters[index] = center;
     }

@@ -328,3 +328,13 @@ test('a flare pointed at a light by hand goes when the light does', ()=>
     run(lampCode + 'lamp.destroy(); flare.update();');
     assert.equal(run('flare.destroyed'), true);
 });
+
+test('a room the light is in, seen from outside, hides its flare; only a small lamp around the light does not', ()=>
+{
+    const run = load();
+    run(lampCode + `var room = new EngineObject3D(vec3(0, 0, -10), render3D.boxMesh); room.scale3D = vec3(12);
+        steps(flare, 20);`);
+    assert.equal(run('flare.visible'), 0, 'the room\'s near wall is between the camera and the light');
+    run('room.scale3D = vec3(2); steps(flare, 20);');
+    assert.equal(run('flare.visible'), 1, 'a lamp the size of a lamp');
+});

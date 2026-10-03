@@ -7,7 +7,7 @@ What changed in each release, newest first. Releases before 1.20.0 are on the
 
 ### New Changes
 
-- A VoxelMap's transparent blocks, like water and glass, show from both sides, so the surface of water shows from under it
+- A VoxelMap block type can be `doubleSided`, its faces shown from inside the block too, so the surface of water shows from under it
 - 3D Voxels: the player goes under water and walks on the bottom, in place of floating at the surface
 - `tileLayersLoad`'s `collisionLayer` may be a layer's name
 - LDtk: an IntGrid layer is always a hidden layer of its values under its own name, its rule tiles in layers over it named with tiles, so `tileLayersLoad(map, tileInfo, 0, 'Collisions')` is solid where the values say, whatever the tiles stack or fade; a project of several worlds loads; a project with no tileset entry keeps its tiles
@@ -20,6 +20,7 @@ What changed in each release, newest first. Releases before 1.20.0 are on the
 - LDtk: a see-through tile keeps its opacity, in a layer of its own; a layer whose tileset is another size is left out with a warning, in place of being read as stacks; a missing level says so in release builds too
 - A Tiled tileset's margin and spacing count from where the game's sheet starts, so a sheet inside an atlas keeps its place
 - 2D level editor: applying an autosave of another size leaves an object layer it does not know about as the file has it, and an autosave whose tiles do not fit its size no longer resizes the map
+- A light's lens flare is hidden by a room or a level mesh around it, seen from outside: only a lamp, a mesh around the light no wider than half its radius, is passed by
 - 3D level editor: a broken autosave no longer blocks every edit until Drop, and one older than the last edits, which storage had no room for, says so as the 2D editor does
 
 ## 1.24.0 - 2026-10-02

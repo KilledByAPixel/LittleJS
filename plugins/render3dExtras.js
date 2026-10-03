@@ -1622,7 +1622,8 @@ class LensFlare3D extends EngineObject3D
         this.elements = undefined;
         /** @property {Light3D|undefined} - A light the flare is of in place of the sun, a lamp or a spotlight: the
          *  flare is at the light and in its color, smaller from farther than the light reaches, hidden by what is
-         *  in front of the light, and a spotlight's shows from inside its beam only; a DirectionalLight3D's is far
+         *  in front of the light but its lamp, a mesh around it no wider than half its radius, and a spotlight's
+         *  shows from inside its beam only; a DirectionalLight3D's is far
          *  away where it shines from, like the sun's; the flare is destroyed when its light is; light.addFlare
          *  sets this
          *  @type {Light3D|undefined} */
@@ -1762,13 +1763,15 @@ class LensFlare3D extends EngineObject3D
             if (map.raycast(ray, reach, (type)=> !map.blockType(type).seeThrough))
                 return true;
         // a light's lamp, the mesh the light is inside, does not hide it: one whose box, in its own space, the light
-        // is in
+        // is in, and no wider than half the light's reach, since a room or a whole level has a box around its lights
+        // too, and its walls do hide them from outside
         const lamp = (o)=>
         {
             if (!this.light || reach === Infinity || !o.mesh || o instanceof HeightMap) return false;
-            const matrix = render3DObjectMatrix(o);
-            if (!matrix.determinant()) return false;
-            const p = matrix.copy().invert().transformPoint(source.pos), b = o.mesh.bounds || o.mesh.getBounds();
+            const matrix = render3DObjectMatrix(o), b = o.mesh.bounds || o.mesh.getBounds();
+            const side = max(b.max.x - b.min.x, b.max.y - b.min.y, b.max.z - b.min.z) * render3DMaxStretch(matrix.m);
+            if (!matrix.determinant() || side > this.light.radius / 2) return false;
+            const p = matrix.copy().invert().transformPoint(source.pos);
             return p.x >= b.min.x && p.x <= b.max.x && p.y >= b.min.y && p.y <= b.max.y &&
                 p.z >= b.min.z && p.z <= b.max.z;
         };

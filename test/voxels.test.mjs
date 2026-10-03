@@ -100,8 +100,23 @@ test('see-through blocks keep their neighbors\' faces, same see-through blocks h
     map.setVoxel(vec3(2, 3, 1), 6); // two water blocks, one body of water, in the transparent mesh
     map.buildChunks();
     assert.equal(faces(map.chunkTransparentMeshes[0]), 10);
-    assert.deepEqual([map.chunkTransparentMeshes[0].doubleSided, map.chunkMeshes[0].doubleSided], [true, false],
-        'water and glass show from inside too, the surface from under the water; solid blocks only from outside');
+    map.destroy();
+});
+
+test('a doubleSided block type shows its faces from inside too, as the surface of water from under it; others do not', () =>
+{
+    const map = new VoxelMap(vec3(), vec3(16));
+    map.setBlockType(6, 6, {transparent: true, doubleSided: true});
+    map.setBlockType(7, 7, {transparent: true});
+    map.setVoxel(vec3(1, 1, 1), 6);
+    map.buildChunks();
+    assert.equal(faces(map.chunkTransparentMeshes[0]), 12, 'each face twice, once facing in');
+    const mesh = map.chunkTransparentMeshes[0];
+    assert.ok(mesh.normals.some((n)=> n.y < 0) && mesh.normals.some((n)=> n.y > 0));
+    map.setVoxel(vec3(1, 1, 1), 7);
+    map.buildChunks();
+    assert.equal(faces(map.chunkTransparentMeshes[0]), 6, 'glass from outside only');
+    assert.equal(map.blockType(6).doubleSided, true);
     map.destroy();
 });
 
