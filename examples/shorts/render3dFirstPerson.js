@@ -14,7 +14,7 @@ const mazeData =
 ];
 const mazeSize = vec2(mazeData[0].length, mazeData.length);
 const cellSize = 2, wallHeight = 3, eyeHeight = 1.5;
-let player, flashlight, night = true;
+let player, flashlight, gel, night = true;
 
 // the world position of a maze cell, at a height
 const cellPos = (x, z, y)=> vec3(
@@ -65,7 +65,25 @@ function gameInit()
     flashlight = new Light3D(vec3(), 25, hsl(.13,.4,.9), 3);
     flashlight.coneAngle = .45;
     flashlight.coneSoftness = .6;
+    gel = makeGel();
     setNight(night);
+}
+
+// a gel to shine the flashlight through: panes of colored glass with dark
+// lead between them, drawn on a canvas
+function makeGel()
+{
+    const size = 64, panes = 4, pane = size/panes;
+    const context = createCanvasContext(size, size);
+    context.fillStyle = hsl(0,0,.1).toString(); // the lead
+    context.fillRect(0, 0, size, size);
+    for (let x = panes; x--;)
+    for (let y = panes; y--;)
+    {
+        context.fillStyle = hsl((x+y*panes)/7, .8, .6).toString();
+        context.fillRect(x*pane+2, y*pane+2, pane-4, pane-4);
+    }
+    return new TextureInfo(context.canvas);
 }
 
 // night: a dark sky, and the flashlight casts the shadows in place of
@@ -85,6 +103,8 @@ function setNight(on)
 function gameUpdate()
 {
     keyWasPressed('KeyN') && setNight(!night); // N is night and day
+    if (keyWasPressed('KeyG')) // G puts the gel in front of the flashlight
+        flashlight.gel = flashlight.gel ? undefined : gel;
     if (keyWasPressed('KeyF')) // F toggles flying
     {
         player.fly = !player.fly;
@@ -105,7 +125,8 @@ function gameUpdatePost()
 function gameRenderPost()
 {
     const mode = player.fly ? 'flying' : 'walking';
-    const text = `click: look / WASD: move / F: fly (${mode}) / N: night`;
+    const text = `click: look / WASD: move / F: fly (${mode}) / N: night` +
+        ' / G: gel';
     const color = night ? WHITE : BLACK;
     drawTextScreen(text, vec2(mainCanvasSize.x/2, 40), 30, color);
 }
@@ -114,8 +135,9 @@ function gameRenderPost()
 Walk a small maze with a first person camera. At night the player's
 flashlight, a spotlight, lights the way and casts the shadows. Click to
 capture the mouse and look around, walk with WASD or the arrow keys,
-press F to fly and N to switch between night and day. Escape lets the
-mouse go.
+press F to fly and N to switch between night and day. At night G puts a
+gel of colored glass in front of the flashlight. Escape lets the mouse
+go.
 
 ## How it works
 ### The maze
@@ -161,6 +183,16 @@ the beam points where the player looks. The comment in the code says
 why it is not at the eye: seen from the light itself, every shadow is
 hidden behind the thing that casts it.
 
+### The gel
+A light's `gel` is a picture it shines through, cast along its beam in
+its colors like a slide in a projector. `makeGel` paints one on a
+canvas from `createCanvasContext`: a dark background, the lead, with a
+4 by 4 grid of panes in colors around the hue circle, each 2 pixels in
+from the edge of its square. `new TextureInfo(context.canvas)` makes it
+a texture, and G sets `flashlight.gel` to it or back to `undefined`.
+
+Only the light that casts the shadows has a gel, so it shows at night.
+
 ### Night and day
 `render3D.shadows = true` turns shadows on, and by default the sun casts
 them. `render3D.shadowLight = flashlight` has the spotlight cast them in
@@ -181,6 +213,7 @@ times the maze's length, which covers it from any angle.
 - Start in daylight: `night = true` to `night = false`.
 - Open a wall: change the row `'#.##.###.#'` to `'#........#'`.
 - Set `wallHeight` to `6`.
+- Bigger panes: `panes = 4` to `panes = 2`.
 
 ## See also
 3D Voxels uses the same camera with gravity and jumping. 3D Lights has

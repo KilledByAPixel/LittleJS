@@ -107,7 +107,7 @@ test('an instanced batch splits when a material field changes, and not when it s
     assert.deepEqual(counts, {same: 0, changed: 1, count: 1});
 });
 
-test('the pass binds white to the map units at its start and nothing at its end, unit 0 active after', ()=>
+test('the pass binds white to the map units and the gel unit at its start and nothing at its end, unit 0 active after', ()=>
 {
     const calls = JSON.parse(run(`const calls = [], saved = glContext;
         glContext = {TEXTURE0: 33984, TEXTURE_2D: 3553, activeTexture: (u)=> calls.push(['unit', u - 33984]),
@@ -116,7 +116,8 @@ test('the pass binds white to the map units at its start and nothing at its end,
         try { render3DSetMapUnits('white'); render3DSetMapUnits(null); } finally { glContext = saved; }
         JSON.stringify({calls, cache: render3DBoundMaps.length})`));
     const unitCalls = (texture)=> [['unit', 2], ['texture', texture], ['sampler', 2, null],
-        ['unit', 3], ['texture', texture], ['sampler', 3, null], ['unit', 0]];
+        ['unit', 3], ['texture', texture], ['sampler', 3, null],
+        ['unit', 4], ['texture', texture], ['sampler', 4, null], ['unit', 0]];
     assert.deepEqual(calls.calls, [...unitCalls('white'), ...unitCalls(null)]);
     assert.equal(calls.cache, 0, 'the map cache is forgotten');
     const pass = run('render3DRenderPass.toString()');

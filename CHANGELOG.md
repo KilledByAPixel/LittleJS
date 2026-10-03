@@ -5,6 +5,10 @@ What changed in each release, newest first. Releases before 1.20.0 are on the
 
 ## Unreleased
 
+### New Changes
+
+- Spotlight gels: `light.gel` is a picture the shadow casting spotlight shines through, cast along its beam in its colors, like a slide or stained glass; with none a scene draws exactly as before. The 3D First Person flashlight has one on G
+
 ### New Demos
 
 - [Custom Editor](https://killedbyapixel.github.io/LittleJS/examples/?example=Custom%20Editor) - A level editor made for one game: a class of its own with a tool that lays out rooms by a drag, a button, a key and an overlay

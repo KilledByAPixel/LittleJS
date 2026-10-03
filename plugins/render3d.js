@@ -637,6 +637,7 @@ class Render3DPlugin
         this.viewProjection = new Matrix4;
         /** @property {Matrix4} - This frame's light view projection for the shadow map */
         this.shadowMatrix = new Matrix4;
+        this.gelAxes = [1, 0, 0, 1]; // the shadow light's right and up in its map's, for its gel
         /** @property {Vector3} - Camera right axis this frame */
         this.cameraRight = vec3(1, 0, 0);
         /** @property {Vector3} - Camera up axis this frame */
@@ -1240,8 +1241,14 @@ class Render3DPlugin
             // the near plane stays in front of the far one however small the light
             const far = caster.radius, near = min(max(far / 500, .02), far / 2);
             const fov = min(caster.coneAngle, RENDER3D_SHADOW_CONE_MAX) * 2 + .1;
-            this.shadowMatrix = Matrix4.perspective(fov, 1, near, far).multiply(
-                Matrix4.lookAt(pos, pos.add(forward), up).invert());
+            const view = Matrix4.lookAt(pos, pos.add(forward), up);
+            this.shadowMatrix = Matrix4.perspective(fov, 1, near, far).multiply(view.copy().invert());
+            // the map's own right and up are not the light's, which a gel is upright by: the four numbers that
+            // turn the one into the other
+            const v = view.m, l = render3DObjectMatrix(caster).m;
+            const right = vec3(l[0], l[1], l[2]).normalize(), lightUp = vec3(l[4], l[5], l[6]).normalize();
+            const mapRight = vec3(v[0], v[1], v[2]), mapUp = vec3(v[4], v[5], v[6]);
+            this.gelAxes = [right.dot(mapRight), right.dot(mapUp), lightUp.dot(mapRight), lightUp.dot(mapUp)];
             this.shadowPlanes = render3DFrustumPlanes(this.shadowMatrix);
             // depth is not even with perspective: the lookup divides this by the distance squared, which makes
             // the bias the same distance in the world near the light and far from it
@@ -1702,8 +1709,8 @@ function render3DFragmentSource(fragmentCode)
         'uniform vec4 extraLightCones[' + RENDER3D_MAX_LIGHTS + '];' +
         'uniform int extraLightCount;' +
         'uniform vec3 cameraPos;' +
-        'uniform vec4 materialParams,emissiveTint,skyTop,skyHorizon,skyBottom;' +
-        'uniform sampler2D tex,normalTex,emissiveTex;' +
+        'uniform vec4 materialParams,emissiveTint,skyTop,skyHorizon,skyBottom,gelAxes;' +
+        'uniform sampler2D tex,normalTex,emissiveTex,gelTex;' +
         'uniform bool premultipliedTexture;' + // is the texture a render target, which holds premultiplied color
         'uniform highp sampler2DShadow shadowMap;' +
         'in vec3 P,N;in vec2 T,L;in vec4 C,S;' +
@@ -1720,6 +1727,12 @@ function render3DFragmentSource(fragmentCode)
         'for(int x=-1;x<=1;++x)for(int y=-1;y<=1;++y)' +
         's+=texture(shadowMap,vec3(q.xy+vec2(x,y)*shadowParams.z,q.z));' +
         'return s/9.;}' +
+        // the gel the shadow light shines through, at this fragment's place in its view, upright as it looks out;
+        // white with no gel, so a light without one is exactly as before
+        'vec3 gel(){' +
+        'if(S.w<=0.)return vec3(1);' +
+        'vec2 g=S.xy/S.w,u=vec2(dot(gelAxes.xy,g),dot(gelAxes.zw,g))*.5+.5;' +
+        'return texture(gelTex,vec2(u.x,1.-u.y)).rgb;}' +
         // the normal map's normal here, in the frame that the position and texture coordinate change along across the
         // screen, so a mesh needs no tangents; green points up the image and v runs down it, so up is -v;
         // a mesh with no texture coordinates has no frame and keeps its own normal
@@ -1765,7 +1778,7 @@ function render3DFragmentSource(fragmentCode)
         'vec4 K=extraLightCones[i];' +
         'float k=clamp(dot(K.xyz,-v)-K.w,0.,1.);' +
         'lc*=k*k*(3.-2.*k);' +
-        'if(i==si)lc*=sh;' +
+        'if(i==si)lc*=sh*gel();' +
         'l+=lc*max(0.,ln);' +
         'if(lightColor.a>0.)sp+=lc*pow(max(dot(reflect(-v,n),eye),0.),materialParams.y)*step(0.,ln);' +
         '}' +
@@ -1813,6 +1826,8 @@ function render3DUseProgram(program)
     gl.uniform1i(render3DUniform('shadowMap'), 1);
     gl.uniform1i(render3DUniform('normalTex'), 2);
     gl.uniform1i(render3DUniform('emissiveTex'), 3);
+    gl.uniform1i(render3DUniform('gelTex'), 4);
+    gl.uniform4fv(render3DUniform('gelAxes'), r.gelAxes);
     const c = r.camera.pos;
     gl.uniform3f(render3DUniform('cameraPos'), c.x, c.y, c.z);
     gl.uniform1i(render3DUniform('extraLightCount'), r.lightCount);
@@ -2273,8 +2288,16 @@ function render3DRenderPass(after2D)
     // may have left its own texture, which fails every draw; the shadow map goes back there even with shadows off
     gl.activeTexture(gl.TEXTURE1);
     gl.bindTexture(gl.TEXTURE_2D, r.shadowTexture || null);
-    // the material maps' units start white, a 2D plugin may have left its own textures there
+    // the material maps' units start white, a 2D plugin may have left its own textures there, and the shadow
+    // light's gel goes on its unit for the pass, white when it has none
     render3DSetMapUnits(r.whiteTexture);
+    const gel = render3DShadowCaster()?.gel?.glTexture;
+    if (gel)
+    {
+        gl.activeTexture(gl.TEXTURE4);
+        gl.bindTexture(gl.TEXTURE_2D, gel);
+        gl.activeTexture(gl.TEXTURE0);
+    }
     gl.depthMask(true);
     gl.clear(gl.DEPTH_BUFFER_BIT);
 
@@ -2313,12 +2336,12 @@ function render3DRenderPass(after2D)
     }
 }
 
-// put a texture on both material map units with no sampler, white at the start of the pass and none at its end, and
-// forget what the map cache thought was bound; unit 0 is active after
+// put a texture on the material map units and the gel's with no sampler, white at the start of the pass and none at
+// its end, and forget what the map cache thought was bound; unit 0 is active after
 function render3DSetMapUnits(texture)
 {
     const gl = glContext;
-    for (const unit of [2, 3])
+    for (const unit of [2, 3, 4])
     {
         gl.activeTexture(gl.TEXTURE0 + unit);
         gl.bindTexture(gl.TEXTURE_2D, texture);
@@ -4766,6 +4789,11 @@ class Light3D extends EngineObject3D
         /** @property {number} - How fast the glow fades from its middle: 1 by default, .5 a wide haze, 2 a tight
          *  bright core */
         this.glowFalloff = 1;
+        /** @property {TextureInfo|undefined} - A gel: a picture the light shines through, like a stained glass window
+         *  or the leaves of a tree, cast along its cone in its colors, upright as the light looks out; only the
+         *  spotlight that casts the shadows has one, with render3D.shadows on and it as render3D.shadowLight
+         *  @type {TextureInfo|undefined} */
+        this.gel = undefined;
         this.additive = true; // the glow is added on, in the transparent stage; a light with none draws nothing
         /** @type {LensFlare3D|undefined} */
         this.flareObject = undefined;

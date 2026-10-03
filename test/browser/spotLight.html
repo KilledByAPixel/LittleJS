@@ -61,7 +61,7 @@ smokeRun(async ()=>
     lamp.gel = new TextureInfo(picture);
     engineStep(2);
     const color = (x)=> smokePixel(.5 + x / 13.86, .5);
-    check('a gel colors the light, its left half to the lamp's left', color(-1)[0] > 80 && color(-1)[2] < 30, color(-1));
+    check('a gel colors the light, its left half to the left of the lamp', color(-1)[0] > 80 && color(-1)[2] < 30, color(-1));
     check('and its right half to the right', color(1)[2] > 80 && color(1)[0] < 30, color(1));
     lamp.gel = undefined;
     engineStep(2);
