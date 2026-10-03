@@ -9,10 +9,9 @@ on:
     branches: [main]
   workflow_dispatch:
 
+# the build runs npm install, so it reads only; the right to deploy is the deploy job's alone
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
 # one deploy at a time, a newer push takes the place of one still waiting
 concurrency:
@@ -22,6 +21,9 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: read
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
@@ -42,6 +44,9 @@ jobs:
   deploy:
     needs: build
     runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
