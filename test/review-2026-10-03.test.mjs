@@ -102,3 +102,11 @@ test('a light\'s flare looks past four lamps around it, and counts a fifth as hi
     assert.equal(run('lamps(4)'), 1, 'four nested shades');
     assert.equal(run('lamps(1)'), 0, 'five');
 });
+
+test('a palette list names only tiles the sheet has, a sheet read by its columns as a tile set', ()=>
+{
+    const run = load();
+    run(`var sheet = new TileInfo(vec2(), vec2(16), new TextureInfo({width: 17, height: 16}, false), .5, 0, 1);
+        var layer = new TileLayer(vec2(), vec2(2, 1), sheet); levelEditor.paletteTiles = [0, 99];`);
+    assert.deepEqual(json(run, 'editorPaletteTiles({live: layer}).map((t)=> t.tile)'), [0]);
+});

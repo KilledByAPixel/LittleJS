@@ -155,6 +155,11 @@ function createCanvasContext(width, height=width, willReadFrequently=false)
     return /** @type {OffscreenCanvasRenderingContext2D} */ (canvas.getContext('2d', {willReadFrequently}));
 }
 
+// can a canvas be made to draw into: an OffscreenCanvas, or a canvas element where there is none, as in Safari before
+// 16.4; neither in a headless test
+function canvasAvailable()
+{ return typeof OffscreenCanvas != 'undefined' || typeof document != 'undefined' && !!document.createElement; }
+
 /** Save a canvas to disk
  *  @param {HTMLCanvasElement|OffscreenCanvas} canvas
  *  @param {string} [filename]

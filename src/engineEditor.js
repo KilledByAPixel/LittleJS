@@ -2180,7 +2180,7 @@ function editorPaletteTiles(layer)
         if (layer.palette?.list !== list || layer.palette.count !== live.tileInfo?.tiles?.length)
             layer.palette = {list, count: live.tileInfo?.tiles?.length, // a tile set fills in as it loads
                 tiles: list.map((tile)=> ({tile, tileInfo: editorTileInfo(live, tile)}))
-                .filter((t)=> t.tileInfo || !live.tileInfo?.tiles)}; // a tile set has only so many
+                .filter((t)=> t.tileInfo || !live.tileInfo)}; // a tile set, or a sheet, has only so many
         return layer.palette.tiles;
     }
     // a tile set lists its tiles, each a tile the palette offers
@@ -2273,8 +2273,10 @@ function editorPaletteDraw(canvas, layer)
     context.moveTo(8, 8), context.lineTo(cell - 8, cell - 8);
     context.moveTo(cell - 8, 8), context.lineTo(8, cell - 8);
     context.stroke();
-    tiles.forEach(({tileInfo: {pos, size, textureInfo}}, i)=>
+    tiles.forEach(({tileInfo}, i)=>
     {
+        if (!tileInfo) return; // headless, a layer with no sheet
+        const {pos, size, textureInfo} = tileInfo;
         // each from its own sheet, a tile set's may be on several
         const slot = i + 1, x = slot % columns * cell, y = (slot / columns | 0) * cell, image = textureInfo?.image;
         image && context.drawImage(image, pos.x, pos.y, size.x, size.y, x + 2, y + 2, cell - 4, cell - 4);

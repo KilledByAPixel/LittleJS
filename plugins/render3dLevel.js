@@ -251,7 +251,7 @@ function level3DTerrainSetColors(map, terrain, paint=level3DTerrainPaint(terrain
 let level3DVoxelPlain;
 function level3DVoxelPlainTiles()
 {
-    if (textureInfos[0]?.size.x || headlessMode || typeof OffscreenCanvas == 'undefined')
+    if (textureInfos[0]?.size.x || headlessMode || !canvasAvailable())
         return tile();
     if (!level3DVoxelPlain)
     {

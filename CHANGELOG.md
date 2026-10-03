@@ -12,7 +12,7 @@ What changed in each release, newest first. Releases before 1.20.0 are on the
 
 ### Fixes
 
-- Older browsers: the engine starts with no `OffscreenCanvas` (Safari before 16.4), drawing into a canvas element in its place, and uses neither `Array.prototype.at` nor `Object.hasOwn` (Safari before 15.4); the example browser's markdown has no lookbehind, which Safari before 16.4 could not read
+- Older browsers: the engine starts with no `OffscreenCanvas` (Safari before 16.4), drawing into a canvas element in its place, and so do the textures it makes itself (normal maps from heights, particle shapes, light glows, lens flares, glTF's white texture), and uses neither `Array.prototype.at` nor `Object.hasOwn` (Safari before 15.4); the example browser's markdown has no lookbehind, which Safari before 16.4 could not read
 - On an iPhone the silent switch no longer mutes the game's sound, where Safari has `navigator.audioSession` (16.4 and up)
 - Level editor: the brush, its ghost and the palette read a tile past the end of a sheet as nothing, as the layer draws it, where a collision value picked up with the right button asserted every frame; the palette of a tile set filled in after it was first shown shows its tiles
 - A light's flare looks past four lamps around it to what is behind them, where the fourth counted as hidden

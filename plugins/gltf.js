@@ -835,7 +835,7 @@ function gltfPart(json, buffers, textures, primitive, matrix, name)
 let gltfWhiteTextureInfo;
 function gltfWhiteTexture()
 {
-    if (gltfWhiteTextureInfo || !glContext || typeof OffscreenCanvas == 'undefined') return gltfWhiteTextureInfo;
+    if (gltfWhiteTextureInfo || !glContext || !canvasAvailable()) return gltfWhiteTextureInfo;
     const context = createCanvasContext(1);
     context.fillStyle = '#fff';
     context.fillRect(0, 0, 1, 1);

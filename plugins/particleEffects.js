@@ -301,7 +301,7 @@ function particleEffectShapeTile(name)
 {
     if (!particleEffectShapeTiles)
     {
-        if (headlessMode || !glContext || typeof OffscreenCanvas == 'undefined') return;
+        if (headlessMode || !glContext || !canvasAvailable()) return;
         // drawn at 4 times 32 pixel cells, so a big soft shape stays smooth when textures are pixelated
         const cell = 32, r = 15, count = particleEffectShapes.length, res = 4;
         const context = createCanvasContext(cell * count * res, cell * res);

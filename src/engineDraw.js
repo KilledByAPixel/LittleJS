@@ -1900,7 +1900,7 @@ function engineGlowTexture(falloff=1)
     ASSERT(isNumber(falloff) && falloff > 0, 'glowFalloff must be a number above 0');
     const key = max(round(falloff * 10), 1) / 10;
     let texture = engineGlowTextures.get(key);
-    if (texture || !glContext || typeof OffscreenCanvas == 'undefined') return texture;
+    if (texture || !glContext || !canvasAvailable()) return texture;
     const size = 64, context = createCanvasContext(size), steps = 16;
     const gradient = context.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
     for (let i = 0; i <= steps; ++i)

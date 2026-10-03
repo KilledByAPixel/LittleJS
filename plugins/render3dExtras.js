@@ -28,7 +28,7 @@ function render3DDetach(o)
 let render3DSoftDotTexture;
 function render3DSoftDot()
 {
-    if (render3DSoftDotTexture || !glContext || typeof OffscreenCanvas == 'undefined') return render3DSoftDotTexture;
+    if (render3DSoftDotTexture || !glContext || !canvasAvailable()) return render3DSoftDotTexture;
     const size = 32, context = createCanvasContext(size);
     const gradient = context.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
     for (const [stop, alpha] of [[0, 1], [.33, .9], [.67, .7], [1, 0]]) // the same falloff as a soft disc
@@ -50,7 +50,7 @@ function normalMapFromHeight(size, heightFunction, strength=1)
 {
     ASSERT(isVector2(size) && size.x >= 1 && size.y >= 1, 'normalMapFromHeight size must be a Vector2 of pixels');
     const width = size.x | 0, height = size.y | 0;
-    if (typeof OffscreenCanvas == 'undefined')
+    if (!canvasAvailable())
     {
         // headless, nothing to draw into; the right size so what reads it still works
         const textureInfo = new TextureInfo(undefined, false, true);
@@ -1484,7 +1484,7 @@ function render3DFlareTile(shape)
 {
     if (!render3DFlareTiles)
     {
-        if (headlessMode || !glContext || typeof OffscreenCanvas == 'undefined') return;
+        if (headlessMode || !glContext || !canvasAvailable()) return;
         const cell = 128, shapes = render3DFlareShapes, context = createCanvasContext(cell * shapes.length, cell);
         // each shape is how see-through it is from its middle out
         const alpha =
