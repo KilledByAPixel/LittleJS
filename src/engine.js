@@ -450,7 +450,7 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
                     o.parent || o.updateTransforms();
 
                 // objects made and destroyed while paused, like a menu's effects, still leave the list
-                engineObjects = engineObjects.filter(o=>!o.destroyed);
+                engineObjects.some(o=>o.destroyed) && (engineObjects = engineObjects.filter(o=>!o.destroyed));
             }
             else
                 engineObjectsUpdate();
@@ -497,7 +497,7 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
             // render the game and objects
             enginePreRender();
             gameRender();
-            engineObjects.sort((a,b)=> a.renderOrder - b.renderOrder);
+            engineObjectsSort();
             for (const o of engineObjects)
             {
                 if (o.destroyed) continue;
@@ -769,14 +769,18 @@ function engineObjectsUpdate()
     ++engineObjectsUpdateCount;
     engineObjectsCollidePairs.clear();
     // objects update in render order, which rendering keeps them in, so a headless run or a frame that rendered
-    // nothing updates them the same way; the sort is stable, and nearly free on a list that is already sorted
-    engineObjects.sort((a,b)=> a.renderOrder - b.renderOrder);
+    // nothing updates them the same way
+    engineObjectsSort();
     // get list of solid objects for physics optimization, in update order, which 3D collision pairs by;
     // 2D checks the static ones last, so a contact with a moving object can not leave something back inside a static
     // solid it was already pushed out of
-    engineObjectsCollide = engineObjects.filter(o=>o.collideSolidObjects);
-    engineObjectsCollideStaticLast = engineObjectsCollide.filter(o=>o.mass)
-        .concat(engineObjectsCollide.filter(o=>!o.mass));
+    const fixed = [];
+    engineObjectsCollide = [];
+    engineObjectsCollideStaticLast = [];
+    for (const o of engineObjects)
+        o.collideSolidObjects && (engineObjectsCollide.push(o), (o.mass ? engineObjectsCollideStaticLast : fixed).push(o));
+    for (const o of fixed)
+        engineObjectsCollideStaticLast.push(o);
 
     // update physics before object update
     for (const o of engineObjects)
@@ -826,7 +830,16 @@ function engineObjectsUpdate()
         updateTopObject(o);
 
     // remove destroyed objects
-    engineObjects = engineObjects.filter(o=>!o.destroyed);
+    engineObjects.some(o=>o.destroyed) && (engineObjects = engineObjects.filter(o=>!o.destroyed));
+}
+
+// sort the objects by render order, keeping the order of equals, only when one is out of order, as they are kept
+// sorted and most frames change none
+function engineObjectsSort()
+{
+    for (let i = engineObjects.length; --i > 0;)
+        if (engineObjects[i].renderOrder < engineObjects[i-1].renderOrder)
+            return void engineObjects.sort((a,b)=> a.renderOrder - b.renderOrder);
 }
 
 /** Destroy and remove all objects

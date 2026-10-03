@@ -102,3 +102,70 @@ test('a text input takes a keydown with no key, as autofill sends, and types not
         input.onKeyDown({ code: '' });`);
     assert.equal(run('input.text'), 'ab');
 });
+
+// the objects' update with the sort and the copies of positions counted
+function counted(code)
+{
+    const { run } = loadEngine();
+    run(`setHeadlessMode(true); var sorts = 0, copies = 0; const copy = Vector2.prototype.copy;
+        Vector2.prototype.copy = function() { ++copies; return copy.call(this); };
+        var count = ()=> { engineObjects.sort = function(f) { ++sorts; return Array.prototype.sort.call(this, f); }; };` + code);
+    return run;
+}
+
+test('an object with mass that collides with nothing copies no position to update', () =>
+{
+    const run = counted(`var o = new EngineObject(vec2(), vec2(1)); o.velocity = vec2(.1, 0);
+        engineObjectsUpdate(); copies = 0; engineObjectsUpdate();`);
+    assert.deepEqual([run('copies'), run('o.pos.x')], [0, .2]);
+});
+
+test('objects already in render order are not sorted again, one out of order is, and they update in that order', () =>
+{
+    const run = counted(`var order = []; class Logged extends EngineObject { update() { order.push(this.name); } }
+        var a = new Logged(vec2()), b = new Logged(vec2()); a.name = 'a', b.name = 'b';
+        count(); engineObjectsUpdate(); var before = sorts;
+        a.renderOrder = 1; count(); engineObjectsUpdate();`);
+    assert.deepEqual([run('before'), run('sorts'), run('order.join("")')], [0, 1, 'abba']);
+});
+
+// a canvas context that takes any call and keeps the points drawn
+function fakeContext()
+{
+    const points = [];
+    return { points, context: new Proxy({ lineTo: (x, y)=> points.push([x, y]) },
+        { get: (target, key)=> key in target ? target[key] : ()=> {}, set: ()=> true }) };
+}
+
+test('an outline is made into kept vectors, the same points every time', () =>
+{
+    const { run } = loadEngine();
+    run(`var made = 0; const make = vec2; vec2 = (...a)=> (++made, make(...a));
+        var square = [make(0, 0), make(1, 0), make(1, 1), make(0, 1)];
+        var outline = ()=> JSON.stringify(glMakeOutline(square, .2).map((p)=> [p.x, p.y]));
+        var first = outline(); made = 0; var second = outline();`);
+    assert.equal(run('second'), run('first'));
+    assert.equal(run('made'), 0);
+    assert.deepEqual(JSON.parse(run('first')).slice(0, 2).map((p)=> p.map((n)=> Math.round(n * 1e9) / 1e9)),
+        [[-.1, -.1], [.1, .1]], 'inner, then outer');
+});
+
+test('a regular polygon draws the same points with no new vectors after its first', () =>
+{
+    const { run, context } = loadEngine();
+    run('setHeadlessMode(true)');
+    const draw = (sides=6)=>
+    {
+        const fake = fakeContext();
+        context.fake = fake.context;
+        run(`made = 0; drawRegularPoly(vec2(), vec2(2, 4), ${sides}, WHITE, 0, BLACK, 0, false, false, fake);`);
+        return fake.points;
+    };
+    run(`var made = 0; const make = vec2; vec2 = (...a)=> (++made, make(...a));`);
+    const first = draw(), second = draw();
+    assert.deepEqual(second, first);
+    assert.deepEqual(first.at(-1).map((n)=> Math.round(n * 1e9) / 1e9), [0, 2], 'the last side ends at the top');
+    const few = run('made');
+    draw(30); draw(30);
+    assert.equal(run('made'), few, 'no more for more sides');
+});

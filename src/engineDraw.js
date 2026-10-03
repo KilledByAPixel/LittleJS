@@ -872,13 +872,15 @@ function drawLineList(points, width=.1, color=WHITE, wrap=false, pos=vec2(), ang
     if (useWebGL && glEnable)
     {
         ASSERT(!!glContext, 'WebGL is not enabled!');
-        let size = vec2(1);
+        let sx = 1, sy = 1;
         if (screenSpace)
         {
             if (glSkipScreenSpace) return;
-            [pos, size, angle] = screenToWorldTransform(pos, size, angle);
+            let size;
+            [pos, size, angle] = screenToWorldTransform(pos, vec2(1), angle);
+            sx = size.x, sy = size.y;
         }
-        glDrawOutlineTransform(points, color.rgbaInt(), width, pos.x, pos.y, size.x, size.y, angle, wrap);
+        glDrawOutlineTransform(points, color.rgbaInt(), width, pos.x, pos.y, sx, sy, angle, wrap);
     }
     else
     {
@@ -944,16 +946,21 @@ function drawRegularPoly(pos, size=vec2(1), sides=3, color=WHITE, lineWidth=0, l
     ASSERT(isVector2(size), 'size must be a vec2');
     ASSERT(isNumber(sides), 'sides must be a number');
 
-    // build regular polygon points
-    const points = [];
+    // build regular polygon points, into vectors kept for the next, as drawPoly is done with them when it returns
+    const points = drawRegularPolyPoints, pool = drawRegularPolyPool;
+    points.length = 0;
     const sizeX = size.x/2, sizeY = size.y/2;
     for (let i=sides; i-- > 0;) // a count that is not whole, or below zero, still ends
     {
-        const a = (i/sides)*PI*2;
-        points.push(vec2(sin(a)*sizeX, cos(a)*sizeY));
+        const a = (i/sides)*PI*2, point = pool[points.length] ||= vec2();
+        point.x = sin(a)*sizeX, point.y = cos(a)*sizeY;
+        points.push(point);
     }
     drawPoly(points, color, lineWidth, lineColor, pos, angle, useWebGL, screenSpace, context);
 }
+
+// the points drawRegularPoly draws and the vectors it writes them into
+const drawRegularPolyPoints = [], drawRegularPolyPool = [];
 
 /** Draw colored polygon using passed in points
  *  - WebGL fills a polygon whose edges do not cross, concave or not; a self crossing one, like a star through its
@@ -982,15 +989,17 @@ function drawPoly(points, color=WHITE, lineWidth=0, lineColor=BLACK, pos=vec2(),
     if (useWebGL && glEnable)
     {
         ASSERT(!!glContext, 'WebGL is not enabled!');
-        let size = vec2(1);
+        let sx = 1, sy = 1;
         if (screenSpace)
         {
             if (glSkipScreenSpace) return;
-            [pos, size, angle] = screenToWorldTransform(pos, size, angle);
+            let size;
+            [pos, size, angle] = screenToWorldTransform(pos, vec2(1), angle);
+            sx = size.x, sy = size.y;
         }
-        glDrawPointsTransform(points, color.rgbaInt(), pos.x, pos.y, size.x, size.y, angle);
+        glDrawPointsTransform(points, color.rgbaInt(), pos.x, pos.y, sx, sy, angle);
         if (lineWidth > 0)
-            glDrawOutlineTransform(points, lineColor.rgbaInt(), lineWidth, pos.x, pos.y, size.x, size.y, angle);
+            glDrawOutlineTransform(points, lineColor.rgbaInt(), lineWidth, pos.x, pos.y, sx, sy, angle);
     }
     else
     {

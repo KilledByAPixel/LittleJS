@@ -961,6 +961,9 @@ function glClearRect(x, y, width, height)
 
 ///////////////////////////////////////////////////////////////////////////////
 
+// the strip glMakeOutline makes and the vectors it writes, kept for the next, as it is read into the batch first
+const glOutlineStrip = [], glOutlinePool = [];
+
 // WebGL internal function to convert polygon to outline triangle strip
 function glMakeOutline(points, width, wrap=true)
 {
@@ -968,7 +971,8 @@ function glMakeOutline(points, width, wrap=true)
         return [];
     
     const halfWidth = width / 2;
-    const strip = [];
+    const strip = glOutlineStrip, pool = glOutlinePool;
+    strip.length = 0;
     const n = points.length;
     const e = 1e-6;
     // miter ratio cap (dimensionless, matches SVG/Canvas2D convention)
@@ -1025,10 +1029,10 @@ function glMakeOutline(points, width, wrap=true)
         }
         
         // create inner and outer points along the normal
-        const inner = vec2(curr.x - nx * halfWidth, curr.y - ny * halfWidth);
-        const outer = vec2(curr.x + nx * halfWidth, curr.y + ny * halfWidth);
-        strip.push(inner);
-        strip.push(outer);
+        const inner = pool[strip.length] ||= vec2(), outer = pool[strip.length + 1] ||= vec2();
+        inner.x = curr.x - nx * halfWidth, inner.y = curr.y - ny * halfWidth;
+        outer.x = curr.x + nx * halfWidth, outer.y = curr.y + ny * halfWidth;
+        strip.push(inner, outer);
     }
     if (strip.length > 1 && wrap)
     {

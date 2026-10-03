@@ -200,9 +200,9 @@ class EngineObject
         ASSERT(this.angleDamping >= 0 && this.angleDamping <= 1, 'angleDamping must be 0 to 1, the fraction kept each frame');
         ASSERT(this.damping >= 0 && this.damping <= 1, 'damping must be 0 to 1, the fraction of velocity kept each frame');
 
-        // apply physics; only the solver needs where the object was, so only then is it copied
+        // apply physics; only collision needs where the object was, so only then is it copied
         const solve = enablePhysicsSolver && this.mass;
-        const oldPos = solve ? this.pos.copy() : undefined;
+        const oldPos = solve && (this.collideSolidObjects || this.collideLevel) ? this.pos.copy() : undefined;
         this.velocity.x *= this.damping;
         this.velocity.y *= this.damping;
         if (this.mass)
