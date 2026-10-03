@@ -1345,6 +1345,12 @@ declare module "littlejsengine" {
      *  @default
      *  @memberof Settings */
     export let soundEnable: boolean;
+    /** Play sound with an iPhone's silent switch on, as media does; off by default, so the switch mutes the game as it
+     *  does a ringtone, and the player's own music keeps playing beside it; Safari 16.4 and up, elsewhere it does nothing
+     *  @type {boolean}
+     *  @default
+     *  @memberof Settings */
+    export let soundIgnoreSilentSwitch: boolean;
     /** Volume scale to apply to all sound, music and speech
      *  Use setSoundVolume to also update the audio master gain immediately
      *  @type {number}
@@ -1614,6 +1620,10 @@ declare module "littlejsengine" {
      *  @param {boolean} enable
      *  @memberof Settings */
     export function setSoundEnable(enable: boolean): void;
+    /** Set if sound plays with an iPhone's silent switch on, as media does, which also pauses the player's own music
+     *  @param {boolean} ignore
+     *  @memberof Settings */
+    export function setSoundIgnoreSilentSwitch(ignore: boolean): void;
     /** Set volume scale to apply to all sound, music and speech
      *  @param {number} volume
      *  @memberof Settings */
@@ -1806,7 +1816,7 @@ declare module "littlejsengine" {
      *  @return {number}
      *  @memberof Math */
     export function smoothStep(percent: number): number;
-    /** Returns the nearest power of two not less than the value
+    /** Returns the nearest whole power of two not less than the value, 1 for a value of 1 or less
      *  @param {number} value
      *  @return {number}
      *  @memberof Math */
@@ -1899,6 +1909,7 @@ declare module "littlejsengine" {
     export function saveText(text: string, filename?: string, type?: string): void;
     /** Create an offscreen canvas to draw into, and return its 2D context
      *  - The canvas is context.canvas, which is what TextureInfo and the like take
+     *  - A browser with no OffscreenCanvas, Safari before 16.4, gets a canvas element that is not on the page
      *  @param {number} width - In pixels
      *  @param {number} [height] - In pixels, defaults to the width for a square
      *  @param {boolean} [willReadFrequently] - Keep it in software, faster when getImageData is called on it often
@@ -1933,11 +1944,12 @@ declare module "littlejsengine" {
     export function readSaveData<T extends {
         [x: string]: any;
     } = any>(saveName: string, defaultSaveData?: T): T;
-    /** Write save data to local storage
+    /** Write save data to local storage, an object as readSaveData gives it back
      *  @param {string} saveName - unique name for the game/save
      *  @param {object} saveData - object containing data to be saved
+     *  @return {boolean} - Whether it was written, false when storage is unavailable or full
      *  @memberof Utilities */
-    export function writeSaveData(saveName: string, saveData: object): void;
+    export function writeSaveData(saveName: string, saveData: object): boolean;
     /** 1D value noise — returns a smooth value in [0, 1] for any real x.
      *  Integer inputs land on deterministic lattice values; non-integer inputs
      *  are interpolated with smoothStep for C1 continuity.
@@ -2535,6 +2547,10 @@ declare module "littlejsengine" {
         padding: number;
         /** @property {TextureInfo} - The texture info for this tile */
         textureInfo: TextureInfo;
+        /** @property {Array<TileInfo>|undefined} - A tile set's tiles, each wherever it was packed, as loadTiles makes
+         *  them: a tile layer given this tile info draws its tile n from tiles[n] and not from a grid on one sheet
+         *  @type {Array<TileInfo>|undefined} */
+        tiles: Array<TileInfo> | undefined;
         /** @property {number} - Shrinks tile by this many pixels to prevent neighbors bleeding */
         bleed: number;
         /** @property {number} - How many frames per row for frame(), 0 to keep frames on a single row */
@@ -3660,13 +3676,13 @@ declare module "littlejsengine" {
      * @memberof Audio
      * @example
      * // load an audio asset file
-     * const sound_example = new Sound('sound.mp3');
+     * const music = new Sound('sound.mp3');
      *
      * // create a zzfx sound
-     * const sound_example = new Sound([.5,.5]);
+     * const blip = new Sound([.5,.5]);
      *
      * // play a sound
-     * sound_example.play();
+     * blip.play();
      */
     export class Sound {
         /** Create a sound object and cache the audio for later use
@@ -4284,7 +4300,8 @@ declare module "littlejsengine" {
      *  @param {number}   [renderOrder] - Render order of the top layer
      *  @param {number|string} [collisionLayer] - Layer to use for collision if any, by its index or its name
      *  @param {boolean}  [draw] - Should the layer be drawn automatically
-     *  @return {Array<TileCollisionLayer>}
+     *  @return {Array<TileCollisionLayer>} - It throws for a map that is not whole cells, or a layer whose tiles do not
+     *    fill it, before it makes any layer
      *  @memberof TileLayers */
     export function tileLayersLoad(tileMapData: any, tileInfo?: TileInfo, renderOrder?: number, collisionLayer?: number | string, draw?: boolean): Array<TileCollisionLayer>;
     /**
@@ -4605,7 +4622,7 @@ declare module "littlejsengine" {
      *     rgb(1,1,1,0), rgb(0,0,0,0), // colorEndA, colorEndB
      *     1, .2, .2, .1, .05,  // particleTime, sizeStart, sizeEnd, particleSpeed, particleAngleSpeed
      *     .99, 1, 1, PI, .05,  // damping, angleDamping, gravityScale, particleCone, fadeRate
-     *     .5, 1                // randomness, collide
+     *     .5, true             // randomness, collide
      * );
      */
     export class ParticleEmitter extends EngineObject {
@@ -7681,8 +7698,8 @@ declare module "littlejsengine" {
      *  const path = pf.findPath(player.pos, mousePos);
      *
      *  // Bare grid with custom walkability:
-     *  const pf = new PathFinder(vec2(50, 50));
-     *  pf.isWalkable = (x, y) => myGrid[y*50 + x] === 0;
+     *  const gridFinder = new PathFinder(vec2(50, 50));
+     *  gridFinder.isWalkable = (x, y) => myGrid[y*50 + x] === 0;
      */
     export class PathFinder {
         /** @param {TileCollisionLayer|Vector2} source - Either a TileCollisionLayer
@@ -8503,6 +8520,7 @@ declare module "littlejsengine" {
         viewProjection: Matrix4;
         /** @property {Matrix4} - This frame's light view projection for the shadow map */
         shadowMatrix: Matrix4;
+        gelAxes: number[];
         /** @property {Vector3} - Camera right axis this frame */
         cameraRight: Vector3;
         /** @property {Vector3} - Camera up axis this frame */
@@ -9885,6 +9903,13 @@ declare module "littlejsengine" {
         /** @property {number} - How fast the glow fades from its middle: 1 by default, .5 a wide haze, 2 a tight
          *  bright core */
         glowFalloff: number;
+        /** @property {TextureInfo|TileInfo|undefined} - A gel: a picture the light shines through, like a stained glass
+         *  window or the leaves of a tree, cast along its cone in its colors, upright as the light looks out, the whole
+         *  texture of a TileInfo; only the spotlight that casts the shadows has one, with render3D.shadows on and it
+         *  as render3D.shadowLight, and only on what takes its shadows: an object with receiveShadow off is lit
+         *  without the gel; its alpha is not read, see through panes are dark
+         *  @type {TextureInfo|TileInfo|undefined} */
+        gel: TextureInfo | TileInfo | undefined;
         /** @type {LensFlare3D|undefined} */
         flareObject: LensFlare3D | undefined;
         /** Give the light a lens flare, made with the arguments of LensFlare3D, in place of the one it had
@@ -10219,7 +10244,8 @@ declare module "littlejsengine" {
      *   with the sun's own color; shapes says what its ghosts are, glowSize and ghostSize how big its parts are; or
      *   give it elements of your own, which may be tiles of the game's
      * - visible is how much of the sun shows, 0 to 1, eased over fadeTime, there for a game to read; it is 0 while the
-     *   sun is too far off the screen for the flare to show, a third of the screen past its edge, where nothing is tested
+     *   sun is too far off the screen for the flare to show, about a seventh of the screen past its edge, where nothing
+     *   is tested
      * - What hides the sun is found with a ray from the camera, against the level and every object that is not see
      *   through, each on the triangles of its mesh, see render3D.pick; turn it off with occlusion
      * - It needs WebGL, and it draws nothing in the shadow of renderAfter2D
@@ -10262,7 +10288,7 @@ declare module "littlejsengine" {
         elements: Array<LensFlareElement> | undefined;
         /** @property {Light3D|undefined} - A light the flare is of in place of the sun, a lamp or a spotlight: the
          *  flare is at the light and in its color, smaller from farther than the light reaches, hidden by what is
-         *  in front of the light but its lamp, a mesh around it no wider than half its radius, and a spotlight's
+         *  in front of the light but its lamp, a mesh around it whose surface is near it, and a spotlight's
          *  shows from inside its beam only; a DirectionalLight3D's is far
          *  away where it shines from, like the sun's; the flare is destroyed when its light is; light.addFlare
          *  sets this
@@ -10566,11 +10592,24 @@ declare module "littlejsengine" {
         duration: number;
     }
     /** Parse a model from GLB bytes or glTF JSON, fetching the buffers and images it refers to
+     *  - A .gltf names its .bin and image files, which are fetched from baseUrl, or found among files: what a game
+     *    has in hand, like the files dropped on the page, by their paths in the drop; with files, baseUrl is the
+     *    .gltf's own folder among them ('' or 'models/house/'), its names are read from there, and a name found nowhere
+     *    there is taken by its file name alone only when one file of the drop has it; only an http, https or blob uri
+     *    is fetched then
+     *  - A file the model needs that is not found is named in the error, and an image that can not be read is named in
+     *    a warning and left out
      *  @param {ArrayBuffer|Object|string} data - GLB bytes, or the glTF JSON as bytes, text or an object
      *  @param {string} [baseUrl] - Where the .bin and image files are, with its trailing slash; loadGLTF passes the file's folder
+     *  @param {Map<string, Blob>} [files] - The files it refers to, by their paths, in place of fetching them
      *  @return {Promise<GLTFModel>}
+     *  @example
+     *  // the files of a drop, a .gltf with its .bin and textures, by their names
+     *  const files = new Map([...dataTransfer.files].map((file)=> [file.name, file]));
+     *  const gltf = [...files.values()].find((file)=> file.name.endsWith('.gltf'));
+     *  const model = await parseGLTF(await gltf.text(), '', files);
      *  @memberof GLTF */
-    export function parseGLTF(data: ArrayBuffer | any | string, baseUrl?: string): Promise<GLTFModel>;
+    export function parseGLTF(data: ArrayBuffer | any | string, baseUrl?: string, files?: Map<string, Blob>): Promise<GLTFModel>;
     /** Load a glTF or GLB model, the .bin and images of a .gltf from beside it
      *  - A texture only OPAQUE materials use loads with its alpha set to 1, so the 3D pass cuts no holes in it
      *  @param {string} url
@@ -10831,6 +10870,7 @@ declare module "littlejsengine" {
      * - Animation frames keep layout and wrap across rows as needed
      * - WebGL textures upload once per batch of loads
      * - loadAtlas imports pre-packed atlases (TexturePacker and Aseprite json)
+     * - loadTiles packs separate tile images, or several tile sheets, into one tile set for tile layers and maps
      * @namespace TextureSheets
      */
     /** Width and height in pixels of texture sheets created by loadSprite
@@ -10901,6 +10941,7 @@ declare module "littlejsengine" {
      *  - Pass frameSize for animations, then step through them with TileInfo.frame
      *  - Grid images keep their layout and frames wrap down to the next row
      *  - Pass sourcePadding if the source image has padding baked in around frames
+     *  - The same image loaded again with the same settings gives back what the first load did, packed once
      *  @param {string} src - Image source path
      *  @param {Vector2|number} [frameSize] - Size of each animation frame in pixels, or the whole image less its
      *  source padding if not passed
@@ -10912,6 +10953,28 @@ declare module "littlejsengine" {
      *  const runTile = loadSprite('run.png', vec2(16)); // a 16x16 frame animation
      *  @memberof TextureSheets */
     export function loadSprite(src: string, frameSize?: Vector2 | number, padding?: number, sourcePadding?: number | Vector2): TileInfo;
+    /** Load tile images and pack them into texture sheets as one tile set, for tile layers and maps
+     *  - Each image is cut into tiles of tileSize, left to right then down, so an image of one tile is one tile and a
+     *    sheet is all of its tiles; the tiles are numbered from 0 in the order the images are given
+     *  - Returns a tile set at once, a TileInfo whose tiles fill in as the images load; wait for them with spritesReady
+     *  - Give it to tileLayersLoad, a TileLayer or a TileCollisionLayer as its tile info: tile n draws tiles[n],
+     *    wherever it was packed, and the level editor's palette offers each of them; frame and index do not read the
+     *    list, use set.tiles[n] for one tile; make the layers after spritesReady, a layer made before draws nothing
+     *  - An image that is not a whole number of tiles gives the whole tiles in it; a sheet with gaps between its tiles
+     *    is not read, cut it into its tiles first
+     *  - An image that fails to load, or that no sheet can hold, adds no tiles and says so in the console, so the tiles
+     *    of the images after it move up
+     *  - The same images loaded again with the same settings give back what the first load did, packed once
+     *  @param {Array<string>} sources - Image source paths
+     *  @param {Vector2|number} [tileSize] - Size of a tile in pixels
+     *  @param {number} [padding] - How many pixels padding around each tile on the sheet
+     *  @return {TileInfo}
+     *  @example
+     *  const tiles = loadTiles(['grass.png', 'dirt.png', 'water.png', 'props.png'], 16);
+     *  await spritesReady();
+     *  tileLayersLoad(map, tiles); // tile 0 is grass, 1 dirt, 2 water, then the tiles of props.png
+     *  @memberof TextureSheets */
+    export function loadTiles(sources: Array<string>, tileSize?: Vector2 | number, padding?: number): TileInfo;
     /** Load a pre-packed texture atlas and repack it onto texture sheets
      *  - Supports TexturePacker json (hash and array) and Aseprite json
      *  - Returns an empty object which is filled with TileInfos when loaded
@@ -10919,6 +10982,7 @@ declare module "littlejsengine" {
      *  - Aseprite frame tags become animations, so do names like run_0, run_1
      *  - Trimmed frames are restored to their full source size when packed
      *  - Rotated frames are rotated back upright when packed
+     *  - The same atlas loaded again by its paths, with the same padding, gives back what the first load did, packed once
      *  @param {string} imageSrc - Atlas image path
      *  @param {string|Object} jsonSrc - Atlas json path, or already parsed json data
      *  @param {number} [padding] - How many pixels padding around each frame

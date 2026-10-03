@@ -35,7 +35,7 @@ const engineName = 'LittleJS';
  *  @type {string}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.24.1';
+const engineVersion = '1.24.2';
 
 /** Frames per second to update
  *  @type {number}
@@ -168,6 +168,7 @@ let timeFixedStart = 0, frameFixedStart = 0;
 let windowWidthLast = 0, windowHeightLast = 0, windowPixelRatioLast = 0;
 let engineUpdateInternal; // assigned by engineInit so engineStep can drive it
 let engineFrameScheduled = false; // a frame of the loop is asked for and has not run yet
+let engineFrameErrors = 0; // errors a release build's loop went on past
 
 // the pairs of objects asked about a collision this update, so the other's own physics does not ask again: each
 // asker's others, with true for a pair both said to resolve, and false for one left overlapping, ignored or only
@@ -453,7 +454,7 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
                     o.parent || o.updateTransforms();
 
                 // objects made and destroyed while paused, like a menu's effects, still leave the list
-                engineObjects = engineObjects.filter(o=>!o.destroyed);
+                engineObjects.some(o=>o.destroyed) && (engineObjects = engineObjects.filter(o=>!o.destroyed));
             }
             else
                 engineObjectsUpdate();
@@ -500,7 +501,7 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
             // render the game and objects
             enginePreRender();
             gameRender();
-            engineObjects.sort((a,b)=> a.renderOrder - b.renderOrder);
+            engineObjectsSort();
             for (const o of engineObjects)
             {
                 if (o.destroyed) continue;
@@ -603,7 +604,7 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
     }
 
     // the splash first, the images load under it, then the loading screen for the rest
-    showSplashScreen && await promises.at(-1);
+    showSplashScreen && await promises[promises.length - 1];
     return startEngine(promises);
 
     // gameInit runs once the images are in, and the game loop starts once it and everything loaded while it ran are
@@ -726,7 +727,16 @@ function engineScheduleFrame()
     const next = (frameTimeMS)=>
     {
         engineFrameScheduled = false;
-        engineManualStep || engineUpdateInternal(frameTimeMS);
+        if (engineManualStep) return;
+        if (debug) return engineUpdateInternal(frameTimeMS); // a debug build stops at an error, where it shows it
+        try { engineUpdateInternal(frameTimeMS); }
+        catch (error)
+        {
+            // a release build goes on past an error in a frame, a frozen game is the worst a player can get; only the
+            // first is logged, one every frame would flood the console
+            engineFrameErrors++ || console.error(error);
+            engineScheduleFrame();
+        }
     };
     if (typeof requestAnimationFrame === 'function')
         requestAnimationFrame(next);
@@ -772,14 +782,18 @@ function engineObjectsUpdate()
     ++engineObjectsUpdateCount;
     engineObjectsCollidePairs.clear();
     // objects update in render order, which rendering keeps them in, so a headless run or a frame that rendered
-    // nothing updates them the same way; the sort is stable, and nearly free on a list that is already sorted
-    engineObjects.sort((a,b)=> a.renderOrder - b.renderOrder);
+    // nothing updates them the same way
+    engineObjectsSort();
     // get list of solid objects for physics optimization, in update order, which 3D collision pairs by;
     // 2D checks the static ones last, so a contact with a moving object can not leave something back inside a static
     // solid it was already pushed out of
-    engineObjectsCollide = engineObjects.filter(o=>o.collideSolidObjects);
-    engineObjectsCollideStaticLast = engineObjectsCollide.filter(o=>o.mass)
-        .concat(engineObjectsCollide.filter(o=>!o.mass));
+    const fixed = [];
+    engineObjectsCollide = [];
+    engineObjectsCollideStaticLast = [];
+    for (const o of engineObjects)
+        o.collideSolidObjects && (engineObjectsCollide.push(o), (o.mass ? engineObjectsCollideStaticLast : fixed).push(o));
+    for (const o of fixed)
+        engineObjectsCollideStaticLast.push(o);
 
     // update physics before object update
     for (const o of engineObjects)
@@ -829,7 +843,16 @@ function engineObjectsUpdate()
         updateTopObject(o);
 
     // remove destroyed objects
-    engineObjects = engineObjects.filter(o=>!o.destroyed);
+    engineObjects.some(o=>o.destroyed) && (engineObjects = engineObjects.filter(o=>!o.destroyed));
+}
+
+// sort the objects by render order, keeping the order of equals, only when one is out of order, as they are kept
+// sorted and most frames change none
+function engineObjectsSort()
+{
+    for (let i = engineObjects.length; --i > 0;)
+        if (engineObjects[i].renderOrder < engineObjects[i-1].renderOrder)
+            return void engineObjects.sort((a,b)=> a.renderOrder - b.renderOrder);
 }
 
 /** Destroy and remove all objects
@@ -1199,7 +1222,10 @@ function debugShowErrors()
     {
         // replace entire page with error message
         document.body.style.cssText = 'background-color:#111;margin:8px';
-        document.body.innerHTML = `<pre style=color:#f00;font-size:28px;white-space:pre-wrap>` + message;
+        const pre = document.createElement('pre'); // the message as text, a file name in it never markup
+        pre.style.cssText = 'color:#f00;font-size:28px;white-space:pre-wrap';
+        pre.textContent = String(message);
+        document.body.replaceChildren(pre);
     }
     
     const originalAssert = console.assert;
@@ -2096,11 +2122,15 @@ function smoothStep(percent)
  *  @memberof Math */
 function isPowerOfTwo(value) { return value > 0 && value % 1 === 0 && 2**round(log2(value)) === value; } // any size, not only 32 bits
 
-/** Returns the nearest power of two not less than the value
+/** Returns the nearest whole power of two not less than the value, 1 for a value of 1 or less
  *  @param {number} value
  *  @return {number}
  *  @memberof Math */
-function nearestPowerOfTwo(value) { return 2**ceil(log2(value)); }
+function nearestPowerOfTwo(value)
+{
+    const power = 2**ceil(log2(max(value, 1)));
+    return power < value ? power * 2 : power; // log2 of a value just above a power can round down to it
+}
 
 /** Returns true if two axis aligned bounding boxes are overlapping
  *  this can be used for simple collision detection between objects
@@ -3310,6 +3340,7 @@ function saveText(text, filename='text', type='text/plain')
 
 /** Create an offscreen canvas to draw into, and return its 2D context
  *  - The canvas is context.canvas, which is what TextureInfo and the like take
+ *  - A browser with no OffscreenCanvas, Safari before 16.4, gets a canvas element that is not on the page
  *  @param {number} width - In pixels
  *  @param {number} [height] - In pixels, defaults to the width for a square
  *  @param {boolean} [willReadFrequently] - Keep it in software, faster when getImageData is called on it often
@@ -3318,8 +3349,15 @@ function saveText(text, filename='text', type='text/plain')
 function createCanvasContext(width, height=width, willReadFrequently=false)
 {
     ASSERT(isNumber(width) && isNumber(height), 'canvas width and height must be numbers', width, height);
-    return new OffscreenCanvas(width, height).getContext('2d', {willReadFrequently});
+    const canvas = typeof OffscreenCanvas != 'undefined' ? new OffscreenCanvas(width, height) :
+        Object.assign(document.createElement('canvas'), {width, height});
+    return /** @type {OffscreenCanvasRenderingContext2D} */ (canvas.getContext('2d', {willReadFrequently}));
 }
+
+// can a canvas be made to draw into: an OffscreenCanvas, or a canvas element where there is none, as in Safari before
+// 16.4; neither in a headless test
+function canvasAvailable()
+{ return typeof OffscreenCanvas != 'undefined' || typeof document != 'undefined' && !!document.createElement; }
 
 /** Save a canvas to disk
  *  @param {HTMLCanvasElement|OffscreenCanvas} canvas
@@ -3328,7 +3366,7 @@ function createCanvasContext(width, height=width, willReadFrequently=false)
  *  @memberof Utilities */
 function saveCanvas(canvas, filename='screenshot', type='image/png')
 {
-    if (canvas instanceof OffscreenCanvas)
+    if (typeof OffscreenCanvas != 'undefined' && canvas instanceof OffscreenCanvas)
     {
         // copy to temporary canvas and save
         const saveCanvas = document.createElement('canvas');
@@ -3338,7 +3376,7 @@ function saveCanvas(canvas, filename='screenshot', type='image/png')
         saveDataURL(saveCanvas.toDataURL(type), filename);
     }
     else
-        saveDataURL(canvas.toDataURL(type), filename);
+        saveDataURL(/** @type {HTMLCanvasElement} */ (canvas).toDataURL(type), filename);
 }
 
 /** Save a data url to disk
@@ -3406,16 +3444,19 @@ function readSaveData(saveName, defaultSaveData)
     return { .../** @type {object} */ (defaultSaveData), ...loadedData };
 }
 
-/** Write save data to local storage
+/** Write save data to local storage, an object as readSaveData gives it back
  *  @param {string} saveName - unique name for the game/save
  *  @param {object} saveData - object containing data to be saved
+ *  @return {boolean} - Whether it was written, false when storage is unavailable or full
  *  @memberof Utilities */
 function writeSaveData(saveName, saveData)
 {
     ASSERT(isStringLike(saveName), 'writeSaveData requires saveName string');
+    ASSERT(typeof saveData === 'object' && saveData !== null && !isArray(saveData),
+        'writeSaveData: save data must be an object, readSaveData reads it back into one');
     // tolerate localStorage being unavailable or quota exceeded
-    try { localStorage.setItem(saveName, JSON.stringify(saveData)); }
-    catch { LOG('writeSaveData: failed to write', saveName); }
+    try { localStorage.setItem(saveName, JSON.stringify(saveData)); return true; }
+    catch { LOG('writeSaveData: failed to write', saveName); return false; }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -3452,8 +3493,9 @@ function noise2D(x, y)
 {
     const ix = floor(x), iy = floor(y);
     const fx = smoothStep(x - ix), fy = smoothStep(y - iy);
-    // large prime decorrelates neighboring rows
-    const h = (a, b) => noiseHash(a + b * 374761393);
+    // large prime decorrelates neighboring rows; multiplied as 32 bit integers, which is what the hash keeps of it,
+    // so the row stays exact however far out y is, where a plain product would lose its low bits
+    const h = (a, b) => noiseHash(a + Math.imul(b, 374761393));
     return lerp(
         lerp(h(ix,     iy    ), h(ix + 1, iy    ), fx),
         lerp(h(ix,     iy + 1), h(ix + 1, iy + 1), fx),
@@ -3877,6 +3919,13 @@ let vibrateEnable = true;
  *  @memberof Settings */
 let soundEnable = true;
 
+/** Play sound with an iPhone's silent switch on, as media does; off by default, so the switch mutes the game as it
+ *  does a ringtone, and the player's own music keeps playing beside it; Safari 16.4 and up, elsewhere it does nothing
+ *  @type {boolean}
+ *  @default
+ *  @memberof Settings */
+let soundIgnoreSilentSwitch = false;
+
 /** Volume scale to apply to all sound, music and speech
  *  Use setSoundVolume to also update the audio master gain immediately
  *  @type {number}
@@ -4278,6 +4327,15 @@ function setVibrateEnable(enable) { vibrateEnable = enable; }
  *  @memberof Settings */
 function setSoundEnable(enable) { soundEnable = enable; }
 
+/** Set if sound plays with an iPhone's silent switch on, as media does, which also pauses the player's own music
+ *  @param {boolean} ignore
+ *  @memberof Settings */
+function setSoundIgnoreSilentSwitch(ignore)
+{
+    soundIgnoreSilentSwitch = ignore;
+    audioSetSession();
+}
+
 /** Set volume scale to apply to all sound, music and speech
  *  @param {number} volume
  *  @memberof Settings */
@@ -4521,9 +4579,9 @@ class EngineObject
         ASSERT(this.angleDamping >= 0 && this.angleDamping <= 1, 'angleDamping must be 0 to 1, the fraction kept each frame');
         ASSERT(this.damping >= 0 && this.damping <= 1, 'damping must be 0 to 1, the fraction of velocity kept each frame');
 
-        // apply physics; only the solver needs where the object was, so only then is it copied
+        // apply physics; only collision needs where the object was, so only then is it copied
         const solve = enablePhysicsSolver && this.mass;
-        const oldPos = solve ? this.pos.copy() : undefined;
+        const oldPos = solve && (this.collideSolidObjects || this.collideLevel) ? this.pos.copy() : undefined;
         this.velocity.x *= this.damping;
         this.velocity.y *= this.damping;
         if (this.mass)
@@ -5177,6 +5235,10 @@ class TileInfo
         this.padding = padding;
         /** @property {TextureInfo} - The texture info for this tile */
         this.textureInfo = textureInfo;
+        /** @property {Array<TileInfo>|undefined} - A tile set's tiles, each wherever it was packed, as loadTiles makes
+         *  them: a tile layer given this tile info draws its tile n from tiles[n] and not from a grid on one sheet
+         *  @type {Array<TileInfo>|undefined} */
+        this.tiles = undefined;
         /** @property {number} - Shrinks tile by this many pixels to prevent neighbors bleeding */
         this.bleed = bleed;
         /** @property {number} - How many frames per row for frame(), 0 to keep frames on a single row */
@@ -5863,13 +5925,15 @@ function drawLineList(points, width=.1, color=WHITE, wrap=false, pos=vec2(), ang
     if (useWebGL && glEnable)
     {
         ASSERT(!!glContext, 'WebGL is not enabled!');
-        let size = vec2(1);
+        let sx = 1, sy = 1;
         if (screenSpace)
         {
             if (glSkipScreenSpace) return;
-            [pos, size, angle] = screenToWorldTransform(pos, size, angle);
+            let size;
+            [pos, size, angle] = screenToWorldTransform(pos, vec2(1), angle);
+            sx = size.x, sy = size.y;
         }
-        glDrawOutlineTransform(points, color.rgbaInt(), width, pos.x, pos.y, size.x, size.y, angle, wrap);
+        glDrawOutlineTransform(points, color.rgbaInt(), width, pos.x, pos.y, sx, sy, angle, wrap);
     }
     else
     {
@@ -5935,16 +5999,21 @@ function drawRegularPoly(pos, size=vec2(1), sides=3, color=WHITE, lineWidth=0, l
     ASSERT(isVector2(size), 'size must be a vec2');
     ASSERT(isNumber(sides), 'sides must be a number');
 
-    // build regular polygon points
-    const points = [];
+    // build regular polygon points, into vectors kept for the next, as drawPoly is done with them when it returns
+    const points = drawRegularPolyPoints, pool = drawRegularPolyPool;
+    points.length = 0;
     const sizeX = size.x/2, sizeY = size.y/2;
     for (let i=sides; i-- > 0;) // a count that is not whole, or below zero, still ends
     {
-        const a = (i/sides)*PI*2;
-        points.push(vec2(sin(a)*sizeX, cos(a)*sizeY));
+        const a = (i/sides)*PI*2, point = pool[points.length] ||= vec2();
+        point.x = sin(a)*sizeX, point.y = cos(a)*sizeY;
+        points.push(point);
     }
     drawPoly(points, color, lineWidth, lineColor, pos, angle, useWebGL, screenSpace, context);
 }
+
+// the points drawRegularPoly draws and the vectors it writes them into
+const drawRegularPolyPoints = [], drawRegularPolyPool = [];
 
 /** Draw colored polygon using passed in points
  *  - WebGL fills a polygon whose edges do not cross, concave or not; a self crossing one, like a star through its
@@ -5973,15 +6042,17 @@ function drawPoly(points, color=WHITE, lineWidth=0, lineColor=BLACK, pos=vec2(),
     if (useWebGL && glEnable)
     {
         ASSERT(!!glContext, 'WebGL is not enabled!');
-        let size = vec2(1);
+        let sx = 1, sy = 1;
         if (screenSpace)
         {
             if (glSkipScreenSpace) return;
-            [pos, size, angle] = screenToWorldTransform(pos, size, angle);
+            let size;
+            [pos, size, angle] = screenToWorldTransform(pos, vec2(1), angle);
+            sx = size.x, sy = size.y;
         }
-        glDrawPointsTransform(points, color.rgbaInt(), pos.x, pos.y, size.x, size.y, angle);
+        glDrawPointsTransform(points, color.rgbaInt(), pos.x, pos.y, sx, sy, angle);
         if (lineWidth > 0)
-            glDrawOutlineTransform(points, lineColor.rgbaInt(), lineWidth, pos.x, pos.y, size.x, size.y, angle);
+            glDrawOutlineTransform(points, lineColor.rgbaInt(), lineWidth, pos.x, pos.y, sx, sy, angle);
     }
     else
     {
@@ -6626,7 +6697,7 @@ function tintImageData(data, color, additiveColor)
     if (additiveColor && !isBlack(additiveColor))
     {
         // multiply + additive (slower), color.a is baked into the alpha channel here
-        const colorMultiply = [color.r, color.g, color.b, color.a];
+        const colorMultiply = [clamp(color.r), clamp(color.g), clamp(color.b), clamp(color.a)];
         const colorAdd = [additiveColor.r * 255, additiveColor.g * 255,
                           additiveColor.b * 255, additiveColor.a * 255];
         for (let i = 0; i < data.length; ++i)
@@ -6637,9 +6708,9 @@ function tintImageData(data, color, additiveColor)
     // RGB only, faster — alpha left intact for the caller
     for (let i = 0; i < data.length; i+=4)
     {
-        data[i  ] *= color.r;
-        data[i+1] *= color.g;
-        data[i+2] *= color.b;
+        data[i  ] *= clamp(color.r);
+        data[i+1] *= clamp(color.g);
+        data[i+2] *= clamp(color.b);
     }
     return false;
 }
@@ -6891,7 +6962,7 @@ function engineGlowTexture(falloff=1)
     ASSERT(isNumber(falloff) && falloff > 0, 'glowFalloff must be a number above 0');
     const key = max(round(falloff * 10), 1) / 10;
     let texture = engineGlowTextures.get(key);
-    if (texture || !glContext || typeof OffscreenCanvas == 'undefined') return texture;
+    if (texture || !glContext || !canvasAvailable()) return texture;
     const size = 64, context = createCanvasContext(size), steps = 16;
     const gradient = context.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
     for (let i = 0; i <= steps; ++i)
@@ -7504,6 +7575,9 @@ function inputInit()
         if (soundEnable && !headlessMode && audioContext && !audioIsRunning())
             audioContext.resume();
 
+        // a press in the bars around a letterboxed canvas is not one on its edge; a drag out of it still moves
+        if (!inCanvas(e.x, e.y))
+            return;
         inputData[0][e.button] = 3;
 
         const mousePosScreenLast = mousePosScreen;
@@ -7657,8 +7731,8 @@ function inputInit()
                     }
                     else if (inputWasTouching && touch.identifier === inputTouchIdentifier)
                         mouseDeltaScreen = mouseDeltaScreen.add(mousePosScreen.subtract(mousePosScreenLast));
-                    else if (pressTouch)
-                        inputData[0][button] = 3;
+                    else if (pressTouch && inCanvas(pressTouch.clientX, pressTouch.clientY))
+                        inputData[0][button] = 3; // a tap in the bars around the canvas is not a press
                     // the finger left after a pinch moves the mouse from where it is, with no jump and no press
                     inputTouchIdentifier = pinching ? undefined : touch.identifier;
                 }
@@ -7687,6 +7761,13 @@ function inputInit()
             return true;
         }
 
+    }
+
+    // is a point of the window on the canvas
+    function inCanvas(x, y)
+    {
+        const rect = mainCanvas.getBoundingClientRect();
+        return x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom;
     }
 
     // convert a mouse or touch event position to screen space
@@ -7859,7 +7940,7 @@ function inputUpdate()
             const centered = gamepadAxisCentered[i] ?? (gamepadAxisCentered[i] = []);
             const readAxis = (j)=>
             {
-                const v = gamepad.axes[j];
+                const v = isFinite(gamepad.axes[j]) ? gamepad.axes[j] : 0; // a broken axis reads as centered
                 if (isStandard && j < 4)
                     return v; // spec guarantees axes 0-3 are the two sticks
                 if (!gamepadAxisFilterEnable)
@@ -7891,6 +7972,10 @@ function inputUpdate()
                 if (button.pressed && (!button.value || button.value > .9))
                     hadInput = true;
             }
+
+            // a different gamepad in the same slot with fewer buttons or sticks holds none of the last one's
+            data.length = buttonsLast.length = gamepad.buttons.length;
+            sticks.length = gamepad.axes.length >> 1;
             
             // set new primary gamepad if current is not connected
             if (hadInput)
@@ -8483,7 +8568,17 @@ function audioInit()
 {
     if (!soundEnable || headlessMode) return;
 
+    audioSetSession();
     document.addEventListener('visibilitychange', audioVisibilityChange);
+}
+
+// on an iPhone the silent switch mutes the page's sound, unless soundIgnoreSilentSwitch has it play as media,
+// Safari 16.4 and up; elsewhere there is no audioSession and nothing changes
+function audioSetSession()
+{
+    const session = typeof navigator != 'undefined' && /** @type {any} */ (navigator).audioSession;
+    if (session)
+        session.type = soundIgnoreSilentSwitch ? 'playback' : 'auto';
 }
 
 // a hidden page stops the game, so its sound stops too, and the audio clock with it so every sound picks up
@@ -8628,13 +8723,13 @@ function audioParamRamp(param, value, fadeTime=0)
  * @memberof Audio
  * @example
  * // load an audio asset file
- * const sound_example = new Sound('sound.mp3');
+ * const music = new Sound('sound.mp3');
  *
  * // create a zzfx sound
- * const sound_example = new Sound([.5,.5]);
+ * const blip = new Sound([.5,.5]);
  *
  * // play a sound
- * sound_example.play();
+ * blip.play();
  */
 class Sound
 {
@@ -9593,6 +9688,19 @@ function tileCollisionRaycast(posStart, posEnd, callbackObject, normal, solidOnl
 // Tiled's flip flags, horizontal, vertical and diagonal as bits 2, 1 and 0, as [direction, mirror]
 const tileLayersTiledFlips = [[0,0], [3,1], [2,1], [3,0], [0,1], [1,0], [2,0], [1,1]];
 
+// the tile info a layer's tile info gives a tile: a tile set's tile, a frame of a sheet read by its columns, or a
+// tile of its grid; undefined past the end of a tile set, or of a sheet read by its columns, as values kept only for
+// collision can be, which the level editor reads the same way
+function tileLayerTileInfo(t, tile)
+{
+    if (!t) return;
+    if (t.tiles) return t.tiles[tile];
+    if (!t.columns) return t.index(tile);
+    if (t.textureInfo && t.pos.y + (tile / t.columns | 0) * (t.size.y + t.padding*2) + t.size.y > t.textureInfo.size.y)
+        return;
+    return t.frame(tile);
+}
+
 /**
  * Load tile layers from exported data
  * - Tiled maps come in as they are, flipped and turned tiles included, from one tileset image (a second tileset's
@@ -9612,7 +9720,8 @@ const tileLayersTiledFlips = [[0,0], [3,1], [2,1], [3,0], [0,1], [1,0], [2,0], [
  *  @param {number}   [renderOrder] - Render order of the top layer
  *  @param {number|string} [collisionLayer] - Layer to use for collision if any, by its index or its name
  *  @param {boolean}  [draw] - Should the layer be drawn automatically
- *  @return {Array<TileCollisionLayer>}
+ *  @return {Array<TileCollisionLayer>} - It throws for a map that is not whole cells, or a layer whose tiles do not
+ *    fill it, before it makes any layer
  *  @memberof TileLayers */
 function tileLayersLoad(tileMapData, tileInfo=tileLayerDefaultTile(), renderOrder=0, collisionLayer, draw=true)
 {
@@ -9629,15 +9738,20 @@ function tileLayersLoad(tileMapData, tileInfo=tileLayerDefaultTile(), renderOrde
     // the editor, in debug builds, keeps the map as the source of its edits and brings back autosaved ones
     tileMapData = editorMapRestore(tileMapData);
 
-    // validate the tile map data
-    ASSERT(tileMapData.width && tileMapData.height);
-    ASSERT(tileMapData.layers && tileMapData.layers.length);
+    // validate the tile map data: a size that is not whole cells, or tiles that do not fill it, is said in any build,
+    // since the layers and their loops are made from that size
+    const {width: mapWidth, height: mapHeight} = tileMapData;
+    if (!(Number.isInteger(mapWidth) && Number.isInteger(mapHeight) && mapWidth > 0 && mapHeight > 0))
+        throw new Error(`tileLayersLoad: a map is a whole number of cells across and down, not ${mapWidth} by ${mapHeight}`);
+    if (!isArray(tileMapData.layers) || !tileMapData.layers.length)
+        throw new Error('tileLayersLoad: a map has a list of layers');
 
     // a sheet with a margin around its tiles or a spacing between them: the first tile is at the margin and each
     // cell is a tile and a spacing, which is a padding of half the spacing counted from there, by the tileset's
     // own count of columns, since the image's width does not say with a spacing that is not all around
+    // a tile set from loadTiles has each tile where it was packed, whatever the map says of its own image
     const tileset = tileMapData.tilesets?.[0];
-    if (tileInfo && tileset && (tileset.margin > 0 || tileset.spacing > 0))
+    if (tileInfo && !tileInfo.tiles && tileset && (tileset.margin > 0 || tileset.spacing > 0))
     {
         const margin = tileset.margin || 0, spacing = tileset.spacing || 0, size = tileInfo.size;
         const width = tileInfo.textureInfo?.size.x || 0;
@@ -9679,20 +9793,25 @@ function tileLayersLoad(tileMapData, tileInfo=tileLayerDefaultTile(), renderOrde
     {
         const name = collisionLayer;
         collisionLayer = layers.findIndex((l)=> l.color && l.dataLayer.name === name);
-        ASSERT(collisionLayer >= 0, 'no tile layer named ' + name);
+        collisionLayer < 0 && console.error('tileLayersLoad: no tile layer is named ' + name + ', none is solid');
     }
 
-    // create tile layers and fill with data
+    // create tile layers and fill with data, every layer's tiles checked first, so a bad one leaves none made
     const tileLayers = [];
     const levelSize = vec2(tileMapData.width, tileMapData.height);
     const layerCount = layers.length;
+    for (const [layerIndex, {dataLayer, color}] of layers.entries())
+    {
+        const tiles = dataLayer.data; // a list of gids, or a typed array of them
+        if (color && (!(isArray(tiles) || ArrayBuffer.isView(tiles)) || dataLayer.data.length !== levelSize.area()))
+            throw new Error(`tileLayersLoad: layer ${dataLayer.name ?? layerIndex} has ${dataLayer.data?.length} tiles for a map of ` +
+                `${levelSize.area()}; infinite maps and compressed layers are not read`);
+    }
     for (let layerIndex=layerCount; layerIndex--;)
     {
         const {dataLayer, color: layerColor, visible} = layers[layerIndex];
         if (!layerColor)
             continue;
-        ASSERT(dataLayer.data && dataLayer.data.length, 'tile layer has no data, infinite maps and compressed layers are not supported');
-        ASSERT(levelSize.area() === dataLayer.data.length);
 
         const layerRenderOrder = renderOrder - (layerCount - 1 - layerIndex);
         const tileLayer = new TileCollisionLayer(vec2(), levelSize, tileInfo, layerRenderOrder);
@@ -9701,8 +9820,8 @@ function tileLayersLoad(tileMapData, tileInfo=tileLayerDefaultTile(), renderOrde
         if (!visible)
             tileLayer.render = ()=> {}; // a hidden layer keeps its tiles and collision but is not drawn
 
-        for (let x=levelSize.x; x--;)
-        for (let y=levelSize.y; y--;)
+        for (let x=0; x<levelSize.x; ++x)
+        for (let y=0; y<levelSize.y; ++y)
         {
             const pos = vec2(x, levelSize.y-1-y);
             const data = dataLayer.data[x + y*levelSize.x];
@@ -9774,6 +9893,8 @@ function tileLayersFromLDtk(ldtk, level=0)
     const first = instances.find((l)=> tiled(l) && l.__tilesetDefUid != undefined) || instances.find(tiled) || instances[0];
     const grid = first?.__gridSize || 16;
     const width = first?.__cWid || ceil(data.pxWid / grid), height = first?.__cHei || ceil(data.pxHei / grid);
+    if (!(width > 0 && height > 0 && width * height <= 1 << 22))
+        throw new Error('tileLayersFromLDtk: level ' + data.identifier + ' is ' + width + ' by ' + height + ' cells');
     const map = {width, height, tilewidth: grid, tileheight: grid, orientation: 'orthogonal', renderorder: 'right-down',
         infinite: false, layers: [], nextlayerid: 1, nextobjectid: 1};
 
@@ -9791,7 +9912,7 @@ function tileLayersFromLDtk(ldtk, level=0)
         const instance = instances[i], name = instance.__identifier, id = map.nextlayerid++;
         if (!tiled(instance))
         {
-            const objects = (instance.entityInstances || []).map((entity)=>
+            const objects = (instance.entityInstances || []).filter((entity)=> isArray(entity.px)).map((entity)=>
             {
                 // an entity is placed by its pivot, an object here by its middle
                 const [pivotX=0, pivotY=0] = entity.__pivot || [], w = entity.width || 0, h = entity.height || 0;
@@ -9807,12 +9928,9 @@ function tileLayersFromLDtk(ldtk, level=0)
             map.layers.push({id, name, type: 'objectgroup', objects, opacity: 1, visible: true, x: 0, y: 0});
             continue;
         }
-        const tiles = [...(instance.autoLayerTiles || []), ...(instance.gridTiles || [])];
-        const ownTiles = !tiles.length || !tileset ||
-            instance.__tilesetDefUid === tileset.uid && tileset.tileGridSize === grid;
-        if (instance.__gridSize !== grid || instance.__cWid !== width || instance.__cHei !== height || !ownTiles)
+        if (instance.__gridSize !== grid || instance.__cWid !== width || instance.__cHei !== height)
         {
-            debug && console.warn(`tileLayersFromLDtk: layer ${name} has another grid or tileset, left out`);
+            console.warn(`tileLayersFromLDtk: layer ${name} has another grid, left out`);
             continue;
         }
         // an IntGrid layer's values, hidden, under its own name, for collision whatever its tiles do
@@ -9823,7 +9941,20 @@ function tileLayersFromLDtk(ldtk, level=0)
             const data = empty();
             (instance.intGridCsv || []).forEach((value, k)=> k < data.length && (data[k] = value));
             map.layers.push({id, name, type: 'tilelayer', width, height, data, opacity, visible: false, x: 0, y: 0});
-            if (!tiles.length) continue;
+        }
+        // its tiles, those with a place, from the first layer's tileset
+        const tiles = [...(instance.autoLayerTiles || []), ...(instance.gridTiles || [])].filter((t)=> isArray(t.px));
+        if (!tiles.length)
+        {
+            // a tile layer with none yet is an empty layer, to paint in the editor, and a level of one still loads
+            values || map.layers.push({id, name, type: 'tilelayer', width, height, data: empty(), opacity,
+                visible: instance.visible !== false, x: 0, y: 0});
+            continue;
+        }
+        if (tileset && (instance.__tilesetDefUid !== tileset.uid || tileset.tileGridSize !== grid))
+        {
+            console.warn(`tileLayersFromLDtk: the tiles of layer ${name} are on another tileset, left out`);
+            continue;
         }
 
         // a layer for each depth in a cell and each opacity, the first tiles drawn solid first
@@ -9961,7 +10092,15 @@ function objectLayersMake(tileMapData, object)
     const pos = vec2(object.x / tilewidth, height - object.y / tileheight);
     const {make} = type, result = make.prototype ? new make(pos) : make(pos);
     if (!result || typeof result !== 'object') return;
-    return Object.assign(result, objectLayersProperties(type, object));
+    for (const [key, value] of Object.entries(objectLayersProperties(type, object)))
+    {
+        // a property named as a method of the object, like update, would take the method's place, so it is left out
+        if (typeof result[key] === 'function' && typeof value !== 'function')
+            debug && console.warn(`objectLayersLoad: ${name} property ${key} has a method's name, left out`);
+        else
+            result[key] = value;
+    }
+    return result;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -10147,6 +10286,7 @@ class TileLayer extends CanvasLayer
             // set tile info
             this.tileInfo = tileInfo.frame(0);
             this.tileInfo.bleed = 0; // disable bleed for tile layers
+            this.tileInfo.tiles = tileInfo.tiles; // a tile set's list, filled in as its images load
         }
 
         // init tile data
@@ -10326,8 +10466,10 @@ class TileLayer extends CanvasLayer
         const d = this.getData(layerPos);
         if (!d || d.tile === undefined) return;
 
-        // a tileset packed by loadSprite keeps its own columns, counted from its first tile, not the sheet's grid
-        const t = this.tileInfo, tileInfo = t && (t.columns ? t.frame(d.tile) : t.index(d.tile));
+        // a tile set from loadTiles has each tile where it was packed, a tileset packed by loadSprite keeps its own
+        // columns, counted from its first tile, not the sheet's grid
+        const t = this.tileInfo, tileInfo = tileLayerTileInfo(t, d.tile);
+        if (t && !tileInfo) return; // past the end of the sheet or the tile set, or loading
         this.drawLayerTile(drawPos, cellPixels, tileInfo, d.color, d.direction*PI/2, d.mirror);
     }
 
@@ -10602,7 +10744,23 @@ class TileCollisionLayer extends TileLayer
             const tileData = this.getCollisionData(pos);
             return tileData && collisionTest(tileData, vec2(pos.x + offset.x, pos.y + offset.y));
         }
-        const hitPos = lineTest(posStart.subtract(offset), posEnd.subtract(offset), testFunction, normal);
+        // only the part of the line over the layer, and a cell around it, can meet a tile, so a ray toward a point
+        // far beyond is walked across the layer and no farther; the cell around keeps the step into the layer as it was
+        const a = posStart.subtract(offset), d = posEnd.subtract(posStart);
+        let t0 = 0, t1 = 1;
+        for (const [p, q, high] of [[a.x, d.x, this.size.x + 1], [a.y, d.y, this.size.y + 1]])
+        {
+            if (!q)
+            {
+                if (p < -1 || p > high) return;
+                continue;
+            }
+            const u = (-1 - p) / q, v = (high - p) / q;
+            t0 = max(t0, min(u, v)), t1 = min(t1, max(u, v));
+        }
+        if (t0 > t1) return;
+        const hitPos = lineTest(t0 ? a.add(d.scale(t0)) : a, t1 < 1 ? a.add(d.scale(t1)) : posEnd.subtract(offset),
+            testFunction, normal);
         if (hitPos)
             hitPos.x += offset.x, hitPos.y += offset.y;
         if (debugRaycast && hitPos)
@@ -10660,7 +10818,7 @@ class TileCollisionLayer extends TileLayer
  *     rgb(1,1,1,0), rgb(0,0,0,0), // colorEndA, colorEndB
  *     1, .2, .2, .1, .05,  // particleTime, sizeStart, sizeEnd, particleSpeed, particleAngleSpeed
  *     .99, 1, 1, PI, .05,  // damping, angleDamping, gravityScale, particleCone, fadeRate
- *     .5, 1                // randomness, collide
+ *     .5, true             // randomness, collide
  * );
  */
 class ParticleEmitter extends EngineObject
@@ -11844,9 +12002,9 @@ function glSetTextureData(texture, image, pixelated=tilesPixelated)
     {
         // WebGL ignores the unpack flag below for a bitmap and uploads it as it was made, so it is drawn onto a
         // canvas first, which reads either kind of bitmap right and uploads as the flag says
-        const canvas = new OffscreenCanvas(image.width, image.height);
-        canvas.getContext('2d').drawImage(image, 0, 0);
-        image = canvas;
+        const context = createCanvasContext(image.width, image.height);
+        context.drawImage(image, 0, 0);
+        image = context.canvas;
     }
     // smooth filtering mixes a texel with its see through neighbors, right only for premultiplied color, or the
     // edges go dark; pixel art is sampled a texel at a time, and uploads straight color as it always has
@@ -12229,6 +12387,9 @@ function glClearRect(x, y, width, height)
 
 ///////////////////////////////////////////////////////////////////////////////
 
+// the strip glMakeOutline makes and the vectors it writes, kept for the next, as it is read into the batch first
+const glOutlineStrip = [], glOutlinePool = [];
+
 // WebGL internal function to convert polygon to outline triangle strip
 function glMakeOutline(points, width, wrap=true)
 {
@@ -12236,7 +12397,8 @@ function glMakeOutline(points, width, wrap=true)
         return [];
     
     const halfWidth = width / 2;
-    const strip = [];
+    const strip = glOutlineStrip, pool = glOutlinePool;
+    strip.length = 0;
     const n = points.length;
     const e = 1e-6;
     // miter ratio cap (dimensionless, matches SVG/Canvas2D convention)
@@ -12293,10 +12455,10 @@ function glMakeOutline(points, width, wrap=true)
         }
         
         // create inner and outer points along the normal
-        const inner = vec2(curr.x - nx * halfWidth, curr.y - ny * halfWidth);
-        const outer = vec2(curr.x + nx * halfWidth, curr.y + ny * halfWidth);
-        strip.push(inner);
-        strip.push(outer);
+        const inner = pool[strip.length] ||= vec2(), outer = pool[strip.length + 1] ||= vec2();
+        inner.x = curr.x - nx * halfWidth, inner.y = curr.y - ny * halfWidth;
+        outer.x = curr.x + nx * halfWidth, outer.y = curr.y + ny * halfWidth;
+        strip.push(inner, outer);
     }
     if (strip.length > 1 && wrap)
     {
@@ -12667,7 +12829,6 @@ const medals = {};
 
 // Engine internal variables not exposed to documentation
 let medalsDisplayQueue = [], medalsSaveName, medalsDisplayTimeLast, medalsRenderAdded;
-let medalsLoadWaiting = false; // medalsInit came before any medal, each one made reads its own unlock
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -12692,9 +12853,7 @@ function medalsInit(saveName)
 // check which local medals are unlocked in the save, and write the catalog back
 function medalsLoad()
 {
-    // with no medals made yet, the save is left as it is for them, a game that calls medalsInit first keeps its unlocks;
-    // it keeps waiting from then on, so loading again (a dropped Newgrounds session) does not drop medals still to come
-    medalsLoadWaiting ||= !Object.keys(medals).length;
+    // the saved unlocks of medals not made yet stay for them, a medal made late or behind a flag keeps its unlock
     if (debugMedals || !medalsSaveName) return;
     const saved = readSaveData(medalsSaveName);
     ASSERT(Object.keys(saved).every(key=> isNumber(+key)),
@@ -12751,7 +12910,7 @@ function medalsForEach(callback)
 function medalsReset()
 {
     medalsForEach(medal=> medal.isLocal() && (medal.unlocked = false));
-    if (medalsLoadWaiting && medalsSaveName && !debugMedals)
+    if (medalsSaveName && !debugMedals)
     {
         // the saved unlocks of medals not made yet are cleared too, they are read when those medals are made
         const saved = readSaveData(medalsSaveName);
@@ -12767,11 +12926,10 @@ function medalsReset()
 function medalsSave()
 {
     if (debugMedals || !medalsSaveName) return;
-    // while medalsInit waits for medals made later, their saved entries are kept for them
+    // every saved entry stays: a medal not made this time keeps its unlock for when it is, since a player given a
+    // medal back is better than one who lost it, and what is not a medal is the game's own, under the same name
     const saved = readSaveData(medalsSaveName);
-    const data = medalsLoadWaiting ? {...saved} : {};
-    for (const key in saved) // what is not a medal is the game's own, saved under the same name, and stays
-        isNumber(+key) || (data[key] = saved[key]);
+    const data = {...saved};
     medalsForEach(medal=> {
         if (!medal.isLocal())
         {
@@ -12840,9 +12998,9 @@ class Medal
         if (src)
             (this.image = new Image).src = src;
 
-        // add this to list of medals, unlocked if the save says so when medalsInit came before any medal
+        // add this to list of medals, unlocked if the save says so when medalsInit came first
         medals[id] = this;
-        if (medalsLoadWaiting && !debugMedals && this.isLocal())
+        if (medalsSaveName && !debugMedals && this.isLocal())
             this.unlocked = !!readSaveData(medalsSaveName)[id]?.unlocked;
     }
 
@@ -13988,7 +14146,7 @@ class LightSystemPlugin
             }
 
             // where Canvas2D draws go during the shadow and emissive passes
-            lightSystem.shadowContext ||= new OffscreenCanvas(1, 1).getContext('2d');
+            lightSystem.shadowContext ||= createCanvasContext(1);
 
             // resolve texture size default at init time (mainCanvasSize may
             // not be set yet at the moment the constructor first ran), and
@@ -15721,6 +15879,8 @@ class UISystemPlugin
     showConfirmDialog(text='Are you sure?', yesCallback, noCallback, size=vec2(500,250), exitKey='Escape')
     {
         ASSERT(!uiSystem.confirmDialog, 'a confirm dialog is already open, check uiSystem.confirmDialog');
+        if (uiSystem.confirmDialog)
+            return uiSystem.confirmDialog; // in a release build, the one open, as a second would break navigation
 
         const savedNavigationDirection = uiSystem.navigationDirection;
         const savedNavigationObject = uiSystem.navigationObject;
@@ -16386,7 +16546,7 @@ class UITextInput extends UIObject
     onKeyDown(e)
     {
         // named keys by key, so numpad Enter works as Enter
-        const code = e.code, key = e.key;
+        const code = e.code, key = e.key || ''; // autofill sends a keydown with no key
         if (e.repeat && (key === 'Enter' || code === 'Space'))
             return; // a key held when editing began repeats, it should not type or stop editing
         this.text += ''; // a game may have set a number
@@ -16620,12 +16780,14 @@ class UISlider extends UIObject
     }
     update()
     {
+        // held when the frame began, so a release in the same frame as the last move still reads it
+        const wasActive = this.isActiveObject();
         super.update();
         if (!this.interactive)
             return;
 
         const oldValue = this.value;
-        if (this.isActiveObject())
+        if (wasActive || this.isActiveObject())
         {
             // handle horizontal or vertical slider
             const isHorizontal = this.size.x > this.size.y;
@@ -19904,6 +20066,7 @@ function getCrescentPoints(pos, size=1, percent=0, angle=0, invert=false, sides=
  * - Animation frames keep layout and wrap across rows as needed
  * - WebGL textures upload once per batch of loads
  * - loadAtlas imports pre-packed atlases (TexturePacker and Aseprite json)
+ * - loadTiles packs separate tile images, or several tile sheets, into one tile set for tile layers and maps
  * @namespace TextureSheets
  */
 
@@ -19927,6 +20090,10 @@ let textureSheets = [];
 // pending loads pack through a queue so sheets fill in call order
 let textureSheetQueue = Promise.resolve();
 let textureSheetPendingCount = 0;
+// what each load handed back by what it was given, so the same image loaded again is packed once
+const textureSheetLoaded = new Map;
+// a load's key: what it was given, a vector by its numbers
+const textureSheetLoadKey = (...parts)=> parts.map((p)=> isVector2(p) ? p.x + ',' + p.y : String(p)).join('|');
 
 /**
  * Texture Sheet - A texture that images are packed into as they load
@@ -20083,6 +20250,7 @@ class TextureSheet
  *  - Pass frameSize for animations, then step through them with TileInfo.frame
  *  - Grid images keep their layout and frames wrap down to the next row
  *  - Pass sourcePadding if the source image has padding baked in around frames
+ *  - The same image loaded again with the same settings gives back what the first load did, packed once
  *  @param {string} src - Image source path
  *  @param {Vector2|number} [frameSize] - Size of each animation frame in pixels, or the whole image less its
  *  source padding if not passed
@@ -20103,10 +20271,14 @@ function loadSprite(src, frameSize, padding=textureSheetPadding, sourcePadding=0
 
     if (isNumber(frameSize))
         frameSize = vec2(/** @type {number} */ (frameSize));
+    const key = textureSheetLoadKey('sprite', src, frameSize, padding, sourcePadding);
+    if (!headlessMode && textureSheetLoaded.has(key))
+        return textureSheetLoaded.get(key);
 
     // start with an empty tile that gets filled in when the image loads
     const tileInfo = new TileInfo(vec2(), vec2(), undefined, padding, 0);
     if (headlessMode) return tileInfo;
+    textureSheetLoaded.set(key, tileInfo);
 
     // point at a sheet right away so drawing before it loads picks up empty pixels
     tileInfo.textureInfo = (textureSheets[0] || textureSheetCreate()).textureInfo;
@@ -20149,6 +20321,70 @@ function loadSprite(src, frameSize, padding=textureSheetPadding, sourcePadding=0
     return tileInfo;
 }
 
+/** Load tile images and pack them into texture sheets as one tile set, for tile layers and maps
+ *  - Each image is cut into tiles of tileSize, left to right then down, so an image of one tile is one tile and a
+ *    sheet is all of its tiles; the tiles are numbered from 0 in the order the images are given
+ *  - Returns a tile set at once, a TileInfo whose tiles fill in as the images load; wait for them with spritesReady
+ *  - Give it to tileLayersLoad, a TileLayer or a TileCollisionLayer as its tile info: tile n draws tiles[n],
+ *    wherever it was packed, and the level editor's palette offers each of them; frame and index do not read the
+ *    list, use set.tiles[n] for one tile; make the layers after spritesReady, a layer made before draws nothing
+ *  - An image that is not a whole number of tiles gives the whole tiles in it; a sheet with gaps between its tiles
+ *    is not read, cut it into its tiles first
+ *  - An image that fails to load, or that no sheet can hold, adds no tiles and says so in the console, so the tiles
+ *    of the images after it move up
+ *  - The same images loaded again with the same settings give back what the first load did, packed once
+ *  @param {Array<string>} sources - Image source paths
+ *  @param {Vector2|number} [tileSize] - Size of a tile in pixels
+ *  @param {number} [padding] - How many pixels padding around each tile on the sheet
+ *  @return {TileInfo}
+ *  @example
+ *  const tiles = loadTiles(['grass.png', 'dirt.png', 'water.png', 'props.png'], 16);
+ *  await spritesReady();
+ *  tileLayersLoad(map, tiles); // tile 0 is grass, 1 dirt, 2 water, then the tiles of props.png
+ *  @memberof TextureSheets */
+function loadTiles(sources, tileSize=tileDefaultSize, padding=textureSheetPadding)
+{
+    ASSERT(isArray(sources) && sources.every((src)=> isStringLike(src)), 'sources must be a list of image paths');
+    ASSERT(isVector2(tileSize) || isNumber(tileSize), 'tileSize must be a vec2 or number');
+    ASSERT(isNumber(padding), 'padding must be a number');
+    ASSERT(engineInitialized || headlessMode, 'call loadTiles after engineInit, e.g. in gameInit');
+    const size = isNumber(tileSize) ? vec2(/** @type {number} */ (tileSize)) : /** @type {Vector2} */ (tileSize).copy();
+    const key = textureSheetLoadKey('tiles', sources.join('\n'), size, padding);
+    if (!headlessMode && textureSheetLoaded.has(key))
+        return textureSheetLoaded.get(key);
+    const set = new TileInfo(vec2(), size, undefined, 0, 0);
+    set.tiles = [];
+    if (headlessMode) return set;
+    textureSheetLoaded.set(key, set);
+    set.textureInfo = (textureSheets[0] || textureSheetCreate()).textureInfo;
+
+    // every image decodes at once, and packs through the queue in the order given, so the tiles keep that order
+    for (const src of sources)
+    {
+        const image = new Image;
+        const imagePromise = new Promise((resolve)=>
+        {
+            image.onerror = image.onload = resolve;
+            image.crossOrigin = 'anonymous';
+            image.src = src;
+        });
+        textureSheetQueueJob('loadTiles ' + src, async ()=>
+        {
+            await imagePromise;
+            // the whole tiles of it, an edge past the last one left out
+            const columns = image.width / size.x | 0, rows = image.height / size.y | 0, count = columns * rows;
+            const added = count && textureSheetAdd(vec2(columns * size.x, rows * size.y), size, padding, 0);
+            if (!added)
+                return console.warn('loadTiles: ' + src + (count ? ' does not fit on a texture sheet' :
+                    ' failed to load, or is smaller than a tile') + ', its tiles are left out');
+            added.sheet.drawImage(image, added.tile, false); // upload once per batch
+            for (let k = 0; k < count; ++k)
+                set.tiles.push(added.tile.frame(k));
+        });
+    }
+    return set;
+}
+
 /** Load a pre-packed texture atlas and repack it onto texture sheets
  *  - Supports TexturePacker json (hash and array) and Aseprite json
  *  - Returns an empty object which is filled with TileInfos when loaded
@@ -20156,6 +20392,7 @@ function loadSprite(src, frameSize, padding=textureSheetPadding, sourcePadding=0
  *  - Aseprite frame tags become animations, so do names like run_0, run_1
  *  - Trimmed frames are restored to their full source size when packed
  *  - Rotated frames are rotated back upright when packed
+ *  - The same atlas loaded again by its paths, with the same padding, gives back what the first load did, packed once
  *  @param {string} imageSrc - Atlas image path
  *  @param {string|Object} jsonSrc - Atlas json path, or already parsed json data
  *  @param {number} [padding] - How many pixels padding around each frame
@@ -20173,9 +20410,15 @@ function loadAtlas(imageSrc, jsonSrc, padding=textureSheetPadding)
     ASSERT(isNumber(padding), 'padding must be a number');
     ASSERT(engineInitialized || headlessMode, 'call loadAtlas after engineInit, e.g. in gameInit');
 
+    // json passed in as data may be another atlas each time, only one loaded by its path is kept
+    const key = typeof jsonSrc === 'object' ? undefined : textureSheetLoadKey('atlas', imageSrc, jsonSrc, padding);
+    if (!headlessMode && textureSheetLoaded.has(key))
+        return textureSheetLoaded.get(key);
+
     /** @type {Object<string, TileInfo>} */
     const atlas = {};
     if (headlessMode) return atlas;
+    key && textureSheetLoaded.set(key, atlas);
 
     // start fetching the json and decoding the image right away, in parallel
     const jsonPromise = typeof jsonSrc === 'object' ? Promise.resolve(jsonSrc) :
@@ -20296,12 +20539,14 @@ function parseAtlas(data)
         const tagged = new Set;
         for (const tag of tags)
         {
-            groups.push({name: tag.name, frames: frames.slice(tag.from, tag.to + 1)});
-            for (let i = tag.from; i <= tag.to; ++i)
+            // a tag reaches only frames there are, whatever its numbers say
+            const from = max(0, floor(tag.from) || 0), to = min(frames.length - 1, floor(tag.to) || 0);
+            groups.push({name: tag.name, frames: frames.slice(from, to + 1)});
+            for (let i = from; i <= to; ++i)
                 tagged.add(i);
         }
         frames.forEach((f, i)=> tagged.has(i) || groups.push({name: f.name, frames: [f]}));
-        return groups;
+        return parseAtlasNamesCheck(groups);
     }
 
     // group frames that share a name stem with contiguous trailing numbers
@@ -20330,6 +20575,17 @@ function parseAtlas(data)
         else
             list.forEach(f=> groups.push({name: f.name, frames: [f]}));
     }
+    return parseAtlasNamesCheck(groups);
+}
+
+// an atlas's groups, with a warning for each name two of them have, as a sprite is looked up by name and the second
+// takes the first's place
+function parseAtlasNamesCheck(groups)
+{
+    const names = new Set;
+    for (const {name} of groups)
+        names.has(name) ? console.warn(`parseAtlas: two sprites are named ${name}, the second takes the first's place`) :
+            names.add(name);
     return groups;
 }
 
@@ -20901,14 +21157,14 @@ function tweenProperty(target, propertyPath, start, end, duration = 1, options =
 function tweenCarryOvershoot(tween)
 {
     const duration = tween.duration;
-    tween.life = duration ? min(tween.life, 0) % duration + duration : 1e-9;
+    tween.life = duration > 0 ? min(tween.life, 0) % duration + duration : 1e-9;
 }
 
 // How many iterations the update that finished one ran through: that one and every whole one after it
 function tweenPassed(tween)
 {
     const duration = tween.duration;
-    return duration ? 1 + floor(-min(tween.life, 0) / duration) : 1;
+    return duration > 0 ? 1 + floor(-min(tween.life, 0) / duration) : 1; // no time, or less, is one each update
 }
 
 // start the next iteration of a loop or pingPong, the time the last one ran over already spent, true
@@ -21357,8 +21613,8 @@ class PathFinderNode
  *  const path = pf.findPath(player.pos, mousePos);
  *
  *  // Bare grid with custom walkability:
- *  const pf = new PathFinder(vec2(50, 50));
- *  pf.isWalkable = (x, y) => myGrid[y*50 + x] === 0;
+ *  const gridFinder = new PathFinder(vec2(50, 50));
+ *  gridFinder.isWalkable = (x, y) => myGrid[y*50 + x] === 0;
  */
 class PathFinder
 {
@@ -23026,15 +23282,16 @@ function collideOrientedBoxes3D(posA, sizeA, axesA, posB, sizeB, axesB)
  */
 function raycastSphere(ray, pos, radius)
 {
+    // in numbers, as a pick runs it for every object
     const {origin, direction} = ray;
-    const oc = origin.subtract(pos);
-    const c = oc.dot(oc) - radius*radius;
+    const x = origin.x - pos.x, y = origin.y - pos.y, z = origin.z - pos.z;
+    const c = x*x + y*y + z*z - radius*radius;
     if (c < 0)
         return 0; // origin is inside the sphere, even for a ray of no length, as raycastBox gives
     const a = direction.dot(direction);
     if (!a)
         return undefined;
-    const b = 2*oc.dot(direction);
+    const b = 2*(x*direction.x + y*direction.y + z*direction.z);
     const discriminant = b*b - 4*a*c;
     if (discriminant < 0)
         return undefined;
@@ -23744,6 +24001,7 @@ class Render3DPlugin
         this.viewProjection = new Matrix4;
         /** @property {Matrix4} - This frame's light view projection for the shadow map */
         this.shadowMatrix = new Matrix4;
+        this.gelAxes = [1, 0, 0, 1]; // the shadow light's right and up in its map's, for its gel
         /** @property {Vector3} - Camera right axis this frame */
         this.cameraRight = vec3(1, 0, 0);
         /** @property {Vector3} - Camera up axis this frame */
@@ -24347,8 +24605,14 @@ class Render3DPlugin
             // the near plane stays in front of the far one however small the light
             const far = caster.radius, near = min(max(far / 500, .02), far / 2);
             const fov = min(caster.coneAngle, RENDER3D_SHADOW_CONE_MAX) * 2 + .1;
-            this.shadowMatrix = Matrix4.perspective(fov, 1, near, far).multiply(
-                Matrix4.lookAt(pos, pos.add(forward), up).invert());
+            const view = Matrix4.lookAt(pos, pos.add(forward), up);
+            this.shadowMatrix = Matrix4.perspective(fov, 1, near, far).multiply(view.copy().invert());
+            // the map's own right and up are not the light's, which a gel is upright by: the four numbers that
+            // turn the one into the other
+            const v = view.m, l = render3DObjectMatrix(caster).m;
+            const right = vec3(l[0], l[1], l[2]).normalize(), lightUp = vec3(l[4], l[5], l[6]).normalize();
+            const mapRight = vec3(v[0], v[1], v[2]), mapUp = vec3(v[4], v[5], v[6]);
+            this.gelAxes = [right.dot(mapRight), right.dot(mapUp), lightUp.dot(mapRight), lightUp.dot(mapUp)];
             this.shadowPlanes = render3DFrustumPlanes(this.shadowMatrix);
             // depth is not even with perspective: the lookup divides this by the distance squared, which makes
             // the bias the same distance in the world near the light and far from it
@@ -24809,8 +25073,8 @@ function render3DFragmentSource(fragmentCode)
         'uniform vec4 extraLightCones[' + RENDER3D_MAX_LIGHTS + '];' +
         'uniform int extraLightCount;' +
         'uniform vec3 cameraPos;' +
-        'uniform vec4 materialParams,emissiveTint,skyTop,skyHorizon,skyBottom;' +
-        'uniform sampler2D tex,normalTex,emissiveTex;' +
+        'uniform vec4 materialParams,emissiveTint,skyTop,skyHorizon,skyBottom,gelAxes;' +
+        'uniform sampler2D tex,normalTex,emissiveTex,gelTex;' +
         'uniform bool premultipliedTexture;' + // is the texture a render target, which holds premultiplied color
         'uniform highp sampler2DShadow shadowMap;' +
         'in vec3 P,N;in vec2 T,L;in vec4 C,S;' +
@@ -24827,6 +25091,12 @@ function render3DFragmentSource(fragmentCode)
         'for(int x=-1;x<=1;++x)for(int y=-1;y<=1;++y)' +
         's+=texture(shadowMap,vec3(q.xy+vec2(x,y)*shadowParams.z,q.z));' +
         'return s/9.;}' +
+        // the gel the shadow light shines through, at this fragment's place in its view, upright as it looks out;
+        // white with no gel, so a light without one is exactly as before
+        'vec3 gel(){' +
+        'if(S.w<=0.)return vec3(1);' +
+        'vec2 g=S.xy/S.w,u=vec2(dot(gelAxes.xy,g),dot(gelAxes.zw,g))*.5+.5;' +
+        'return texture(gelTex,vec2(u.x,1.-u.y)).rgb;}' +
         // the normal map's normal here, in the frame that the position and texture coordinate change along across the
         // screen, so a mesh needs no tangents; green points up the image and v runs down it, so up is -v;
         // a mesh with no texture coordinates has no frame and keeps its own normal
@@ -24872,7 +25142,7 @@ function render3DFragmentSource(fragmentCode)
         'vec4 K=extraLightCones[i];' +
         'float k=clamp(dot(K.xyz,-v)-K.w,0.,1.);' +
         'lc*=k*k*(3.-2.*k);' +
-        'if(i==si)lc*=sh;' +
+        'if(i==si)lc*=sh*gel();' +
         'l+=lc*max(0.,ln);' +
         'if(lightColor.a>0.)sp+=lc*pow(max(dot(reflect(-v,n),eye),0.),materialParams.y)*step(0.,ln);' +
         '}' +
@@ -24920,6 +25190,8 @@ function render3DUseProgram(program)
     gl.uniform1i(render3DUniform('shadowMap'), 1);
     gl.uniform1i(render3DUniform('normalTex'), 2);
     gl.uniform1i(render3DUniform('emissiveTex'), 3);
+    gl.uniform1i(render3DUniform('gelTex'), 4);
+    gl.uniform4fv(render3DUniform('gelAxes'), r.gelAxes);
     const c = r.camera.pos;
     gl.uniform3f(render3DUniform('cameraPos'), c.x, c.y, c.z);
     gl.uniform1i(render3DUniform('extraLightCount'), r.lightCount);
@@ -25380,8 +25652,16 @@ function render3DRenderPass(after2D)
     // may have left its own texture, which fails every draw; the shadow map goes back there even with shadows off
     gl.activeTexture(gl.TEXTURE1);
     gl.bindTexture(gl.TEXTURE_2D, r.shadowTexture || null);
-    // the material maps' units start white, a 2D plugin may have left its own textures there
+    // the material maps' units start white, a 2D plugin may have left its own textures there, and the shadow
+    // light's gel goes on its unit for the pass, white when it has none
     render3DSetMapUnits(r.whiteTexture);
+    const gel = render3DTextureOf(render3DShadowCaster()?.gel)?.glTexture;
+    if (gel)
+    {
+        gl.activeTexture(gl.TEXTURE4);
+        gl.bindTexture(gl.TEXTURE_2D, gel);
+        gl.activeTexture(gl.TEXTURE0);
+    }
     gl.depthMask(true);
     gl.clear(gl.DEPTH_BUFFER_BIT);
 
@@ -25420,12 +25700,12 @@ function render3DRenderPass(after2D)
     }
 }
 
-// put a texture on both material map units with no sampler, white at the start of the pass and none at its end, and
-// forget what the map cache thought was bound; unit 0 is active after
+// put a texture on the material map units and the gel's with no sampler, white at the start of the pass and none at
+// its end, and forget what the map cache thought was bound; unit 0 is active after
 function render3DSetMapUnits(texture)
 {
     const gl = glContext;
-    for (const unit of [2, 3])
+    for (const unit of [2, 3, 4])
     {
         gl.activeTexture(gl.TEXTURE0 + unit);
         gl.bindTexture(gl.TEXTURE_2D, texture);
@@ -25789,17 +26069,63 @@ const render3DMeshBuffers = typeof FinalizationRegistry == 'undefined' ? undefin
         glContext.deleteBuffer(indexBuffer);
     });
 
-// the place a point is at, to a hundred thousandth, which smooth normals are summed by
-function render3DPlaceKey(p) { return `${round(p.x * 1e5)},${round(p.y * 1e5)},${round(p.z * 1e5)}`; }
-
-// add a face normal to the sum at a triangle's corner a, weighted by the angle there, so a cube corner averages its
-// three faces evenly however it is cut into triangles
-function render3DAddCornerNormal(sums, a, b, c, normal)
+// the points at one place, to a hundred thousandth, which smooth normals are summed by: each point's group, numbered
+// from 0, found by a number made from its place and checked against the place, so no text is made for a point
+function render3DPlaceGroups(points)
 {
-    const u = b.subtract(a), v = c.subtract(a);
-    const angle = Math.acos(clamp(u.dot(v) / (u.length() * v.length() || 1), -1, 1));
-    const k = render3DPlaceKey(a);
-    sums.set(k, (sums.get(k) || vec3()).add(normal.scale(angle)));
+    const groups = new Int32Array(points.length), first = new Map, next = [], places = [];
+    for (let i = 0; i < points.length; ++i)
+    {
+        const p = points[i], x = round(p.x * 1e5), y = round(p.y * 1e5), z = round(p.z * 1e5);
+        const hash = Math.imul(x, 73856093) ^ Math.imul(y, 19349663) ^ Math.imul(z, 83492791);
+        let group = first.get(hash);
+        while (group !== undefined && !(places[group*3] === x && places[group*3+1] === y && places[group*3+2] === z))
+            group = next[group];
+        if (group === undefined)
+        {
+            group = next.length;
+            next.push(first.get(hash));
+            first.set(hash, group);
+            places.push(x, y, z);
+        }
+        groups[i] = group;
+    }
+    return {groups, count: next.length};
+}
+
+// the face normals meeting at each place added up, each weighted by its corner angle so a cube corner averages its
+// three faces evenly however they are cut into triangles; of a strip, every other triangle turned back, with no
+// indices, or of the index list; in numbers, with no vector made for a triangle or a corner
+function render3DSmoothNormalSums(points, indices)
+{
+    const strip = !indices, triangles = strip ? max(points.length - 2, 0) : indices.length / 3 | 0;
+    const {groups, count} = render3DPlaceGroups(points);
+    const sums = new Float64Array(count * 3), touched = new Uint8Array(count);
+    let nx = 0, ny = 0, nz = 0;
+    const addCorner = (a, b, c, group)=>
+    {
+        // the angle at corner a, then the face normal scaled by it added to the sum at a's place
+        const ux = b.x - a.x, uy = b.y - a.y, uz = b.z - a.z, vx = c.x - a.x, vy = c.y - a.y, vz = c.z - a.z;
+        const dot = ux*vx + uy*vy + uz*vz, lengths = (ux**2 + uy**2 + uz**2)**.5 * (vx**2 + vy**2 + vz**2)**.5;
+        const angle = Math.acos(clamp(dot / (lengths || 1), -1, 1)), s = group * 3;
+        sums[s] += nx * angle, sums[s+1] += ny * angle, sums[s+2] += nz * angle;
+        touched[group] = 1;
+    };
+    for (let t = 0; t < triangles; ++t)
+    {
+        const i0 = strip ? t : indices[t*3], i1 = strip ? t + 1 : indices[t*3+1], i2 = strip ? t + 2 : indices[t*3+2];
+        const a = points[i0], b = points[i1], c = points[i2];
+        const ux = b.x - a.x, uy = b.y - a.y, uz = b.z - a.z, vx = c.x - a.x, vy = c.y - a.y, vz = c.z - a.z;
+        const cx = uy*vz - uz*vy, cy = uz*vx - ux*vz, cz = ux*vy - uy*vx;
+        const lengthSquared = cx**2 + cy**2 + cz**2;
+        if (!lengthSquared) continue; // no area, like a triangle joining two strips
+        const k = (strip && !(t & 1) ? -1 : 1) / lengthSquared**.5;
+        nx = cx * k, ny = cy * k, nz = cz * k;
+        addCorner(a, b, c, groups[i0]);
+        addCorner(b, c, a, groups[i1]);
+        addCorner(c, a, b, groups[i2]);
+    }
+    return {groups, sums, touched};
 }
 
 /**
@@ -26184,42 +26510,52 @@ class Mesh
             // the triangles are listed: smooth normals add up around each position, weighted by the corner angle
             // like the strip's, so vertices split apart at one place smooth back together and a mesh can go flat and
             // smooth again; flat ones need a vertex per corner, so the vertices are split up first
-            if (!smooth)
+            if (smooth)
             {
-                const split = (a)=> this.indices.map(i=> a[i]);
-                this.points = split(this.points), this.normals = split(this.normals);
-                this.uvs = split(this.uvs), this.colors = split(this.colors);
-                this.indices = this.indices.map((_, i)=> i);
+                const {groups, sums, touched} = render3DSmoothNormalSums(this.points, this.indices);
+                this.normals = this.points.map((p, i)=>
+                {
+                    const s = groups[i] * 3, x = sums[s], y = sums[s+1], z = sums[s+2];
+                    const lengthSquared = x**2 + y**2 + z**2, k = 1 / lengthSquared**.5;
+                    return touched[groups[i]] && lengthSquared ? vec3(x * k, y * k, z * k) : RENDER3D_DEFAULT_NORMAL;
+                });
+                this.dirty = true;
+                return this;
             }
-            const points = this.points, indices = this.indices, sums = new Map;
+            const split = (a)=> this.indices.map(i=> a[i]);
+            this.points = split(this.points), this.normals = split(this.normals);
+            this.uvs = split(this.uvs), this.colors = split(this.colors);
+            this.indices = this.indices.map((_, i)=> i);
+            const points = this.points, indices = this.indices;
             const normals = points.map(()=> RENDER3D_DEFAULT_NORMAL);
             for (let t = 0; t < indices.length; t += 3)
             {
                 const a = points[indices[t]], b = points[indices[t+1]], c = points[indices[t+2]];
                 const cross = b.subtract(a).cross(c.subtract(a));
-                if (!cross.lengthSquared()) continue;
-                const normal = cross.normalize();
-                if (!smooth)
-                {
-                    // its own three corners
-                    normals[indices[t]] = normals[indices[t+1]] = normals[indices[t+2]] = normal;
-                    continue;
-                }
-                for (let j = 0; j < 3; ++j)
-                    render3DAddCornerNormal(sums, points[indices[t+j]], points[indices[t+(j+1)%3]],
-                        points[indices[t+(j+2)%3]], normal);
+                if (cross.lengthSquared()) // its own three corners
+                    normals[indices[t]] = normals[indices[t+1]] = normals[indices[t+2]] = cross.normalize();
             }
-            this.normals = !smooth ? normals : points.map(p=>
+            this.normals = normals;
+            this.dirty = true;
+            return this;
+        }
+
+        // smooth normals are the sums at each place made unit length, or straight up for a place with none
+        const points = this.points, n = points.length;
+        if (smooth)
+        {
+            const {groups, sums, touched} = render3DSmoothNormalSums(points);
+            this.normals = points.map((p, i)=>
             {
-                const s = sums.get(render3DPlaceKey(p));
-                return s && s.lengthSquared() ? s.normalize() : RENDER3D_DEFAULT_NORMAL;
+                const s = groups[i] * 3, x = sums[s], y = sums[s+1], z = sums[s+2], l = (x**2 + y**2 + z**2)**.5;
+                return !touched[groups[i]] ? vec3(0, 1, 0) : l ? vec3(x * (1/l), y * (1/l), z * (1/l)) : vec3();
             });
+            this.vertexKeys = undefined;
             this.dirty = true;
             return this;
         }
 
         // the outward normal of each triangle in the strip
-        const points = this.points, n = points.length;
         const faceNormals = [];
         for (let i = 0; i + 2 < n; ++i)
         {
@@ -26230,22 +26566,10 @@ class Mesh
             faceNormals.push(normal.lengthSquared() ? normal.normalize(i & 1 ? 1 : -1) : undefined);
         }
 
-        // then hand those to the vertices, shared around a position or kept per face
+        // then hand those to the vertices: every triangle writes its own three corners, so the only vertices left
+        // with the default are the repeats at the ends of a strip, which no triangle with any area uses
         const normals = points.map(()=> RENDER3D_DEFAULT_NORMAL);
-        if (smooth)
-        {
-            // add up the face normals meeting at each position, each weighted by its corner angle so a cube
-            // corner averages its three faces evenly however the strips cut them, then normalize
-            const sums = new Map;
-            faceNormals.forEach((f, i)=> f && [0, 1, 2].forEach(j=>
-                render3DAddCornerNormal(sums, points[i+j], points[i+(j+1)%3], points[i+(j+2)%3], f)));
-            for (let i = 0; i < n; ++i)
-                normals[i] = (sums.get(render3DPlaceKey(points[i])) || RENDER3D_DEFAULT_NORMAL).normalize();
-        }
-        else
-            // every triangle writes its own three corners, so the only vertices left with the default
-            // are the repeats at the ends of a strip, which no triangle with any area uses
-            faceNormals.forEach((f, i)=> f && (normals[i] = normals[i+1] = normals[i+2] = f));
+        faceNormals.forEach((f, i)=> f && (normals[i] = normals[i+1] = normals[i+2] = f));
 
         this.normals = normals;
         this.vertexKeys = undefined; // flat normals tell entries at one place apart
@@ -27392,6 +27716,7 @@ function engineObjectsCollect3D(pos, size, objects=engineObjects, testCenters=fa
 
 // how far along a ray an object is hit, or undefined for a miss; a mesh is hit on its triangles, in its own space,
 // and a sprite as the quad it draws
+const render3DRaycastCenter = vec3();
 function render3DRaycastObject(ray, o)
 {
     if (o.destroyed || !(o instanceof EngineObject3D)) return;
@@ -27404,7 +27729,8 @@ function render3DRaycastObject(ray, o)
     // a mesh that changed since it was measured is measured again, an upload may not have come yet
     const radius = (mesh.dirty || !mesh.radius ? mesh.computeRadius() : mesh.radius) * render3DMaxStretch(matrix.m);
     if (!(radius > 0)) return; // nothing to hit
-    const center = matrix.getTranslation();
+    // its place read from the matrix into a vector kept for this, a pick tests every object and most miss
+    const m = matrix.m, center = render3DRaycastCenter.set(m[12], m[13], m[14]);
     const distance = raycastSphere(ray, center, radius);
     if (distance === undefined) return;
 
@@ -27873,6 +28199,13 @@ class Light3D extends EngineObject3D
         /** @property {number} - How fast the glow fades from its middle: 1 by default, .5 a wide haze, 2 a tight
          *  bright core */
         this.glowFalloff = 1;
+        /** @property {TextureInfo|TileInfo|undefined} - A gel: a picture the light shines through, like a stained glass
+         *  window or the leaves of a tree, cast along its cone in its colors, upright as the light looks out, the whole
+         *  texture of a TileInfo; only the spotlight that casts the shadows has one, with render3D.shadows on and it
+         *  as render3D.shadowLight, and only on what takes its shadows: an object with receiveShadow off is lit
+         *  without the gel; its alpha is not read, see through panes are dark
+         *  @type {TextureInfo|TileInfo|undefined} */
+        this.gel = undefined;
         this.additive = true; // the glow is added on, in the transparent stage; a light with none draws nothing
         /** @type {LensFlare3D|undefined} */
         this.flareObject = undefined;
@@ -27988,7 +28321,7 @@ function render3DDetach(o)
 let render3DSoftDotTexture;
 function render3DSoftDot()
 {
-    if (render3DSoftDotTexture || !glContext || typeof OffscreenCanvas == 'undefined') return render3DSoftDotTexture;
+    if (render3DSoftDotTexture || !glContext || !canvasAvailable()) return render3DSoftDotTexture;
     const size = 32, context = createCanvasContext(size);
     const gradient = context.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
     for (const [stop, alpha] of [[0, 1], [.33, .9], [.67, .7], [1, 0]]) // the same falloff as a soft disc
@@ -28010,7 +28343,7 @@ function normalMapFromHeight(size, heightFunction, strength=1)
 {
     ASSERT(isVector2(size) && size.x >= 1 && size.y >= 1, 'normalMapFromHeight size must be a Vector2 of pixels');
     const width = size.x | 0, height = size.y | 0;
-    if (typeof OffscreenCanvas == 'undefined')
+    if (!canvasAvailable())
     {
         // headless, nothing to draw into; the right size so what reads it still works
         const textureInfo = new TextureInfo(undefined, false, true);
@@ -29444,7 +29777,7 @@ function render3DFlareTile(shape)
 {
     if (!render3DFlareTiles)
     {
-        if (headlessMode || !glContext || typeof OffscreenCanvas == 'undefined') return;
+        if (headlessMode || !glContext || !canvasAvailable()) return;
         const cell = 128, shapes = render3DFlareShapes, context = createCanvasContext(cell * shapes.length, cell);
         // each shape is how see-through it is from its middle out
         const alpha =
@@ -29535,7 +29868,8 @@ function render3DFlareTile(shape)
  *   with the sun's own color; shapes says what its ghosts are, glowSize and ghostSize how big its parts are; or
  *   give it elements of your own, which may be tiles of the game's
  * - visible is how much of the sun shows, 0 to 1, eased over fadeTime, there for a game to read; it is 0 while the
- *   sun is too far off the screen for the flare to show, a third of the screen past its edge, where nothing is tested
+ *   sun is too far off the screen for the flare to show, about a seventh of the screen past its edge, where nothing
+ *   is tested
  * - What hides the sun is found with a ray from the camera, against the level and every object that is not see
  *   through, each on the triangles of its mesh, see render3D.pick; turn it off with occlusion
  * - It needs WebGL, and it draws nothing in the shadow of renderAfter2D
@@ -29582,7 +29916,7 @@ class LensFlare3D extends EngineObject3D
         this.elements = undefined;
         /** @property {Light3D|undefined} - A light the flare is of in place of the sun, a lamp or a spotlight: the
          *  flare is at the light and in its color, smaller from farther than the light reaches, hidden by what is
-         *  in front of the light but its lamp, a mesh around it no wider than half its radius, and a spotlight's
+         *  in front of the light but its lamp, a mesh around it whose surface is near it, and a spotlight's
          *  shows from inside its beam only; a DirectionalLight3D's is far
          *  away where it shines from, like the sun's; the flare is destroyed when its light is; light.addFlare
          *  sets this
@@ -29656,7 +29990,7 @@ class LensFlare3D extends EngineObject3D
         const source = this.flareSource(), center = mainCanvasSize.scale(.5);
         const sun = source && render3D.worldToScreen(source.pos);
         if (!sun || !center.x || !center.y) return;
-        // it fades as the sun leaves the screen, gone when it is a third of the screen past the edge
+        // it fades as the sun leaves the screen, gone .3 of half the screen past the edge
         const off = max(abs(sun.x - center.x) / center.x, abs(sun.y - center.y) / center.y);
         const strength = clamp((1.3 - off) / .5) * this.intensity;
         if (!(strength > 0)) return;
@@ -29722,21 +30056,30 @@ class LensFlare3D extends EngineObject3D
         for (const map of maps)
             if (map.raycast(ray, reach, (type)=> !map.blockType(type).seeThrough))
                 return true;
-        // a light's lamp, the mesh the light is inside, does not hide it: one whose box, in its own space, the light
-        // is in, and no wider than half the light's reach, since a room or a whole level has a box around its lights
-        // too, and its walls do hide them from outside
-        const lamp = (o)=>
+        // a light's lamp, a mesh around the light, does not hide it: one whose box, in its own space, the light is in,
+        // hit close to the light, as a shade or a globe is, and small, its thinnest side no more than twice that; a
+        // room or a whole level holds its lights too, and its walls do hide them from outside, even one close behind
+        const inside = (o)=>
         {
-            if (!this.light || reach === Infinity || !o.mesh || o instanceof HeightMap) return false;
+            if (!o.mesh || o instanceof HeightMap) return false;
             const matrix = render3DObjectMatrix(o), b = o.mesh.bounds || o.mesh.getBounds();
-            const side = max(b.max.x - b.min.x, b.max.y - b.min.y, b.max.z - b.min.z) * render3DMaxStretch(matrix.m);
-            if (!matrix.determinant() || side > this.light.radius / 2) return false;
+            const m = matrix.m, scale = (k)=> hypot(m[k], m[k + 1], m[k + 2]); // each axis's own stretch
+            const thinnest = min((b.max.x - b.min.x) * scale(0), (b.max.y - b.min.y) * scale(4), (b.max.z - b.min.z) * scale(8));
+            if (!matrix.determinant() || thinnest > near * 2) return false;
             const p = matrix.copy().invert().transformPoint(source.pos);
             return p.x >= b.min.x && p.x <= b.max.x && p.y >= b.min.y && p.y <= b.max.y &&
                 p.z >= b.min.z && p.z <= b.max.z;
         };
-        const hit = render3D.pick(ray, blockers.filter((o)=> !maps.some((map)=> map === o) && !lamp(o)));
-        return !!hit && hit.distance < reach;
+        const near = this.light && reach < Infinity ? min(2, this.light.radius * .4) : 0;
+        let candidates = blockers.filter((o)=> !maps.some((map)=> map === o));
+        for (let tries = 5; tries--;)
+        {
+            const hit = render3D.pick(ray, candidates);
+            if (!hit || hit.distance >= reach) return false;
+            if (!(reach - hit.distance <= near && inside(hit.object))) return true;
+            candidates = candidates.filter((o)=> o !== hit.object); // its lamp, look past it
+        }
+        return true; // lamps on lamps, take it as hidden
     }
 
     /** Ease visible toward whether the sun shows, called automatically each frame; a flare that would not show
@@ -29797,9 +30140,10 @@ function parseOBJ(text, smooth=render3D?.smoothShading)
     // OBJ indices count from 1, and a negative one counts back from the end of the list so far
     const index = (s, list)=> { const i = parseInt(s); return i < 0 ? list.length + i : i - 1; };
     const lookup = (s, list)=> list[index(s, list)];
-    for (const line of text.split('\n'))
+    // any line end, a line carried on by a backslash at its end, and a comment after what a line holds
+    for (const line of text.replace(/\\\r?\n/g, ' ').split(/\r\n?|\n/))
     {
-        const parts = line.trim().split(/\s+/);
+        const parts = line.replace(/#.*/, '').trim().split(/\s+/);
         switch (parts[0])
         {
             case 'v':  positions.push(vec3(+parts[1], +parts[2], +parts[3])); break;
@@ -29811,6 +30155,7 @@ function parseOBJ(text, smooth=render3D?.smoothShading)
                 if (corners.length < 3) break;
                 const facePoints = corners.map(c=> lookup(c[0], positions));
                 ASSERT(facePoints.every(isVector3), 'OBJ face uses a vertex index the file does not have', line);
+                if (!facePoints.every(isVector3)) break; // a release build leaves the face out
                 const hasNormals = corners.every(c=> c[2]);
                 missingNormals ||= !hasNormals;
                 const faceNormal = hasNormals ? undefined : render3DFaceNormal(facePoints[0], facePoints[1], facePoints[2], facePoints[3]);
@@ -30535,8 +30880,8 @@ class VoxelMap extends EngineObject3D
 
                 // a double sided block shows the face from inside too, its corners the other way round
                 if (block.doubleSided)
-                    mesh.addStrip([points[1], points[0], points[3], points[2]], normal.scale(-1),
-                        [uvs[1], uvs[0], uvs[3], uvs[2]], [colors[1], colors[0], colors[3], colors[2]]);
+                    mesh.addStrip([points[0], points[2], points[1], points[3]], normal.scale(-1),
+                        [uvs[0], uvs[2], uvs[1], uvs[3]], [colors[0], colors[2], colors[1], colors[3]]);
             }
         }
         this.chunkMeshes[index]?.dispose();
@@ -30997,18 +31342,21 @@ function level3DTerrainShape(terrain)
 {
     if (!terrain || typeof terrain !== 'object') return;
     const size = terrain.size, rows = terrain.heights, n = LEVEL3D_TERRAIN_SAMPLES;
-    if (!isArray(size) || size.length !== 2 || !size.every((v)=> isNumber(v) && v > 0)) return;
+    if (!isArray(size) || size.length !== 2 || !size.every((v)=> level3DFinite(v) && v > 0)) return;
     if (!isArray(rows) || rows.length < 2 || rows.length > n || !isArray(rows[0])) return;
     const columns = rows[0].length;
     if (columns < 2 || columns > n || !rows.every((row)=> isArray(row) && row.length === columns)) return;
-    const heights = rows.map((row)=> row.map((v)=> isNumber(v) ? clamp(v) : 0));
+    const heights = rows.map((row)=> row.map((v)=> level3DFinite(v) ? clamp(v) : 0));
     return {pos: level3DVector(terrain.pos, vec3()), size: vec2(size[0], size[1]),
-        height: isNumber(terrain.height) && terrain.height > 0 ? terrain.height : 1, heights};
+        height: level3DFinite(terrain.height) && terrain.height > 0 ? terrain.height : 1, heights};
 }
 
 // a hex color of a level as a Color, undefined when it is not one
 function level3DHexColor(hex)
-{ return /^#([0-9a-f]{6}|[0-9a-f]{8})$/i.test(hex) ? new Color().setHex(hex) : undefined; }
+{ return typeof hex === 'string' && /^#([0-9a-f]{6}|[0-9a-f]{8})$/i.test(hex) ? new Color().setHex(hex) : undefined; }
+
+// a number of a level that is a real one, not NaN or Infinity, which JSON writes as 1e999
+const level3DFinite = (v)=> typeof v === 'number' && isFinite(v);
 
 // the paint of a level's terrain block, for a terrain of so many samples: its colors as they are written and a
 // color for each sample, row after row, 0 for none and 1 the first of the colors; undefined when it has none or
@@ -31047,7 +31395,7 @@ function level3DTerrainSetColors(map, terrain, paint=level3DTerrainPaint(terrain
 let level3DVoxelPlain;
 function level3DVoxelPlainTiles()
 {
-    if (textureInfos[0]?.size.x || headlessMode || typeof OffscreenCanvas == 'undefined')
+    if (textureInfos[0]?.size.x || headlessMode || !canvasAvailable())
         return tile();
     if (!level3DVoxelPlain)
     {
@@ -31088,12 +31436,12 @@ function level3DSceneApply(scene)
 {
     const r = render3D;
     if (!r || !scene || typeof scene !== 'object') return;
-    const color = (value)=> /^#([0-9a-f]{6}|[0-9a-f]{8})$/i.test(value) ? new Color().setHex(value) : undefined;
+    const color = level3DHexColor;
     const sky = isArray(scene.sky) && scene.sky.length === 3 ? scene.sky.map(color) : [];
     if (sky.length && sky.every((c)=> c))
     {
         // as setSky does, without disposing a dome that is the game's own
-        const [top, horizon, bottom] = sky, ambient = isNumber(scene.ambient) ? scene.ambient : .5;
+        const [top, horizon, bottom] = sky, ambient = level3DFinite(scene.ambient) ? scene.ambient : .5;
         level3DSkies.has(r.sky) && r.sky.dispose();
         level3DSkies.add(r.sky = buildSky(top, horizon, bottom));
         r.fogColor = horizon.copy();
@@ -31105,7 +31453,7 @@ function level3DSceneApply(scene)
         r.sunDirection = sun;
     r.sunColor = color(scene.sunColor) || r.sunColor;
     const fog = scene.fog;
-    if (isArray(fog) && fog.length === 2 && fog.every((v)=> isNumber(v)))
+    if (isArray(fog) && fog.length === 2 && fog.every(level3DFinite))
         r.fogStart = fog[0], r.fogEnd = fog[1];
     r.fogColor = color(scene.fogColor) || r.fogColor;
     if (typeof scene.shadows === 'boolean')
@@ -31132,7 +31480,7 @@ const level3DSunHasFlare = ()=> engineObjects.some((o)=> o instanceof LensFlare3
 // a vec3 of an array of three numbers, as the file has them, or the fallback
 function level3DVector(value, fallback)
 {
-    return isArray(value) && value.length === 3 && value.every((v)=> isNumber(v)) ?
+    return isArray(value) && value.length === 3 && value.every(level3DFinite) ?
         vec3(value[0], value[1], value[2]) : fallback;
 }
 
@@ -31148,12 +31496,14 @@ function level3DProperties(type, object)
     {
         const d = type.defaults[key];
         if (isColor(d))
-            /^#([0-9a-f]{6}|[0-9a-f]{8})$/i.test(value) && (properties[key] = new Color().setHex(value));
+            level3DHexColor(value) && (properties[key] = level3DHexColor(value));
         else if (isVector3(d))
             properties[key] = level3DVector(value, properties[key]);
         else if (isVector2(d))
-            isArray(value) && value.length === 2 && value.every((v)=> isNumber(v)) &&
+            isArray(value) && value.length === 2 && value.every(level3DFinite) &&
                 (properties[key] = vec2(value[0], value[1]));
+        else if (typeof d === 'number')
+            level3DFinite(value) && (properties[key] = value);
         else if (d === undefined || typeof value === typeof d)
             properties[key] = value;
     }
@@ -31238,6 +31588,8 @@ const level3DPrefabs = new Map;
 // how many prefabs deep an instance being made is, a prefab that holds itself is stopped; and how many of those
 // are attached: a prefab inside an attached one is attached too, or its parts would be left behind in the world
 let level3DPrefabDepth = 0, level3DPrefabAttached = 0;
+// the prefabs being made, one inside the next, so one that holds itself is caught where it does, however many times
+const level3DPrefabMaking = [];
 
 /** Add a prefab: a small level, its objects placed about its own origin, to place many times under one name
  *  - It is a type from then on: a level's object of that type, the level editor's Place list and level3DSpawn make
@@ -31379,11 +31731,12 @@ class Prefab3D extends EngineObject3D
     {
         const prefab = level3DPrefabs.get(this.prefabName);
         if (!prefab) return;
-        if (level3DPrefabDepth >= 8)
+        if (level3DPrefabMaking.includes(this.prefabName) || level3DPrefabDepth >= 8)
         {
             debug && console.error(`level3DLoad: the prefab ${this.prefabName} holds itself, left out there`);
             return;
         }
+        level3DPrefabMaking.push(this.prefabName);
         ++level3DPrefabDepth;
         this.attached && ++level3DPrefabAttached;
         try
@@ -31427,6 +31780,7 @@ class Prefab3D extends EngineObject3D
         finally
         {
             --level3DPrefabDepth;
+            level3DPrefabMaking.pop();
             this.attached && --level3DPrefabAttached;
         }
     }
@@ -31650,7 +32004,7 @@ function particleEffectSanitize(raw)
 {
     // one line of text, line breaks and control characters made spaces
     const text = typeof raw?.name === 'string' ? raw.name.replace(/[\x00-\x1f\x7f]+/g, ' ').trim() : '';
-    const name = text ? text.slice(0, 60) : 'Effect';
+    const name = text ? text.slice(0, 60).trim() : 'Effect'; // no space left where it was cut
     const input = raw?.settings && typeof raw.settings === 'object' ? {...raw.settings} : {};
     input.collideLevel ??= input.collideTiles; // its name before 1.20
     // a library saved before shapes names its tile and no shape, it keeps its tile
@@ -31791,7 +32145,7 @@ function particleEffectShapeTile(name)
 {
     if (!particleEffectShapeTiles)
     {
-        if (headlessMode || !glContext || typeof OffscreenCanvas == 'undefined') return;
+        if (headlessMode || !glContext || !canvasAvailable()) return;
         // drawn at 4 times 32 pixel cells, so a big soft shape stays smooth when textures are pixelated
         const cell = 32, r = 15, count = particleEffectShapes.length, res = 4;
         const context = createCanvasContext(cell * count * res, cell * res);
@@ -32620,11 +32974,24 @@ async function loadGLTF(url)
 }
 
 /** Parse a model from GLB bytes or glTF JSON, fetching the buffers and images it refers to
+ *  - A .gltf names its .bin and image files, which are fetched from baseUrl, or found among files: what a game
+ *    has in hand, like the files dropped on the page, by their paths in the drop; with files, baseUrl is the
+ *    .gltf's own folder among them ('' or 'models/house/'), its names are read from there, and a name found nowhere
+ *    there is taken by its file name alone only when one file of the drop has it; only an http, https or blob uri
+ *    is fetched then
+ *  - A file the model needs that is not found is named in the error, and an image that can not be read is named in
+ *    a warning and left out
  *  @param {ArrayBuffer|Object|string} data - GLB bytes, or the glTF JSON as bytes, text or an object
  *  @param {string} [baseUrl] - Where the .bin and image files are, with its trailing slash; loadGLTF passes the file's folder
+ *  @param {Map<string, Blob>} [files] - The files it refers to, by their paths, in place of fetching them
  *  @return {Promise<GLTFModel>}
+ *  @example
+ *  // the files of a drop, a .gltf with its .bin and textures, by their names
+ *  const files = new Map([...dataTransfer.files].map((file)=> [file.name, file]));
+ *  const gltf = [...files.values()].find((file)=> file.name.endsWith('.gltf'));
+ *  const model = await parseGLTF(await gltf.text(), '', files);
  *  @memberof GLTF */
-async function parseGLTF(data, baseUrl='')
+async function parseGLTF(data, baseUrl='', files)
 {
     let json = data, glbBuffer;
     if (data instanceof ArrayBuffer)
@@ -32668,7 +33035,7 @@ async function parseGLTF(data, baseUrl='')
             ASSERT(glbBuffer && !i, 'a buffer without a uri is the GLB chunk, and only the first can be');
             return glbBuffer;
         }
-        return gltfFetch(buffer.uri, baseUrl).then(r=> r.arrayBuffer());
+        return gltfFetch(buffer.uri, baseUrl, files).then(r=> r.arrayBuffer());
     }));
 
     // the textures, decoded together first; none without WebGL, and a failed image only logs; the base color, normal
@@ -32687,7 +33054,7 @@ async function parseGLTF(data, baseUrl='')
             const image = json.images[source], sampler = json.samplers?.[texture.sampler] || {};
             let blob;
             if (image.uri)
-                blob = await gltfFetch(image.uri, baseUrl).then(r=> r.blob());
+                blob = await gltfFetch(image.uri, baseUrl, files).then(r=> r.blob());
             else
             {
                 const view = json.bufferViews[image.bufferView];
@@ -32704,14 +33071,18 @@ async function parseGLTF(data, baseUrl='')
             // REPEAT by default, and hard edged only when its sampler says NEAREST, not as the game's tiles are
             return new TextureInfo(bitmap, true, [sampler.wrapS ?? 10497, sampler.wrapT ?? 10497], sampler.magFilter === 9728);
         }
-        catch (e) { LOG('glTF image not loaded', e); }
+        catch (e) { console.warn('glTF image not loaded, left out: ' + (e?.message || e)); }
     }));
 
     // the parts: the scene's nodes walked with their transforms, every primitive of a node's mesh placed by it;
     // each node's parent and resting place are kept, so an animation can move a part from where it rests
-    const parts = [], parents = [], restInverse = [], restPose = [];
+    const parts = [], parents = [], restInverse = [], restPose = [], visited = new Set;
     const visit = (index, parentMatrix, parentIndex, parentRest)=>
     {
+        // nodes are trees, so one reached again is a cycle or a node with two parents, a file problem
+        if (visited.has(index))
+            throw new Error('glTF node ' + index + ' is reached twice, nodes must form trees');
+        visited.add(index);
         const node = json.nodes[index], local = gltfNodeMatrix(node);
         let matrix = parentMatrix ? parentMatrix.copy().multiply(local) : local;
         let rest = parentRest && parentRest.copy().multiply(local); // where it rests, when that is not where it is baked
@@ -32894,8 +33265,37 @@ function gltfSample(channel, time, out)
 }
 
 // fetch a uri beside the model, or decode a data uri without going out
-function gltfFetch(uri, baseUrl)
+function gltfFetch(uri, baseUrl, files)
 {
+    // among the files given, by its path from the model's folder, or by its name when only one file has it; a uri
+    // of the web is still fetched, and no other kind is
+    if (files && !/^(data|https?|blob):/i.test(uri))
+    {
+        let name = uri.replace(/[?#].*$/, '');
+        try { name = decodeURIComponent(name); } catch {}
+        // a path with its . and .. steps taken, the same for the keys, which may start with ./ or / or use \
+        const clean = (text)=>
+        {
+            const parts = [];
+            for (const part of text.replace(/\\/g, '/').split('/'))
+                if (part === '..' ? !parts.pop() : part && part !== '.' && !parts.push(part))
+                    return; // above the top of the files
+            return parts.join('/');
+        };
+        const path = clean(baseUrl + name);
+        if (path === undefined)
+            return Promise.reject(new Error('glTF needs ' + name + ', which is above the files given'));
+        const lower = path.toLowerCase(), file = path.slice(path.lastIndexOf('/') + 1);
+        const byPath = new Map([...files].map(([key, value])=> [clean(key)?.toLowerCase(), value]));
+        const found = files.get(path) ?? byPath.get(lower), keys = [...byPath.keys()];
+        if (found)
+            return Promise.resolve(new Response(found));
+        const named = new Set(keys.filter((k)=> k?.slice(k.lastIndexOf('/') + 1) === file).map((k)=> byPath.get(k)));
+        if (named.size === 1)
+            return Promise.resolve(new Response([...named][0]));
+        return Promise.reject(new Error('glTF needs ' + path + (named.size ? ', and more than one file has its name' :
+            ', which is not among the files given')));
+    }
     if (uri.startsWith('data:'))
     {
         const comma = uri.indexOf(','), bytes = atob(uri.slice(comma + 1)), data = new Uint8Array(bytes.length);
@@ -32910,7 +33310,7 @@ function gltfFetch(uri, baseUrl)
     const url = base ? new URL(uri, base).href : baseUrl + uri;
     return fetch(url).then(r=>
     {
-        if (!r.ok) throw new Error('glTF file not found: ' + url);
+        if (!r.ok) throw new Error('glTF needs ' + uri + ', not found at ' + url);
         return r;
     });
 }
@@ -32941,11 +33341,18 @@ function gltfAccessor(json, buffers, index)
     const size = Type.BYTES_PER_ELEMENT;
     const scales = /** @type {Array<[Object, number]>} */ ([[Int8Array, 127], [Uint8Array, 255], [Int16Array, 32767], [Uint16Array, 65535]]);
     const scale = a.normalized ? new Map(scales).get(Type) || 1 : 1;
+    // with a buffer under it the count is bounded by the buffer, without one it is all zeros and a sparse few,
+    // which no real model makes millions of
+    if (!view && !(a.count <= 1 << 20))
+        throw new Error('glTF accessor ' + index + ' has no buffer and a count of ' + a.count);
+    // its elements must lie in its buffer before so many floats are made for them
+    const viewEnd = view && (buffers[view.buffer]?.byteLength ?? 0), stride = view?.byteStride || components * size;
+    if (view && !((view.byteOffset || 0) + (a.byteOffset || 0) + (a.count - 1) * stride + components * size <= viewEnd))
+        throw new Error('glTF accessor ' + index + ' reaches past its buffer');
     const out = new Float32Array(a.count * components);
     if (view)
     {
         const buffer = buffers[view.buffer], offset = (view.byteOffset || 0) + (a.byteOffset || 0);
-        const stride = view.byteStride || components * size;
         if (stride === components * size)
             out.set(new Type(buffer, offset, a.count * components)); // packed, one view over all of it
         else
@@ -33044,7 +33451,7 @@ function gltfPart(json, buffers, textures, primitive, matrix, name)
 let gltfWhiteTextureInfo;
 function gltfWhiteTexture()
 {
-    if (gltfWhiteTextureInfo || !glContext || typeof OffscreenCanvas == 'undefined') return gltfWhiteTextureInfo;
+    if (gltfWhiteTextureInfo || !glContext || !canvasAvailable()) return gltfWhiteTextureInfo;
     const context = createCanvasContext(1);
     context.fillStyle = '#fff';
     context.fillRect(0, 0, 1, 1);
@@ -33617,7 +34024,7 @@ function tweakNumber(parent, axis, get, set, options, save)
     const change = (input)=>
     {
         const v = parseFloat(input.value);
-        if (!isNumber(v)) return; // a box part way through typing
+        if (!isFinite(v)) return; // a box part way through typing, or 1e999
         set(v);
         save();
     };
@@ -34210,7 +34617,7 @@ function editorSetOpen(open)
         // the layer edited last, when it is still there, or the collision layer
         const layers = editorLayers();
         layers.includes(editorLayer) || (editorLayer = layers.find((layer)=> layer.live?.isSolid) ??
-            layers.filter((layer)=> !layer.isObjects).at(-1));
+            layers.filter((layer)=> !layer.isObjects).pop());
         layers.includes(editorObjectLayer) || (editorObjectLayer = editorLayer ? undefined :
             layers.find((layer)=> layer.isObjects)); // a level of objects alone
         editorCall('onOpen');
@@ -34411,7 +34818,7 @@ function editorLayerRecord(live)
 function editorTilesets(live)
 {
     const tileInfo = live.tileInfo, image = tileInfo?.textureInfo?.image;
-    if (!image) return [];
+    if (!image || tileInfo.tiles) return []; // a tile set is packed from many images, none of them a Tiled tileset
     const {x: tilewidth, y: tileheight} = tileInfo.size, padding = tileInfo.padding;
     const columns = tileInfo.columns || floor(image.width / (tilewidth + padding*2));
     const rows = floor(image.height / (tileheight + padding*2));
@@ -34427,7 +34834,17 @@ function editorJSONFetched(url, json)
 { json && typeof json === 'object' && editorFetchedURLs.set(json, String(url)); }
 
 // a map as Tiled JSON, everything it was loaded with kept, the tile data as the editor left it
-function editorMapJSON(record) { return JSON.stringify(record.map); }
+function editorMapJSON(record)
+{
+    // an object layer the editor made for a first object, every object of which was taken back, is left out
+    const map = record.map, made = map.layers.find((layer)=> editorMadeGroups.has(layer) && !layer.objects.length);
+    if (!made) return JSON.stringify(map);
+    return JSON.stringify({...map, layers: map.layers.filter((layer)=> layer !== made),
+        ...(map.nextlayerid === made.id + 1 && {nextlayerid: made.id})});
+}
+
+// the object layers the editor made in a map, for a map that had none
+const editorMadeGroups = new WeakSet;
 
 // the files picked to save maps to, kept across reloads in IndexedDB by page and map, which is where a browser
 // lets a page keep them; each resolves to undefined when the store can not be used
@@ -34639,7 +35056,7 @@ function editorAutosave(record)
     const saves = editorSaves(), map = record.map, data = editorTileLayerData(map.layers);
     const objects = editorObjectGroups(map.layers).map((group)=> group.objects ?? []);
     const original = record.originalObjects ?? [], kept = objects.slice();
-    while (kept.length > original.length && !kept.at(-1).length)
+    while (kept.length > original.length && !kept[kept.length - 1].length)
         kept.pop(); // an Objects layer the editor made, empty again, is not an edit
     const size = record.originalSize, sameSize = map.width === size.width && map.height === size.height;
     // the map as it was loaded has nothing to keep; one a Save wrote is kept until a reload shows the file has it
@@ -34980,13 +35397,15 @@ function editorObjectLayers(record)
     return record.objectLayers;
 }
 
-// a new Tiled object layer named Objects, on top of a map
+// a new Tiled object layer named Objects, on top of a map, with an id past every layer's, in groups too
 function editorNewObjectGroup(map)
 {
-    const id = map.nextlayerid ?? map.layers.length + 1, group = {draworder: 'topdown', id, name: 'Objects',
+    const ids = (layers)=> (layers || []).flatMap((layer)=> [(layer.id | 0) + 1, ...ids(layer.layers)]);
+    const id = max(map.nextlayerid ?? 1, ...ids(map.layers)), group = {draworder: 'topdown', id, name: 'Objects',
         objects: [], opacity: 1, type: 'objectgroup', visible: true, x: 0, y: 0};
     map.nextlayerid = id + 1;
     map.layers.push(group);
+    editorMadeGroups.add(group);
     return group;
 }
 
@@ -35010,12 +35429,13 @@ function editorObjectPos(record, object)
     return vec2(object.x / tilewidth, height - object.y / tileheight);
 }
 
-// set an object's position in the map from a world position
+// set an object's position in the map from a world position, to a millionth of a pixel, so a place turned into
+// cells and back is written as it was and not a hair off
 function editorObjectSetPos(record, object, pos)
 {
     const {height=0, tilewidth=1, tileheight=1} = record.map;
-    object.x = pos.x * tilewidth;
-    object.y = (height - pos.y) * tileheight;
+    object.x = round(pos.x * tilewidth * 1e6) / 1e6;
+    object.y = round((height - pos.y) * tileheight * 1e6) / 1e6;
 }
 
 // called by objectLayersLoad for each object it read, the editor keeps what the game made by the object's id
@@ -35063,8 +35483,8 @@ function editorSetObjects(layer, list)
             if ('pos' in made && (old.x !== object.x || old.y !== object.y))
                 made.pos = editorObjectPos(record, object);
             const was = objectLayersProperties(type, old), now = objectLayersProperties(type, object);
-            for (const name in now)
-                editorSameData(was[name], now[name]) || (made[name] = now[name]);
+            for (const name in now) // a method's name is left out, as objectLayersMake leaves it
+                editorSameData(was[name], now[name]) || typeof made[name] === 'function' || (made[name] = now[name]);
         }
     }
 }
@@ -35078,7 +35498,7 @@ function editorChangeObjects(layer, change)
     change(after);
     if (editorSameData(before, after)) return false;
     editorSetObjects(layer, after);
-    const last = editorStroke?.at(-1);
+    const last = editorStroke?.[editorStroke.length - 1];
     if (last?.objectLayer === layer)
         last.after = after;
     else
@@ -35092,15 +35512,21 @@ function editorObjectSetProperty(object, name, value, defaultValue)
 {
     if (Number.isInteger(defaultValue) && isNumber(value))
         value = round(value); // an integer stays one, as Tiled keeps an int
-    const properties = (object.properties ?? []).filter((property)=> property.name !== name);
+    const list = object.properties ?? [], at = list.findIndex((property)=> property.name === name), old = list[at];
+    const properties = list.filter((property)=> property.name !== name);
     const text = (v)=> isColor(v) ? v.toString() : isVector2(v) ? v.x + ',' + v.y : JSON.stringify(v);
     if (text(value) !== text(defaultValue))
     {
         const hex = isColor(value) && value.toString();
-        properties.push(hex ? {name, type: 'color', value: '#' + hex.slice(7, 9) + hex.slice(1, 7)} :
+        const property = hex ? {name, type: 'color', value: '#' + hex.slice(7, 9) + hex.slice(1, 7)} :
             isVector2(value) ? {name, type: 'string', value: text(value)} :
             {name, type: typeof value === 'boolean' ? 'bool' : typeof value === 'string' ? 'string' :
-            Number.isInteger(defaultValue) ? 'int' : 'float', value});
+            Number.isInteger(defaultValue) ? 'int' : 'float', value};
+
+        // one the map had keeps its place and its kind where the value fits it, a file stays a file, an object an object
+        if (old?.type === 'file' && property.type === 'string' || old?.type === 'object' && property.type === 'int')
+            property.type = old.type;
+        at < 0 ? properties.push(property) : properties.splice(at, 0, property);
     }
     if (properties.length)
         object.properties = properties;
@@ -35186,14 +35612,15 @@ function editorObjectsIn(layer, a, b)
 function editorPickObject(object)
 { editorObjectBrush = [{type: object.type || object.class, properties: editorObjectsCopy(object.properties ?? []), offset: vec2()}]; }
 
-// a new Tiled point object for a brush's object, at a world position, with the map's next id
-function editorNewObject(record, {type, properties}, pos)
+// a new Tiled object for a brush's object, at a world position, with the map's next id: a copy of the object it was
+// copied from, its name, size, turn and the rest kept, or a point object of the brush's type and properties
+function editorNewObject(record, {type, properties, object}, pos)
 {
-    const object = {id: editorNextObjectId(record.map), name: '', type, point: true, rotation: 0, visible: true,
-        width: 0, height: 0, x: 0, y: 0};
-    properties.length && (object.properties = editorObjectsCopy(properties));
-    editorObjectSetPos(record, object, pos);
-    return object;
+    const made = object ? editorObjectsCopy(object) : {id: 0, name: '', type, point: true, rotation: 0, visible: true,
+        width: 0, height: 0, x: 0, y: 0, ...(properties.length && {properties: editorObjectsCopy(properties)})};
+    made.id = editorNextObjectId(record.map);
+    editorObjectSetPos(record, made, pos);
+    return made;
 }
 
 // place an object brush's objects at a position plus each one's offset, as one undo
@@ -35224,8 +35651,8 @@ function editorDeleteObjects()
     return true;
 }
 
-// the selected objects into the brush, their offsets from the lowest corner of their positions, and the selection
-// cleared so the next click places them
+// the selected objects into the brush, each a copy with its offset from the lowest corner of their positions, and
+// the selection cleared so the next click places them
 function editorCopyObjects()
 {
     const objects = editorSelectedObjects();
@@ -35233,7 +35660,7 @@ function editorCopyObjects()
     const positions = objects.map((object)=> editorObjectPos(editorObjectLayer.record, object));
     const low = vec2(min(...positions.map((p)=> p.x)), min(...positions.map((p)=> p.y)));
     editorObjectBrush = editorObjectClipboard = objects.map((object, i)=> ({type: object.type || object.class,
-        properties: editorObjectsCopy(object.properties ?? []), offset: positions[i].subtract(low)}));
+        offset: positions[i].subtract(low), object: editorObjectsCopy(object)}));
     editorObjectSelection.clear();
     return true;
 }
@@ -35369,12 +35796,8 @@ function editorCellClamped(live, worldPos)
 function editorArea(a, b)
 { return {min: vec2(min(a.x, b.x), min(a.y, b.y)), max: vec2(max(a.x, b.x), max(a.y, b.y))}; }
 
-// the tile info a layer draws a tile with, as TileLayer.drawTileData picks it
-function editorTileInfo(live, tile)
-{
-    const t = live.tileInfo;
-    return t && (t.columns ? t.frame(tile) : t.index(tile));
-}
+// the tile info a layer draws a tile with, as TileLayer.drawTileData picks it, undefined past the end of its sheet
+function editorTileInfo(live, tile) { return tileLayerTileInfo(live.tileInfo, tile); }
 
 ///////////////////////////////////////////////////////////////////////////////
 // stamps
@@ -35605,8 +36028,8 @@ function editorClear()
     editorStrokeEnd();
 }
 
-// the objects of a map's object layers inside a tile area, each {group, type, properties, offset}: the index of its
-// object layer, and its offset from the area's bottom left corner, as a stamp keeps them
+// the objects of a map's object layers inside a tile area, each {group, type, offset, object}: the index of its
+// object layer, its offset from the area's bottom left corner, and a copy of it, as a stamp keeps them
 function editorAreaObjects(layer, area)
 {
     const corner = layer.live.pos.add(area.min), far = layer.live.pos.add(area.max).add(vec2(1));
@@ -35614,8 +36037,8 @@ function editorAreaObjects(layer, area)
     {
         const ids = new Set(editorObjectsIn(objectLayer, corner, far));
         return (objectLayer.group?.objects ?? []).filter((object)=> ids.has(object.id)).map((object)=>
-            ({group, type: object.type || object.class, properties: editorObjectsCopy(object.properties ?? []),
-            offset: editorObjectPos(layer.record, object).subtract(corner)}));
+            ({group, type: object.type || object.class, offset: editorObjectPos(layer.record, object).subtract(corner),
+            object: editorObjectsCopy(object)}));
     });
 }
 
@@ -35703,12 +36126,13 @@ function editorSelectionDragTo(cell)
             from.arrayCheck(target.live.size) && editorPaint(target, from, 0);
         }
         editorPaintStamp(layer, editorSelection.min, stamp);
+        // whole cells added to the places as written, as an object drag does, so they come back to the digit
+        const {tilewidth=1, tileheight=1} = layer.record.map;
         for (const {objectLayer, ids} of drag.objects)
             editorChangeObjects(objectLayer, (list)=>
             {
                 for (const object of list)
-                    ids.has(object.id) && editorObjectSetPos(layer.record, object,
-                        editorObjectPos(layer.record, object).add(delta));
+                    ids.has(object.id) && (object.x += delta.x * tilewidth, object.y -= delta.y * tileheight);
             });
     });
     editorStroke && editorRedraw(editorStroke);
@@ -35938,8 +36362,18 @@ function editorPaletteTiles(layer)
     const live = layer?.live, image = live?.tileInfo?.textureInfo?.image, list = levelEditor.paletteTiles;
     if (list && live)
     {
-        if (layer.palette?.list !== list)
-            layer.palette = {list, tiles: list.map((tile)=> ({tile, tileInfo: editorTileInfo(live, tile)}))};
+        if (layer.palette?.list !== list || layer.palette.count !== live.tileInfo?.tiles?.length)
+            layer.palette = {list, count: live.tileInfo?.tiles?.length, // a tile set fills in as it loads
+                tiles: list.map((tile)=> ({tile, tileInfo: editorTileInfo(live, tile)}))
+                .filter((t)=> t.tileInfo || !live.tileInfo)}; // a tile set, or a sheet, has only so many
+        return layer.palette.tiles;
+    }
+    // a tile set lists its tiles, each a tile the palette offers
+    const set = live?.tileInfo?.tiles;
+    if (set)
+    {
+        if (layer.palette?.set !== set || layer.palette.tiles.length !== set.length)
+            layer.palette = {set, tiles: set.map((tileInfo, tile)=> ({tile, tileInfo}))};
         return layer.palette.tiles;
     }
     if (!image) return [];
@@ -35967,7 +36401,7 @@ function editorPaletteTiles(layer)
                 size.y).data.buffer);
             return pixels.every((p)=> p === pixels[0]);
         };
-        while (tiles.length > 1 && blank(tiles.at(-1)))
+        while (tiles.length > 1 && blank(tiles[tiles.length - 1]))
             tiles.pop();
     }
     catch {}
@@ -36009,7 +36443,7 @@ function editorPaletteDrawObjects(canvas)
 function editorPaletteDraw(canvas, layer)
 {
     const tiles = editorPaletteTiles(layer), cell = editorPaletteCell, columns = editorPaletteColumns;
-    const image = layer?.live.tileInfo?.textureInfo?.image, slots = tiles.length + 1;
+    const slots = tiles.length + 1;
     canvas.style.display = tiles.length ? '' : 'none';
     canvas.width = columns * cell;
     canvas.height = ceil(slots / columns) * cell;
@@ -36024,10 +36458,13 @@ function editorPaletteDraw(canvas, layer)
     context.moveTo(8, 8), context.lineTo(cell - 8, cell - 8);
     context.moveTo(cell - 8, 8), context.lineTo(8, cell - 8);
     context.stroke();
-    tiles.forEach(({tileInfo: {pos, size}}, i)=>
+    tiles.forEach(({tileInfo}, i)=>
     {
-        const slot = i + 1, x = slot % columns * cell, y = (slot / columns | 0) * cell;
-        context.drawImage(image, pos.x, pos.y, size.x, size.y, x + 2, y + 2, cell - 4, cell - 4);
+        if (!tileInfo) return; // headless, a layer with no sheet
+        const {pos, size, textureInfo} = tileInfo;
+        // each from its own sheet, a tile set's may be on several
+        const slot = i + 1, x = slot % columns * cell, y = (slot / columns | 0) * cell, image = textureInfo?.image;
+        image && context.drawImage(image, pos.x, pos.y, size.x, size.y, x + 2, y + 2, cell - 4, cell - 4);
     });
 
     // the brush's slot outlined, when it is one tile the palette shows or Erase
@@ -36320,7 +36757,7 @@ function editorPropertiesUpdate(box)
             input.type = 'number';
             input.step = Number.isInteger(defaultValue) ? '1' : 'any';
             input.value = String(value);
-            input.onchange = ()=> { const v = parseFloat(input.value); isNumber(v) && set(v); };
+            input.onchange = ()=> { const v = parseFloat(input.value); isFinite(v) && set(v); }; // 1e999 is not one
         }
         else if (typeof defaultValue === 'string')
         {
@@ -36342,7 +36779,7 @@ function editorPropertiesUpdate(box)
                 {
                     // both checked before a vector is made of them, an emptied or half typed field shows its value again
                     const px = parseFloat(input.value), py = parseFloat(y.value);
-                    if (isNumber(px) && isNumber(py))
+                    if (isFinite(px) && isFinite(py))
                         set(vec2(px, py));
                     else
                         input.value = String(value.x), y.value = String(value.y);
@@ -36615,8 +37052,9 @@ function editorRender()
     for (let y = y0; y < y1; ++y)
     {
         const t = editorGidToTile(source.data[x + (height - 1 - y) * width]);
-        if (t && live.getData(vec2(x, y)).tile === undefined)
-            drawTile(live.pos.add(vec2(x + .5, y + .5)), vec2(1), editorTileInfo(live, t.tile), ghost,
+        const tileInfo = t && editorTileInfo(live, t.tile);
+        if (tileInfo && live.getData(vec2(x, y)).tile === undefined)
+            drawTile(live.pos.add(vec2(x + .5, y + .5)), vec2(1), tileInfo, ghost,
                 t.direction * PI/2, t.mirror, undefined, glEnable, false);
     }
 
@@ -36655,8 +37093,9 @@ function editorRender()
         {
             const gid = grid[x + y * w], t = editorGidToTile(gid);
             const center = live.pos.add(editorHover).add(vec2(x + .5, y + .5));
-            if (t)
-                drawTile(center, vec2(1), editorTileInfo(live, t.tile), hsl(0, 0, 1, .7), t.direction * PI/2, t.mirror, undefined, glEnable, false);
+            const tileInfo = t && editorTileInfo(live, t.tile);
+            if (tileInfo)
+                drawTile(center, vec2(1), tileInfo, hsl(0, 0, 1, .7), t.direction * PI/2, t.mirror, undefined, glEnable, false);
             else if (gid === 0)
                 drawRect(center, vec2(1), hsl(0, 1, .5, .3), undefined, undefined, false);
         }
@@ -37355,17 +37794,27 @@ function editor3DSetPart(name, part)
 function editor3DPrefabsShow()
 {
     if (editor3DPrefabLevels.has(editor3DLevel)) return; // inside a prefab, the prefabs are the level's
-    const prefabs = editor3DLevelPart('prefabs') ?? {};
+    const prefabs = editor3DLevelPart('prefabs') ?? {}, removed = new Set;
     for (const [name, prefab] of level3DPrefabs)
     {
         if (!prefab.fromLevel || prefabs[name]) continue;
         level3DPrefabs.delete(name);
         level3DTypes.delete(name);
+        removed.add(name);
     }
     level3DPrefabsAdd(prefabs);
-    // every object of a prefab's type, one whose type was not there when the objects were set too
+    // every object of a prefab's type, one whose type was not there when the objects were set too; an instance of a
+    // prefab taken out leaves the game, its object waiting in the level for the prefab to come back
     for (const object of editor3DObjects())
-        level3DPrefabs.has(object.type) && editor3DMakeInstance(object);
+    {
+        if (level3DPrefabs.has(object.type))
+            editor3DMakeInstance(object);
+        else if (removed.has(object.type))
+        {
+            editor3DInstances.get(object.id)?.destroy?.();
+            editor3DInstances.delete(object.id);
+        }
+    }
     editor3DShadowLight();
 }
 
@@ -37606,7 +38055,9 @@ function editor3DTerrainStore()
 {
     const map = editor3DTerrainMap(), terrain = editor3DLevelPart('terrain');
     if (!map || !terrain) return;
-    terrain.heights = map.heights.map((row)=> row.map((v)=> round(v * 1e3) / 1e3));
+    // the heights changed to a thousandth, the rest as the level has them, so a stroke of paint rounds none
+    const before = terrain.heights;
+    terrain.heights = map.heights.map((row, z)=> row.map((v, x)=> v === before?.[z]?.[x] ? v : round(v * 1e3) / 1e3));
     const paint = editor3DTerrainPaints.get(map);
     if (!paint) return; // nothing painted since the level's was read
     const used = paint.colors.map((hex, i)=> paint.cells.includes(i + 1));
@@ -38482,10 +38933,12 @@ function editor3DJSON(value)
 // a level as the file has it: its version, what else it holds, and its objects, one to a line
 function editor3DLevelJSON(level=editor3DLevel)
 {
+    // the level's parts after the rest, in one order, so the same level is the same file however its parts were made
     const {littlejs3D, objects, ...rest} = level;
     const lines = [`"littlejs3D": ${LEVEL3D_VERSION}`];
-    for (const [key, value] of Object.entries(rest))
-        lines.push(JSON.stringify(key) + ': ' + editor3DJSON(value));
+    const keys = Object.keys(rest).filter((key)=> !editor3DLevelPartNames.includes(key));
+    for (const key of [...keys, ...editor3DLevelPartNames.filter((name)=> name in rest)])
+        lines.push(JSON.stringify(key) + ': ' + editor3DJSON(rest[key]));
     const list = (isArray(objects) ? objects : []).map((o)=> '    ' + editor3DJSON(o));
     lines.push('"objects": [' + (list.length ? '\n' + list.join(',\n') + '\n  ]' : ']'));
     return '{\n  ' + lines.join(',\n  ') + '\n}\n';
@@ -39303,7 +39756,7 @@ function editor3DSetSelectedProperty(name, value)
 {
     const selected = editor3DSelected(), id = selected[0]?.id;
     const defaults = selected[0] && level3DTypes.get(selected[0].type)?.defaults;
-    const d = defaults && Object.hasOwn(defaults, name) ? defaults[name] : undefined;
+    const d = defaults && Object.prototype.hasOwnProperty.call(defaults, name) ? defaults[name] : undefined;
     const sameType = isColor(d) ? isColor(value) : isVector3(d) ? isVector3(value) :
         isVector2(d) ? isVector2(value) : typeof value === typeof d;
     if (selected.length !== 1 || !editor3DPropertyEditable(d) || !sameType) return false;
@@ -40026,7 +40479,7 @@ function editor3DSceneUpdate(box)
         input.onchange = ()=>
         {
             const n = parseFloat(input.value);
-            isNumber(n) && n >= 0 ? set(v = n) : input.value = v + ''; // one not taken shows what it has again
+            isFinite(n) && n >= 0 ? set(v = n) : input.value = v + ''; // one not taken shows what it has again
             editor3DStrokeEnd();
             input.blur();
         };
@@ -40115,7 +40568,7 @@ function editor3DPropertiesUpdate(box)
             input.onchange = ()=>
             {
                 const v = inputs.map((i)=> parseFloat(i.value));
-                if (v.every((n)=> isNumber(n)))
+                if (v.every((n)=> isFinite(n)))
                     set(axes.length > 2 ? vec3(v[0], v[1], v[2]) : vec2(v[0], v[1]));
                 else
                     inputs.forEach((i, k)=> i.value = editor3DRound(value[axes[k]]) + '');
@@ -40157,7 +40610,7 @@ function editor3DPropertiesUpdate(box)
             input.type = 'number';
             input.step = 'any';
             input.value = value + '';
-            input.onchange = ()=> { const v = parseFloat(input.value); isNumber(v) && set(v); };
+            input.onchange = ()=> { const v = parseFloat(input.value); isFinite(v) && set(v); };
         }
         else if (typeof defaultValue === 'string')
         {
