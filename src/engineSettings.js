@@ -418,6 +418,13 @@ let vibrateEnable = true;
  *  @memberof Settings */
 let soundEnable = true;
 
+/** Play sound with an iPhone's silent switch on, as media does; off by default, so the switch mutes the game as it
+ *  does a ringtone, and the player's own music keeps playing beside it; Safari 16.4 and up, elsewhere it does nothing
+ *  @type {boolean}
+ *  @default
+ *  @memberof Settings */
+let soundIgnoreSilentSwitch = false;
+
 /** Volume scale to apply to all sound, music and speech
  *  Use setSoundVolume to also update the audio master gain immediately
  *  @type {number}
@@ -818,6 +825,15 @@ function setVibrateEnable(enable) { vibrateEnable = enable; }
  *  @param {boolean} enable
  *  @memberof Settings */
 function setSoundEnable(enable) { soundEnable = enable; }
+
+/** Set if sound plays with an iPhone's silent switch on, as media does, which also pauses the player's own music
+ *  @param {boolean} ignore
+ *  @memberof Settings */
+function setSoundIgnoreSilentSwitch(ignore)
+{
+    soundIgnoreSilentSwitch = ignore;
+    audioSetSession();
+}
 
 /** Set volume scale to apply to all sound, music and speech
  *  @param {number} volume

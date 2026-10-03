@@ -441,6 +441,8 @@ getNoteFrequency(semitoneOffset, rootFrequency=220)  // Get frequency for musica
 
 // Audio settings
 soundEnable = true      // Should sound be enabled?
+soundIgnoreSilentSwitch = false // play with an iPhone's silent switch on, as media, pausing the player's music;
+                        // off, the switch mutes the game; setSoundIgnoreSilentSwitch(true)
 soundVolume = .3        // Volume scale to apply to all sound
 soundDefaultRange = 40  // Default range where sound no longer plays
 soundDefaultTaper = .7  // Default range percent to taper off sound (0-1)

@@ -131,3 +131,15 @@ test('a ray toward a point far beyond a tile layer ends at the layer, and hits a
     assert.equal(run('none'), undefined, 'a ray that never crosses the layer, at once');
     assert.ok(run('!!far'), 'and one that does still hits');
 });
+
+test('an iPhone\'s silent switch mutes the game unless the game says to play through it', ()=>
+{
+    const navigator = {audioSession: {type: 'auto'}};
+    const { run } = loadEngine({navigator});
+    run('audioInit()'); // as engineInit starts the sound, not headless here
+    assert.equal(navigator.audioSession.type, 'auto', 'by default the switch is obeyed');
+    run('setSoundIgnoreSilentSwitch(true)');
+    assert.deepEqual([navigator.audioSession.type, run('soundIgnoreSilentSwitch')], ['playback', true]);
+    run('setSoundIgnoreSilentSwitch(false)');
+    assert.equal(navigator.audioSession.type, 'auto');
+});

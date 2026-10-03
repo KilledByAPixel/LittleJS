@@ -58,11 +58,17 @@ function audioInit()
 {
     if (!soundEnable || headlessMode) return;
 
-    // on an iPhone the silent switch mutes the page's sound unless it plays as media, Safari 16.4 and up
-    const session = /** @type {any} */ (navigator).audioSession;
-    if (session)
-        session.type = 'playback';
+    audioSetSession();
     document.addEventListener('visibilitychange', audioVisibilityChange);
+}
+
+// on an iPhone the silent switch mutes the page's sound, unless soundIgnoreSilentSwitch has it play as media,
+// Safari 16.4 and up; elsewhere there is no audioSession and nothing changes
+function audioSetSession()
+{
+    const session = typeof navigator != 'undefined' && /** @type {any} */ (navigator).audioSession;
+    if (session)
+        session.type = soundIgnoreSilentSwitch ? 'playback' : 'auto';
 }
 
 // a hidden page stops the game, so its sound stops too, and the audio clock with it so every sound picks up
