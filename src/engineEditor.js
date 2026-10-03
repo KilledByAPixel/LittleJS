@@ -570,8 +570,8 @@ function editorMapRestore(map)
     if ((saved.width ?? map.width) === map.width && (saved.height ?? map.height) === map.height &&
         editorSameData(saved.layers, data) && editorSameData(saved.objects ?? [], objects))
         editorDiscardPending(record);
-    else if (!sameFile || !editorResizeMap(map, saved.width ?? map.width, saved.height ?? map.height) ||
-        !editorCopyData(data, saved.layers))
+    else if (!sameFile || !editorSavedFits(saved, data.length, saved.width ?? map.width, saved.height ?? map.height) ||
+        !editorResizeMap(map, saved.width ?? map.width, saved.height ?? map.height) || !editorCopyData(data, saved.layers))
     {
         record.pending = saved;
         console.warn(`LittleJS editor: ${record.fileName} changed since its autosaved edits, ` +
@@ -870,6 +870,11 @@ function editorCopyData(data, saved)
     return true;
 }
 
+// are an autosave's tiles a layer for each of the map's, each of its own size, so the map is resized only for tiles
+// that fit it
+const editorSavedFits = (saved, count, width, height)=> isArray(saved.layers) && saved.layers.length === count &&
+    saved.layers.every((layer)=> isArray(layer) && layer.length === width * height);
+
 // remember a map's tile data and objects, or forget them when they are back to the file
 function editorAutosave(record)
 {
@@ -898,7 +903,7 @@ function editorPaintData(record, data, objects, width=record.map.width, height=r
     {
         if (!editorHas('onRestart')) return;
         const before = editorMapSnapshot(record);
-        editorSetMapSnapshot(record, {width, height, layers: data, objects});
+        editorSetMapSnapshot(record, {width, height, layers: data, objects}, keepUnknown);
         editorMapChanged(record, before);
         return;
     }
@@ -1015,13 +1020,15 @@ function editorMapSnapshot(record)
     return editorObjectsCopy({width: map.width, height: map.height, layers: editorTileLayerData(map.layers), objects});
 }
 
-// give a map a size, tiles and objects, the game's Restart hook makes its layers again
-function editorSetMapSnapshot(record, snapshot)
+// give a map a size, tiles and objects, the game's Restart hook makes its layers again; keepUnknown leaves an object
+// layer past the snapshot's as it is, as applying an autosave from before the file had it does
+function editorSetMapSnapshot(record, snapshot, keepUnknown=false)
 {
     const map = record.map;
     editorResizeMap(map, snapshot.width, snapshot.height);
     editorCopyData(editorTileLayerData(map.layers), snapshot.layers);
     editorRestoreObjects(map, snapshot);
+    if (!keepUnknown)
     for (const group of editorObjectGroups(map.layers).slice(snapshot.objects.length))
         group.objects = []; // an Objects layer the editor made since
     editorClearSelections();

@@ -549,9 +549,11 @@ function editor3DLevelLoaded(level)
         level.objects = editor3DCopy(saved.objects);
         for (const name of editor3DLevelPartNames)
             parts[name] ? level[name] = editor3DCopy(parts[name]) : delete level[name];
+        saved.stale && console.warn(`LittleJS editor: the edits brought back to ${record.fileName} are older than ` +
+            'the last ones, which storage had no room for');
     }
-    else if (saved)
-        record.pending = saved;
+    else if (saved && isArray(saved.objects))
+        record.pending = saved; // one that is broken is passed by, and the next autosave writes over it
 }
 
 // called by level3DLoad for each object, with what its type made

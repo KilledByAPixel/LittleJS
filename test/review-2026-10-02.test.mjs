@@ -180,3 +180,72 @@ test('the points of a transformed polygon are written into vectors kept for the 
     assert.deepEqual(json(run, 'seen.slice(0, 2)'), [[[10, 22], [12, 20], [8, 20]], [[0, 1], [1, 0], [-1, 0]]]);
     assert.equal(run('made.size'), 3, 'the same three vectors each time');
 });
+
+// the second pass of the review of 2026-10-02: autosaves of another size, and autosaves that are broken
+
+test('2D editor: applying a resized autosave leaves an object layer it does not know about as the file has it', async ()=>
+{
+    const { run } = await loadGame();
+    run(`var map = { width: 2, height: 1, tilewidth: 16, tileheight: 16, layers: [
+            { type: 'tilelayer', id: 1, name: 'ground', width: 2, height: 1, data: [1, 0] },
+            { type: 'objectgroup', id: 2, name: 'old', objects: [{ id: 1, type: 'Coin', x: 8, y: 8 }] },
+            { type: 'objectgroup', id: 3, name: 'new', objects: [{ id: 2, type: 'Coin', x: 24, y: 8 }] }] };
+        objectLayersAddType('Coin', class extends EngineObject {});
+        levelEditor.onRestart = ()=> {};
+        var layers = tileLayersLoad(map, undefined, 0, 0); objectLayersLoad(map);
+        var record = editorLayerRecord(layers[0]).record;
+        // an autosave of the map at 3 wide, from before the file had its second object layer
+        editorPaintData(record, [[0, 1, 1]], [[{ id: 1, type: 'Coin', x: 40, y: 8 }]], 3, 1, true);`);
+    assert.deepEqual(json(run, '[map.width, map.layers[0].data, map.layers[1].objects[0].x, map.layers[2].objects.length]'),
+        [3, [0, 1, 1], 40, 1]);
+});
+
+// a game whose map is levels/a.json, loaded with a storage that has an autosave in it
+async function loadWithSave(save, plugin3D=false)
+{
+    const items = {[plugin3D ? 'LittleJS editor 3D /game/' : 'LittleJS editor /game/']: JSON.stringify(save)};
+    const engine = loadEngine({ localStorage: { getItem: (k)=> items[k] ?? null, setItem(k, v) { items[k] = v; } },
+        location: { pathname: '/game/' } });
+    engine.run('setHeadlessMode(true)');
+    await engine.run(`setEngineManualStep(true);
+        engineInit(()=> { ${plugin3D ? 'new Render3DPlugin' : ''} }, ()=> {}, ()=> {}, ()=> {}, ()=> {})`);
+    return engine;
+}
+const map2D = `var map = { width: 2, height: 1, tilewidth: 16, tileheight: 16, layers: [
+    { type: 'tilelayer', id: 1, name: 'ground', width: 2, height: 1, data: [1, 0] }] };`;
+
+test('2D editor: an autosave whose tiles do not fit its own size leaves the map\'s size alone', async ()=>
+{
+    // the hash of the map as the file has it, so the autosave is of this file
+    const first = await loadGame();
+    first.run(map2D + `editorJSONFetched('levels/a.json', map); var layers = tileLayersLoad(map, undefined, 0, 0);`);
+    const hash = first.run('editorLayerRecord(layers[0]).record.hash');
+    const { run } = await loadWithSave({'levels/a.json': {hash, width: 5, height: 1, layers: [[1, 2]]}});
+    run(map2D + `editorJSONFetched('levels/a.json', map); var layers = tileLayersLoad(map, undefined, 0, 0);`);
+    assert.deepEqual(json(run, '[map.width, map.layers[0].data]'), [2, [1, 0]], 'not made 5 wide for tiles of 2');
+    assert.equal(run('!!editorLayerRecord(layers[0]).record.pending'), true, 'it waits, for Drop');
+});
+
+const level3D = `var level = {littlejs3D: 1, objects: [{id: 1, type: 'Box', pos: [0, .5, 0]}]};
+    editorJSONFetched('levels/room.json', level);`;
+
+test('3D editor: an autosave with no list of objects is passed by, and the level can be edited', async ()=>
+{
+    const { run } = await loadWithSave({'levels/room.json': {hash: 'another', objects: 'broken'}}, true);
+    run(level3D + 'level3DLoad(level); levelEditor.open();');
+    assert.equal(run('editor3DRecords.get(level).pending'), undefined);
+    assert.equal(run('editor3DChange((list)=> { list[0].pos = [2, .5, 0]; })'), true, 'an edit is not refused');
+});
+
+test('3D editor: an autosave older than the last edits, which storage had no room for, says so', async ()=>
+{
+    const first = await loadGame(true);
+    first.run(level3D + 'level3DLoad(level);');
+    const hash = first.run('editor3DRecords.get(level).hash');
+    const { run } = await loadWithSave({'levels/room.json':
+        {hash, stale: true, objects: [{id: 1, type: 'Box', pos: [3, .5, 0]}]}}, true);
+    run(level3D);
+    const said = warned(run, 'level3DLoad(level);');
+    assert.equal(run('level.objects[0].pos[0]'), 3, 'its edits are back');
+    assert.ok(said.some((text)=> text.includes('older')), said.join(' | '));
+});

@@ -19,6 +19,8 @@ What changed in each release, newest first. Releases before 1.20.0 are on the
 - The level editor's tile palette no longer asserts on a Tiled tileset with a margin or a spacing
 - LDtk: a see-through tile keeps its opacity, in a layer of its own; a layer whose tileset is another size is left out with a warning, in place of being read as stacks; a missing level says so in release builds too
 - A Tiled tileset's margin and spacing count from where the game's sheet starts, so a sheet inside an atlas keeps its place
+- 2D level editor: applying an autosave of another size leaves an object layer it does not know about as the file has it, and an autosave whose tiles do not fit its size no longer resizes the map
+- 3D level editor: a broken autosave no longer blocks every edit until Drop, and one older than the last edits, which storage had no room for, says so as the 2D editor does
 
 ## 1.24.0 - 2026-10-02
 
