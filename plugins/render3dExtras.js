@@ -1575,7 +1575,8 @@ function render3DFlareTile(shape)
  *   with the sun's own color; shapes says what its ghosts are, glowSize and ghostSize how big its parts are; or
  *   give it elements of your own, which may be tiles of the game's
  * - visible is how much of the sun shows, 0 to 1, eased over fadeTime, there for a game to read; it is 0 while the
- *   sun is too far off the screen for the flare to show, a third of the screen past its edge, where nothing is tested
+ *   sun is too far off the screen for the flare to show, about a seventh of the screen past its edge, where nothing
+ *   is tested
  * - What hides the sun is found with a ray from the camera, against the level and every object that is not see
  *   through, each on the triangles of its mesh, see render3D.pick; turn it off with occlusion
  * - It needs WebGL, and it draws nothing in the shadow of renderAfter2D
@@ -1696,7 +1697,7 @@ class LensFlare3D extends EngineObject3D
         const source = this.flareSource(), center = mainCanvasSize.scale(.5);
         const sun = source && render3D.worldToScreen(source.pos);
         if (!sun || !center.x || !center.y) return;
-        // it fades as the sun leaves the screen, gone when it is a third of the screen past the edge
+        // it fades as the sun leaves the screen, gone .3 of half the screen past the edge
         const off = max(abs(sun.x - center.x) / center.x, abs(sun.y - center.y) / center.y);
         const strength = clamp((1.3 - off) / .5) * this.intensity;
         if (!(strength > 0)) return;

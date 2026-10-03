@@ -1670,8 +1670,9 @@ const map = new VoxelMap(pos3D=vec3(), mapSize=vec3(16), tileInfo=tile()) // a g
         // that objects with collideLevel collide with; pos3D is its corner and a cell is 1 unit, it stays upright
 map.setVoxel(cell, type) / map.getVoxel(cell) // type 1-255 shows that tile on every face, 0 is empty, a cell outside
                                               // the map is ignored and reads 0
-map.setBlockType(type, faces, {seeThrough, transparent}) // faces: a tile, six (+x, -x, +y, -y, +z, -z), or
-        // {top, side, bottom}; seeThrough for holes like leaves, transparent to blend like water, drawn after the rest
+map.setBlockType(type, faces, {seeThrough, transparent, doubleSided}) // faces: a tile, six (+x, -x, +y, -y, +z,
+        // -z), or {top, side, bottom}; seeThrough for holes like leaves, transparent to blend like water, drawn after
+        // the rest; doubleSided for faces seen from inside too, so the surface of water shows from under it
 map.raycast(ray, maxDistance, test)           // {distance, cell, normal, type} of the first block a ray hits, or
                                               // undefined; test(type, cell) says which blocks count
 map.data / map.rebuild()                      // the Uint8Array of types, x + mapSize.x*(y + mapSize.y*z); rebuild
@@ -2296,7 +2297,8 @@ debugLine(posA, posB, color, width=.1, time)                // Draw debug line
 debugPoly(pos, points, color=WHITE, time=0, angle=0, fill)  // Draw debug polygon
 debugText(text, pos, size=1, color=WHITE, time=0, angle=0)  // Draw debug text
 debugOverlap(pA, sA, pB, sB, color) // Draw a debug overlap between two boxes
-// each debug draw also takes screenSpace after the params above, defaulting to drawScreenSpace
+// each debug draw also takes screenSpace as its last parameter, defaulting to drawScreenSpace; debugText takes a
+// font before it
 debugClear()                     // Clear all debug primitives
 debugScreenshot()                // Save a screenshot at the end of this frame
 debugShowErrors()                // Show full page error message when an error occurs

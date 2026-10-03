@@ -1136,9 +1136,11 @@ textareaCode.addEventListener('input', codeInput);
 inputSearch.addEventListener('input', ()=> filterExamples());
 inputSearch.addEventListener('keydown', (e)=>
 {
-    // Escape clears the search, and with nothing to clear closes the sheet
+    // Escape clears the search, and with nothing to clear closes the sheet; the page's own Escape does not also
+    // close it after a clear
     if (e.key !== 'Escape')
         return;
+    e.stopPropagation();
     inputSearch.value ? filterExamples(1) : showListPanel(false);
 });
 buttonRestart.addEventListener('click', restartCode);
@@ -1159,7 +1161,11 @@ listExamples.addEventListener('keydown', (e)=>
     // is the row's own click, which selects it and closes the sheet
     const step = e.key === 'ArrowDown' ? 1 : e.key === 'ArrowUp' ? -1 : 0;
     if (step)
+    {
         stepExample(step);
+        // the focus goes with it, so Enter, which clicks the focused row, takes the one now selected
+        e.target !== listExamples && listItems.find((item)=> item.index === selectedExample)?.element.focus();
+    }
     else if (e.key === 'Escape' || e.key === 'Enter' && e.target === listExamples)
         showListPanel(false);
     else

@@ -263,6 +263,13 @@ Plugins are self-contained features that live alongside the engine but aren't pa
 | `newgrounds.js` | Newgrounds.io integration (medals held on the server, scoreboards) |
 | `audioEffects.js` | Web Audio effects like filter, reverb, delay, distortion and compressor, for a group of sounds or everything |
 | `drawUtilities.js` | Higher-level drawing helpers like nine-slice and three-slice |
+| `render3dVoxels.js` | `VoxelMap`, a 3D grid of blocks that draws itself and that objects collide with |
+| `render3dLevel.js` | 3D levels as JSON: object types, prefabs, a scene block, block maps and terrain, loaded with `level3DLoad` |
+| `render3dDebug.js` | 3D debug draws (`debugBox3D`, `debugSphere3D`, `debugLine3D`), in debug builds only |
+| `render3dEditor.js` | The free camera and the 3D level editor, in debug builds only |
+| `sceneSystem.js` | Scenes as plain objects, switched with `setScene` |
+| `parallax.js` | `ParallaxLayer`, a background that follows the camera at its own depth and repeats |
+| `particleEffects.js` | A library of ready made particle effects, and their designer's file format |
 
 This self-contained design means the community can also ship plugins independently of the main repo — you can write your own plugin as just a JavaScript file that uses the engine's public API.
 
@@ -367,7 +374,7 @@ LittleJS has a dedicated [js13k branch](https://github.com/KilledByAPixel/Little
 - **Lean on built-ins to avoid asset files**: `Sound` with ZzFX parameters generates sound effects from a tiny array, and built-in shape drawing avoids shipping image assets.
 - **Use a packer**: the js13k branch is set up to compress the final bundle with Roadroller or a similar packer. Check the branch's build script for the current toolchain.
 
-For normal production (non-13KB) builds, the engine ships `dist/littlejs.release.js` (asserts stripped) and `dist/littlejs.min.js` (minified) — both well under 100KB.
+For normal production (non-13KB) builds, the engine ships `dist/littlejs.release.js` (asserts stripped, about 1.5 MB with every plugin and its comments) and `dist/littlejs.min.js` (minified, about 420 KB, about 125 KB gzipped). A bundler like Vite leaves out the plugins a game does not use, which makes a small game far smaller.
 
 ---
 
@@ -387,7 +394,7 @@ LittleJS works best when your tile sheet is broken up into grids of tiles becaus
 drawTile(vec2(21,5), vec2(4.5), tile(3,128));
 ```
 
-Once loaded, the underlying images are available via `textureInfos[0].image`, `textureInfos[1].image`, etc. This is useful for tasks like reading pixel data to generate a level — see [examples/module/game.js](examples/module/game.js) for an example that reads tile data directly from an image.
+Once loaded, the underlying images are available via `textureInfos[0].image`, `textureInfos[1].image`, etc. This is useful for tasks like reading pixel data to generate a level — the [Level Editor short](https://killedbyapixel.github.io/LittleJS/examples/?example=Level%20Editor) loads a level from data instead, and [examples/module/game.js](examples/module/game.js) builds one from a string.
 
 ### What is the tile function and how do tile indexes work?
 
