@@ -81,6 +81,11 @@ What changed in each release, newest first. Releases before 1.20.0 are on the
 - A `Sound` made while sound is off counts as loaded, so a loading screen that waits for sounds finishes
 - A tween callback that throws no longer leaves the tween system allocating on every update
 - The build and the docs build leave `dist/` and `docs/` untouched when a step fails
+- A `Timer` set to a time below zero reads as done
+- `UIVideo` lets go of its video when it is destroyed
+- A texture atlas tag with no frames no longer drops the groups after it
+- `setAdditiveBlendMode` works in headless mode
+- The release build's `levelEditor` has `keys`, `buttons` and `tools`, as the debug one does
 
 ## 1.23.0 - 2026-10-01
 

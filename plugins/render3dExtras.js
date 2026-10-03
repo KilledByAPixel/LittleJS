@@ -1575,7 +1575,7 @@ function render3DFlareTile(shape)
  *   with the sun's own color; shapes says what its ghosts are, glowSize and ghostSize how big its parts are; or
  *   give it elements of your own, which may be tiles of the game's
  * - visible is how much of the sun shows, 0 to 1, eased over fadeTime, there for a game to read; it is 0 while the
- *   sun is off the screen, where nothing is tested
+ *   sun is too far off the screen for the flare to show, a third of the screen past its edge, where nothing is tested
  * - What hides the sun is found with a ray from the camera, against the level and every object that is not see
  *   through, each on the triangles of its mesh, see render3D.pick; turn it off with occlusion
  * - It needs WebGL, and it draws nothing in the shadow of renderAfter2D

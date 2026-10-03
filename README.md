@@ -105,7 +105,7 @@ The code is very clean and well documented with many examples to get you started
 
 ## How To Use LittleJS
 
-To get started download the latest LittleJS package from GitHub or install via npm: 
+To get started download the latest release from GitHub, the engine's builds and source as npm has them (the examples are in the repository), or install via npm: 
 
 ```
 npm install littlejsengine

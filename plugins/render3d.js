@@ -4776,10 +4776,11 @@ class Light3D extends EngineObject3D
      *  @param {number} [count] - How many ghosts there are, besides the glow at the light
      *  @param {number} [intensity] - How bright it is
      *  @param {number} [saturation] - How colorful the ghosts are
+     *  @param {Color} [color] - Tints the flare, with the light's own color
      *  @return {LensFlare3D} - The flare, to change: light.addFlare().shapes = ['hex'] */
-    addFlare(size, count, intensity, saturation)
+    addFlare(size, count, intensity, saturation, color)
     {
-        const flare = new LensFlare3D(size, count, intensity, saturation);
+        const flare = new LensFlare3D(size, count, intensity, saturation, color);
         this.flare = flare;
         return flare;
     }

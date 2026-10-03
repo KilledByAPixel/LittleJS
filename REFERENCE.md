@@ -1758,7 +1758,7 @@ flare.elements = [{at: .5, size: .1, color: hsl(.6,1,.6,.3), shape: 'disc'}] // 
                                   // tileInfo for a tile of your own; angle turns it
 flare.visible                     // how much of the sun shows, 0 to 1, eased over fadeTime, to read; what is not
                                   // see through hides it, flare.occlusion = false turns that off
-light.addFlare(size, count, intensity, saturation) // gives a Light3D a flare of its own and returns it: at the
+light.addFlare(size, count, intensity, saturation, color) // gives a Light3D a flare of its own and returns it: at the
                                   // light, in its color, smaller from farther than its radius, hidden by what is
                                   // in front of it, a spotlight's only from inside its beam
 light.flare                       // the light's LensFlare3D, its child, or undefined; set one of your own, and
