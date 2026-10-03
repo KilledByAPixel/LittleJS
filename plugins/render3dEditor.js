@@ -354,7 +354,7 @@ function editor3DSceneState()
     const r = render3D;
     return {sky: r.sky, ambientColor: r.ambientColor.copy(), ambientGroundColor: r.ambientGroundColor?.copy(),
         fogStart: r.fogStart, fogEnd: r.fogEnd, fogColor: r.fogColor?.copy(), sunDirection: r.sunDirection.copy(),
-        sunColor: r.sunColor.copy(), shadows: r.shadows};
+        sunColor: r.sunColor.copy(), shadows: r.shadows, sunFlare: !!level3DSunFlare && !level3DSunFlare.destroyed};
 }
 function editor3DSceneRestore(state)
 {
@@ -369,7 +369,7 @@ function editor3DSceneRestore(state)
     r.sunDirection = state.sunDirection.copy();
     r.sunColor = state.sunColor.copy();
     r.shadows = state.shadows;
-    level3DSceneFlare(false); // the flare a scene gave the sun, the game's own stays
+    level3DSceneFlare(state.sunFlare); // a flare an earlier level's scene gave the sun, never the game's own
 }
 
 // the scene on screen as a block, to start a level's scene from: a sky only when the dome's colors are known

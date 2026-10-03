@@ -293,7 +293,7 @@ function tileLayersFromLDtk(ldtk, level=0)
         infinite: false, layers: [], nextlayerid: 1, nextobjectid: 1};
 
     // the tileset of the first layer that has one, where its tiles are in its image
-    const tileset = (ldtk.defs?.tilesets || []).find((t)=> t.uid === first?.__tilesetDefUid);
+    const tileset = (ldtk?.defs?.tilesets || []).find((t)=> t.uid === first?.__tilesetDefUid);
     if (tileset)
         map.tilesets = [{firstgid: 1, name: String(tileset.relPath || '').replace(/^.*[\\/]/, '').replace(/\.\w+$/, ''),
             image: tileset.relPath, imagewidth: tileset.pxWid, imageheight: tileset.pxHei,

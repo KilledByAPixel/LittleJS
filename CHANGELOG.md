@@ -5,7 +5,9 @@ What changed in each release, newest first. Releases before 1.20.0 are on the
 
 ## Unreleased
 
-Nothing yet.
+### Fixes
+
+- 3D level editor: an edit of a level's scene, or its undo, no longer takes away a sun lens flare that an earlier level's scene gave the game
 
 ## 1.24.0 - 2026-10-02
 
