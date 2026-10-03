@@ -1537,3 +1537,13 @@ test('a download does not change what the file is, the editor can not know it re
     assert.equal(await engine.run('editorSave(front.record)'), 'downloaded');
     assert.deepEqual(saved(storage).layers[1], [5, 0, 3, 0, 0, 0]);
 });
+
+test('undo keeps the last 100 edits: of 101, 100 undo and the first stays', async () =>
+{
+    const { run } = await loadGame();
+    run(mapCode + `editorLayer = front;
+        for (let i = 1; i <= 101; ++i) { editorPaint(front, vec2(0, 0), editorTileToGid(i % 2 ? 1 : 2)); editorStrokeEnd(); }
+        for (let i = 101; i--;) editorUndo();`);
+    assert.equal(run('editorUndoList.length'), 0);
+    assert.equal(run('frontData[3]'), run('editorTileToGid(1)'), 'the first edit, past the cap, is kept');
+});
