@@ -5,9 +5,7 @@ What changed in each release, newest first. Releases before 1.20.0 are on the
 
 ## Unreleased
 
-### Fixes
-
-- 3D level editor: an edit of a level's scene, or its undo, no longer takes away a sun lens flare that an earlier level's scene gave the game
+Nothing yet.
 
 ## 1.24.0 - 2026-10-02
 
@@ -40,6 +38,7 @@ What changed in each release, newest first. Releases before 1.20.0 are on the
 ### Fixes
 
 - A lens flare that is off the screen, or of a light that is off, no longer looks for what hides it every frame
+- 3D level editor: an edit of a level's scene, or its undo, no longer takes away a sun lens flare that an earlier level's scene gave the game
 - Shorts: the lander lands upright after a full turn, the maze reaches its top row and works at even sizes, a pocketed cue ball comes back, the 3D Voxels player floats in water, and more that writing them up turned up
 
 ## 1.23.1 - 2026-10-02
