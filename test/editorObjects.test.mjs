@@ -295,7 +295,7 @@ test('with All Layers, Ctrl+C on a tile area takes the objects inside it, even w
     engine.run(editCode + 'editorAllLayers = true; editorSelection = editorArea(vec2(0, 1), vec2(1, 1));');
     assert.equal(typed(engine, 'c', true), true);
     assert.deepEqual(JSON.parse(engine.run('JSON.stringify(editorBrush.objects)')),
-        [{ group: 0, type: 'Coin', properties: [], offset: { x: .5, y: .5 } }]);
+        [{ group: 0, type: 'Coin', offset: { x: .5, y: .5 }, object: { id: 1, type: 'Coin', point: true, x: 8, y: 8 } }]);
     assert.equal(engine.run('editorBrushLabel()'), 'Brush: 2x1 stamp, 1 object');
 });
 
@@ -598,4 +598,52 @@ test('a click on an object leaves its place as it is written, with nothing to un
     assert.equal(run('list()[0].x'), 7 + 48);
     drag(engine, [x + 2, y], [x, y]);
     assert.deepEqual([run('list()[0].x'), run('list()[0].y')], [7, 7]);
+});
+
+// coin 1 named, sized, turned and hidden, as a Tiled object can be
+const fieldsCode = editCode.replace(`{ id: 1, type: 'Coin', point: true, x: 8, y: 8 }`,
+    `{ id: 1, type: 'Coin', name: 'door', x: 8, y: 8, width: 32, height: 16, rotation: 15, visible: false }`);
+const fields = (engine, i)=> JSON.parse(engine.run(`JSON.stringify(list()[${i}])`));
+
+test('cut and paste keeps an object\'s name, size, turn and visibility, with a new id and place', async () =>
+{
+    const engine = await loadGame();
+    engine.run(fieldsCode + 'editorSelectLayer(objects); editorObjectSelection.add(1);');
+    typed(engine, 'x', true);
+    click(engine, 1.5, .5);
+    assert.deepEqual(fields(engine, 1), { id: 3, type: 'Coin', name: 'door', x: 24, y: 24, width: 32, height: 16,
+        rotation: 15, visible: false });
+});
+
+test('a stamp keeps its objects\' fields too', async () =>
+{
+    const engine = await loadGame();
+    engine.run(fieldsCode + `editorAllLayers = true; editorSelection = editorArea(vec2(0, 1), vec2(1, 1));
+        editorCopy(); editorSelection = undefined;`);
+    click(engine, 2.5, .5);
+    assert.deepEqual(fields(engine, 2), { id: 3, type: 'Coin', name: 'door', x: 40, y: 24, width: 32, height: 16,
+        rotation: 15, visible: false });
+});
+
+// 24 pixel tiles and places that are not whole cells, where a place turned into cells and back is off by a hair
+const noiseCode = editCode.replace('width: 4, height: 2, tilewidth: 16, tileheight: 16',
+    'width: 10, height: 10, tilewidth: 24, tileheight: 24').replace(`width: 4, height: 2, data: [0, 0, 0, 0, 1, 1, 1, 1]`,
+    'width: 10, height: 10, data: Array(100).fill(0)').replace('x: 8, y: 8', 'x: 10, y: 37')
+    .replace('x: 40, y: 8', 'x: 100, y: 77.7') + 'editorAllLayers = true;';
+
+test('a selection dragged with its objects puts them down to the digit, there and back', async () =>
+{
+    const engine = await loadGame();
+    engine.run(noiseCode + `editorSelection = editorArea(vec2(0), vec2(9));
+        editorSelectionDragStart(editorLayer, vec2(5)); editorSelectionDragTo(vec2(8, 7)); editorStrokeEnd();
+        editorSelectionDragStart(editorLayer, vec2(8, 7)); editorSelectionDragTo(vec2(6, 5)); editorStrokeEnd();`);
+    assert.deepEqual(positions(engine), [[1, 34, 37], [2, 124, 77.7]]);
+});
+
+test('a stamp\'s objects are put down to the digit', async () =>
+{
+    const engine = await loadGame();
+    engine.run(noiseCode + `editorSelection = editorArea(vec2(0), vec2(9)); editorCopy();
+        editorChangeObjects(objects, (l)=> l.splice(0)); editorPlaceStampObjects(editorLayer, vec2(0), editorBrush);`);
+    assert.deepEqual(positions(engine), [[3, 10, 37], [4, 100, 77.7]]);
 });

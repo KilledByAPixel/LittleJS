@@ -1414,7 +1414,7 @@ class UITextInput extends UIObject
     onKeyDown(e)
     {
         // named keys by key, so numpad Enter works as Enter
-        const code = e.code, key = e.key;
+        const code = e.code, key = e.key || ''; // autofill sends a keydown with no key
         if (e.repeat && (key === 'Enter' || code === 'Space'))
             return; // a key held when editing began repeats, it should not type or stop editing
         this.text += ''; // a game may have set a number
@@ -1648,12 +1648,14 @@ class UISlider extends UIObject
     }
     update()
     {
+        // held when the frame began, so a release in the same frame as the last move still reads it
+        const wasActive = this.isActiveObject();
         super.update();
         if (!this.interactive)
             return;
 
         const oldValue = this.value;
-        if (this.isActiveObject())
+        if (wasActive || this.isActiveObject())
         {
             // handle horizontal or vertical slider
             const isHorizontal = this.size.x > this.size.y;

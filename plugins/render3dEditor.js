@@ -915,7 +915,9 @@ function editor3DTerrainStore()
 {
     const map = editor3DTerrainMap(), terrain = editor3DLevelPart('terrain');
     if (!map || !terrain) return;
-    terrain.heights = map.heights.map((row)=> row.map((v)=> round(v * 1e3) / 1e3));
+    // the heights changed to a thousandth, the rest as the level has them, so a stroke of paint rounds none
+    const before = terrain.heights;
+    terrain.heights = map.heights.map((row, z)=> row.map((v, x)=> v === before?.[z]?.[x] ? v : round(v * 1e3) / 1e3));
     const paint = editor3DTerrainPaints.get(map);
     if (!paint) return; // nothing painted since the level's was read
     const used = paint.colors.map((hex, i)=> paint.cells.includes(i + 1));

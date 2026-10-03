@@ -1253,12 +1253,13 @@ function editorObjectPos(record, object)
     return vec2(object.x / tilewidth, height - object.y / tileheight);
 }
 
-// set an object's position in the map from a world position
+// set an object's position in the map from a world position, to a millionth of a pixel, so a place turned into
+// cells and back is written as it was and not a hair off
 function editorObjectSetPos(record, object, pos)
 {
     const {height=0, tilewidth=1, tileheight=1} = record.map;
-    object.x = pos.x * tilewidth;
-    object.y = (height - pos.y) * tileheight;
+    object.x = round(pos.x * tilewidth * 1e6) / 1e6;
+    object.y = round((height - pos.y) * tileheight * 1e6) / 1e6;
 }
 
 // called by objectLayersLoad for each object it read, the editor keeps what the game made by the object's id
@@ -1429,14 +1430,15 @@ function editorObjectsIn(layer, a, b)
 function editorPickObject(object)
 { editorObjectBrush = [{type: object.type || object.class, properties: editorObjectsCopy(object.properties ?? []), offset: vec2()}]; }
 
-// a new Tiled point object for a brush's object, at a world position, with the map's next id
-function editorNewObject(record, {type, properties}, pos)
+// a new Tiled object for a brush's object, at a world position, with the map's next id: a copy of the object it was
+// copied from, its name, size, turn and the rest kept, or a point object of the brush's type and properties
+function editorNewObject(record, {type, properties, object}, pos)
 {
-    const object = {id: editorNextObjectId(record.map), name: '', type, point: true, rotation: 0, visible: true,
-        width: 0, height: 0, x: 0, y: 0};
-    properties.length && (object.properties = editorObjectsCopy(properties));
-    editorObjectSetPos(record, object, pos);
-    return object;
+    const made = object ? editorObjectsCopy(object) : {id: 0, name: '', type, point: true, rotation: 0, visible: true,
+        width: 0, height: 0, x: 0, y: 0, ...(properties.length && {properties: editorObjectsCopy(properties)})};
+    made.id = editorNextObjectId(record.map);
+    editorObjectSetPos(record, made, pos);
+    return made;
 }
 
 // place an object brush's objects at a position plus each one's offset, as one undo
@@ -1467,8 +1469,8 @@ function editorDeleteObjects()
     return true;
 }
 
-// the selected objects into the brush, their offsets from the lowest corner of their positions, and the selection
-// cleared so the next click places them
+// the selected objects into the brush, each a copy with its offset from the lowest corner of their positions, and
+// the selection cleared so the next click places them
 function editorCopyObjects()
 {
     const objects = editorSelectedObjects();
@@ -1476,7 +1478,7 @@ function editorCopyObjects()
     const positions = objects.map((object)=> editorObjectPos(editorObjectLayer.record, object));
     const low = vec2(min(...positions.map((p)=> p.x)), min(...positions.map((p)=> p.y)));
     editorObjectBrush = editorObjectClipboard = objects.map((object, i)=> ({type: object.type || object.class,
-        properties: editorObjectsCopy(object.properties ?? []), offset: positions[i].subtract(low)}));
+        offset: positions[i].subtract(low), object: editorObjectsCopy(object)}));
     editorObjectSelection.clear();
     return true;
 }
@@ -1844,8 +1846,8 @@ function editorClear()
     editorStrokeEnd();
 }
 
-// the objects of a map's object layers inside a tile area, each {group, type, properties, offset}: the index of its
-// object layer, and its offset from the area's bottom left corner, as a stamp keeps them
+// the objects of a map's object layers inside a tile area, each {group, type, offset, object}: the index of its
+// object layer, its offset from the area's bottom left corner, and a copy of it, as a stamp keeps them
 function editorAreaObjects(layer, area)
 {
     const corner = layer.live.pos.add(area.min), far = layer.live.pos.add(area.max).add(vec2(1));
@@ -1853,8 +1855,8 @@ function editorAreaObjects(layer, area)
     {
         const ids = new Set(editorObjectsIn(objectLayer, corner, far));
         return (objectLayer.group?.objects ?? []).filter((object)=> ids.has(object.id)).map((object)=>
-            ({group, type: object.type || object.class, properties: editorObjectsCopy(object.properties ?? []),
-            offset: editorObjectPos(layer.record, object).subtract(corner)}));
+            ({group, type: object.type || object.class, offset: editorObjectPos(layer.record, object).subtract(corner),
+            object: editorObjectsCopy(object)}));
     });
 }
 
@@ -1942,12 +1944,13 @@ function editorSelectionDragTo(cell)
             from.arrayCheck(target.live.size) && editorPaint(target, from, 0);
         }
         editorPaintStamp(layer, editorSelection.min, stamp);
+        // whole cells added to the places as written, as an object drag does, so they come back to the digit
+        const {tilewidth=1, tileheight=1} = layer.record.map;
         for (const {objectLayer, ids} of drag.objects)
             editorChangeObjects(objectLayer, (list)=>
             {
                 for (const object of list)
-                    ids.has(object.id) && editorObjectSetPos(layer.record, object,
-                        editorObjectPos(layer.record, object).add(delta));
+                    ids.has(object.id) && (object.x += delta.x * tilewidth, object.y -= delta.y * tileheight);
             });
     });
     editorStroke && editorRedraw(editorStroke);

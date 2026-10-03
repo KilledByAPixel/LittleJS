@@ -206,3 +206,16 @@ test('the Terrain tool\'s X goes around its brushes, and a press with the flatte
     run('editor3DKeys.KeyX()');
     assert.deepEqual({...run(`editor3DTerrainPress(vec3(0, 0, 0), true, false)`)}, {kind: 'terrain', mode: 'lower'});
 });
+
+test('a stroke writes to a thousandth only the heights it changed, the rest stay as the level has them', async ()=>
+{
+    const { run } = await loadGame();
+    const fine = JSON.parse(flat);
+    fine[0][0] = .123456, fine[8][8] = .7654321, fine[4][4] = .2000004;
+    run(fileCode(withTerrain.replace(flat, JSON.stringify(fine))) + `editor3DTerrainBrush.color = '#ff0000';`);
+    run('editor3DTerrainPaintAt(vec3(0, 0, 0)); editor3DStrokeEnd();');
+    assert.deepEqual(json(run, 'level.terrain.heights'), fine, 'paint changes no height');
+    run(`editor3DTerrainSculpt(vec3(0, 0, 0), 'raise', 1); editor3DStrokeEnd();`);
+    const heights = json(run, 'level.terrain.heights');
+    assert.deepEqual([heights[0][0], heights[8][8], heights[4][4]], [.123456, .7654321, .7]);
+});

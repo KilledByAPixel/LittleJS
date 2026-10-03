@@ -18,6 +18,11 @@ What changed in each release, newest first. Releases before 1.20.0 are on the
 - A light's flare looks past four lamps around it to what is behind them, where the fourth counted as hidden
 - A click or tap in the bars around a letterboxed canvas presses nothing, where it pressed whatever was at the canvas edge
 - `showConfirmDialog` while one is open gives the one open, where a second broke UI navigation in release builds
+- The level editor's cut, copy and stamps keep an object's name, size, turn and visibility, where a paste made a bare point; objects moved with a selection or stamped land on their place to the digit, not a hair off
+- The 3D editor's terrain paint rounds no heights, and a sculpt stroke rounds only those it changed
+- A `UISlider` let go in the frame it moves takes that last place
+- A gamepad of fewer buttons put in the slot of another holds none of the other's buttons; a gamepad axis that reads NaN is centered, where it failed an assert in debug builds
+- `UITextInput` takes a keydown with no key, as autofill sends, where it threw
 - A tile layer's raycast toward a point far beyond the layer walks only across the layer, where a ray to a far constant took seconds
 - `debugShowErrors` shows a message as text, so a file name with markup in it can not add elements to the page
 - Canvas2D tints clamp the color to 0 to 1, as WebGL does

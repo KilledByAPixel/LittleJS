@@ -951,7 +951,7 @@ function inputUpdate()
             const centered = gamepadAxisCentered[i] ?? (gamepadAxisCentered[i] = []);
             const readAxis = (j)=>
             {
-                const v = gamepad.axes[j];
+                const v = isFinite(gamepad.axes[j]) ? gamepad.axes[j] : 0; // a broken axis reads as centered
                 if (isStandard && j < 4)
                     return v; // spec guarantees axes 0-3 are the two sticks
                 if (!gamepadAxisFilterEnable)
@@ -983,6 +983,10 @@ function inputUpdate()
                 if (button.pressed && (!button.value || button.value > .9))
                     hadInput = true;
             }
+
+            // a different gamepad in the same slot with fewer buttons or sticks holds none of the last one's
+            data.length = buttonsLast.length = gamepad.buttons.length;
+            sticks.length = gamepad.axes.length >> 1;
             
             // set new primary gamepad if current is not connected
             if (hadInput)
