@@ -4293,6 +4293,7 @@ declare module "littlejsengine" {
      *   of the LDtk file is layer 0; where LDtk stacks tiles in a cell, an edge over a fill, each tile over another
      *   goes in a layer of its own just above, named with (2), (3) and so on, so a layer of the first tiles has one
      *   wherever the LDtk layer has any, which makes it the one for collision
+     * - A tile LDtk draws see-through goes in a layer of its own with that opacity, times the layer's, named with it
      * - An IntGrid layer with no tiles is a hidden layer of its values, for collision: pass its index as collisionLayer
      * - An Entities layer is an object layer: an entity's name is its type for objectLayersAddType, it is placed at
      *   its middle, and its Int, Float, Bool, String, Color and FilePath fields are its properties (an enum is a string)
