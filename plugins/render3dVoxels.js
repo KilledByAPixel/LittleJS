@@ -163,7 +163,7 @@ class VoxelMap extends EngineObject3D
      *    six in the order +x, -x, +y, -y, +z, -z, or the side's with the top and bottom's, which default to the side's
      *  @param {{seeThrough?: boolean, transparent?: boolean}} [options] - seeThrough for holes in its texture, like
      *    leaves, so the blocks beside it keep their faces; transparent to blend, like glass or water, drawn in the
-     *    transparent stage, and see-through too */
+     *    transparent stage from both sides, so water's surface shows from under it, and see-through too */
     setBlockType(type, faces, {seeThrough=false, transparent=false}={})
     {
         ASSERT(type >= 1 && type <= 255 && type % 1 === 0, 'a block type is a whole number from 1 to 255', type);
@@ -256,6 +256,7 @@ class VoxelMap extends EngineObject3D
         this.chunkMeshes[index]?.dispose();
         this.chunkTransparentMeshes[index]?.dispose();
         this.chunkMeshes[index] = opaque.points.length ? opaque : undefined;
+        transparent.doubleSided = true; // seen from inside too, water's surface from under it
         this.chunkTransparentMeshes[index] = transparent.points.length ? transparent : undefined;
         this.chunkCenters[index] = center;
     }

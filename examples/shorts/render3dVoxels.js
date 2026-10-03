@@ -65,7 +65,7 @@ function gameInit()
             tree(x, h+1, z);
     }
 
-    // the player starts on a hill, and water does not stop it
+    // the player starts on a hill, and goes into water, under it
     player = new FirstPersonCamera3D(vec3(11, 12, 44));
     player.setCollision();
     player.collideWithVoxel = (type)=> type != 6;
@@ -83,13 +83,6 @@ function gameUpdate()
     for (let i = 7; i--;)
         if (keyWasPressed('Digit' + (i+1)))
             selected = i + 1;
-
-    // float: in water the player rises to the top, and can jump from it
-    if (map.getVoxel(player.pos3D.floor()) == 6)
-    {
-        player.velocity3D.y = max(player.velocity3D.y, .03);
-        player.groundObject = map;
-    }
 
     // get the block in the middle of the view
     const ray = render3D.screenToRay(mainCanvasSize.scale(.5));
@@ -155,7 +148,8 @@ A block type shows the tile of its own number on every face unless
 - Type 1, grass, has tile 0 on top, 1 on its sides and 2 below.
 - Types 5 to 7 use their own tile. Leaves are `seeThrough`: the texture
   has holes, so blocks beside them keep their faces. Water and glass are
-  `transparent`, drawn blended with what is behind them.
+  `transparent`, drawn blended with what is behind them, and from both
+  sides, so from under the water its surface shows overhead.
 
 The loops in `gameInit` fill the columns. `h` is the ground height from
 a sine and a cosine, `setVoxel(cell, type)` puts grass on top, two dirt
@@ -169,11 +163,7 @@ leaves around the top, only into empty cells, which `getVoxel` tells.
 tall, and `render3D.gravity` pulls it down. It starts above a hill and
 drops onto it. The map asks an object's `collideWithVoxel(type)` whether
 a block stops it, and the player's says every type but 6, water, so it
-can be in water. `gameUpdate` makes it float: while the block at the
-body's middle, `getVoxel` of its position rounded down, is water, the
-player is given a small upward speed, so it rises until its middle is
-at the surface and stays there. Setting `groundObject` lets it jump
-from the water as it does from the ground.
+walks into water and sinks to the bottom, where it can walk and jump.
 `jumpSpeed` is the upward speed space gives it while it stands on
 something, and `eyeHeight` puts the eye .6 above the body's middle.
 
