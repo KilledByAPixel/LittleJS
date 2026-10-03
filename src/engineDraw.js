@@ -182,6 +182,10 @@ class TileInfo
         this.padding = padding;
         /** @property {TextureInfo} - The texture info for this tile */
         this.textureInfo = textureInfo;
+        /** @property {Array<TileInfo>|undefined} - A tile set's tiles, each wherever it was packed, as loadTiles makes
+         *  them: a tile layer given this tile info draws its tile n from tiles[n] and not from a grid on one sheet
+         *  @type {Array<TileInfo>|undefined} */
+        this.tiles = undefined;
         /** @property {number} - Shrinks tile by this many pixels to prevent neighbors bleeding */
         this.bleed = bleed;
         /** @property {number} - How many frames per row for frame(), 0 to keep frames on a single row */

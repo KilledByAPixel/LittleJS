@@ -1616,7 +1616,7 @@ function editorArea(a, b)
 function editorTileInfo(live, tile)
 {
     const t = live.tileInfo;
-    return t && (t.columns ? t.frame(tile) : t.index(tile));
+    return t && (t.tiles ? t.tiles[tile] : t.columns ? t.frame(tile) : t.index(tile));
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -2183,6 +2183,14 @@ function editorPaletteTiles(layer)
     {
         if (layer.palette?.list !== list)
             layer.palette = {list, tiles: list.map((tile)=> ({tile, tileInfo: editorTileInfo(live, tile)}))};
+        return layer.palette.tiles;
+    }
+    // a tile set lists its tiles, each a tile the palette offers
+    const set = live?.tileInfo?.tiles;
+    if (set)
+    {
+        if (layer.palette?.set !== set || layer.palette.tiles.length !== set.length)
+            layer.palette = {set, tiles: set.map((tileInfo, tile)=> ({tile, tileInfo}))};
         return layer.palette.tiles;
     }
     if (!image) return [];

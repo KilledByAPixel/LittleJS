@@ -20,7 +20,15 @@ smokeRun(async ()=>
     setTilesPixelated(true);
     const pixel = (x, y)=> smokePixel(.5 + x / 8, .5 + y / 8);
     let hard, smooth;
-    await engineInit(()=>
+    // two images for a tile set: one yellow tile, and a sheet of two, magenta then cyan
+    const image = (...colors)=>
+    {
+        const canvas = document.createElement('canvas'), context = canvas.getContext('2d');
+        canvas.width = 16 * colors.length, canvas.height = 16;
+        colors.forEach((color, i)=> { context.fillStyle = color; context.fillRect(i * 16, 0, 16, 16); });
+        return canvas.toDataURL();
+    };
+    await engineInit(async ()=>
     {
         setCameraScale(16);
 
@@ -29,6 +37,14 @@ smokeRun(async ()=>
         layer.setData(vec2(0, 0), new TileLayerData(1));
         layer.setData(vec2(1, 1), new TileLayerData(0));
         layer.redraw();
+
+        // a tile set of the two images, packed onto the texture sheets, in a row of three cells at the bottom right
+        const tiles = loadTiles([image('#ff0'), image('#f0f', '#0ff')], 16);
+        await spritesReady();
+        const set = new TileLayer(vec2(1, -4), vec2(3, 1), tiles);
+        [0, 1, 2].forEach((t)=> set.setData(vec2(t, 0), new TileLayerData(t)));
+        set.redraw();
+        window.tileCount = tiles.tiles.length;
 
         // particles of the red tile at the top right, still, opaque and as big as two tiles
         const white = [1, 1, 1, 1];
@@ -53,6 +69,10 @@ smokeRun(async ()=>
     check3('a tile layer draws its first cell', pixel(-3.5, -3.5), (r, g, b)=> g > 200 && r < 50 && b < 50);
     check3('and its last', pixel(-2.5, -2.5), (r, g, b)=> r > 200 && g < 50 && b < 50);
     check3('an empty cell shows what is behind it', pixel(-2.5, -3.5), (r, g, b)=> b > 200 && r < 50 && g < 50);
+    check('a tile set has a tile for each tile of its images, in order', window.tileCount === 3, window.tileCount);
+    check3('its first tile is the first image', pixel(1.5, -3.5), (r, g, b)=> r > 200 && g > 200 && b < 50);
+    check3('and the next two the tiles of the second image', [...pixel(2.5, -3.5), ...pixel(3.5, -3.5)].slice(0, 3),
+        (r, g, b)=> r > 200 && g < 50 && b > 200 && pixel(3.5, -3.5)[1] > 200 && pixel(3.5, -3.5)[0] < 50);
     check3('particles draw their tile', pixel(2, 2), (r, g, b)=> r > 200 && g < 60 && b < 60);
     // a little left of the middle of each, where the hard one is still black and the smooth one is on its way to white
     check3('a pixelated texture has a hard edge', pixel(1.8, -1.5), (r)=> r < 20);

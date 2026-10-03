@@ -215,6 +215,7 @@ export
     textureSheets,
     TextureSheet,
     loadSprite,
+    loadTiles,
     loadAtlas,
     parseAtlas,
     spritesReady,

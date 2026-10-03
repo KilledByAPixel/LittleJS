@@ -7,6 +7,7 @@ What changed in each release, newest first. Releases before 1.20.0 are on the
 
 ### New Changes
 
+- Tile sets from separate images: `loadTiles(['grass.png', 'brick.png', 'props.png'], 16)` packs tile images, or several tile sheets, into the texture sheets as one tile set, numbered in the order given, for `tileLayersLoad`, tile layers and the level editor's palette
 - Spotlight gels: `light.gel` is a picture the shadow casting spotlight shines through, cast along its beam in its colors, like a slide or stained glass; with none a scene draws exactly as before. The 3D First Person flashlight has one on G
 
 ### New Demos

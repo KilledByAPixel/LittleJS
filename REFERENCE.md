@@ -2175,6 +2175,11 @@ getCrescentPoints(pos, size=1, percent=0, angle=0, invert=false, sides=glCircleS
 - See `examples/shorts/textureSheet.js`
 
 ```javascript
+loadTiles(sources, tileSize, padding=1) // Pack tile images, or several tile sheets, into one tile set: each image cut
+                                      // into tiles, numbered from 0 in the order given; give the TileInfo it
+                                      // returns to tileLayersLoad or a TileLayer, and await spritesReady first
+tileInfo.tiles                        // a tile set's tiles, each where it was packed: a tile layer draws tile n
+                                      // from tiles[n], and the level editor's palette offers each
 loadSprite(src, frameSize, padding=1, sourcePadding=0) // Load an image and pack it, returns a TileInfo
 loadAtlas(imageSrc, jsonSrc, padding=1) // Load a TexturePacker or Aseprite atlas, returns name->TileInfo object
 parseAtlas(data)                      // Parse atlas json into named frame groups, used by loadAtlas

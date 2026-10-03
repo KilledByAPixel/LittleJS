@@ -678,6 +678,7 @@ class TileLayer extends CanvasLayer
             // set tile info
             this.tileInfo = tileInfo.frame(0);
             this.tileInfo.bleed = 0; // disable bleed for tile layers
+            this.tileInfo.tiles = tileInfo.tiles; // a tile set's list, filled in as its images load
         }
 
         // init tile data
@@ -857,8 +858,10 @@ class TileLayer extends CanvasLayer
         const d = this.getData(layerPos);
         if (!d || d.tile === undefined) return;
 
-        // a tileset packed by loadSprite keeps its own columns, counted from its first tile, not the sheet's grid
-        const t = this.tileInfo, tileInfo = t && (t.columns ? t.frame(d.tile) : t.index(d.tile));
+        // a tile set from loadTiles has each tile where it was packed, a tileset packed by loadSprite keeps its own
+        // columns, counted from its first tile, not the sheet's grid
+        const t = this.tileInfo, tileInfo = t && (t.tiles ? t.tiles[d.tile] : t.columns ? t.frame(d.tile) : t.index(d.tile));
+        if (t && !tileInfo) return; // past the end of a tile set, or loading
         this.drawLayerTile(drawPos, cellPixels, tileInfo, d.color, d.direction*PI/2, d.mirror);
     }
 

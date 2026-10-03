@@ -7,6 +7,7 @@
  * - Animation frames keep layout and wrap across rows as needed
  * - WebGL textures upload once per batch of loads
  * - loadAtlas imports pre-packed atlases (TexturePacker and Aseprite json)
+ * - loadTiles packs separate tile images, or several tile sheets, into one tile set for tile layers and maps
  * @namespace TextureSheets
  */
 
@@ -252,6 +253,61 @@ function loadSprite(src, frameSize, padding=textureSheetPadding, sourcePadding=0
     });
 
     return tileInfo;
+}
+
+/** Load tile images and pack them into texture sheets as one tile set, for tile layers and maps
+ *  - Each image is cut into tiles of tileSize, left to right then down, so an image of one tile is one tile and a
+ *    sheet is all of its tiles; the tiles are numbered from 0 in the order the images are given
+ *  - Returns a tile set at once, a TileInfo whose tiles fill in as the images load; wait for them with spritesReady
+ *  - Give it to tileLayersLoad, a TileLayer or a TileCollisionLayer as its tile info: tile n draws tiles[n],
+ *    wherever it was packed, and the level editor's palette offers each of them
+ *  - An image that fails to load, or that no sheet can hold, adds no tiles and says so in the console, so the tiles
+ *    of the images after it move up
+ *  @param {Array<string>} sources - Image source paths
+ *  @param {Vector2|number} [tileSize] - Size of a tile in pixels
+ *  @param {number} [padding] - How many pixels padding around each tile on the sheet
+ *  @return {TileInfo}
+ *  @example
+ *  const tiles = loadTiles(['grass.png', 'dirt.png', 'water.png', 'props.png'], 16);
+ *  await spritesReady();
+ *  tileLayersLoad(map, tiles); // tile 0 is grass, 1 dirt, 2 water, then the tiles of props.png
+ *  @memberof TextureSheets */
+function loadTiles(sources, tileSize=tileDefaultSize, padding=textureSheetPadding)
+{
+    ASSERT(isArray(sources) && sources.every((src)=> isStringLike(src)), 'sources must be a list of image paths');
+    ASSERT(isVector2(tileSize) || isNumber(tileSize), 'tileSize must be a vec2 or number');
+    ASSERT(isNumber(padding), 'padding must be a number');
+    ASSERT(engineInitialized || headlessMode, 'call loadTiles after engineInit, e.g. in gameInit');
+    const size = isNumber(tileSize) ? vec2(/** @type {number} */ (tileSize)) : /** @type {Vector2} */ (tileSize).copy();
+    const set = new TileInfo(vec2(), size, undefined, 0, 0);
+    set.tiles = [];
+    if (headlessMode) return set;
+    set.textureInfo = (textureSheets[0] || textureSheetCreate()).textureInfo;
+
+    // every image decodes at once, and packs through the queue in the order given, so the tiles keep that order
+    for (const src of sources)
+    {
+        const image = new Image;
+        const imagePromise = new Promise((resolve)=>
+        {
+            image.onerror = image.onload = resolve;
+            image.crossOrigin = 'anonymous';
+            image.src = src;
+        });
+        textureSheetQueueJob('loadTiles ' + src, async ()=>
+        {
+            await imagePromise;
+            const count = (image.width / size.x | 0) * (image.height / size.y | 0);
+            const added = count && textureSheetAdd(vec2(image.width, image.height), size, padding, 0);
+            if (!added)
+                return console.warn('loadTiles: ' + src + (count ? ' does not fit on a texture sheet' :
+                    ' failed to load, or is smaller than a tile') + ', its tiles are left out');
+            added.sheet.drawImage(image, added.tile, false); // upload once per batch
+            for (let k = 0; k < count; ++k)
+                set.tiles.push(added.tile.frame(k));
+        });
+    }
+    return set;
 }
 
 /** Load a pre-packed texture atlas and repack it onto texture sheets
