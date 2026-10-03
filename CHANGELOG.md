@@ -21,6 +21,7 @@ What changed in each release, newest first. Releases before 1.20.0 are on the
 - A Tiled tileset's margin and spacing count from where the game's sheet starts, so a sheet inside an atlas keeps its place
 - 2D level editor: applying an autosave of another size leaves an object layer it does not know about as the file has it, and an autosave whose tiles do not fit its size no longer resizes the map
 - A light's lens flare is hidden by a room or a level mesh around it, seen from outside: only a lamp, a mesh around the light no wider than half its radius, is passed by
+- Example browser: Enter on a focused example selects it, a heading named in a write-up is no longer a link that does nothing, blocked or broken saved preferences no longer stop the page, and the handle drags with the main button only
 - 3D level editor: a broken autosave no longer blocks every edit until Drop, and one older than the last edits, which storage had no room for, says so as the 2D editor does
 
 ## 1.24.0 - 2026-10-02

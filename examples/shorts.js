@@ -413,7 +413,6 @@ async function loadFile(filename, largeExample, fallbackInfo='')
         codeIsJS = true;
         if (codeMirror)
         {
-            codeMirror.on('change', codeInput);
             codeMirror.setOption('mode', 'javascript');
             codeMirror.setValue(text);
         }
@@ -576,7 +575,8 @@ const docsLinks = typeof docsSearchIndex == 'object' ? buildDocsLinks(docsSearch
 // show an example's info in its box, from its top
 function setExampleInfo(info)
 {
-    exampleInfoBox.innerHTML = renderExampleInfo(info, exampleList.map((example)=> example.name), docsLinks);
+    const names = exampleList.filter((example)=> !example.isHeading).map((example)=> example.name);
+    exampleInfoBox.innerHTML = renderExampleInfo(info, names, docsLinks);
     exampleInfoBox.scrollTop = 0;
 }
 
@@ -959,12 +959,14 @@ function readSaveData()
     // load saved preferences
     const defaultTheme = 'littlejs';
     const defaultFontSize = '16px';
-    const saveDataJSON = localStorage.getItem(saveName);
-    const saveData = saveDataJSON ? JSON.parse(saveDataJSON) : {};
+    // storage that is blocked, or holds something else, is no preferences, not a page that does not start
+    let saveData = {};
+    try { saveData = JSON.parse(localStorage.getItem(saveName)) || {}; } catch {}
     selectTheme.value = savedTheme = saveData.theme ?? defaultTheme;
     selectFontSize.value = saveData.fontSize ?? defaultFontSize;
     checkboxShowInfo.checked = saveData.showInfo ?? true;
-    infoShare = saveData.infoShare;
+    const share = saveData.infoShare;
+    infoShare = isFinite(share) && share > 0 && share < 1 ? share : undefined;
     showExampleInfo();
     applyInfoShare();
 }
@@ -986,6 +988,8 @@ function setInfoHeight(height)
 {
     // the code keeps at least a few lines, and the box its first lines
     const total = divEditor.clientHeight, minCode = 80, minInfo = 60;
+    if (!(total > 0))
+        return; // hidden, nothing to share
     height = Math.min(Math.max(height, minInfo), total - infoSplitter.offsetHeight - minCode);
     infoShare = height / total;
     applyInfoShare();
@@ -1005,13 +1009,12 @@ function writeSaveData()
         showInfo: checkboxShowInfo.checked,
         infoShare,
     };
-    const saveDataJSON = JSON.stringify(saveData);
-    localStorage.setItem(saveName, saveDataJSON);
+    try { localStorage.setItem(saveName, JSON.stringify(saveData)); } catch {}
 }
 
 function resetDefaults()
 {
-    localStorage.removeItem(saveName);
+    try { localStorage.removeItem(saveName); } catch {}
     readSaveData();
     loadTheme();
 }
@@ -1144,11 +1147,12 @@ buttonExamples.addEventListener('click', ()=> showListPanel(true));
 buttonListClose.addEventListener('click', ()=> showListPanel(false));
 listExamples.addEventListener('keydown', (e)=>
 {
-    // the arrow keys go through the list, Enter and Escape close the sheet
+    // the arrow keys go through the list, Escape closes the sheet, and Enter does on the list itself; on a row it
+    // is the row's own click, which selects it and closes the sheet
     const step = e.key === 'ArrowDown' ? 1 : e.key === 'ArrowUp' ? -1 : 0;
     if (step)
         stepExample(step);
-    else if (e.key === 'Enter' || e.key === 'Escape')
+    else if (e.key === 'Escape' || e.key === 'Enter' && e.target === listExamples)
         showListPanel(false);
     else
         return;
@@ -1165,6 +1169,8 @@ addEventListener('keydown', (e)=>
     let drag; // where the drag started and the box's height then
     infoSplitter.addEventListener('pointerdown', (e)=>
     {
+        if (e.button)
+            return; // a right or middle button is not a drag
         drag = {y: e.clientY, height: exampleInfoBox.offsetHeight};
         infoSplitter.setPointerCapture(e.pointerId);
         infoSplitter.classList.add('dragging');
