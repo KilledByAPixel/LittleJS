@@ -1689,7 +1689,8 @@ await loadOBJ(url, smooth) // fetch then parse, in an async gameInit; chain .cen
 // Draco or meshopt compressed geometry, which throws saying so
 const model = await loadGLTF(url)   // a GLTFModel, in an async gameInit; or await parseGLTF(data, baseUrl, files) on
                                      // bytes or JSON you already have; files, a Map of the .bin and image files a
-                                     // .gltf names, by path or name, like the files of a drop, is looked in first
+                                     // .gltf names by their paths, like the files of a drop, in place of fetching,
+                                     // baseUrl then the .gltf's folder among them
 model.parts                          // one GLTFPart per primitive of every node: name, mesh in model space, color,
                                      // textureInfo when the material has one and WebGL is on, transparent for a
                                      // blending material or glass (KHR_materials_transmission), which comes in

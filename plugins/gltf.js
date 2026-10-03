@@ -372,13 +372,18 @@ async function loadGLTF(url)
 
 /** Parse a model from GLB bytes or glTF JSON, fetching the buffers and images it refers to
  *  - A .gltf names its .bin and image files, which are fetched from baseUrl, or found among files: what a game
- *    has in hand, like the files dropped on the page, each by its path in the folder the .gltf is in, or by its name
+ *    has in hand, like the files dropped on the page, by their paths in the drop; with files, baseUrl is the
+ *    .gltf's own folder among them ('' or 'models/house/'), its names are read from there, and a name found nowhere
+ *    there is taken by its file name alone only when one file of the drop has it; only an http, https or blob uri
+ *    is fetched then
+ *  - A file the model needs that is not found is named in the error, and an image that can not be read is named in
+ *    a warning and left out
  *  @param {ArrayBuffer|Object|string} data - GLB bytes, or the glTF JSON as bytes, text or an object
  *  @param {string} [baseUrl] - Where the .bin and image files are, with its trailing slash; loadGLTF passes the file's folder
- *  @param {Map<string, Blob>} [files] - The files it refers to, by path or name, looked in before fetching
+ *  @param {Map<string, Blob>} [files] - The files it refers to, by their paths, in place of fetching them
  *  @return {Promise<GLTFModel>}
  *  @example
- *  // the files of a drop, a .gltf with its .bin and textures, by name
+ *  // the files of a drop, a .gltf with its .bin and textures, by their names
  *  const files = new Map([...dataTransfer.files].map((file)=> [file.name, file]));
  *  const gltf = [...files.values()].find((file)=> file.name.endsWith('.gltf'));
  *  const model = await parseGLTF(await gltf.text(), '', files);
@@ -463,7 +468,7 @@ async function parseGLTF(data, baseUrl='', files)
             // REPEAT by default, and hard edged only when its sampler says NEAREST, not as the game's tiles are
             return new TextureInfo(bitmap, true, [sampler.wrapS ?? 10497, sampler.wrapT ?? 10497], sampler.magFilter === 9728);
         }
-        catch (e) { LOG('glTF image not loaded', e); }
+        catch (e) { console.warn('glTF image not loaded, left out: ' + (e?.message || e)); }
     }));
 
     // the parts: the scene's nodes walked with their transforms, every primitive of a node's mesh placed by it;
@@ -659,16 +664,24 @@ function gltfSample(channel, time, out)
 // fetch a uri beside the model, or decode a data uri without going out
 function gltfFetch(uri, baseUrl, files)
 {
-    // among the files given: by its path as the model writes it, or by its name, for files dropped loose
-    if (files && !uri.startsWith('data:'))
+    // among the files given, by its path from the model's folder, or by its name when only one file has it; a uri
+    // of the web is still fetched, and no other kind is
+    if (files && !/^(data|https?|blob):/i.test(uri))
     {
-        let path = uri;
-        try { path = decodeURIComponent(uri); } catch {}
-        path = path.replace(/^\.\//, '');
-        const file = files.get(path) ?? files.get(path.slice(path.lastIndexOf('/') + 1));
-        if (file)
-            return Promise.resolve(new Response(file));
-        return Promise.reject(new Error('glTF needs ' + path + ', which is not among the files given'));
+        let name = uri.replace(/[?#].*$/, '');
+        try { name = decodeURIComponent(name); } catch {}
+        const parts = [];
+        for (const part of (baseUrl + name).replace(/\\/g, '/').split('/'))
+            part === '..' ? parts.pop() : part && part !== '.' && parts.push(part);
+        const path = parts.join('/'), lower = path.toLowerCase(), file = parts.at(-1)?.toLowerCase();
+        const keys = [...files.keys()], found = files.get(path) ?? files.get(keys.find((k)=> k.toLowerCase() === lower));
+        if (found)
+            return Promise.resolve(new Response(found));
+        const named = new Set(keys.filter((k)=> k.slice(k.lastIndexOf('/') + 1).toLowerCase() === file).map((k)=> files.get(k)));
+        if (named.size === 1)
+            return Promise.resolve(new Response([...named][0]));
+        return Promise.reject(new Error('glTF needs ' + path + (named.size ? ', and more than one file has its name' :
+            ', which is not among the files given')));
     }
     if (uri.startsWith('data:'))
     {

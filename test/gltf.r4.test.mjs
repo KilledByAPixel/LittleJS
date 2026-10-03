@@ -119,3 +119,19 @@ test('a glTF whose file is not among those given says which file it needs', asyn
     const {model} = splitModel('scene.bin');
     await assert.rejects(parseGLTF(model, '', new Map()), /scene\.bin/);
 });
+
+test('a glTF in a folder of a drop finds its files from that folder, before any of the same name elsewhere', async ()=>
+{
+    const right = splitModel('mesh.bin'), wrong = new ArrayBuffer(36);
+    new Float32Array(wrong).set([0, 0, 0,  18, 0, 0,  0, 3, 0]);
+    const files = new Map([['Other/mesh.bin', new Blob([wrong])], ['Models/mesh.bin', new Blob([right.buffer])],
+        ['shared/tex.bin', new Blob([right.buffer])]]);
+    const model = await parseGLTF(right.model, 'Models/', files);
+    const b = model.getBounds();
+    assert.deepEqual([b.max.x - b.min.x, b.max.y - b.min.y], [2, 2], 'its own folder\'s mesh.bin');
+    // up a folder, and a name that is in the drop only once
+    assert.equal((await parseGLTF(splitModel('../shared/tex.bin').model, 'Models/', files)).parts.length, 1);
+    assert.equal((await parseGLTF(splitModel('elsewhere/tex.bin').model, 'Models/', files)).parts.length, 1, 'by its name');
+    // a name in the drop twice, and neither in the model's folder, is not guessed
+    await assert.rejects(parseGLTF(splitModel('mesh.bin').model, 'Lone/', files), /more than one/);
+});

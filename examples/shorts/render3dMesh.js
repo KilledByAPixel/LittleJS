@@ -22,7 +22,7 @@ f 7 10 8
 `;
 
 const modelSize = 5;
-let model, modelName = 'house';
+let model, asset, modelName = 'house'; // asset: the Mesh or GLTFModel shown
 
 function gameInit()
 {
@@ -48,33 +48,31 @@ function gameInit()
     document.addEventListener('drop', async (e)=>
     {
         stop(e);
-        const files = await droppedFiles(e.dataTransfer);
-        const file = [...files.values()].find(
-            (f)=> /\.(obj|glb|gltf)$/i.test(f.name));
-        if (!file) return;
+        const items = droppedFiles(e.dataTransfer); // read before awaiting
+        let name = 'the drop';
         try
         {
-            if (/\.obj$/i.test(file.name))
+            const files = await items, [path, file] = [...files].find(
+                ([path])=> /\.(obj|glb|gltf)$/i.test(path)) || [];
+            if (!file) return;
+            name = file.name;
+            if (/\.obj$/i.test(path))
                 setModel(parseOBJ(await file.text()));
-            else // a .gltf finds its .bin and images among the files
-                setModel(await parseGLTF(await file.arrayBuffer(), '',
-                    files));
-            modelName = file.name;
+            else // a .gltf finds its files from its own folder in the drop
+                setModel(await parseGLTF(await file.arrayBuffer(),
+                    path.slice(0, path.lastIndexOf('/') + 1), files));
+            modelName = name;
         }
-        catch (error) { modelName = file.name + ' failed: ' + error.message; }
+        catch (error) { modelName = name + ' failed: ' + error.message; }
     });
 }
 
-// every file of a drop, by its path in the dropped folder and by its name,
-// so a .gltf finds the files it names either way
+// every file of a drop by its path in the dropped folder, the files a .gltf
+// names are found from its own folder
 async function droppedFiles(dataTransfer)
 {
-    const files = new Map;
-    const add = (path, file)=>
-    {
-        files.set(path, file);
-        files.has(file.name) || files.set(file.name, file);
-    };
+    const files = new Map, add = (path, file)=> files.set(path, file);
+    const loose = [...dataTransfer.files]; // gone after the first await
     const read = async (entry, path)=>
     {
         if (entry.isFile)
@@ -93,7 +91,7 @@ async function droppedFiles(dataTransfer)
     for (const entry of entries)
         await read(entry, '');
     if (!files.size) // a browser that gives no entries gives the files
-        for (const file of dataTransfer.files)
+        for (const file of loose)
             add(file.name, file);
     return files;
 }
@@ -101,7 +99,10 @@ async function droppedFiles(dataTransfer)
 // show a Mesh or a GLTFModel: centered, scaled to size, standing on the floor
 function setModel(loaded)
 {
+    // the model shown before goes, and what it was loaded into with it
     model?.destroy(true);
+    asset?.dispose();
+    asset = loaded;
     loaded.center().fit(modelSize);
     const pos = vec3(0, -loaded.getBounds().min.y, 0);
     if (loaded instanceof GLTFModel)
