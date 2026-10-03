@@ -52,6 +52,22 @@ smokeRun(async ()=>
     check('the same place on the other side, with no box, is lit', ground(-1.9) > 100, ground(-1.9));
     check('the ground beside the shadow stays lit', ground(-2.2) > 100 && ground(0) > 150, [ground(-2.2), ground(0)]);
 
+    // a gel, a picture the shadow light shines through: its left half red and its right half blue, as the lamp
+    // sees them, so the ground to the lamp's left, -x, is red and to its right blue
+    const picture = document.createElement('canvas'), context = picture.getContext('2d');
+    picture.width = 2, picture.height = 1;
+    context.fillStyle = '#f00', context.fillRect(0, 0, 1, 1);
+    context.fillStyle = '#00f', context.fillRect(1, 0, 1, 1);
+    lamp.gel = new TextureInfo(picture);
+    engineStep(2);
+    const color = (x)=> smokePixel(.5 + x / 13.86, .5);
+    check('a gel colors the light, its left half to the lamp's left', color(-1)[0] > 80 && color(-1)[2] < 30, color(-1));
+    check('and its right half to the right', color(1)[2] > 80 && color(1)[0] < 30, color(1));
+    lamp.gel = undefined;
+    engineStep(2);
+    check('with no gel the light is white again', ground(-1) > 100 && smokePixel(.5 - 1 / 13.86, .5)[2] > 100,
+        smokePixel(.5 - 1 / 13.86, .5));
+
     lamp.coneAngle = 0;
     engineStep(2);
     check('with no cone it is a point light again, lighting past the cone', ground(-5.5) > 30, ground(-5.5));

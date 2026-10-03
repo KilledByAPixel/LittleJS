@@ -1144,6 +1144,13 @@ inputSearch.addEventListener('keydown', (e)=>
 buttonRestart.addEventListener('click', restartCode);
 buttonPrev.addEventListener('click', ()=> stepExample(-1));
 buttonNext.addEventListener('click', ()=> stepExample(1));
+buttonTheme.addEventListener('click', ()=>
+{
+    // light or dark, kept under the name the docs site uses, so one choice holds for both
+    const theme = document.documentElement.dataset.theme != 'light' ? 'light' : 'dark';
+    document.documentElement.dataset.theme = theme;
+    try { localStorage.setItem('theme', theme); } catch (e) {}
+});
 buttonExamples.addEventListener('click', ()=> showListPanel(true));
 buttonListClose.addEventListener('click', ()=> showListPanel(false));
 listExamples.addEventListener('keydown', (e)=>

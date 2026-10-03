@@ -18,7 +18,7 @@ What changed in each release, newest first. Releases before 1.20.0 are on the
 - `tileLayersLoad`'s `collisionLayer` may be a layer's name
 - `light.addFlare` takes the flare's color too
 - LDtk: an IntGrid layer is always a hidden layer of its values under its own name, its rule tiles in layers over it named with tiles, so `tileLayersLoad(map, tileInfo, 0, 'Collisions')` is solid where the values say, whatever the tiles stack or fade; a project of several worlds loads; a project with no tileset entry keeps its tiles
-- The example browser has a new look, in the dark colors of the docs site: a slim top bar in place of the title, the demo at 16:9, and the example list as rows under their headings. A handle between the code and its write-up drags to give one the other's space, by touch and the arrow keys too, and is remembered; a double click puts the quarter back. On a phone the example's name, between Prev and Next, opens a full screen picker with the search. The Screenshot button is gone
+- The example browser has a new look, in the dark colors of the docs site: a slim top bar in place of the title, the demo at 16:9, and the example list as rows under their headings. A handle between the code and its write-up drags to give one the other's space, by touch and the arrow keys too, and is remembered; a double click puts the quarter back. On a phone the example's name, between Prev and Next, opens a full screen picker with the search. The Screenshot button is gone. A button in the top bar switches between dark and light, the choice shared with the docs site
 
 ### Fixes
 

@@ -1,10 +1,10 @@
 <!DOCTYPE html><head>
 <title>LittleJS Example Browser</title>
 <link rel=icon type=image/png href=favicon.png>
-<link rel=stylesheet href=style.css?12>
+<link rel=stylesheet href=style.css?13>
+<script>try{var t=localStorage.getItem('theme');if(t)document.documentElement.dataset.theme=t}catch(e){}</script>
 <meta charset=utf-8>
 <meta name='viewport' content='width=device-width, initial-scale=1.0'>
-<meta name='color-scheme' content='dark'>
 <!-- meta tags for social media -->
 <meta name='twitter:title'       content='LittleJS Example Browser'>
 <meta property='og:title'        content='LittleJS Example Browser'>
@@ -24,6 +24,7 @@
 <a id=exampleLink target=_blank rel=noopener title='This example on GitHub'>Source</a>
 <a href='../docs/' target=_blank rel=noopener>Docs</a>
 <a href='https://github.com/KilledByAPixel/LittleJS' target=_blank rel=noopener>GitHub</a>
+<button id=buttonTheme aria-label='Switch between light and dark' title='Light or dark'><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M12 3a9 9 0 1 0 9 9c0-.5 0-1-.1-1.4A6 6 0 0 1 12 3z" fill="currentColor"/></svg></button>
 </nav>
 </header>
 <main id=container1>

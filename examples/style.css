@@ -6,6 +6,10 @@
     --panel: #232328;
     --panel2: #2a2a30;
     --line: #35353c;
+    --line2: #4a4a54;
+    --strong: #fff;
+    --code: #aef;
+    --code-bg: #141416;
     --text: #e6e6ea;
     --muted: #9a9aa5;
     --accent: #5db2ff;
@@ -15,6 +19,23 @@
     --gap: 8px;
     --radius: 6px;
     color-scheme: dark;
+}
+/* the light theme, the docs site's, by the button in the top bar; the code editor keeps its own Theme */
+:root[data-theme=light]
+{
+    --bg: #ffffff;
+    --panel: #f4f4f6;
+    --panel2: #e9e9ee;
+    --line: #dcdce2;
+    --line2: #c4c4cc;
+    --text: #1f1f24;
+    --muted: #666672;
+    --accent: #0b6fd0;
+    --strong: #000;
+    --code: #0b5fb0;
+    --code-bg: #e9e9ee;
+    --pink: #d81b54;
+    color-scheme: light;
 }
 
 * { box-sizing: border-box; }
@@ -81,6 +102,16 @@ body.listOpen { overflow: hidden; }
 .links { display: flex; gap: 16px; white-space: nowrap; }
 .links a { color: var(--muted); }
 .links a:hover { color: var(--text); text-decoration: none; }
+#buttonTheme
+{
+    display: flex;
+    padding: 4px;
+    background: none;
+    border: 0;
+    color: var(--muted);
+}
+#buttonTheme:hover { background: none; color: var(--text); }
+.links { align-items: center; }
 
 /* the two columns: the editor and the preview with the list under it */
 #container1
@@ -136,7 +167,7 @@ button, select, input[type=search]
     margin: 0;
 }
 button { cursor: pointer; white-space: nowrap; }
-button:hover:not(:disabled) { background: var(--panel2); border-color: #4a4a54; }
+button:hover:not(:disabled) { background: var(--panel2); border-color: var(--line2); }
 button:active:not(:disabled) { background: var(--line); }
 button:disabled { color: var(--muted); opacity: .5; cursor: default; }
 select { padding: 4px 6px; }
@@ -337,7 +368,7 @@ input[type=search]:focus { outline: none; border-color: var(--accent); }
 #exampleInfoBox h2, #exampleInfoBox h3, #exampleInfoBox h4
 {
     margin: 14px 0 4px;
-    color: #fff;
+    color: var(--strong);
 }
 #exampleInfoBox h2 { font-size: 18px; }
 #exampleInfoBox h3 { font-size: 15px; }
@@ -348,8 +379,8 @@ input[type=search]:focus { outline: none; border-color: var(--accent); }
 #exampleInfoBox code, #exampleInfoBox pre
 {
     font: 12.5px/1.5 ui-monospace, "Cascadia Mono", Consolas, Menlo, monospace;
-    color: #aef;
-    background: #141416;
+    color: var(--code);
+    background: var(--code-bg);
     border-radius: 3px;
 }
 #exampleInfoBox code { padding: 1px 5px; }
