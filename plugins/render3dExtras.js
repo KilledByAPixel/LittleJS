@@ -1622,7 +1622,7 @@ class LensFlare3D extends EngineObject3D
         this.elements = undefined;
         /** @property {Light3D|undefined} - A light the flare is of in place of the sun, a lamp or a spotlight: the
          *  flare is at the light and in its color, smaller from farther than the light reaches, hidden by what is
-         *  in front of the light but its lamp, a mesh around it no wider than half its radius, and a spotlight's
+         *  in front of the light but its lamp, a mesh around it whose surface is near it, and a spotlight's
          *  shows from inside its beam only; a DirectionalLight3D's is far
          *  away where it shines from, like the sun's; the flare is destroyed when its light is; light.addFlare
          *  sets this
@@ -1762,21 +1762,28 @@ class LensFlare3D extends EngineObject3D
         for (const map of maps)
             if (map.raycast(ray, reach, (type)=> !map.blockType(type).seeThrough))
                 return true;
-        // a light's lamp, the mesh the light is inside, does not hide it: one whose box, in its own space, the light
-        // is in, and no wider than half the light's reach, since a room or a whole level has a box around its lights
-        // too, and its walls do hide them from outside
-        const lamp = (o)=>
+        // a light's lamp, a mesh around the light, does not hide it: one whose box, in its own space, the light is in,
+        // hit close to the light, as a shade or a globe is; a room or a whole level holds its lights too, and its
+        // walls, farther from them, do hide them from outside
+        const inside = (o)=>
         {
-            if (!this.light || reach === Infinity || !o.mesh || o instanceof HeightMap) return false;
+            if (!o.mesh || o instanceof HeightMap) return false;
             const matrix = render3DObjectMatrix(o), b = o.mesh.bounds || o.mesh.getBounds();
-            const side = max(b.max.x - b.min.x, b.max.y - b.min.y, b.max.z - b.min.z) * render3DMaxStretch(matrix.m);
-            if (!matrix.determinant() || side > this.light.radius / 2) return false;
+            if (!matrix.determinant()) return false;
             const p = matrix.copy().invert().transformPoint(source.pos);
             return p.x >= b.min.x && p.x <= b.max.x && p.y >= b.min.y && p.y <= b.max.y &&
                 p.z >= b.min.z && p.z <= b.max.z;
         };
-        const hit = render3D.pick(ray, blockers.filter((o)=> !maps.some((map)=> map === o) && !lamp(o)));
-        return !!hit && hit.distance < reach;
+        const near = this.light && reach < Infinity ? min(2, this.light.radius * .4) : 0;
+        let candidates = blockers.filter((o)=> !maps.some((map)=> map === o));
+        for (let tries = 4; tries--;)
+        {
+            const hit = render3D.pick(ray, candidates);
+            if (!hit || hit.distance >= reach) return false;
+            if (!(reach - hit.distance <= near && inside(hit.object))) return true;
+            candidates = candidates.filter((o)=> o !== hit.object); // its lamp, look past it
+        }
+        return false;
     }
 
     /** Ease visible toward whether the sun shows, called automatically each frame; a flare that would not show

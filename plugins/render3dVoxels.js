@@ -256,8 +256,8 @@ class VoxelMap extends EngineObject3D
 
                 // a double sided block shows the face from inside too, its corners the other way round
                 if (block.doubleSided)
-                    mesh.addStrip([points[1], points[0], points[3], points[2]], normal.scale(-1),
-                        [uvs[1], uvs[0], uvs[3], uvs[2]], [colors[1], colors[0], colors[3], colors[2]]);
+                    mesh.addStrip([points[0], points[2], points[1], points[3]], normal.scale(-1),
+                        [uvs[0], uvs[2], uvs[1], uvs[3]], [colors[0], colors[2], colors[1], colors[3]]);
             }
         }
         this.chunkMeshes[index]?.dispose();

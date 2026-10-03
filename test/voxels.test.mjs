@@ -111,8 +111,14 @@ test('a doubleSided block type shows its faces from inside too, as the surface o
     map.setVoxel(vec3(1, 1, 1), 6);
     map.buildChunks();
     assert.equal(faces(map.chunkTransparentMeshes[0]), 12, 'each face twice, once facing in');
-    const mesh = map.chunkTransparentMeshes[0];
-    assert.ok(mesh.normals.some((n)=> n.y < 0) && mesh.normals.some((n)=> n.y > 0));
+    // each triangle has its twin facing the other way, over the same three corners, so the inside of a face is
+    // split along the same diagonal as its outside and shows no seam where the shading differs
+    const mesh = map.chunkTransparentMeshes[0], {vertices, indices} = mesh.getTriangles();
+    const key = (i)=> { const p = mesh.points[vertices[indices[i]]]; return [p.x, p.y, p.z].join(); };
+    const triangles = [];
+    for (let i = 0; i < indices.length; i += 3) triangles.push([key(i), key(i + 1), key(i + 2)]);
+    const turns = (a, b)=> [0, 1, 2].some((k)=> a[0] === b[k] && a[1] === b[(k + 2) % 3] && a[2] === b[(k + 1) % 3]);
+    assert.ok(triangles.every((t)=> triangles.some((u)=> turns(t, u))), 'every triangle has a twin the other way round');
     map.setVoxel(vec3(1, 1, 1), 7);
     map.buildChunks();
     assert.equal(faces(map.chunkTransparentMeshes[0]), 6, 'glass from outside only');

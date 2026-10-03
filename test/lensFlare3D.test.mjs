@@ -338,3 +338,21 @@ test('a room the light is in, seen from outside, hides its flare; only a small l
     run('room.scale3D = vec3(2); steps(flare, 20);');
     assert.equal(run('flare.visible'), 1, 'a lamp the size of a lamp');
 });
+
+test('a light\'s fixture is told from a room by how near its surface is to the light, not by its size', ()=>
+{
+    const run = load();
+    // a red light 10 ahead of the camera, of the reach given, inside a box of the size given
+    const shows = (radius, size)=>
+    {
+        run(`for (const o of engineObjects) o.destroy(); engineObjects.length = 0; sun(1, 0, 0);
+            var lamp = new Light3D(vec3(0, 0, -10), ${radius}, rgb(1, 0, 0)), flare = new LensFlare3D; flare.light = lamp;
+            var box = new EngineObject3D(vec3(0, 0, -10), render3D.boxMesh); box.scale3D = vec3(${JSON.stringify(size)}[0],
+            ${JSON.stringify(size)}[1], ${JSON.stringify(size)}[2]); steps(flare, 20);`);
+        assert.ok(run('!!flare.flareLook()'), 'the flare would show with nothing in the way');
+        return run('flare.visible');
+    };
+    assert.equal(shows(20, [6, 6, 6]), 0, 'a closed room 6 wide around a light that reaches far hides it');
+    assert.equal(shows(5, [3, 3, 3]), 1, 'a globe 3 wide around a light of the default reach is its own fixture');
+    assert.equal(shows(8, [.3, 6, .3]), 1, 'a thin lamp post holding the light is too');
+});

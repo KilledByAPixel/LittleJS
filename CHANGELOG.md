@@ -16,6 +16,8 @@ What changed in each release, newest first. Releases before 1.20.0 are on the
 - Small malformed files no longer make a loader run on: an Aseprite tag past its frames keeps to them, a glTF node reached twice and an accessor of millions with no buffer are refused, an LDtk level of millions of cells is refused and a tile or entity with no place is passed by
 - LDtk: an IntGrid layer whose rule tiles are on another tileset keeps its values for collision, its tiles left out with a warning
 - A collision layer named that no layer has says so in release builds too
+- A light's lens flare: its lamp is told from a room around it by how near to the light the ray meets its surface, not by its size, so a globe around the light is its own fixture and a small closed room hides it
+- VoxelMap: the inside of a doubleSided face is split along the same diagonal as its outside, so it shows no seam
 - 3D levels: a color that is not a string, and a number that is NaN or Infinity (1e999 in JSON), are read as the default, in place of an assert or a NaN
 - `tileLayersLoad` says so when a map is not a whole number of cells across and down, or a layer's tiles do not fill it, in release builds too, in place of running on
 
@@ -33,6 +35,10 @@ What changed in each release, newest first. Releases before 1.20.0 are on the
 - `light.addFlare` takes the flare's color too
 - LDtk: an IntGrid layer is always a hidden layer of its values under its own name, its rule tiles in layers over it named with tiles, so `tileLayersLoad(map, tileInfo, 0, 'Collisions')` is solid where the values say, whatever the tiles stack or fade; a project of several worlds loads; a project with no tileset entry keeps its tiles
 - The example browser has a new look, in the dark colors of the docs site: a slim top bar in place of the title, the demo at 16:9, and the example list as rows under their headings. A handle between the code and its write-up drags to give one the other's space, by touch and the arrow keys too, and is remembered; a double click puts the quarter back. On a phone the example's name, between Prev and Next, opens a full screen picker with the search. The Screenshot button is gone. A button in the top bar switches between dark and light, the choice shared with the docs site
+
+### Breaking Changes
+
+- LDtk: an IntGrid layer with tiles is now a hidden layer of its values under its own name, its tiles in layers named with tiles over it, so the layer indices and names of such a level move; name the collision layer, `tileLayersLoad(map, tileInfo, 0, 'Collisions')`, in place of an index
 
 ### Fixes
 
