@@ -16,6 +16,8 @@ What changed in each release, newest first. Releases before 1.20.0 are on the
 - On an iPhone the silent switch mutes the game, as it does a ringtone, and the player's music plays on beside it; `setSoundIgnoreSilentSwitch(true)` has the game play through the switch as media does (Safari 16.4 and up)
 - Level editor: the brush, its ghost and the palette read a tile past the end of a sheet as nothing, as the layer draws it, where a collision value picked up with the right button asserted every frame; the palette of a tile set filled in after it was first shown shows its tiles
 - A light's flare looks past four lamps around it to what is behind them, where the fourth counted as hidden
+- A click or tap in the bars around a letterboxed canvas presses nothing, where it pressed whatever was at the canvas edge
+- `showConfirmDialog` while one is open gives the one open, where a second broke UI navigation in release builds
 - A tile layer's raycast toward a point far beyond the layer walks only across the layer, where a ray to a far constant took seconds
 - `debugShowErrors` shows a message as text, so a file name with markup in it can not add elements to the page
 - Canvas2D tints clamp the color to 0 to 1, as WebGL does

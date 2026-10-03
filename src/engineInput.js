@@ -586,6 +586,9 @@ function inputInit()
         if (soundEnable && !headlessMode && audioContext && !audioIsRunning())
             audioContext.resume();
 
+        // a press in the bars around a letterboxed canvas is not one on its edge; a drag out of it still moves
+        if (!inCanvas(e.x, e.y))
+            return;
         inputData[0][e.button] = 3;
 
         const mousePosScreenLast = mousePosScreen;
@@ -739,8 +742,8 @@ function inputInit()
                     }
                     else if (inputWasTouching && touch.identifier === inputTouchIdentifier)
                         mouseDeltaScreen = mouseDeltaScreen.add(mousePosScreen.subtract(mousePosScreenLast));
-                    else if (pressTouch)
-                        inputData[0][button] = 3;
+                    else if (pressTouch && inCanvas(pressTouch.clientX, pressTouch.clientY))
+                        inputData[0][button] = 3; // a tap in the bars around the canvas is not a press
                     // the finger left after a pinch moves the mouse from where it is, with no jump and no press
                     inputTouchIdentifier = pinching ? undefined : touch.identifier;
                 }
@@ -769,6 +772,13 @@ function inputInit()
             return true;
         }
 
+    }
+
+    // is a point of the window on the canvas
+    function inCanvas(x, y)
+    {
+        const rect = mainCanvas.getBoundingClientRect();
+        return x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom;
     }
 
     // convert a mouse or touch event position to screen space

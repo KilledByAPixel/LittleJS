@@ -747,6 +747,8 @@ class UISystemPlugin
     showConfirmDialog(text='Are you sure?', yesCallback, noCallback, size=vec2(500,250), exitKey='Escape')
     {
         ASSERT(!uiSystem.confirmDialog, 'a confirm dialog is already open, check uiSystem.confirmDialog');
+        if (uiSystem.confirmDialog)
+            return uiSystem.confirmDialog; // in a release build, the one open, as a second would break navigation
 
         const savedNavigationDirection = uiSystem.navigationDirection;
         const savedNavigationObject = uiSystem.navigationObject;
