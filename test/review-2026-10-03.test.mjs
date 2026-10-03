@@ -82,3 +82,23 @@ test('a tween that loops or ping pongs with no time, or less, ends its loops, in
         for (let i = 10; i--;) tweenUpdate(1/60, 1/60);`);
     assert.equal(run('ends'), 2);
 });
+
+test('the level editor reads a tile past the end of a sheet read by its columns as nothing, as the layer draws it', ()=>
+{
+    const run = load();
+    run(`var sheet = new TileInfo(vec2(), vec2(16), new TextureInfo({width: 17, height: 16}, false), .5, 0, 1);
+        var layer = new TileLayer(vec2(), vec2(2, 1), sheet);`);
+    assert.deepEqual(json(run, '[!!editorTileInfo(layer, 0), editorTileInfo(layer, 99) === undefined]'), [true, true]);
+});
+
+test('a light\'s flare looks past four lamps around it, and counts a fifth as hidden', ()=>
+{
+    const run = load();
+    run(`new Render3DPlugin; render3D.camera.pos = vec3(); render3D.camera.rotation = vec3();
+        render3D.sunDirection = vec3(1, 0, 0); render3D.updateMatrices();
+        var lamp = new Light3D(vec3(0, 0, -10), 10, rgb(1, 0, 0)), flare = new LensFlare3D; flare.light = lamp;
+        var lamps = (n)=> { for (let i = 0; i < n; ++i) { const o = new EngineObject3D(vec3(0, 0, -10), render3D.boxMesh);
+            o.scale3D = vec3(1 + i * .2); } flare.visible = .5; for (let i = 20; i--;) flare.update(); return flare.visible; };`);
+    assert.equal(run('lamps(4)'), 1, 'four nested shades');
+    assert.equal(run('lamps(1)'), 0, 'five');
+});
