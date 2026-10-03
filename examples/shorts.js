@@ -1027,6 +1027,25 @@ function resetDefaults()
 // setup code mirror
 
 const useCodeMirror = true;
+
+// the hash of each CodeMirror file, so the browser refuses one the CDN changed
+const codeMirrorIntegrity =
+{
+    'codemirror.min.js': 'sha384-4jtDQkm5WXyXl9gNSgtjNod/6XkUGfxETi+BJ3EuN7ApjJ7/HZoK7PHThKqCkCxp',
+    'codemirror.min.css': 'sha384-zaeBlB/vwYsDRSlFajnDd7OydJ0cWk+c2OWybl3eSUf6hW2EbhlCsQPqKr3gkznT',
+    'addon/edit/matchbrackets.js': 'sha384-VTfea43jk3cts7Fd5DbskOZKCo1P+X4qCWSv0+oIhMKaSymJL4+KZ9eC6VzkZbab',
+    'mode/javascript/javascript.min.js': 'sha384-kmQrbJf09Uo1WRLMDVGoVG3nM6F48frIhcj7f3FDUjeRzsiHwyBWDjMUIttnIeAf',
+    'theme/3024-night.min.css': 'sha384-ZF1y497ptQQ0w7TijSMNCdbAMAfq0OrjYxCWpwS+XALVDjkh9two6NEoJ1AjxHdA',
+    'theme/abcdef.min.css': 'sha384-v2J32HB1r0WhGrgrPsTNrbpMHWzjBUIqN7Voq8Y+VqpQxN8InjgD4goC/81N5fSs',
+    'theme/ambiance.min.css': 'sha384-VlWK68qbI4TC0Z8QYqGxdcCtUDdCJgVjzDY7eYclnR1agPGsvV9Vx2987H3siE44',
+    'theme/blackboard.min.css': 'sha384-gfUhqRJeEinPIZ4VtS4+cMfxWA8PS2efJFC9XnQ1NiDvPwwTJuLJXNL7MMv5shFg',
+    'theme/monokai.min.css': 'sha384-05WuhgjXiqmZzcQ3vQRQ39HN356Yqb+SnhvELzFtpwS5b2IlqE8QsOO5LCSJ2znj',
+    'theme/duotone-light.min.css': 'sha384-NSWqmGxjlM/qMf/DHgbK6InBrU3nWUkKT3+zBX5kBY9AS0+NdS+2LDBx/yNUwfTQ',
+    'theme/icecoder.min.css': 'sha384-E1cQZV+GDiGD1kxl2SB3bxQdR8SHWduMaGe5EXlODbs7rmdJNnaa8XiihXg0u3+E',
+    'theme/lesser-dark.min.css': 'sha384-wFF9dJnTwZU/69xmY0KbetmBc6N246Xv+6MLnOH9CmiGYNW5CdtZn3dQS5bkorC5',
+    'theme/night.min.css': 'sha384-9WCMrht/cArNqEFe+P/oiR3mFD2raNS40bAWBzVYl3cVZszX8PctQCYXwdCUSVhF',
+    'theme/yonce.min.css': 'sha384-7JFYEmzGFV9/5PSm/oQ3RWFabOXSOcdPvwWf8iJMSrbA5J4vaL3sYSvLk2M5CiL9',
+};
 let codeMirror; // code mirror instance
 let errorLineMarker; // marker for error line in code mirror
 let codeIsJS; // is the current code javascript
@@ -1084,9 +1103,11 @@ if (useCodeMirror)
 
 function addCodeMirrorElement(filename, type, rel)
 {
-    // add element for code mirror
+    // add element for code mirror, pinned to its version and its hash
     const e = document.createElement(type);
     e.rel = rel;
+    if (codeMirrorIntegrity[filename])
+        e.integrity = codeMirrorIntegrity[filename];
     filename = 'https://cdnjs.cloudflare.com/ajax/libs/codemirror/6.65.7/' + filename;
     if (type === 'link')
         e.href = filename;

@@ -157,3 +157,17 @@ test('a Vector2 string must be exactly two numbers, anything else keeps the defa
             .map((c)=> [c.offset.x, c.offset.y]);`);
     assert.deepEqual(JSON.parse(JSON.stringify(values)), [[1, 2], [1, 2], [1, 2], [1, 2], [2, 3]]);
 });
+
+test('a Tiled property named as a method of the object is left out, so update still runs', () =>
+{
+    for (const file of [undefined, 'littlejs.release.js'])
+    {
+        const { run, warnings } = engine(file);
+        run(`class Door { constructor(pos) { this.pos = pos; } update() { return 'runs'; } }
+            objectLayersAddType('Door', Door, { locked: false });
+            var [door] = objectLayersLoad(${map([{ id: 1, type: 'Door', point: true, x: 8, y: 8, properties: [
+                { name: 'update', type: 'string', value: 'x' }, { name: 'locked', type: 'bool', value: true }] }])});`);
+        assert.deepEqual([run('door.update()'), run('door.locked')], ['runs', true], file);
+        file || assert.ok(warnings.some((w)=> /update/.test(w)), 'a debug build says why');
+    }
+});

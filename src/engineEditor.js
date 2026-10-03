@@ -1319,8 +1319,8 @@ function editorSetObjects(layer, list)
             if ('pos' in made && (old.x !== object.x || old.y !== object.y))
                 made.pos = editorObjectPos(record, object);
             const was = objectLayersProperties(type, old), now = objectLayersProperties(type, object);
-            for (const name in now)
-                editorSameData(was[name], now[name]) || (made[name] = now[name]);
+            for (const name in now) // a method's name is left out, as objectLayersMake leaves it
+                editorSameData(was[name], now[name]) || typeof made[name] === 'function' || (made[name] = now[name]);
         }
     }
 }

@@ -33,6 +33,10 @@ let textureSheets = [];
 // pending loads pack through a queue so sheets fill in call order
 let textureSheetQueue = Promise.resolve();
 let textureSheetPendingCount = 0;
+// what each load handed back by what it was given, so the same image loaded again is packed once
+const textureSheetLoaded = new Map;
+// a load's key: what it was given, a vector by its numbers
+const textureSheetLoadKey = (...parts)=> parts.map((p)=> isVector2(p) ? p.x + ',' + p.y : String(p)).join('|');
 
 /**
  * Texture Sheet - A texture that images are packed into as they load
@@ -189,6 +193,7 @@ class TextureSheet
  *  - Pass frameSize for animations, then step through them with TileInfo.frame
  *  - Grid images keep their layout and frames wrap down to the next row
  *  - Pass sourcePadding if the source image has padding baked in around frames
+ *  - The same image loaded again with the same settings gives back what the first load did, packed once
  *  @param {string} src - Image source path
  *  @param {Vector2|number} [frameSize] - Size of each animation frame in pixels, or the whole image less its
  *  source padding if not passed
@@ -209,10 +214,14 @@ function loadSprite(src, frameSize, padding=textureSheetPadding, sourcePadding=0
 
     if (isNumber(frameSize))
         frameSize = vec2(/** @type {number} */ (frameSize));
+    const key = textureSheetLoadKey('sprite', src, frameSize, padding, sourcePadding);
+    if (!headlessMode && textureSheetLoaded.has(key))
+        return textureSheetLoaded.get(key);
 
     // start with an empty tile that gets filled in when the image loads
     const tileInfo = new TileInfo(vec2(), vec2(), undefined, padding, 0);
     if (headlessMode) return tileInfo;
+    textureSheetLoaded.set(key, tileInfo);
 
     // point at a sheet right away so drawing before it loads picks up empty pixels
     tileInfo.textureInfo = (textureSheets[0] || textureSheetCreate()).textureInfo;
@@ -266,6 +275,7 @@ function loadSprite(src, frameSize, padding=textureSheetPadding, sourcePadding=0
  *    is not read, cut it into its tiles first
  *  - An image that fails to load, or that no sheet can hold, adds no tiles and says so in the console, so the tiles
  *    of the images after it move up
+ *  - The same images loaded again with the same settings give back what the first load did, packed once
  *  @param {Array<string>} sources - Image source paths
  *  @param {Vector2|number} [tileSize] - Size of a tile in pixels
  *  @param {number} [padding] - How many pixels padding around each tile on the sheet
@@ -282,9 +292,13 @@ function loadTiles(sources, tileSize=tileDefaultSize, padding=textureSheetPaddin
     ASSERT(isNumber(padding), 'padding must be a number');
     ASSERT(engineInitialized || headlessMode, 'call loadTiles after engineInit, e.g. in gameInit');
     const size = isNumber(tileSize) ? vec2(/** @type {number} */ (tileSize)) : /** @type {Vector2} */ (tileSize).copy();
+    const key = textureSheetLoadKey('tiles', sources.join('\n'), size, padding);
+    if (!headlessMode && textureSheetLoaded.has(key))
+        return textureSheetLoaded.get(key);
     const set = new TileInfo(vec2(), size, undefined, 0, 0);
     set.tiles = [];
     if (headlessMode) return set;
+    textureSheetLoaded.set(key, set);
     set.textureInfo = (textureSheets[0] || textureSheetCreate()).textureInfo;
 
     // every image decodes at once, and packs through the queue in the order given, so the tiles keep that order
@@ -321,6 +335,7 @@ function loadTiles(sources, tileSize=tileDefaultSize, padding=textureSheetPaddin
  *  - Aseprite frame tags become animations, so do names like run_0, run_1
  *  - Trimmed frames are restored to their full source size when packed
  *  - Rotated frames are rotated back upright when packed
+ *  - The same atlas loaded again by its paths, with the same padding, gives back what the first load did, packed once
  *  @param {string} imageSrc - Atlas image path
  *  @param {string|Object} jsonSrc - Atlas json path, or already parsed json data
  *  @param {number} [padding] - How many pixels padding around each frame
@@ -338,9 +353,15 @@ function loadAtlas(imageSrc, jsonSrc, padding=textureSheetPadding)
     ASSERT(isNumber(padding), 'padding must be a number');
     ASSERT(engineInitialized || headlessMode, 'call loadAtlas after engineInit, e.g. in gameInit');
 
+    // json passed in as data may be another atlas each time, only one loaded by its path is kept
+    const key = typeof jsonSrc === 'object' ? undefined : textureSheetLoadKey('atlas', imageSrc, jsonSrc, padding);
+    if (!headlessMode && textureSheetLoaded.has(key))
+        return textureSheetLoaded.get(key);
+
     /** @type {Object<string, TileInfo>} */
     const atlas = {};
     if (headlessMode) return atlas;
+    key && textureSheetLoaded.set(key, atlas);
 
     // start fetching the json and decoding the image right away, in parallel
     const jsonPromise = typeof jsonSrc === 'object' ? Promise.resolve(jsonSrc) :

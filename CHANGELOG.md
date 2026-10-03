@@ -10,9 +10,14 @@ What changed in each release, newest first. Releases before 1.20.0 are on the
 - Tile sets from separate images: `loadTiles(['grass.png', 'brick.png', 'props.png'], 16)` packs tile images, or several tile sheets, into the texture sheets as one tile set, numbered in the order given, for `tileLayersLoad`, tile layers and the level editor's palette; an image that is not whole tiles gives the whole tiles in it, and a map's tileset margin or spacing does not replace the set
 - Spotlight gels: `light.gel` is a picture the shadow casting spotlight shines through, cast along its beam in its colors, like a slide or stained glass; with none a scene draws exactly as before. The 3D First Person flashlight has one on G
 - Less garbage each frame: objects are sorted only when one is out of render order and the destroyed taken out only when there are some, an object with mass that collides with nothing copies no position, and outlines and regular polygons are made into kept vectors, about 98 fewer for each outlined circle; a 3D pick makes no vectors for an object it misses
+- `Mesh.computeNormals(true)` is 5 to 7 times faster, the same normals to the last bit: a 960 point flag in 0.24 ms where it took 1.8, so a mesh can be bent every frame
+- `loadSprite`, `loadTiles` and `loadAtlas` give back what the first load did when the same image is loaded again with the same settings, packed once
+- A release build goes on past an error in a frame, logging the first, where one error froze the game for good; a debug build stops and shows it as before
 
 ### Fixes
 
+- A Tiled property named as a method of the object it is for, like `update`, is left out, where it replaced the method; a debug build says so
+- `noise2D` stays noise however far out y is, where past about 24 million every row was one value; it gives the same values as before everywhere else
 - Medals: the save keeps the unlock of a medal the game has not made this time, and a medal made after `medalsInit` reads its unlock, so a medal made late or behind a flag is never lost; `medalsReset` locks those too
 - Older browsers: the engine starts with no `OffscreenCanvas` (Safari before 16.4), drawing into a canvas element in its place, and so do the textures it makes itself (normal maps from heights, particle shapes, light glows, lens flares, glTF's white texture), and uses neither `Array.prototype.at` nor `Object.hasOwn` (Safari before 15.4); the example browser's markdown has no lookbehind, which Safari before 16.4 could not read
 - On an iPhone the silent switch mutes the game, as it does a ringtone, and the player's music plays on beside it; `setSoundIgnoreSilentSwitch(true)` has the game play through the switch as media does (Safari 16.4 and up)

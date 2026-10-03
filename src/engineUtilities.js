@@ -294,8 +294,9 @@ function noise2D(x, y)
 {
     const ix = floor(x), iy = floor(y);
     const fx = smoothStep(x - ix), fy = smoothStep(y - iy);
-    // large prime decorrelates neighboring rows
-    const h = (a, b) => noiseHash(a + b * 374761393);
+    // large prime decorrelates neighboring rows; multiplied as 32 bit integers, which is what the hash keeps of it,
+    // so the row stays exact however far out y is, where a plain product would lose its low bits
+    const h = (a, b) => noiseHash(a + Math.imul(b, 374761393));
     return lerp(
         lerp(h(ix,     iy    ), h(ix + 1, iy    ), fx),
         lerp(h(ix,     iy + 1), h(ix + 1, iy + 1), fx),

@@ -206,6 +206,10 @@ If you are using [Visual Studio Code](https://code.visualstudio.com/) there is a
 
 Another option is to setup a simple local web server like [http-server](https://www.npmjs.com/package/http-server) via npm.
 
+### Which browsers does LittleJS run in?
+
+Current Chrome, Edge, Firefox and Safari, on desktop and on phones. The oldest it aims to support is Safari 15 (iOS 15) and the other browsers from 2021 on. Where WebGL2 is missing, 2D games fall back to Canvas2D rendering on their own; the 3D plugin needs WebGL2.
+
 ### How does the camera and world coordinate systems work?
 
 LittleJS drawing functions are all handled in world coordinates by default.

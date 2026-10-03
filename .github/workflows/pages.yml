@@ -29,7 +29,8 @@ jobs:
       - uses: actions/setup-node@v5
         with:
           node-version: '22'
-      - run: npm install
+      # the versions package-lock.json pins, so a tool updating itself can not break the build
+      - run: npm ci
         env:
           # the build never uses Electron, only examples/electron does
           ELECTRON_SKIP_BINARY_DOWNLOAD: '1'

@@ -224,3 +224,27 @@ test('nearestPowerOfTwo is a whole power of two not less than the value, 1 for a
         [8, 64, 1, 1]);
     assert.equal(isPowerOfTwo(nearestPowerOfTwo(.3)), true);
 });
+
+test('noise2D gives what it gave wherever it worked, and stays noise far out in y', async () =>
+{
+    const { noise2D, smoothStep, lerp } = await import('../dist/littlejs.esm.js');
+    // the noise as it was, its rows apart by a large prime times y
+    const hash = (i)=>
+    {
+        let h = (i | 0) ^ 0x9e3779b9;
+        h = Math.imul(h ^ (h >>> 16), 0x85ebca6b);
+        h = Math.imul(h ^ (h >>> 13), 0xc2b2ae35);
+        h ^= h >>> 16;
+        return (h >>> 0) / 2**32;
+    };
+    const old = (x, y)=>
+    {
+        const ix = Math.floor(x), iy = Math.floor(y), fx = smoothStep(x - ix), fy = smoothStep(y - iy);
+        const h = (a, b)=> hash(a + b * 374761393);
+        return lerp(lerp(h(ix, iy), h(ix + 1, iy), fx), lerp(h(ix, iy + 1), h(ix + 1, iy + 1), fx), fy);
+    };
+    for (const [x, y] of [[0, 0], [1.5, 2.25], [-37.2, 1e4 + .3], [123.4, -2e7], [5e6, 7e6]])
+        assert.equal(noise2D(x, y), old(x, y), `${x}, ${y}`);
+    const far = new Set(Array.from({length: 20}, (_, x)=> noise2D(x + .5, 3e8)));
+    assert.ok(far.size > 15, 'a row far out is not one value');
+});

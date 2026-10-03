@@ -217,3 +217,33 @@ test('a ray that misses an object\'s sphere makes no vectors, and raycastSphere 
     assert.equal(run('raycastSphere(new Ray3D(vec3(5, .5, 0), vec3(1, 0, 0)), vec3(5, 0, 0), 1)'), 0, 'from inside');
     assert.equal(run('raycastSphere(new Ray3D(vec3(0, 2, 0), vec3(1, 0, 0)), vec3(5, 0, 0), 1)'), undefined);
 });
+
+// a game whose update throws once, at its third frame, its frames run by hand as the browser would run them
+async function throwingGame(file)
+{
+    const callbacks = [], errors = [];
+    const { run } = loadEngine({ requestAnimationFrame: (f)=> callbacks.push(f),
+        console: { ...console, error: (e)=> errors.push(String(e)) } }, '', file);
+    run('setHeadlessMode(true); var thrown = false;');
+    await run(`engineInit(()=> {}, ()=> { if (frame === 3 && !thrown) { thrown = true; throw new Error('boom'); } },
+        ()=> {}, ()=> {}, ()=> {})`);
+    let t = 0;
+    const pump = (count)=> { for (let i = count; i-- && callbacks.length;) callbacks.shift()(t += 1e3 / 60); };
+    return { run, errors, pump, callbacks };
+}
+
+test('a release build keeps running after an error in a frame, and logs the first one', async () =>
+{
+    const { run, errors, pump } = await throwingGame('littlejs.release.js');
+    pump(20);
+    assert.ok(run('frame') > 10, 'frames went on, ' + run('frame'));
+    assert.equal(errors.length, 1);
+    assert.match(errors[0], /boom/);
+});
+
+test('a debug build stops at an error, as it shows it', async () =>
+{
+    const { run, pump, callbacks } = await throwingGame();
+    assert.throws(()=> pump(20), /boom/);
+    assert.deepEqual([run('frame'), callbacks.length], [3, 0]);
+});

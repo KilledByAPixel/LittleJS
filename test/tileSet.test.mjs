@@ -52,3 +52,18 @@ test('loadTiles hands back a tile set at once, its tiles filled in as the images
     assert.deepEqual(json(run, '(()=> { const s = loadTiles(["a.png", "b.png"], 8); return [s.size.x, s.tiles.length]; })()'),
         [8, 0], 'headless loads no image, so the set stays empty');
 });
+
+test('loading the same image again with the same settings gives back the first load, packed once', ()=>
+{
+    // not headless, with a canvas that takes any call and images that never finish, so nothing is packed yet
+    const canvas = class { constructor(width, height) { this.width = width; this.height = height; }
+        getContext() { return new Proxy({ canvas: this }, { get: (t, k)=> k in t ? t[k] : ()=> {} }); } };
+    const { run } = loadEngine({ OffscreenCanvas: canvas, Image: class { set src(v) {} }, fetch: ()=> new Promise(()=> {}) });
+    run(`glEnable = false; engineInitialized = true; var jobs = 0; const queue = textureSheetQueueJob;
+        textureSheetQueueJob = (...a)=> (++jobs, queue(...a));
+        var a = loadSprite('hero.png', 16), b = loadSprite('hero.png', vec2(16)), c = loadSprite('hero.png', 16, 2);
+        var d = loadTiles(['grass.png', 'dirt.png'], 16), e = loadTiles(['grass.png', 'dirt.png'], 16);
+        var f = loadAtlas('art.png', 'art.json'), g = loadAtlas('art.png', 'art.json');`);
+    assert.deepEqual([run('a === b'), run('a === c'), run('d === e'), run('f === g')], [true, false, true, true]);
+    assert.equal(run('jobs'), 2 + 2 + 1, 'hero twice, two tile images, one atlas');
+});

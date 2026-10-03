@@ -528,7 +528,15 @@ function objectLayersMake(tileMapData, object)
     const pos = vec2(object.x / tilewidth, height - object.y / tileheight);
     const {make} = type, result = make.prototype ? new make(pos) : make(pos);
     if (!result || typeof result !== 'object') return;
-    return Object.assign(result, objectLayersProperties(type, object));
+    for (const [key, value] of Object.entries(objectLayersProperties(type, object)))
+    {
+        // a property named as a method of the object, like update, would take the method's place, so it is left out
+        if (typeof result[key] === 'function' && typeof value !== 'function')
+            debug && console.warn(`objectLayersLoad: ${name} property ${key} has a method's name, left out`);
+        else
+            result[key] = value;
+    }
+    return result;
 }
 
 ///////////////////////////////////////////////////////////////////////////////

@@ -165,6 +165,7 @@ let timeFixedStart = 0, frameFixedStart = 0;
 let windowWidthLast = 0, windowHeightLast = 0, windowPixelRatioLast = 0;
 let engineUpdateInternal; // assigned by engineInit so engineStep can drive it
 let engineFrameScheduled = false; // a frame of the loop is asked for and has not run yet
+let engineFrameErrors = 0; // errors a release build's loop went on past
 
 // the pairs of objects asked about a collision this update, so the other's own physics does not ask again: each
 // asker's others, with true for a pair both said to resolve, and false for one left overlapping, ignored or only
@@ -723,7 +724,16 @@ function engineScheduleFrame()
     const next = (frameTimeMS)=>
     {
         engineFrameScheduled = false;
-        engineManualStep || engineUpdateInternal(frameTimeMS);
+        if (engineManualStep) return;
+        if (debug) return engineUpdateInternal(frameTimeMS); // a debug build stops at an error, where it shows it
+        try { engineUpdateInternal(frameTimeMS); }
+        catch (error)
+        {
+            // a release build goes on past an error in a frame, a frozen game is the worst a player can get; only the
+            // first is logged, one every frame would flood the console
+            engineFrameErrors++ || console.error(error);
+            engineScheduleFrame();
+        }
     };
     if (typeof requestAnimationFrame === 'function')
         requestAnimationFrame(next);
