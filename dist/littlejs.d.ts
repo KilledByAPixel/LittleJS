@@ -4282,31 +4282,35 @@ declare module "littlejsengine" {
      *  @param {Object}   tileMapData - Level data from exported data
      *  @param {TileInfo} [tileInfo] - Default tile info (used for size and texture), tile() by default, none when no image is loaded
      *  @param {number}   [renderOrder] - Render order of the top layer
-     *  @param {number}   [collisionLayer] - Layer to use for collision if any
+     *  @param {number|string} [collisionLayer] - Layer to use for collision if any, by its index or its name
      *  @param {boolean}  [draw] - Should the layer be drawn automatically
      *  @return {Array<TileCollisionLayer>}
      *  @memberof TileLayers */
-    export function tileLayersLoad(tileMapData: any, tileInfo?: TileInfo, renderOrder?: number, collisionLayer?: number, draw?: boolean): Array<TileCollisionLayer>;
+    export function tileLayersLoad(tileMapData: any, tileInfo?: TileInfo, renderOrder?: number, collisionLayer?: number | string, draw?: boolean): Array<TileCollisionLayer>;
     /**
      * Make a Tiled map of a level of an LDtk project, to load with tileLayersLoad and objectLayersLoad
-     * - Each Tiles, AutoLayer and IntGrid layer is a tile layer, the bottom one first as in Tiled, so the last layer
-     *   of the LDtk file is layer 0; where LDtk stacks tiles in a cell, an edge over a fill, each tile over another
-     *   goes in a layer of its own just above, named with (2), (3) and so on, so a layer of the first tiles has one
-     *   wherever the LDtk layer has any, which makes it the one for collision
-     * - A tile LDtk draws see-through goes in a layer of its own with that opacity, times the layer's, named with it
-     * - An IntGrid layer with no tiles is a hidden layer of its values, for collision: pass its index as collisionLayer
+     * - Each Tiles, AutoLayer and IntGrid layer is a tile layer, the bottom one first as in Tiled; where LDtk stacks
+     *   tiles in a cell, an edge over a fill, each tile over another goes in a layer of its own just above, named with
+     *   (2), (3) and so on, and a tile LDtk draws see-through goes in one of its own with that opacity, times the
+     *   layer's, named with it, like Ground .25
+     * - An IntGrid layer is a hidden layer of its values under its own name, for collision, whatever tiles its rules
+     *   make, which are layers over it named with tiles, like Collisions tiles; pass the name as collisionLayer, since
+     *   the stacked and see-through layers change the indices from level to level:
+     *   tileLayersLoad(map, tile(0, 16), 0, 'Collisions')
      * - An Entities layer is an object layer: an entity's name is its type for objectLayersAddType, it is placed at
      *   its middle, and its Int, Float, Bool, String, Color and FilePath fields are its properties (an enum is a string)
      * - The tileset is the first tile layer's, with its padding and spacing; give tileLayersLoad a tile info of its image
      * - The level is in the project file (not saved as separate level files), its layers of one grid size; a layer of
-     *   another grid size or another tileset is left out, with a warning in debug builds
+     *   another grid size or another tileset is left out, with a warning in debug builds, and a project with no tileset
+     *   keeps its tiles for the tile info the game gives; a project of several worlds has its levels counted in order
+     * - Layer offsets are not read
      * - The level editor edits the map this returns, and saves it as a Tiled map
      * @param {Object} ldtk - The LDtk project, its JSON
      * @param {number|string} [level] - Which level, by its index or its identifier
      * @return {Object} - A Tiled map: width, height, tilewidth, tileheight, tilesets and layers
      * @example
      * const map = tileLayersFromLDtk(await fetchJSON('world.ldtk'), 'Level_0');
-     * const layers = tileLayersLoad(map, tile(0, 16), 0, 1); // layer 1 is solid
+     * const layers = tileLayersLoad(map, tile(0, 16), 0, 'Collisions'); // its IntGrid layer is solid
      * objectLayersLoad(map);
      * @memberof TileLayers */
     export function tileLayersFromLDtk(ldtk: any, level?: number | string): any;
@@ -9722,11 +9726,12 @@ declare module "littlejsengine" {
         /** @type {Array<Vector3>} */
         chunkCenters: Array<Vector3>;
         chunksChanged: Set<any>;
-        /** @type {Array<{faces: Array<number>, seeThrough: boolean, transparent: boolean}|undefined>} */
+        /** @type {Array<{faces: Array<number>, seeThrough: boolean, transparent: boolean, doubleSided: boolean}|undefined>} */
         blockTypes: Array<{
             faces: Array<number>;
             seeThrough: boolean;
             transparent: boolean;
+            doubleSided: boolean;
         } | undefined>;
         tiles: Map<any, any>;
         /** The block type at a cell, 0 for empty or outside the map
@@ -9754,25 +9759,28 @@ declare module "littlejsengine" {
          *  @param {number} type - 1 to 255
          *  @param {number|Array<number>|{top?: number, side: number, bottom?: number}} faces - A tile index for every face,
          *    six in the order +x, -x, +y, -y, +z, -z, or the side's with the top and bottom's, which default to the side's
-         *  @param {{seeThrough?: boolean, transparent?: boolean}} [options] - seeThrough for holes in its texture, like
-         *    leaves, so the blocks beside it keep their faces; transparent to blend, like glass or water, drawn in the
-         *    transparent stage, and see-through too */
+         *  @param {{seeThrough?: boolean, transparent?: boolean, doubleSided?: boolean}} [options] - seeThrough for holes
+         *    in its texture, like leaves, so the blocks beside it keep their faces; transparent to blend, like glass or
+         *    water, drawn in the transparent stage, and see-through too; doubleSided for faces seen from inside the
+         *    block as well, like water, whose surface then shows from under it */
         setBlockType(type: number, faces: number | Array<number> | {
             top?: number;
             side: number;
             bottom?: number;
-        }, { seeThrough, transparent }?: {
+        }, { seeThrough, transparent, doubleSided }?: {
             seeThrough?: boolean;
             transparent?: boolean;
+            doubleSided?: boolean;
         }): void;
         /** A block type's faces and how it is seen through
          *  @param {number} type
-         *  @return {{faces: Array<number>, seeThrough: boolean, transparent: boolean}}
+         *  @return {{faces: Array<number>, seeThrough: boolean, transparent: boolean, doubleSided: boolean}}
          *  @ignore */
         blockType(type: number): {
             faces: Array<number>;
             seeThrough: boolean;
             transparent: boolean;
+            doubleSided: boolean;
         };
         /** Build every chunk again, after changing data directly or ambientOcclusion */
         rebuild(): void;
@@ -9884,8 +9892,9 @@ declare module "littlejsengine" {
          *  @param {number} [count] - How many ghosts there are, besides the glow at the light
          *  @param {number} [intensity] - How bright it is
          *  @param {number} [saturation] - How colorful the ghosts are
+         *  @param {Color} [color] - Tints the flare, with the light's own color
          *  @return {LensFlare3D} - The flare, to change: light.addFlare().shapes = ['hex'] */
-        addFlare(size?: number, count?: number, intensity?: number, saturation?: number): LensFlare3D;
+        addFlare(size?: number, count?: number, intensity?: number, saturation?: number, color?: Color): LensFlare3D;
         set flare(arg: LensFlare3D);
         /** The light's lens flare, undefined for none: addFlare makes it, or set a LensFlare3D of your own, and
          *  destroying the flare takes it away
@@ -10210,7 +10219,7 @@ declare module "littlejsengine" {
      *   with the sun's own color; shapes says what its ghosts are, glowSize and ghostSize how big its parts are; or
      *   give it elements of your own, which may be tiles of the game's
      * - visible is how much of the sun shows, 0 to 1, eased over fadeTime, there for a game to read; it is 0 while the
-     *   sun is off the screen, where nothing is tested
+     *   sun is too far off the screen for the flare to show, a third of the screen past its edge, where nothing is tested
      * - What hides the sun is found with a ray from the camera, against the level and every object that is not see
      *   through, each on the triangles of its mesh, see render3D.pick; turn it off with occlusion
      * - It needs WebGL, and it draws nothing in the shadow of renderAfter2D
@@ -10253,7 +10262,8 @@ declare module "littlejsengine" {
         elements: Array<LensFlareElement> | undefined;
         /** @property {Light3D|undefined} - A light the flare is of in place of the sun, a lamp or a spotlight: the
          *  flare is at the light and in its color, smaller from farther than the light reaches, hidden by what is
-         *  in front of the light, and a spotlight's shows from inside its beam only; a DirectionalLight3D's is far
+         *  in front of the light but its lamp, a mesh around it no wider than half its radius, and a spotlight's
+         *  shows from inside its beam only; a DirectionalLight3D's is far
          *  away where it shines from, like the sun's; the flare is destroyed when its light is; light.addFlare
          *  sets this
          *  @type {Light3D|undefined} */

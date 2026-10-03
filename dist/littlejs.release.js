@@ -35,7 +35,7 @@ const engineName = 'LittleJS';
  *  @type {string}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.24.0';
+const engineVersion = '1.24.1';
 
 /** Frames per second to update
  *  @type {number}
@@ -3211,7 +3211,11 @@ function setGLEnable(enable)
 /** Set how many sided polygons to use when drawing circles and ellipses with WebGL
  *  @param {number} sides
  *  @memberof Settings */
-function setGLCircleSides(sides) { glCircleSides = sides; }
+function setGLCircleSides(sides)
+{
+    false&&ASSERT(isNumber(sides) && sides >= 3, 'circles need at least 3 sides');
+    glCircleSides = sides;
+}
 
 /** Set default size of tiles in pixels
  *  @param {Vector2} size
@@ -8733,7 +8737,7 @@ const tileLayersTiledFlips = [[0,0], [3,1], [2,1], [3,0], [0,1], [1,0], [2,0], [
  *  @param {Object}   tileMapData - Level data from exported data
  *  @param {TileInfo} [tileInfo] - Default tile info (used for size and texture), tile() by default, none when no image is loaded
  *  @param {number}   [renderOrder] - Render order of the top layer
- *  @param {number}   [collisionLayer] - Layer to use for collision if any
+ *  @param {number|string} [collisionLayer] - Layer to use for collision if any, by its index or its name
  *  @param {boolean}  [draw] - Should the layer be drawn automatically
  *  @return {Array<TileCollisionLayer>}
  *  @memberof TileLayers */
@@ -8765,7 +8769,8 @@ function tileLayersLoad(tileMapData, tileInfo=tileLayerDefaultTile(), renderOrde
         const margin = tileset.margin || 0, spacing = tileset.spacing || 0, size = tileInfo.size;
         const width = tileInfo.textureInfo?.size.x || 0;
         const columns = tileset.columns || max(1, floor((width - margin*2 + spacing) / (size.x + spacing)));
-        tileInfo = new TileInfo(vec2(margin), size, tileInfo.textureInfo, spacing / 2, tileInfo.bleed, columns);
+        const origin = tileInfo.pos.subtract(vec2(tileInfo.padding)); // where the sheet starts, in an atlas too
+        tileInfo = new TileInfo(origin.add(vec2(margin)), size, tileInfo.textureInfo, spacing / 2, tileInfo.bleed, columns);
     }
 
     // flatten group layers in order, a group's color and visibility carry to the layers inside it
@@ -8795,6 +8800,14 @@ function tileLayersLoad(tileMapData, tileInfo=tileLayerDefaultTile(), renderOrde
         }
     };
     addLayers(tileMapData.layers, WHITE, true);
+
+    // a layer named for collision is the first tile layer of that name, which stays the same when layers are added
+    if (typeof collisionLayer === 'string')
+    {
+        const name = collisionLayer;
+        collisionLayer = layers.findIndex((l)=> l.color && l.dataLayer.name === name);
+        false&&ASSERT(collisionLayer >= 0, 'no tile layer named ' + name);
+    }
 
     // create tile layers and fill with data
     const tileLayers = [];
@@ -8851,32 +8864,38 @@ const tileLayersLDtkTypes = {Int: 'int', Float: 'float', Bool: 'bool', String: '
 
 /**
  * Make a Tiled map of a level of an LDtk project, to load with tileLayersLoad and objectLayersLoad
- * - Each Tiles, AutoLayer and IntGrid layer is a tile layer, the bottom one first as in Tiled, so the last layer
- *   of the LDtk file is layer 0; where LDtk stacks tiles in a cell, an edge over a fill, each tile over another
- *   goes in a layer of its own just above, named with (2), (3) and so on, so a layer of the first tiles has one
- *   wherever the LDtk layer has any, which makes it the one for collision
- * - A tile LDtk draws see-through goes in a layer of its own with that opacity, times the layer's, named with it
- * - An IntGrid layer with no tiles is a hidden layer of its values, for collision: pass its index as collisionLayer
+ * - Each Tiles, AutoLayer and IntGrid layer is a tile layer, the bottom one first as in Tiled; where LDtk stacks
+ *   tiles in a cell, an edge over a fill, each tile over another goes in a layer of its own just above, named with
+ *   (2), (3) and so on, and a tile LDtk draws see-through goes in one of its own with that opacity, times the
+ *   layer's, named with it, like Ground .25
+ * - An IntGrid layer is a hidden layer of its values under its own name, for collision, whatever tiles its rules
+ *   make, which are layers over it named with tiles, like Collisions tiles; pass the name as collisionLayer, since
+ *   the stacked and see-through layers change the indices from level to level:
+ *   tileLayersLoad(map, tile(0, 16), 0, 'Collisions')
  * - An Entities layer is an object layer: an entity's name is its type for objectLayersAddType, it is placed at
  *   its middle, and its Int, Float, Bool, String, Color and FilePath fields are its properties (an enum is a string)
  * - The tileset is the first tile layer's, with its padding and spacing; give tileLayersLoad a tile info of its image
  * - The level is in the project file (not saved as separate level files), its layers of one grid size; a layer of
- *   another grid size or another tileset is left out, with a warning in debug builds
+ *   another grid size or another tileset is left out, with a warning in debug builds, and a project with no tileset
+ *   keeps its tiles for the tile info the game gives; a project of several worlds has its levels counted in order
+ * - Layer offsets are not read
  * - The level editor edits the map this returns, and saves it as a Tiled map
  * @param {Object} ldtk - The LDtk project, its JSON
  * @param {number|string} [level] - Which level, by its index or its identifier
  * @return {Object} - A Tiled map: width, height, tilewidth, tileheight, tilesets and layers
  * @example
  * const map = tileLayersFromLDtk(await fetchJSON('world.ldtk'), 'Level_0');
- * const layers = tileLayersLoad(map, tile(0, 16), 0, 1); // layer 1 is solid
+ * const layers = tileLayersLoad(map, tile(0, 16), 0, 'Collisions'); // its IntGrid layer is solid
  * objectLayersLoad(map);
  * @memberof TileLayers */
 function tileLayersFromLDtk(ldtk, level=0)
 {
-    const levels = ldtk?.levels || [];
+    const levels = ldtk?.levels?.length ? ldtk.levels : (ldtk?.worlds || []).flatMap((w)=> w.levels || []);
     const data = typeof level === 'string' ? levels.find((l)=> l.identifier === level) : levels[level];
-    false&&ASSERT(data, 'LDtk level not found', level);
-    false&&ASSERT(isArray(data.layerInstances), 'LDtk level has no layers: levels saved as separate files are not read');
+    if (!data)
+        throw new Error('tileLayersFromLDtk: no level ' + level);
+    if (!isArray(data.layerInstances))
+        throw new Error('tileLayersFromLDtk: level ' + data.identifier + ' has no layers, levels saved as separate files are not read');
     const instances = data.layerInstances;
     const tiled = (l)=> l.__type !== 'Entities';
     const first = instances.find((l)=> tiled(l) && l.__tilesetDefUid != undefined) || instances.find(tiled) || instances[0];
@@ -8916,22 +8935,32 @@ function tileLayersFromLDtk(ldtk, level=0)
             continue;
         }
         const tiles = [...(instance.autoLayerTiles || []), ...(instance.gridTiles || [])];
-        const usable = instance.__gridSize === grid && instance.__cWid === width && instance.__cHei === height &&
-            (!tiles.length || instance.__tilesetDefUid === tileset?.uid);
-        if (!usable)
+        const ownTiles = !tiles.length || !tileset ||
+            instance.__tilesetDefUid === tileset.uid && tileset.tileGridSize === grid;
+        if (instance.__gridSize !== grid || instance.__cWid !== width || instance.__cHei !== height || !ownTiles)
         {
             debug && console.warn(`tileLayersFromLDtk: layer ${name} has another grid or tileset, left out`);
             continue;
         }
-        // a layer for each depth in a cell and each opacity, the first tiles drawn solid first
+        // an IntGrid layer's values, hidden, under its own name, for collision whatever its tiles do
         const empty = ()=> new Array(width * height).fill(0), opacity = instance.__opacity ?? 1;
+        const values = instance.__type === 'IntGrid';
+        if (values)
+        {
+            const data = empty();
+            (instance.intGridCsv || []).forEach((value, k)=> k < data.length && (data[k] = value));
+            map.layers.push({id, name, type: 'tilelayer', width, height, data, opacity, visible: false, x: 0, y: 0});
+            if (!tiles.length) continue;
+        }
+
+        // a layer for each depth in a cell and each opacity, the first tiles drawn solid first
+        const tilesName = values ? name + ' tiles' : name;
         const stacks = [{depth: 0, alpha: 1, data: empty()}], stack = (depth, alpha)=>
         {
             let s = stacks.find((s)=> s.depth === depth && s.alpha === alpha);
             s || stacks.push(s = {depth, alpha, data: empty()});
             return s.data;
         };
-        if (tiles.length)
         {
             // a tile's place in pixels, its tile in the sheet, its flips, bit 0 across and bit 1 down, which are
             // Tiled's two top bits, and its opacity; LDtk lists them in the order it draws them, so the first in a
@@ -8945,15 +8974,13 @@ function tileLayersFromLDtk(ldtk, level=0)
                         (t.t + 1 | (t.f & 1 ? 0x80000000 : 0) | (t.f & 2 ? 0x40000000 : 0)) >>> 0;
             }
         }
-        else
-            (instance.intGridCsv || []).forEach((value, k)=> k < stacks[0].data.length && (stacks[0].data[k] = value));
-        const visible = instance.__type === 'IntGrid' && !tiles.length ? false : instance.visible !== false;
+        const visible = instance.visible !== false;
         stacks.sort((a, b)=> a.depth - b.depth || b.alpha - a.alpha);
         for (const {depth, alpha, data} of stacks)
         {
-            const layerName = name + (depth ? ` (${depth + 1})` : '') + (alpha < 1 ? ' ' + String(alpha).replace(/^0/, '') : '');
-            map.layers.push({id: depth || alpha < 1 ? map.nextlayerid++ : id, name: layerName, type: 'tilelayer', width,
-                height, data, opacity: opacity * alpha, visible, x: 0, y: 0});
+            const layerName = tilesName + (depth ? ` (${depth + 1})` : '') + (alpha < 1 ? ' ' + String(alpha).replace(/^0/, '') : '');
+            map.layers.push({id: values || depth || alpha < 1 ? map.nextlayerid++ : id, name: layerName, type: 'tilelayer',
+                width, height, data, opacity: opacity * alpha, visible, x: 0, y: 0});
         }
     }
     return map;
@@ -16515,7 +16542,7 @@ class Box2dObject extends EngineObject
 
         const points = [];
         const radius = diameter/2;
-        for (let i=sides; i--;)
+        for (let i=sides; i-- > 0;) // a count that is not a whole number still ends
             points.push(vec2(radius,0).rotate((i+.5)/sides*PI*2));
         return this.addPoly(points, density, friction, restitution, isSensor);
     }
@@ -26983,10 +27010,11 @@ class Light3D extends EngineObject3D
      *  @param {number} [count] - How many ghosts there are, besides the glow at the light
      *  @param {number} [intensity] - How bright it is
      *  @param {number} [saturation] - How colorful the ghosts are
+     *  @param {Color} [color] - Tints the flare, with the light's own color
      *  @return {LensFlare3D} - The flare, to change: light.addFlare().shapes = ['hex'] */
-    addFlare(size, count, intensity, saturation)
+    addFlare(size, count, intensity, saturation, color)
     {
-        const flare = new LensFlare3D(size, count, intensity, saturation);
+        const flare = new LensFlare3D(size, count, intensity, saturation, color);
         this.flare = flare;
         return flare;
     }
@@ -28634,7 +28662,7 @@ function render3DFlareTile(shape)
  *   with the sun's own color; shapes says what its ghosts are, glowSize and ghostSize how big its parts are; or
  *   give it elements of your own, which may be tiles of the game's
  * - visible is how much of the sun shows, 0 to 1, eased over fadeTime, there for a game to read; it is 0 while the
- *   sun is off the screen, where nothing is tested
+ *   sun is too far off the screen for the flare to show, a third of the screen past its edge, where nothing is tested
  * - What hides the sun is found with a ray from the camera, against the level and every object that is not see
  *   through, each on the triangles of its mesh, see render3D.pick; turn it off with occlusion
  * - It needs WebGL, and it draws nothing in the shadow of renderAfter2D
@@ -28681,7 +28709,8 @@ class LensFlare3D extends EngineObject3D
         this.elements = undefined;
         /** @property {Light3D|undefined} - A light the flare is of in place of the sun, a lamp or a spotlight: the
          *  flare is at the light and in its color, smaller from farther than the light reaches, hidden by what is
-         *  in front of the light, and a spotlight's shows from inside its beam only; a DirectionalLight3D's is far
+         *  in front of the light but its lamp, a mesh around it no wider than half its radius, and a spotlight's
+         *  shows from inside its beam only; a DirectionalLight3D's is far
          *  away where it shines from, like the sun's; the flare is destroyed when its light is; light.addFlare
          *  sets this
          *  @type {Light3D|undefined} */
@@ -28821,13 +28850,15 @@ class LensFlare3D extends EngineObject3D
             if (map.raycast(ray, reach, (type)=> !map.blockType(type).seeThrough))
                 return true;
         // a light's lamp, the mesh the light is inside, does not hide it: one whose box, in its own space, the light
-        // is in
+        // is in, and no wider than half the light's reach, since a room or a whole level has a box around its lights
+        // too, and its walls do hide them from outside
         const lamp = (o)=>
         {
             if (!this.light || reach === Infinity || !o.mesh || o instanceof HeightMap) return false;
-            const matrix = render3DObjectMatrix(o);
-            if (!matrix.determinant()) return false;
-            const p = matrix.copy().invert().transformPoint(source.pos), b = o.mesh.bounds || o.mesh.getBounds();
+            const matrix = render3DObjectMatrix(o), b = o.mesh.bounds || o.mesh.getBounds();
+            const side = max(b.max.x - b.min.x, b.max.y - b.min.y, b.max.z - b.min.z) * render3DMaxStretch(matrix.m);
+            if (!matrix.determinant() || side > this.light.radius / 2) return false;
+            const p = matrix.copy().invert().transformPoint(source.pos);
             return p.x >= b.min.x && p.x <= b.max.x && p.y >= b.min.y && p.y <= b.max.y &&
                 p.z >= b.min.z && p.z <= b.max.z;
         };
@@ -29464,7 +29495,7 @@ class VoxelMap extends EngineObject3D
         /** @type {Array<Vector3>} */
         this.chunkCenters = []; // a chunk mesh's points are around its center, which it is drawn at
         this.chunksChanged = new Set;
-        /** @type {Array<{faces: Array<number>, seeThrough: boolean, transparent: boolean}|undefined>} */
+        /** @type {Array<{faces: Array<number>, seeThrough: boolean, transparent: boolean, doubleSided: boolean}|undefined>} */
         this.blockTypes = [];
         this.tiles = new Map; // tile index to the uvs of its corners
 
@@ -29536,27 +29567,29 @@ class VoxelMap extends EngineObject3D
      *  @param {number} type - 1 to 255
      *  @param {number|Array<number>|{top?: number, side: number, bottom?: number}} faces - A tile index for every face,
      *    six in the order +x, -x, +y, -y, +z, -z, or the side's with the top and bottom's, which default to the side's
-     *  @param {{seeThrough?: boolean, transparent?: boolean}} [options] - seeThrough for holes in its texture, like
-     *    leaves, so the blocks beside it keep their faces; transparent to blend, like glass or water, drawn in the
-     *    transparent stage, and see-through too */
-    setBlockType(type, faces, {seeThrough=false, transparent=false}={})
+     *  @param {{seeThrough?: boolean, transparent?: boolean, doubleSided?: boolean}} [options] - seeThrough for holes
+     *    in its texture, like leaves, so the blocks beside it keep their faces; transparent to blend, like glass or
+     *    water, drawn in the transparent stage, and see-through too; doubleSided for faces seen from inside the
+     *    block as well, like water, whose surface then shows from under it */
+    setBlockType(type, faces, {seeThrough=false, transparent=false, doubleSided=false}={})
     {
         false&&ASSERT(type >= 1 && type <= 255 && type % 1 === 0, 'a block type is a whole number from 1 to 255', type);
         const f = /** @type {any} */ (faces);
         const list = isNumber(f) ? [f, f, f, f, f, f] : isArray(f) ? f :
             [f.side, f.side, f.top ?? f.side, f.bottom ?? f.side, f.side, f.side];
         false&&ASSERT(list.length === 6 && list.every(isNumber), 'faces is a tile index, six of them, or {top, side, bottom}');
-        this.blockTypes[type] = {faces: list, seeThrough: seeThrough || transparent, transparent};
+        this.blockTypes[type] = {faces: list, seeThrough: seeThrough || transparent, transparent, doubleSided};
         this.rebuild();
     }
 
     /** A block type's faces and how it is seen through
      *  @param {number} type
-     *  @return {{faces: Array<number>, seeThrough: boolean, transparent: boolean}}
+     *  @return {{faces: Array<number>, seeThrough: boolean, transparent: boolean, doubleSided: boolean}}
      *  @ignore */
     blockType(type)
     {
-        return this.blockTypes[type] ||= {faces: [type, type, type, type, type, type], seeThrough: false, transparent: false};
+        return this.blockTypes[type] ||= {faces: [type, type, type, type, type, type], seeThrough: false, transparent: false,
+            doubleSided: false};
     }
 
     /** Build every chunk again, after changing data directly or ambientOcclusion */
@@ -29626,6 +29659,11 @@ class VoxelMap extends EngineObject3D
                     colors[k] = ao ? RENDER3D_VOXEL_SHADES[shade[i]] : WHITE;
                 }
                 mesh.addStrip(points, normal, uvs, colors);
+
+                // a double sided block shows the face from inside too, its corners the other way round
+                if (block.doubleSided)
+                    mesh.addStrip([points[1], points[0], points[3], points[2]], normal.scale(-1),
+                        [uvs[1], uvs[0], uvs[3], uvs[2]], [colors[1], colors[0], colors[3], colors[2]]);
             }
         }
         this.chunkMeshes[index]?.dispose();
