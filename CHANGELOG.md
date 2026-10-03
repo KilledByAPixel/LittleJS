@@ -7,7 +7,14 @@ What changed in each release, newest first. Releases before 1.20.0 are on the
 
 ### New Changes
 
+- A VoxelMap's transparent blocks, like water and glass, show from both sides, so the surface of water shows from under it
+- 3D Voxels: the player goes under water and walks on the bottom, in place of floating at the surface
 - The example browser has a new look, in the dark colors of the docs site: a slim top bar in place of the title, the demo at 16:9, and the example list as rows under their headings. A handle between the code and its write-up drags to give one the other's space, by touch and the arrow keys too, and is remembered; a double click puts the quarter back. On a phone the example's name, between Prev and Next, opens a full screen picker with the search. The Screenshot button is gone
+
+### Fixes
+
+- The level editor's tile palette no longer asserts on a Tiled tileset with a margin or a spacing
+- LDtk: a see-through tile keeps its opacity, in a layer of its own
 
 ## 1.24.0 - 2026-10-02
 
@@ -21,7 +28,6 @@ What changed in each release, newest first. Releases before 1.20.0 are on the
 ### New Changes
 
 - Every short example has a write-up in the example browser: what it shows, how its code works, things to try in the editor and where to look next, with links to the docs and to other examples
-- The example browser has a new look: the docs site's dark colors, a slim top bar, the examples as a list under headings, a handle that drags between the code and its write-up, and on a phone a full screen picker with search between Prev and Next
 - Lens flares on lights: `light.addFlare()` gives a `Light3D` a lens flare of its own and returns it, `light.flare` is the flare, and it goes with the light; a `DirectionalLight3D` can have one too, far away like the sun's
 - Lens flares in the 3D level editor: a level's Light has a `lensFlare` property, and the Scene box has a Lens flare checkbox for the sun's, saved in the level's scene block
 - Lens flares have three more shapes, `hex`, `streak` and `star`; `flare.shapes` says what the ghosts are picked from, `glowSize` and `ghostSize` scale its parts, and an element may be a tile of the game's own (`tileInfo`), turned (`angle`) and wider than tall
