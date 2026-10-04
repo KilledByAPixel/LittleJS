@@ -663,6 +663,8 @@ function drawTile(pos, size=vec2(1), tileInfo, color=WHITE,
             {
                 // un-flip Y so the image renders right-side up under drawCanvas2D's Y flip
                 context.scale(1, -1);
+                // smooth or pixelated as the texture says, as WebGL draws it, inside drawCanvas2D's save
+                textureInfo.pixelated === undefined || (context.imageSmoothingEnabled = !textureInfo.pixelated);
                 // calculate uvs and render
                 const x = tileInfo.pos.x,  y = tileInfo.pos.y;
                 const w = tileInfo.size.x, h = tileInfo.size.y;
@@ -1748,10 +1750,10 @@ function toggleFullscreen()
     if (isFullscreen())
     {
         if (document.exitFullscreen)
-            document.exitFullscreen();
+            document.exitFullscreen()?.catch?.(()=> {}); // refused outside a click, it stays as it is
     }
     else if (rootElement.requestFullscreen)
-        rootElement.requestFullscreen();
+        rootElement.requestFullscreen()?.catch?.(()=> {});
 }
 
 /** Set the cursor style

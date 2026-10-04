@@ -1153,8 +1153,8 @@ class Color
      * @return {string} */
     toString(useAlpha = true)
     {
-        if (debug && !this.isValid())
-            return '#000';
+        if (!this.isValid())
+            return '#000'; // in release too, as a canvas would keep its last color for #NaN
         const toHex = (c)=> ((c=round(clamp(c)*255))<16 ? '0' : '') + c.toString(16);
         return '#' + toHex(this.r) + toHex(this.g) + toHex(this.b) + (useAlpha ? toHex(this.a) : '');
     }

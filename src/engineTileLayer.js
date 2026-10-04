@@ -1085,9 +1085,9 @@ class TileCollisionLayer extends TileLayer
         for (let y = y0; y < y1; ++y)
         for (let x = x0; x < x1; ++x)
         {
-            if (!this.collisionData[y*size.x + x]) continue;
+            if (!(this.collisionData[y*size.x + x] > 0)) continue; // solid is positive, a negative is a marker
             let end = x + 1; // a run of solid cells along the row
-            while (end < x1 && this.collisionData[y*size.x + end]) ++end;
+            while (end < x1 && this.collisionData[y*size.x + end] > 0) ++end;
             const count = end - x;
             const tileInfo = new TileInfo(vec2(x*cellPixels.x, textureHeight - (y+1)*cellPixels.y),
                 vec2(count*cellPixels.x, cellPixels.y), this.textureInfo, 0, 0);

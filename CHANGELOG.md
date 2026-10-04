@@ -14,6 +14,9 @@ What changed in each release, newest first. Releases before 1.20.0 are on the
 - A Shader's or a post process's code comes after the engine's own in the shader, so a define in it can not rewrite the engine's names, where a #define of one, the vertex color say, changed what was drawn; the 3D shader drops see through texels at the end, after the normal map and texture reads that need the pixels around them
 - Examples: the raycaster walks on a phone, shorts sized for the example browser fill any window, the starter, module and TypeScript examples match again, 3D shorts share one mesh among objects of the same shape, as the instancing one teaches, and smaller fixes
 - Object collision with many solids is far faster: a mover checks only the solids near it, found through a grid, where it checked every one; 2000 movers went from about 1.3 s a frame to 12 ms in a test, and every contact resolves exactly as before, in the same order
+- Input: a key, button or tap released and pressed again in one frame reads as both, where the release was lost, and a keydown the browser does not mark as a repeat for a key already held does not press it again
+- Canvas2D draws a texture smooth or pixelated as its own setting says, as WebGL does; the main canvas starts each frame with no alpha, filter or shadow a game left on it; toggleFullscreen refused by the browser leaves no error in the console
+- A tile layer's shadow is cast by its solid cells only, not by negative markers; a color with a NaN in it is black as text in a release build too; glDeleteTexture leaves the engine holding nothing of the texture
 
 ### Breaking Changes
 

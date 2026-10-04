@@ -733,7 +733,7 @@ function engineUpdateCanvas()
     if (canvasFixedSize.x)
     {
         // set canvas fixed size
-        mainCanvasSize = canvasFixedSize.copy();
+        mainCanvasSize.set(canvasFixedSize.x, canvasFixedSize.y);
 
         // fit to window using css width and height
         const innerAspect = innerWidth / innerHeight;
@@ -793,9 +793,12 @@ function engineUpdateCanvas()
     }
     else
     {
-        // setting the size also resets the context state, match that
+        // setting the size also resets the context state, match that, what a game may have left on it too
         mainContext.setTransform(1, 0, 0, 1, 0, 0);
         mainContext.globalCompositeOperation = 'source-over';
+        mainContext.globalAlpha = 1;
+        mainContext.filter = 'none';
+        mainContext.shadowColor = 'rgba(0,0,0,0)';
         mainContext.clearRect(0, 0, bufferSizeX, bufferSizeY);
     }
 

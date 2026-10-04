@@ -500,16 +500,18 @@ function inputInit()
         // keys typed into an html text field are the player's typing, not game input;
         // a key already down still releases on keyup, which only lets go of keys that are down
         const typing = isTextInput(e.target) || isTextInput(document.activeElement);
-        if (!e.repeat && !typing)
+        // a key already held, a keydown the browser did not mark as a repeat, is not pressed again
+        if (!e.repeat && !typing && !inputKeysHeld.has(e.code))
         {
             inputKeysHeld.add(e.code);
-            // an arrow its alias already holds down is not pressed again, like its release waits for both
+            // an arrow its alias already holds down is not pressed again, like its release waits for both; a release
+            // earlier this frame is kept, so a quick release and press reads as both
             if (!(inputWASDEmulateDirection && inputKeysHeld.has(inputArrowToWASD[e.code]) && inputData[0][e.code] & 1))
-                inputData[0][e.code] = 3;
+                inputData[0][e.code] = 3 | inputData[0][e.code] & 4;
             // an alias presses its arrow's slot too, unless the arrow itself already holds it down
             const remap = remapKey(e.code);
             if (remap !== e.code && !(inputData[0][remap] & 1))
-                inputData[0][remap] = 3;
+                inputData[0][remap] = 3 | inputData[0][remap] & 4;
         }
 
         // try to prevent default browser handling of input
@@ -587,7 +589,7 @@ function inputInit()
         // pointer lock the mouse stays where the lock began, which may be in a bar, and every click is the game's
         if (!pointerLockIsActive() && !inCanvas(e.x, e.y))
             return;
-        inputData[0][e.button] = 3;
+        inputData[0][e.button] = 3 | inputData[0][e.button] & 4; // a release earlier this frame is kept
 
         const mousePosScreenLast = mousePosScreen;
         mousePosScreen = mouseEventToScreen(vec2(e.x,e.y));
@@ -741,7 +743,7 @@ function inputInit()
                     else if (inputWasTouching && touch.identifier === inputTouchIdentifier)
                         mouseDeltaScreen = mouseDeltaScreen.add(mousePosScreen.subtract(mousePosScreenLast));
                     else if (pressTouch && inCanvas(pressTouch.clientX, pressTouch.clientY))
-                        inputData[0][button] = 3; // a tap in the bars around the canvas is not a press
+                        inputData[0][button] = 3 | inputData[0][button] & 4; // a tap in the bars is not a press
                     // the finger left after a pinch moves the mouse from where it is, with no jump and no press
                     inputTouchIdentifier = pinching ? undefined : touch.identifier;
                 }

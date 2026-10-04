@@ -576,8 +576,16 @@ function glCreateTexture(image, wrap=false, pixelated=tilesPixelated)
  *  @memberof WebGL */
 function glDeleteTexture(texture)
 {
-    if (!glContext) return;
-    
+    if (!glContext || !texture) return;
+
+    // what is batched with it is drawn first, since deleting unbinds it, and nothing keeps it after
+    if (texture === glActiveTexture)
+    {
+        glFlush();
+        glActiveTexture = undefined; // so nothing binds the deleted texture again
+    }
+    glMipmapsStale.delete(texture);
+    glPremultipliedTextures.delete(texture);
     glContext.deleteTexture(texture);
 }
 
@@ -653,13 +661,6 @@ function glUnregisterTextureInfo(textureInfo)
     // unset and destroy the texture, drawing what is batched with it first, since deleting unbinds it
     const glTexture = textureInfo.glTexture;
     textureInfo.glTexture = undefined;
-    if (glTexture && glTexture === glActiveTexture)
-    {
-        glFlush();
-        glActiveTexture = undefined; // so nothing binds the deleted texture again
-    }
-    glMipmapsStale.delete(glTexture);
-    glPremultipliedTextures.delete(glTexture);
     glDeleteTexture(glTexture);
 }
 
