@@ -52,6 +52,7 @@ Common outputs include:
 - `littlejs.esm.js` - ES module build (import/export)
 - `littlejs.esm.min.js` - Minified ES module
 - `littlejs.d.ts` - TypeScript definitions
+- `littlejs.2d.js` and `littlejs.2d.min.js` - The 2D build, debug and minified: every file but the 3D plugins and Box2D, the ones `engine2DLeftOut` in `src/engineBuild.mjs` lists, about half the size; a new 3D plugin goes in that list. [test/build2d.test.mjs](test/build2d.test.mjs) checks it has the 2D API, nothing 3D, and runs
 
 Use via script tag or ES module import:
 - `<script src="dist/littlejs.js"></script>`
