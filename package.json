@@ -56,8 +56,6 @@
   },
   "devDependencies": {
     "bestzip": "^2.2.1",
-    "electron": "^38.2.0",
-    "electron-packager": "^17.1.2",
     "google-closure-compiler": "~20230502.0.0",
     "jsdoc": "~4.0.2",
     "roadroller": "~2.1.0",

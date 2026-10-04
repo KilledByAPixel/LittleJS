@@ -18,10 +18,6 @@ jobs:
           node-version: '22'
       # the versions package-lock.json pins, so a tool updating itself can not break the build
       - run: npm ci
-        env:
-          # Engine build/test never use Electron (only examples/electron does),
-          # so skip its large binary download to avoid flaky CDN timeouts.
-          ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
       # dist is committed only for a release, so the tests run on a build of the source as it is
       - run: npm run build
       - run: npm test

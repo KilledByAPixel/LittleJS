@@ -31,9 +31,6 @@ jobs:
           node-version: '22'
       # the versions package-lock.json pins, so a tool updating itself can not break the build
       - run: npm ci
-        env:
-          # the build never uses Electron, only examples/electron does
-          ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
       - run: npm run build
       # the site is the repo's own files and the dist just built, not the tools that built it
       - run: rm -rf node_modules dist.build docs.build
