@@ -33,10 +33,10 @@
 
 /**
  *  @typedef {Object} EditorToolAt - What the level editor gives the callbacks of a tool of the game's own
- *  @property {any} pos - Where the mouse is in the level: a Vector2 in the 2D editor; in the 3D one a Vector3 on
+ *  @property {Vector2|Vector3|undefined} pos - Where the mouse is in the level: a Vector2 in the 2D editor; in the 3D one a Vector3 on
  *    the level or the ground, undefined when the mouse is over the panel
  *  @property {Vector2|undefined} cell - 2D: the tile cell under the mouse on the selected tile layer
- *  @property {any} ray - 3D: the mouse's Ray3D
+ *  @property {Ray3D|undefined} ray - 3D: the mouse's Ray3D
  *  @property {boolean} shift - Is Shift held
  *  @property {boolean} ctrl - Is Ctrl held
  *  @memberof Editor
@@ -161,7 +161,7 @@ class LevelEditor
 
     /** Put the player at a position, a Vector2 in the 2D editor and a Vector3 in the 3D one; set it or override it
      *  and the editor has Play from mouse, which starts play there
-     *  @param {any} pos */
+     *  @param {Vector2|Vector3} pos */
     onPlayFrom(pos) {}
 
     /** Called when the editor opens, to set or override */
@@ -260,7 +260,10 @@ class LevelEditor
     open()
     {
         if (editorOther?.wanted())
-            return editorOther.open();
+        {
+            editorOther.open();
+            return;
+        }
         if (!editorSession)
             editorCameraScale = cameraScale; // a new session starts at the game's zoom, a return keeps the editor's
         editorSession = true;
@@ -272,7 +275,10 @@ class LevelEditor
     close()
     {
         if (editorOther?.active())
-            return editorOther.close();
+        {
+            editorOther.close();
+            return;
+        }
         editorSession = false;
         editorSetOpen(false);
     }

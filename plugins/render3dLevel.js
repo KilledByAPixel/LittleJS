@@ -15,6 +15,16 @@
 
 const LEVEL3D_VERSION = 1; // the format a level's littlejs3D names
 
+/** A 3D level as it is saved, what level3DLoad takes and the 3D level editor edits
+ *  @typedef {Object} Level3D
+ *  @property {number} [littlejs3D] - The format's version, 1
+ *  @property {Array<Object>} objects - Each {id, type, pos, rotation, scale, properties}, all but type optional
+ *  @property {Object} [scene] - The scene block: sky, ambient, sunDirection, sunColor, fog, fogColor, shadows, lensFlare
+ *  @property {Object} [voxels] - A block map: {pos, size, blocks}
+ *  @property {Object} [terrain] - A height map: {pos, size, height, color, heights, paint}
+ *  @property {Object} [prefabs] - The level's own prefabs by name, each {objects, attached}
+ *  @memberof Level3D */
+
 // the types a level's objects are made from, by name
 const level3DTypes = new Map;
 
@@ -33,7 +43,7 @@ const level3DBaseScale = new WeakMap;
  *  - Adding a name again replaces it, Box, Sphere, Cylinder and Light too
  *  @param {string} name - The type the objects have in the level
  *  @param {Function} make - A class made at each object's position, or a function called with it
- *  @param {Object} [defaults] - Properties of each one made, the level editor shows inputs for them
+ *  @param {Object<string, any>} [defaults] - Properties of each one made, the level editor shows inputs for them
  *  @param {TileInfo} [tileInfo] - An icon for the level editor
  *  @memberof Level3D
  *  @example
@@ -87,7 +97,7 @@ function level3DAddMesh(name, mesh, tileInfo, color=WHITE)
  *    sunColor, fog, its start and end, fogColor, the horizon color when not given, shadows, and lensFlare, the
  *    sun's lens flare; what the block leaves out stays as the game set it, and a level with no block changes
  *    nothing
- *  @param {Object} level - The level, the level editor edits this same object
+ *  @param {Level3D} level - The level, the level editor edits this same object
  *  @return {Array<any>} - What each object's type made, a function that made nothing is left out
  *  @memberof Level3D */
 function level3DLoad(level)
@@ -420,7 +430,7 @@ function level3DMakeAt(object, pos, rotation, scale)
  *  @param {Vector3} [pos3D]
  *  @param {Vector3} [rotation3D] - In radians, as an object has it
  *  @param {Vector3} [scale3D] - Times the scale the type makes it with
- *  @param {Object} [properties] - Over the type's defaults
+ *  @param {Object<string, any>} [properties] - Over the type's defaults
  *  @return {any} - What the type made, a Prefab3D for a prefab, undefined when there is no such type
  *  @memberof Level3D
  *  @example
@@ -459,7 +469,8 @@ const level3DPrefabMaking = [];
  *    by hand does
  *  - Adding a name again replaces it
  *  @param {string} name - The type its instances have in a level
- *  @param {Object} prefab - {objects, attached}
+ *  @param {{objects: Array<Object>, attached?: boolean}} prefab - Its objects, about its own origin, and whether
+ *    they are attached
  *  @memberof Level3D
  *  @example
  *  level3DAddPrefab('Tower', {objects: [{type: 'Box', pos: [0, 1, 0], scale: [2, 2, 2]},

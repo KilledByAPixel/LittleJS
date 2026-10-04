@@ -16,6 +16,28 @@
 ///////////////////////////////////////////////////////////////////////////////
 // Tile Layer System
 
+/** A Tiled map as Tiled saves it as JSON, what tileLayersLoad and objectLayersLoad take and tileLayersFromLDtk
+ *  makes; the fields read are listed, and the rest of the file is kept as it is
+ *  @typedef {Object} TiledMap
+ *  @property {number} width - Cells across
+ *  @property {number} height - Cells up
+ *  @property {number} [tilewidth] - A tile's width in pixels
+ *  @property {number} [tileheight] - A tile's height in pixels
+ *  @property {Array<Object>} layers - Tile layers, object layers and groups of them, bottom first
+ *  @property {Array<Object>} [tilesets] - The first one's margin, spacing and columns are read
+ *  @property {number} [nextlayerid]
+ *  @property {number} [nextobjectid]
+ *  @property {string} [orientation]
+ *  @property {string} [renderorder]
+ *  @property {boolean} [infinite]
+ *  @property {string} [type]
+ *  @property {string} [version]
+ *  @property {string} [tiledversion]
+ *  @property {number} [compressionlevel]
+ *  @property {string} [backgroundcolor]
+ *  @property {Array<Object>} [properties]
+ *  @memberof TileLayers */
+
 /** Keep track of all tile layers with collision
  *  @type {Array<TileCollisionLayer>}
  *  @memberof TileLayers */
@@ -151,7 +173,7 @@ function tileLayerTileInfo(t, tile)
  * - An object or image layer keeps its index, with its slot in the returned array left empty
  * - A hidden layer (visible false) is loaded, its collision included, but not drawn; its render
  *   is a no-op, delete that and call redraw() to show it
- *  @param {Object}   tileMapData - Level data from exported data
+ *  @param {TiledMap} tileMapData - Level data from exported data
  *  @param {TileInfo} [tileInfo] - Default tile info (used for size and texture), tile() by default, none when no image is loaded
  *  @param {number}   [renderOrder] - Render order of the top layer
  *  @param {number|string} [collisionLayer] - Layer to use for collision if any, by its index or its name
@@ -165,10 +187,7 @@ function tileLayersLoad(tileMapData, tileInfo=tileLayerDefaultTile(), renderOrde
     {
         // default level data if loading failed
         const s = 50;
-        tileMapData = {};
-        tileMapData.height = tileMapData.width = s;
-        tileMapData.layers = [{}];
-        tileMapData.layers[0].data = new Array(s*s).fill(0);
+        tileMapData = {width: s, height: s, layers: [{data: new Array(s*s).fill(0)}]};
     }
 
     // the editor, in debug builds, keeps the map as the source of its edits and brings back autosaved ones
@@ -310,7 +329,7 @@ const tileLayersLDtkTypes = {Int: 'int', Float: 'float', Bool: 'bool', String: '
  * - The level editor edits the map this returns, and saves it as a Tiled map
  * @param {Object} ldtk - The LDtk project, its JSON
  * @param {number|string} [level] - Which level, by its index or its identifier
- * @return {Object} - A Tiled map: width, height, tilewidth, tileheight, tilesets and layers
+ * @return {TiledMap} - A Tiled map: width, height, tilewidth, tileheight, tilesets and layers
  * @example
  * const map = tileLayersFromLDtk(await fetchJSON('world.ldtk'), 'Level_0');
  * const layers = tileLayersLoad(map, tile(0, 16), 0, 'Collisions'); // its IntGrid layer is solid
@@ -441,7 +460,7 @@ const objectLayersTypes = new Map;
  *  - Adding a name again replaces it
  *  @param {string} name - The type the objects have in Tiled
  *  @param {Function} make - A class made at each object's position, or a function called with it
- *  @param {Object} [defaults] - Properties set on each one made, the level editor shows inputs for them
+ *  @param {Object<string, any>} [defaults] - Properties set on each one made, the level editor shows inputs for them
  *  @param {TileInfo} [tileInfo] - An icon for the level editor
  *  @memberof TileLayers
  *  @example
@@ -462,7 +481,7 @@ function objectLayersAddType(name, make, defaults={}, tileInfo)
  *  - The object's properties in Tiled are set over the type's defaults: numbers, booleans, strings, and colors,
  *    and for a Vector2 default the string x,y
  *  - An object whose type was not added is skipped, with a warning in debug builds
- *  @param {Object} tileMapData - The same Tiled map given to tileLayersLoad
+ *  @param {TiledMap} tileMapData - The same Tiled map given to tileLayersLoad
  *  @return {Array<any>} - What each object's type made, a function that made nothing is left out
  *  @memberof TileLayers */
 function objectLayersLoad(tileMapData)

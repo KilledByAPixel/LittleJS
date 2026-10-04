@@ -117,7 +117,7 @@ function formatTime(t)
 
 /** Fetches a JSON file from a URL and returns the parsed JSON object. Must be used with await!
  *  @param {string} url - URL of JSON file
- *  @return {Promise<object>}
+ *  @return {Promise<any>} - The parsed JSON, any shape, as response.json() gives it
  *  @memberof Utilities */
 async function fetchJSON(url)
 {

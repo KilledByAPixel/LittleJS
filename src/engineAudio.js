@@ -224,7 +224,7 @@ function audioParamRamp(param, value, fadeTime=0)
 class Sound
 {
     /** Create a sound object and cache the audio for later use
-     *  @param {string|URL|Array} [asset] - Filename or URL of an audio file, or a zzfx array
+     *  @param {string|URL|Array<number|undefined>} [asset] - Filename or URL of an audio file, or a zzfx array
      *  @param {number} [randomness] - How much to randomize frequency each time sound plays, for zzfx sounds it overrides the array's own randomness, which is used if undefined
      *  @param {number} [range=soundDefaultRange] - World space max range of sound
      *  @param {number} [taper=soundDefaultTaper] - At what percentage of range should it start tapering
