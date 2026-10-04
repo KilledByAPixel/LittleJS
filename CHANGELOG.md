@@ -7,7 +7,6 @@ What changed in each release, newest first. Releases before 1.20.0 are on the
 
 ### New Changes
 
-- A 2D build, `littlejs.2d.js` and `littlejs.2d.min.js`: the engine and every plugin but the 3D ones and Box2D, about half the size, 72 KB gzipped minified where the full build is 135 KB
 - A skinned glTF model bends about a fifth faster: the skin writes the GPU data as it bends, so the upload sends it without packing it again, and its joints' matrices are worked out with no garbage
 
 ### Breaking Changes

@@ -77,23 +77,6 @@ const engineExtraFiles =
     `${PLUGIN_FOLDER}/box2d.wasm.js`,
     `${PLUGIN_FOLDER}/box2d.wasm.wasm`,
 ];
-// what the 2D build leaves out: the 3D renderer and everything built on it, and Box2D, about half the full build
-const engine2DLeftOut =
-[
-    `${PLUGIN_FOLDER}/box2d.js`,
-    `${PLUGIN_FOLDER}/math3d.js`,
-    `${PLUGIN_FOLDER}/render3d.js`,
-    `${PLUGIN_FOLDER}/render3dMesh.js`,
-    `${PLUGIN_FOLDER}/render3dObject.js`,
-    `${PLUGIN_FOLDER}/render3dExtras.js`,
-    `${PLUGIN_FOLDER}/render3dVoxels.js`,
-    `${PLUGIN_FOLDER}/render3dLevel.js`,
-    `${PLUGIN_FOLDER}/gltf.js`,
-    `${PLUGIN_FOLDER}/threejs.js`,
-    `${PLUGIN_FOLDER}/render3dDebug.js`,
-    `${PLUGIN_FOLDER}/render3dEditor.js`,
-];
-const engine2DFiles = (files)=> files.filter((file)=> !engine2DLeftOut.includes(file));
 const asciiArt =`
       ~~~~°°°°ooo°oOo°ooOooOooOo.
  __________   ________   ____'°oO.
@@ -169,31 +152,6 @@ async function buildAll()
                 ...enginePluginFiles
             ],
             [stripDebugCallsStep], true
-        ),
-        Build
-        (
-            'Build Engine -- 2D',
-            `${BUILD_FOLDER}/${ENGINE_NAME}.2d.js`,
-            [
-                `${SOURCE_FOLDER}/engine.js`,
-                `${SOURCE_FOLDER}/engineDebug.js`,
-                ...engineSourceFiles,
-                ...engine2DFiles(enginePluginFiles),
-                ...engine2DFiles(engineDebugFiles)
-            ],
-            [], true
-        ),
-        Build
-        (
-            'Build Engine -- 2D release',
-            `${BUILD_FOLDER}/${ENGINE_NAME}.2d.release.js`,
-            [
-                `${SOURCE_FOLDER}/engine.js`,
-                `${SOURCE_FOLDER}/engineRelease.js`,
-                ...engineSourceFiles,
-                ...engine2DFiles(enginePluginFiles)
-            ],
-            [stripDebugCallsStep], true
         )
     ]);
 
@@ -204,13 +162,6 @@ async function buildAll()
             'Build Engine -- minified',
             `${BUILD_FOLDER}/${ENGINE_NAME}.min.js`,
             [`${BUILD_FOLDER}/${ENGINE_NAME}.release.js`],
-            [closureCompilerStep, uglifyBuildStep, addLicenseStep]
-        ),
-        Build
-        (
-            'Build Engine -- 2D minified',
-            `${BUILD_FOLDER}/${ENGINE_NAME}.2d.min.js`,
-            [`${BUILD_FOLDER}/${ENGINE_NAME}.2d.release.js`],
             [closureCompilerStep, uglifyBuildStep, addLicenseStep]
         ),
         Build
@@ -236,9 +187,6 @@ async function buildAll()
             [uglifyModuleBuildStep, addLicenseStep]
         )
     ]);
-
-    // the 2D build ships debug and minified, its release step was only the way to the minified one
-    fs.rmSync(`${BUILD_FOLDER}/${ENGINE_NAME}.2d.release.js`);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
