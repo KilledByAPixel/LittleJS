@@ -10,6 +10,10 @@ What changed in each release, newest first. Releases before 1.20.0 are on the
 - A 2D build, `littlejs.2d.js` and `littlejs.2d.min.js`: the engine and every plugin but the 3D ones and Box2D, about half the size, 72 KB gzipped minified where the full build is 135 KB
 - A skinned glTF model bends about a fifth faster: the skin writes the GPU data as it bends, so the upload sends it without packing it again, and its joints' matrices are worked out with no garbage
 
+### Breaking Changes
+
+- render3d.js is in three files: `render3d.js`, the renderer, then `render3dMesh.js`, meshes and the basic builders, and `render3dObject.js`, EngineObject3D, instancing and lights; nothing changes for a game on a build in `dist`, one that loads the plugins one by one adds the two after `render3d.js`
+
 ## 1.25.0 - 2026-10-04
 
 ### New Changes
