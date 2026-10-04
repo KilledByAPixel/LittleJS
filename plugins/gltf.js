@@ -321,11 +321,12 @@ class GLTFObject extends EngineObject3D
         const found = this.model.getAnimation(animation);
         ASSERT(found, 'the model has no animation ' + animation, this.model.animations.map(a=> a.name));
         if (!found) return;
+        const fading = this.blendFrom;
         this.blendFrom = undefined;
         if (blend > 0)
         {
             // from the animation playing, going on as it was, or from the pose held, a fade's mix included
-            const from = this.animation && !this.blendFrom ? {animation: this.animation, time: this.animationTime,
+            const from = this.animation && !fading ? {animation: this.animation, time: this.animationTime,
                 speed: this.animationPlaying ? this.animationSpeed : 0, loop: this.animationLoop} : undefined;
             this.blendFrom = from || {nodes: this.poseNodes || new Map};
             this.blendTime = blend;
@@ -548,6 +549,9 @@ async function parseGLTF(data, baseUrl='', files)
     // the parts: the scene's nodes walked with their transforms, every primitive of a node's mesh placed by it;
     // each node's parent and resting place are kept, so an animation can move a part from where it rests
     const parts = [], parents = [], restInverse = [], restPose = [], visited = new Set;
+    // every node's parent from the children lists, so a joint outside the scene's nodes keeps its own; the walk
+    // below sets them again for the nodes it reaches
+    (json.nodes || []).forEach((node, i)=> (node.children || []).forEach((child)=> parents[child] ??= i));
     const visit = (index, parentMatrix, parentIndex, parentRest)=>
     {
         // nodes are trees, so one reached again is a cycle or a node with two parents, a file problem

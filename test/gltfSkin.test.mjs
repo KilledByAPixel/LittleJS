@@ -136,3 +136,35 @@ test('a blend runs on in update and ends, and a joint can be found to hang thing
     assert.equal(o.getJointMatrix('foot'), undefined);
     o.destroy(true);
 });
+
+test('a fade started during another fades from the mix there, not from the animation it left', async ()=>
+{
+    const model = await parseGLTF(gltfOf({ nodes: nodesOf(),
+        animations: [{ name: 'still', angle: 0 }, { name: 'bend', angle: Math.PI / 2 }] }));
+    const o = model.createObject(vec3());
+    o.play('still', false, 0);
+    o.play('bend', false, 0, 1);
+    o.setAnimationTime(1); // bend held at its end, so only the fades move it
+    o.blendElapsed = .5, o.setAnimationTime(1);
+    const before = points(o.parts[0].mesh)[2];
+    o.play('still', false, 0, 1);
+    assert.deepEqual(points(o.parts[0].mesh)[2], before, 'the second fade starts where the first had got to');
+    o.destroy(true);
+});
+
+test('joints outside the scene\'s nodes keep their parents', async ()=>
+{
+    // the joints' root a node of its own, moved 2 across, with inverse binds to match, and the scene holding only
+    // the mesh's node: the mesh rests where it does with them in the scene
+    const file = gltfOf({ nodes: [{ mesh: 0, skin: 0 }, { children: [2], translation: [2, 0, 0] }, { translation: [0, 1, 0] }] });
+    const bind = file.accessors.findIndex((a)=> a.type === 'MAT4');
+    const view = file.bufferViews[file.accessors[bind].bufferView];
+    const bytes = Buffer.from(file.buffers[0].uri.split(',')[1], 'base64');
+    new Float32Array(bytes.buffer, bytes.byteOffset + view.byteOffset, 32).set([1,0,0,0, 0,1,0,0, 0,0,1,0, -2,0,0,1,
+        1,0,0,0, 0,1,0,0, 0,0,1,0, -2,-1,0,1]);
+    file.buffers[0].uri = 'data:application/octet-stream;base64,' + bytes.toString('base64');
+    const inScene = await parseGLTF({ ...file, scenes: [{ nodes: [0, 1] }] });
+    const outside = await parseGLTF({ ...file, scenes: [{ nodes: [0] }] });
+    assert.deepEqual(points(outside.parts[0].mesh), points(inScene.parts[0].mesh));
+    assert.deepEqual(points(outside.parts[0].mesh), [[0, 0, 0], [1, 0, 0], [0, 2, 0], [1, 2, 0]]);
+});
