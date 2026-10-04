@@ -2048,7 +2048,8 @@ box2d.raycast(start, end, includeSensors=false)    // Returns the closest Box2dR
                                                    // are passed through unless includeSensors
 box2d.raycastAll(start, end, includeSensors=false) // Every Box2dRaycastResult along the ray, nearest first
 box2d.boxCast(pos, size, includeSensors=false) / boxCastAll(pos, size, includeSensors=false) // An object, or all
-                               // of them, whose shapes overlap the box; sensors are passed through unless included
+                               // of them, whose shapes' bounding boxes overlap the box, so near the corner of a turned
+                               // box or a circle it can find one the box misses; sensors are passed through unless included
 box2d.circleCast(pos, diameter, includeSensors=false) / circleCastAll(pos, diameter, includeSensors=false) // The
                                // nearest object, or all of them, whose position is in the circle, wherever its shapes
                                // are; objects of only sensors are passed over unless included

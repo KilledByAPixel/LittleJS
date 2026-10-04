@@ -160,7 +160,7 @@ test('guards the d.ts types: callbacks with parameters, void draws and typed int
     // Function gives TypeScript no parameter types, so a strict arrow callback fails
     const grid = line('export function buildGrid\\(');
     assert.doesNotMatch(grid, /: Function\b/, 'buildGrid callbacks are typed');
-    assert.match(grid, /size\?: Vector2 \| number/, 'buildGrid size takes a number');
+    assert.match(grid, /size\?: (Vector2 \| number|number \| Vector2)/, 'buildGrid size takes a number');
     const callback = line('export function engineObjectsCallback3D\\(');
     assert.doesNotMatch(callback, /: Function\b/);
     assert.match(callback, /EngineObject3D\) => void/);

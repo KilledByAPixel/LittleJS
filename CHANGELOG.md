@@ -7,6 +7,8 @@ What changed in each release, newest first. Releases before 1.20.0 are on the
 
 ### Fixes
 
+- TypeScript: the d.ts keeps `undefined` where a value may be missing, so a game in strict mode can write `render3D.shader = undefined` and is told `light.flare`, `levelEditor.edit3D` or `uiSystem.keyInputObject` may be undefined; a game not in strict mode reads the same types as before
+- `box2d.boxCast` and `boxCastAll` say that they test each shape's bounding box, which can find an object near the corner of a turned box or a circle that the box does not touch
 - An image that failed to load gives tiles of no size, which draw nothing, where `tile()` gave NaN places in release builds and stopped debug builds at an assert; a texture slot never given an image still asserts in debug
 - A release build says when a sound, a `loadSprite` or a `loadAtlas` fails to load, as it did for textures and tile sets
 - A `Box2dObject` keeps one `pos` for life, moved in place each step as an EngineObject's is, so a camera holding it follows the body

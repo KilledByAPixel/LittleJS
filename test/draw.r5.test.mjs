@@ -148,8 +148,9 @@ test('the d.ts types textAlign as the three values drawTextScreen accepts, and l
 {
     const dts = readFileSync('dist/littlejs.d.ts', 'utf8');
     const signature = (name)=> dts.split('\n').find(line => line.includes('export function ' + name + '('));
-    const align = /textAlign\?: ["']left["'] \| ["']center["'] \| ["']right["']/;
-    assert.match(signature('drawText'), align);
-    assert.match(signature('drawTextScreen'), align);
+    // the three values in whatever order and quotes tsc writes them
+    const align = (line)=> line.match(/textAlign\?: ((?:["']\w+["'](?: \| )?)+)/)[1].match(/\w+/g).sort();
+    assert.deepEqual(align(signature('drawText')), ['center', 'left', 'right']);
+    assert.deepEqual(align(signature('drawTextScreen')), ['center', 'left', 'right']);
     assert.match(signature('loadTexture'), /Promise<TextureInfo>/);
 });

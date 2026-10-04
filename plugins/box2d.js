@@ -2144,7 +2144,8 @@ class Box2dPlugin
         return box2d.raycastAll(start, end, includeSensors)[0];
     }
 
-    /** box aabb cast and return all the objects
+    /** Every object whose shapes' bounding boxes overlap a box, not the shapes themselves, so near the corner of a
+     *  turned box or a circle it finds one the box does not touch; use pointCast or a raycast for exact
      *  @param {Vector2} pos
      *  @param {Vector2} size
      *  @param {boolean} [includeSensors] - Also find sensors, trigger zones are passed through by default
@@ -2174,7 +2175,8 @@ class Box2dPlugin
         return queryObjects;
     }
 
-    /** box aabb cast and return the first object
+    /** The first object whose shapes' bounding boxes overlap a box, not the shapes themselves, so near the corner of
+     *  a turned box or a circle it finds one the box does not touch; use pointCast or a raycast for exact
      *  @param {Vector2} pos
      *  @param {Vector2} size
      *  @param {boolean} [includeSensors] - Also find sensors, trigger zones are passed through by default

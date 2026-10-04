@@ -251,11 +251,11 @@ test('UI types come out as the code takes them in the d.ts', () =>
     const body = (name)=> dts.match(new RegExp(`export class ${name} [^{]*\\{([\\s\\S]*?)\\n    \\}`))[1];
     const system = body('UISystemPlugin'), object = body('UIObject');
     assert.match(system, /constructor\(context\?: CanvasRenderingContext2D \| OffscreenCanvasRenderingContext2D\);/);
-    // tsc leaves undefined off accessor types, so the accessor only needs the object type
-    assert.match(system, /get keyInputObject\(\): UIObject;/);
+    // the d.ts is built with strictNullChecks, so an accessor keeps the undefined it may give
+    assert.match(system, /get keyInputObject\(\): UIObject \| undefined;/);
     for (const sound of ['soundPress', 'soundRelease', 'soundClick'])
         assert.match(object, new RegExp(`${sound}: Sound \\| undefined;`), sound);
-    assert.match(object, /align: ['"]left['"] \| ['"]center['"] \| ['"]right['"];/);
+    assert.deepEqual(object.match(/align: ((?:['"]\w+['"](?: \| )?)+);/)[1].match(/\w+/g).sort(), ['center', 'left', 'right']);
     assert.match(object, /onKeyDown\(e: KeyboardEvent\): void;/);
     assert.doesNotMatch(body('UIVideo'), /^\s*soundEnabled/m, 'internal, not public');
     assert.match(body('UITile'), /constructor\(pos: Vector2, size: Vector2, tileInfo: TileInfo,/);

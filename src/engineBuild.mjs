@@ -289,16 +289,63 @@ function typeScriptBuildStep(filename)
     try
     {
         const tsFilename = join(BUILD_FOLDER, `${ENGINE_NAME}.d.ts`);
-        execSync(`npx -p typescript tsc "${filename}" --declaration --allowJs --emitDeclarationOnly --outFile "${tsFilename}"`);
+        // strictNullChecks keeps undefined in the types, where tsc would drop it from accessors and object types
+        // whatever the JSDoc says, so a game in strict mode can set render3D.shader = undefined and is told a
+        // flare may be missing; a game not in strict mode reads the same types as before
+        execSync(`npx -p typescript tsc "${filename}" --declaration --allowJs --emitDeclarationOnly --strictNullChecks --outFile "${tsFilename}"`);
 
         // Make declare module part use the package name littlejsengine
         let fileContent = fs.readFileSync(tsFilename, 'utf8');
         fileContent = fileContent.replace(`${ENGINE_NAME}\.esm`, 'littlejsengine')
-        fs.writeFileSync(tsFilename, fileContent);
+        fs.writeFileSync(tsFilename, typeScriptOptionalTidy(fileContent));
 
     }
     catch (e) { handleError(e, 'Failed to run TypeScript build step!'); }
 };
+
+// strictNullChecks writes an optional parameter or field as x?: T | undefined, which is the same as x?: T, so the
+// redundant | undefined is taken off: each ?: is followed to the end of its type, the first , ; ) or line end outside
+// brackets, and only that type is changed; a required x: T | undefined keeps it
+function typeScriptOptionalTidy(text)
+{
+    let out = '', i = 0;
+    for (let at; (at = text.indexOf('?: ', i)) >= 0;)
+    {
+        const start = at + 3;
+        let end = start, depth = 0;
+        for (; end < text.length; ++end)
+        {
+            const c = text[end];
+            if (c === '=' && text[end + 1] === '>') { ++end; continue; } // an arrow is not a closing bracket
+            if ('([{<'.includes(c)) ++depth;
+            else if (')]}>'.includes(c) && depth) --depth;
+            else if (!depth && (',;)\n'.includes(c))) break;
+        }
+        let type = typeScriptOptionalTidy(text.slice(start, end)); // and the optional fields of a record type in it
+        if (type.endsWith(' | undefined'))
+        {
+            type = type.slice(0, -12);
+            // a function type was wrapped for the union, (() => void) | undefined, and needs it no more
+            if (type[0] === '(' && typeScriptCloseOf(type, 0) === type.length - 1)
+                type = type.slice(1, -1);
+        }
+        out += text.slice(i, start) + type;
+        i = end;
+    }
+    return out + text.slice(i);
+}
+
+// the index of the bracket that closes the one at start
+function typeScriptCloseOf(text, start)
+{
+    let depth = 0;
+    for (let k = start; k < text.length; ++k)
+    {
+        if (text[k] === '(') ++depth;
+        else if (text[k] === ')' && !--depth) return k;
+    }
+    return -1;
+}
 
 // display the error and exit
 function handleError(e,message)
