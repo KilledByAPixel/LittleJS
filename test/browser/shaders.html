@@ -25,7 +25,8 @@ smokeRun(async ()=>
 
         // the right half is an object with a Shader that makes it cyan
         const object = new EngineObject(vec2(16, 0), vec2(32, 64), white);
-        object.shader = new Shader('void mainImage(out vec4 c, vec2 uv) { c = vec4(0., 1., 1., 1.); }');
+        // a define of a name the engine's own code uses, its vertex color d, which must not reach that code
+        object.shader = new Shader('#define d vec4(0)\nvoid mainImage(out vec4 c, vec2 uv) { c = vec4(0., 1., 1., 1.); }');
 
         new PostProcessPlugin(`
             void mainImage(out vec4 c, vec2 p)

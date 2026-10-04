@@ -1746,11 +1746,11 @@ function render3DFragmentSource(fragmentCode)
         'vec3 m=texture(normalTex,T).xyz*2.-1.;' +
         'm.xy*=materialParams.x;' +
         'return normalize((u*m.x-v*m.y)*inversesqrt(k)+n*m.z);}' +
-        (fragmentCode ? RENDER3D_SNIPPET_NAMES + fragmentCode + '\n' : '') +
+        // a snippet's mainImage is declared here and written after main, so a define in it can not reach main
+        (fragmentCode ? 'void mainImage(out vec4,vec2);' : '') +
         'void main(){' +
         (fragmentCode ? 'vec4 t;mainImage(t,T);' : 'vec4 t=texture(tex,T);') +
         'if(premultipliedTexture&&t.a>0.)t.rgb/=t.a;' + // back to straight color, what the lighting and blend expect
-        'if(shadowParams.w>0.&&t.a<.5)discard;' + // an opaque draw drops see through texels, as the shadow map does
         'vec4 c=C*t;' +
         'float e=lightDir.w;' +
         'if(e<1.){' +
@@ -1804,8 +1804,12 @@ function render3DFragmentSource(fragmentCode)
         'float z=distance(cameraPos,P);' +
         'c.rgb=mix(c.rgb,shadowParams.w<0.?vec3(0):fogColor.rgb,smoothstep(fogColor.a,ambientFog.a,z));' +
         '}' +
-        'o=vec4(c.rgb,shadowParams.w>0.?1.:c.a);' + // an opaque draw stays opaque whatever the tint alpha says
-        '}';
+        // an opaque draw drops see through texels, as the shadow map does, at the end, after the normal map's
+        // derivatives and the texture samples, which need the pixels around them, and stays opaque otherwise
+        'if(shadowParams.w>0.&&t.a<.5)discard;' +
+        'o=vec4(c.rgb,shadowParams.w>0.?1.:c.a);' +
+        '}' +
+        (fragmentCode ? '\n' + RENDER3D_SNIPPET_NAMES + fragmentCode + '\n' : '');
 }
 
 // a Shader's 3D program, compiled the first time a draw needs it

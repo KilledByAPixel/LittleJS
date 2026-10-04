@@ -222,3 +222,22 @@ test('every preprocessor line of the post process shader starts a line', ()=>
     for (const at of source.matchAll(/#(define|version)/g))
         assert.ok(at.index === 0 || source[at.index - 1] === '\n', source.slice(at.index - 20, at.index + 20));
 });
+
+test('the engine\'s main comes before a game\'s shader code in 2D, 3D and the post process, mainImage declared', ()=>
+{
+    const { run } = loadEngine({}, 'setHeadlessMode(true);');
+    const snippet = '#define d vec4(0)\nvoid mainImage(out vec4 c, vec2 uv) { c = vec4(1); }';
+    const sources = {
+        '2D': run(`(()=> { let source; glCreateProgram = (v, f)=> (source = f, {}); glContext = {};
+            glShaderProgram(new Shader(${JSON.stringify(snippet)})); return source; })()`),
+        '3D': run(`render3DFragmentSource(${JSON.stringify(snippet)})`),
+        'post process': run(`postProcessFragmentSource(${JSON.stringify(snippet)})`),
+    };
+    for (const [name, source] of Object.entries(sources))
+    {
+        assert.ok(source.indexOf('void main(') < source.indexOf('#define d'), name + ': main before the code');
+        assert.ok(source.indexOf('void mainImage(out vec4,vec2);') < source.indexOf('void main('), name + ': declared');
+    }
+    const plain = run('render3DFragmentSource()');
+    assert.ok(plain.lastIndexOf('discard') > plain.indexOf('normalMapNormal(n)'), 'the 3D discard after the derivatives');
+});

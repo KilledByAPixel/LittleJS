@@ -512,10 +512,12 @@ function glShaderProgram(shader)
         'uniform vec3 iResolution;' +    // canvas size in pixels
         'uniform float iTime;' +         // engine time
         'uniform bool premultipliedTexture;' + // is the texture premultiplied, a render target or a smooth image
-        'in vec2 v,l;in vec4 d,e;out vec4 c;\n' + // a define needs its own line
+        'in vec2 v,l;in vec4 d,e;out vec4 c;' +
+        // main first, the snippet's mainImage declared for it, so a define in the snippet can not reach main's names
+        'void mainImage(out vec4,vec2);' +
+        'void main(){vec4 t;mainImage(t,v);' + gl_FRAGMENT_TINT_SOURCE + '}\n' + // a define needs its own line
         '#define localUV l\n' +
-        shader.fragmentCode + '\n' +
-        'void main(){vec4 t;mainImage(t,v);' + gl_FRAGMENT_TINT_SOURCE + '}');
+        shader.fragmentCode + '\n');
     return glFailedPrograms.has(program) ? glShader : program;
 }
 

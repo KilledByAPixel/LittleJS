@@ -310,11 +310,13 @@ function postProcessFragmentSource(shaderCode, values={})
         'return iDepthRange.z>0.?(d*(f-n)+f+n)/2.:f>0.?2.*n*f/(f+n-d*(f-n)):2.*n/max(1.-d,1e-7);}'+
         // whether there is depth to read: a range of all 0 is none, an orthographic near plane may be behind
         '\n#define LJS_HAS_DEPTH (iDepthRange != vec3(0))\n'+ // a define needs a line of its own
-        '\n' + shaderCode + '\n'+        // insert custom shader code
+        // main first, the code's mainImage declared for it, so a define in the code can not reach main
+        'void mainImage(out vec4,vec2);'+
         'void main(){'+                  // shader entry point
         'mainImage(c,gl_FragCoord.xy);'+ // call post process function
         'c.a=1.;'+                       // always use full alpha
-        '}';                             // end of shader
+        '}'+                             // end of shader
+        '\n' + shaderCode + '\n';        // insert custom shader code
 }
 
 /**

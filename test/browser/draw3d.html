@@ -46,7 +46,8 @@ smokeRun(async ()=>
         const shaded = new EngineObject3D(vec3(0, 3.2, 0), buildBox(), undefined, rgb(1, 1, 1));
         shaded.scale3D = vec3(1.5);
         shaded.emissive = 1;
-        shaded.shader = new Shader('void mainImage(out vec4 c, vec2 uv) { c = vec4(1., 0., 1., 1.); }');
+        // a define of the engine's vertex color C, which must not reach its own code
+        shaded.shader = new Shader('#define C vec4(0)\nvoid mainImage(out vec4 c, vec2 uv) { c = vec4(1., 0., 1., 1.); }');
 
         // one block of a voxel map, cyan from a texture, and a height map, a yellow ramp that faces the camera
         const canvas = new OffscreenCanvas(16, 16), context = canvas.getContext('2d');

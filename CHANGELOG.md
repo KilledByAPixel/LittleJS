@@ -11,6 +11,7 @@ What changed in each release, newest first. Releases before 1.20.0 are on the
 - The level editor autosaves a big map once the edits stop for a moment, where every stroke on a 512 by 512 map wrote megabytes; a small map is saved after every stroke as before, and anything waiting is written when the editor closes, the page hides, the map is saved or another one loads
 - The FAQ and REFERENCE say how far a world can go and how long a game can run before 32-bit floats on the GPU run out of precision
 - The TypeScript example is typed by the shipped littlejs.d.ts in strict mode and imports 'littlejsengine' as an npm game does, an import map giving the browser the build; the Vite starter installs 1.25, where its lock held 1.18.19
+- A Shader's or a post process's code comes after the engine's own in the shader, so a define in it can not rewrite the engine's names, where a #define of one, the vertex color say, changed what was drawn; the 3D shader drops see through texels at the end, after the normal map and texture reads that need the pixels around them
 
 ### Breaking Changes
 
