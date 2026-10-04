@@ -52,6 +52,14 @@ function tweak(){}
 function tweakButton(){}
 function tweakDivider(){}
 function tweakEngineDefaults(){}
+// the 2D editor's edit functions in a release build, which has no editor: there is nothing to edit and nothing
+// changes, and a game that calls them needs no guard; edit3D stays undefined, as it is with no 3D plugins
+const editorEdit2DRelease =
+{
+    map: undefined, layer: undefined, hover: undefined, get objects() { return []; }, get selection() { return new Set; },
+    paint(){ return false; }, changeObjects(){ return false; }, strokeEnd(){}, strokeCancel(){}, bulk(){},
+    undo(){ return false; }, toJSON(){ return ''; },
+};
 class LevelEditor
 {
     constructor()
@@ -61,7 +69,7 @@ class LevelEditor
     }
     get isOpen() { return false; }
     get is3D() { return false; }
-    get edit2D() { return undefined; }
+    get edit2D() { return editorEdit2DRelease; }
     get edit3D() { return undefined; }
     open(){} close(){} addKey(){} addButton(){} addTool(){}
     onTile(){} onRestart(){} onPlayFrom(){} onOpen(){} onClose(){} onUpdate(){} onDraw(){} onPanel(){}

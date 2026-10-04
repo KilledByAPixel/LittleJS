@@ -7,6 +7,7 @@ What changed in each release, newest first. Releases before 1.20.0 are on the
 
 ### Fixes
 
+- In a release build `levelEditor.edit2D` is there and changes nothing, where it was undefined and a call on it threw, so a game needs no guard around it
 - Level editor: a turned or mirrored stamp turns or mirrors its objects too, each object's rotation with it, a box placed from the corner that becomes its own, a polygon's points and a tile object's image mirrored
 
 ## 1.24.3 - 2026-10-03

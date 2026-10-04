@@ -120,3 +120,12 @@ test('a zzfx Sound made where the browser has no audio counts as loaded and play
     run('soundEnable = true; var loaded = 0, s = new Sound([,,500], 0, 0, .7, ()=> ++loaded);');
     assert.deepEqual([run('loaded'), run('s.isLoaded()'), run('s.play() === undefined')], [1, true, true]);
 });
+
+test('in a release build levelEditor.edit2D is there and changes nothing, so a game needs no guard around it', () =>
+{
+    const { run } = loadEngine({}, '', 'littlejs.release.js');
+    run('var edit = levelEditor.edit2D; edit.strokeEnd(); edit.strokeCancel(); edit.bulk(()=> { throw 1; });');
+    assert.deepEqual([run('edit.paint(vec2(), 1)'), run('edit.changeObjects((l)=> l.push({}))'), run('edit.undo()'),
+        run('edit.toJSON()'), run('edit.objects.length'), run('edit.selection.size'), run('edit.map'),
+        run('levelEditor.edit3D')], [false, false, false, '', 0, 0, undefined, undefined]);
+});
