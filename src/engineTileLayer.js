@@ -31,7 +31,7 @@
  *  @property {string} [renderorder]
  *  @property {boolean} [infinite]
  *  @property {string} [type]
- *  @property {string} [version]
+ *  @property {string|number} [version] - A number in files from Tiled before 1.6
  *  @property {string} [tiledversion]
  *  @property {number} [compressionlevel]
  *  @property {string} [backgroundcolor]
@@ -173,7 +173,7 @@ function tileLayerTileInfo(t, tile)
  * - An object or image layer keeps its index, with its slot in the returned array left empty
  * - A hidden layer (visible false) is loaded, its collision included, but not drawn; its render
  *   is a no-op, delete that and call redraw() to show it
- *  @param {TiledMap} tileMapData - Level data from exported data
+ *  @param {TiledMap} [tileMapData] - Level data from exported data, a 50 by 50 empty level when left out
  *  @param {TileInfo} [tileInfo] - Default tile info (used for size and texture), tile() by default, none when no image is loaded
  *  @param {number}   [renderOrder] - Render order of the top layer
  *  @param {number|string} [collisionLayer] - Layer to use for collision if any, by its index or its name

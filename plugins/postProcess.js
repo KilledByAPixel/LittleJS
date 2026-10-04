@@ -101,7 +101,7 @@ class PostProcessPlugin
                 ,
                 postProcessFragmentSource(postProcess.shaderCode, postProcess.values)
             );
-            postProcess.valueNames = Object.keys(postProcess.values).join();
+            postProcess.valueNames = postProcessValueKey(postProcess.values);
 
             // setup VAO for post processing
             postProcess.vao = glContext.createVertexArray();
@@ -139,7 +139,7 @@ class PostProcessPlugin
 
             // made now if WebGL was off when the plugin was made, when a lost context came back, when setShaderCode
             // gave it new code, or when the game added or took away a value, which the shader declares
-            if (postProcess.shader && Object.keys(postProcess.values).join() !== postProcess.valueNames)
+            if (postProcess.shader && postProcessValueKey(postProcess.values) !== postProcess.valueNames)
                 postProcess.setShaderCode(postProcess.shaderCode);
             if (!postProcess.shader)
             {
@@ -203,9 +203,10 @@ class PostProcessPlugin
             glContext.activeTexture(glContext.TEXTURE2);
             glContext.bindTexture(glContext.TEXTURE_2D, depth?.cameraDepthTexture || null);
             glContext.activeTexture(glContext.TEXTURE0);
+            // all 0 without one, which an effect reads as no depth
             const camera = depth?.camera;
-            camera && glContext.uniform3f(glUniformLocation(postProcess.shader, 'iDepthRange'), camera.near,
-                camera.far == Infinity ? 0 : camera.far, camera.orthographic ? 1 : 0);
+            glContext.uniform3f(glUniformLocation(postProcess.shader, 'iDepthRange'), camera?.near || 0,
+                !camera || camera.far == Infinity ? 0 : camera.far, camera?.orthographic ? 1 : 0);
 
             // set uniforms and draw
             const uniformLocation = (name)=>glUniformLocation(postProcess.shader, name);
@@ -271,6 +272,10 @@ class PostProcessPlugin
 
 ///////////////////////////////////////////////////////////////////////////////
 
+// what the shader declares of the game's values, each name and its length, so a value that changes either makes the
+// shader again
+const postProcessValueKey = (values)=> Object.entries(values).map(([name, v])=> name + ':' + (isArray(v) ? v.length : 1)).join();
+
 // the fragment shader of the post process pass around its mainImage snippet: the frame on iChannel0, the last output
 // on iChannel1 with a feedback texture, and the 3D depth on iChannel2 when render3D.depthTexture is on, read with
 // sceneDepth(uv), the distance from the camera along its view in world units, uv 0 to 1 across the screen; and a
@@ -281,9 +286,9 @@ function postProcessFragmentSource(shaderCode, values={})
     for (const name in values)
     {
         const value = values[name], length = isArray(value) ? value.length : 1;
-        ASSERT(/^[A-Za-z_][A-Za-z0-9_]*$/.test(name) && !/^(i|gl_)/.test(name),
-            'a postProcess value needs a name GLSL takes, not one starting i or gl_ as the engine\'s own do', name);
-        ASSERT(length >= 1 && length <= 4, 'a postProcess value is a number or 2 to 4 of them', name);
+        ASSERT(/^[A-Za-z_][A-Za-z0-9_]*$/.test(name) && !/^(i[A-Z]|gl_)/.test(name),
+            'a postProcess value needs a name GLSL takes, not i and a capital or gl_, as the engine\'s own are', name);
+        ASSERT(!isArray(value) || length >= 2 && length <= 4, 'a postProcess value is a number or 2 to 4 of them', name);
         declared += `uniform ${length > 1 ? 'vec' + length : 'float'} ${name};`;
     }
     return '#version 300 es\n' +        // specify GLSL ES version
@@ -346,7 +351,8 @@ function postProcessBloom(threshold=.6, strength=1, size=6, includeMainCanvas=fa
 // an effect setting: a number written into the code, or the name of a postProcess value, read from it each frame
 const postProcessNumber = (n)=> typeof n === 'string' ?
     (ASSERT(/^[A-Za-z_][A-Za-z0-9_]*$/.test(n), 'an effect setting is a number or the name of a postProcess value', n), n) :
-    (ASSERT(isNumber(n), 'an effect setting is a number or the name of a postProcess value', n), n.toFixed(4));
+    (ASSERT(isNumber(n) && isFinite(n), 'an effect setting is a finite number or the name of a postProcess value', n),
+        n && abs(n) < 1e-4 ? n.toExponential() : n.toFixed(4)); // a tiny one would be 0.0000
 
 /**
  * Join effects into one post process shader, in the order given, for PostProcessPlugin or setShaderCode
@@ -480,6 +486,10 @@ function postProcessChromatic(strength=.005)
         c.b = texture(iChannel0, uv - d).b;`;
 }
 
+// a blur's widest is 32 pixels, past which its 24 taps sit far enough apart to show; a value's is the game's to keep
+const postProcessBlurCheck = (blur)=>
+    ASSERT(typeof blur === 'string' || blur <= 32, 'a blur of more than 32 pixels shows its taps as copies', blur);
+
 // a blur over a disc of radius r pixels around uv, of 24 taps spread evenly by the golden angle; weight, when given,
 // is GLSL for how much a tap at puv, s of the radius out, counts, from 0 to 1
 function postProcessDiscBlur(weight)
@@ -503,7 +513,7 @@ function postProcessDiscBlur(weight)
  * makes a scene look like a small model; it reads only the screen, so it works in 2D and 3D; put it first
  * @param {number|string} [focus] - Height of the middle of the sharp band, 0 the bottom of the screen and 1 the top
  * @param {number|string} [size] - Height of the sharp band, as a part of the screen
- * @param {number|string} [blur] - Widest blur in pixels, reached half the screen past the band
+ * @param {number|string} [blur] - Widest blur in pixels, reached half the screen past the band, at most 32
  * @return {string}
  * @memberof PostProcess
  * @example
@@ -511,6 +521,7 @@ function postProcessDiscBlur(weight)
  */
 function postProcessTiltShift(focus=.5, size=.25, blur=8)
 {
+    postProcessBlurCheck(blur);
     const n = postProcessNumber;
     return `        // tilt shift
         float r = ${n(blur)} * smoothstep(0., .5, abs(uv.y - ${n(focus)}) - ${n(size)} * .5);${postProcessDiscBlur()}`;
@@ -522,7 +533,7 @@ function postProcessTiltShift(focus=.5, size=.25, blur=8)
  * - What is in focus stays sharp at its edges: a blur in front of or behind it leaves out what is in focus
  * @param {number|string} [focus] - Distance from the camera, along its view, that is sharpest, in world units
  * @param {number|string} [range] - How deep the sharp part is; the blur grows over as far again past it
- * @param {number|string} [blur] - Widest blur in pixels
+ * @param {number|string} [blur] - Widest blur in pixels, at most 32
  * @return {string}
  * @memberof PostProcess
  * @example
@@ -531,11 +542,12 @@ function postProcessTiltShift(focus=.5, size=.25, blur=8)
  */
 function postProcessDepthOfField(focus=10, range=4, blur=8)
 {
+    postProcessBlurCheck(blur);
     const n = postProcessNumber;
     const amount = (depth)=> `${n(blur)} * smoothstep(0., ${n(range)}, abs(${depth} - ${n(focus)}) - ${n(range)} * .5)`;
     // a tap counts as far as its own blur reaches back to here, so a sharp thing in front is not smeared over
-    return `        // depth of field
-        float r = ${amount('sceneDepth(uv)')};${postProcessDiscBlur(`clamp(${amount('sceneDepth(puv)')} - s * r + 1., 0., 1.)`)}`;
+    return `        // depth of field, none where there is no depth, as with render3D.depthTexture off
+        float r = iDepthRange.x > 0. ? ${amount('sceneDepth(uv)')} : 0.;${postProcessDiscBlur(`clamp(${amount('sceneDepth(puv)')} - s * r + 1., 0., 1.)`)}`;
 }
 
 /**

@@ -60,7 +60,7 @@ function gameUpdate()
     if (keyWasPressed('Space'))
         setMode((mode + 1) % modes.length);
     if (keyIsDown('ArrowUp'))
-        blur = min(blur + .2, 20);
+        blur = min(blur + .2, 16);
     if (keyIsDown('ArrowDown'))
         blur = max(blur - .2, 0);
 

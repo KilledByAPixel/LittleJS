@@ -48,6 +48,13 @@ smokeRun(async ()=>
     check('a value moves the band each frame, with the same shader', low[0] > 150 && low[1] < 60 && high[0] < 60 &&
         high[1] > 150 && postProcess.shader === shader, {low, high});
 
+    // depth of field with no depth texture blurs nothing, where it read a depth of 0 everywhere and blurred it all
+    postProcess.values = {};
+    postProcess.setShaderCode(postProcessEffects(postProcessDepthOfField(10, 4, 8)));
+    engineStep(2);
+    check('depth of field with no depth texture leaves the picture sharp', contrast(.5) > 150 && contrast(.03) > 150,
+        [contrast(.5), contrast(.03)]);
+
     // a box in focus 10 away on the left, one far away on the right, the rest nothing, blurred
     stripes = false;
     render3D.depthTexture = true;

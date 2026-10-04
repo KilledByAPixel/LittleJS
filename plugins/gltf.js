@@ -3,8 +3,8 @@
  * - Loads glTF 2.0 models: a .gltf with its .bin and images beside it, or a .glb with everything in one file
  * - A model comes back as parts, one Mesh per primitive of every node placed by the node tree, each with its
  *   material's color and base color texture, plus everything combined into one Mesh
- * - Geometry: positions, normals, uvs, vertex colors and indices, and skins, four joints a vertex; morph targets
- *   are not read
+ * - Geometry: positions, normals, uvs, vertex colors and indices, and skins, the four strongest joints of a vertex
+ *   of up to eight; morph targets are not read
  * - Animations play through the GLTFObject that createObject makes: parts that move, turn and scale, like doors,
  *   wheels and propellers, and skinned characters, their meshes bent by their joints each frame; play takes a
  *   blend time to cross-fade from one animation to the next
@@ -312,7 +312,18 @@ class GLTFObject extends EngineObject3D
         }
     }
 
+    /** Destroy the object and its parts, and free the meshes its skinned parts bend, which are its own
+     *  @param {boolean} [immediate] */
+    destroy(immediate)
+    {
+        if (this.destroyed) return;
+        this.parts.forEach((o, i)=> this.model.parts[i]?.skin && o.mesh?.dispose());
+        super.destroy(immediate);
+    }
+
     /** Play an animation from its start, at once or cross-faded from the pose it is in
+     *  - A play with a blend of the animation already playing goes on with it, so state code may call it each
+     *    frame; without a blend it starts the animation again
      *  @param {string|number|GLTFAnimation} [animation] - Its name, its number in model.animations, or itself
      *  @param {boolean} [loop] - Start again at the end, or stop there
      *  @param {number} [speed] - 1 is as made, negative plays it backward from its end
@@ -323,6 +334,11 @@ class GLTFObject extends EngineObject3D
         const found = this.model.getAnimation(animation);
         ASSERT(found, 'the model has no animation ' + animation, this.model.animations.map(a=> a.name));
         if (!found) return;
+        if (blend > 0 && found === this.animation && this.animationPlaying)
+        {
+            this.animationLoop = loop, this.animationSpeed = speed;
+            return;
+        }
         const fading = this.blendFrom;
         this.blendFrom = undefined;
         if (blend > 0)
@@ -715,22 +731,27 @@ function gltfSkin(json, buffers, skin, primitive, part)
     const joints = skin.joints, mesh = part.mesh, count = mesh.points.length;
     const bind = skin.inverseBindMatrices !== undefined ? gltfAccessor(json, buffers, skin.inverseBindMatrices).data : undefined;
     const inverseBind = joints.map((_, j)=> bind ? new Matrix4(bind.subarray(j * 16, j * 16 + 16)) : new Matrix4);
-    const fileJoints = gltfAccessor(json, buffers, primitive.attributes.JOINTS_0).data;
-    const fileWeights = gltfAccessor(json, buffers, primitive.attributes.WEIGHTS_0).data;
-    ASSERT(primitive.attributes.JOINTS_1 === undefined, 'glTF reads four joints a vertex, JOINTS_1 is left out');
+    // a second set of four, as rigs from many tools have, is read too, and each vertex keeps its four strongest
+    const attributes = primitive.attributes, read = (name)=> gltfAccessor(json, buffers, attributes[name]).data;
+    const sets = [[read('JOINTS_0'), read('WEIGHTS_0')]];
+    attributes.JOINTS_1 !== undefined && attributes.WEIGHTS_1 !== undefined && sets.push([read('JOINTS_1'), read('WEIGHTS_1')]);
     const vertexJoints = new Uint16Array(count * 4), vertexWeights = new Float32Array(count * 4);
     const bindPoints = new Float32Array(count * 3), bindNormals = new Float32Array(count * 3);
     for (let v = 0; v < count; ++v)
     {
-        const from = part.vertexSource ? part.vertexSource[v] : v;
+        const from = part.vertexSource ? part.vertexSource[v] : v, influences = [];
+        for (const [fileJoints, fileWeights] of sets)
+            for (let k = 0; k < 4; ++k)
+                influences.push([fileJoints[from * 4 + k], fileWeights[from * 4 + k]]);
+        sets.length > 1 && influences.sort((a, b)=> b[1] - a[1]); // the strongest four first
         let total = 0;
         for (let k = 0; k < 4; ++k)
-            total += fileWeights[from * 4 + k];
+            total += influences[k][1];
         for (let k = 0; k < 4; ++k)
         {
-            const joint = fileJoints[from * 4 + k];
+            const [joint, weight] = influences[k];
             vertexJoints[v * 4 + k] = joint < joints.length ? joint : 0;
-            vertexWeights[v * 4 + k] = total ? fileWeights[from * 4 + k] / total : k ? 0 : 1;
+            vertexWeights[v * 4 + k] = total ? weight / total : k ? 0 : 1;
         }
         const p = mesh.points[v], n = mesh.normals[v];
         bindPoints.set([p.x, p.y, p.z], v * 3);

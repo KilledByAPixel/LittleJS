@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { parseGLTF, vec3, engineObjectsUpdate, engineObjects, setEngineManualStep, engineInit, engineStep, timeDelta }
+import { parseGLTF, vec3, setEngineManualStep, engineInit, engineStep }
     from '../dist/littlejs.esm.js';
 
 // Skinned glTF: a mesh moved by its joints, each vertex by up to four of them, posed by the model's animations, and
@@ -186,4 +186,55 @@ test('stop during a fade holds the mix shown, and a later play with a blend fade
     o.play('still', false, 0, 1);
     assert.deepEqual(points(o.parts[0].mesh)[2], held, 'the next fade starts from the held mix');
     o.destroy(true);
+});
+
+test('a vertex of more than four joints keeps its four strongest, made to sum to one', async ()=>
+{
+    // the top two vertices weigh .1 on the child joint in the first set and .9 on the root in a second set
+    const file = gltfOf({ nodes: nodesOf(), animations: [{ name: 'bend', angle: Math.PI / 2 }],
+        extra: { weights: [1, 0, 0, 0,  1, 0, 0, 0,  .1, 0, 0, 0,  .1, 0, 0, 0] } });
+    const bytes = Buffer.from(file.buffers[0].uri.split(',')[1], 'base64');
+    const more = (array, type, componentType)=>
+    {
+        const start = bytes.length, data = Buffer.from(array.buffer);
+        const all = Buffer.concat([bytes, data, Buffer.alloc((4 - data.length % 4) % 4)]);
+        file.bufferViews.push({ buffer: 0, byteOffset: start, byteLength: data.length });
+        file.accessors.push({ bufferView: file.bufferViews.length - 1, componentType, count: 4, type });
+        return [all, file.accessors.length - 1];
+    };
+    let all, joints1, weights1;
+    [all, joints1] = more(new Uint16Array([0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0]), 'VEC4', 5123);
+    file.buffers[0].uri = 'data:application/octet-stream;base64,' + all.toString('base64'), file.buffers[0].byteLength = all.length;
+    const bytes2 = all;
+    const start = bytes2.length, w = Buffer.from(new Float32Array([0, 0, 0, 0,  0, 0, 0, 0,  .9, 0, 0, 0,  .9, 0, 0, 0]).buffer);
+    const all2 = Buffer.concat([bytes2, w]);
+    file.bufferViews.push({ buffer: 0, byteOffset: start, byteLength: w.length });
+    file.accessors.push({ bufferView: file.bufferViews.length - 1, componentType: 5126, count: 4, type: 'VEC4' });
+    weights1 = file.accessors.length - 1;
+    file.buffers[0].uri = 'data:application/octet-stream;base64,' + all2.toString('base64'), file.buffers[0].byteLength = all2.length;
+    Object.assign(file.meshes[0].primitives[0].attributes, { JOINTS_1: joints1, WEIGHTS_1: weights1 });
+    const model = await parseGLTF(file);
+    const o = model.createObject(vec3());
+    o.play('bend', false);
+    o.setAnimationTime(1);
+    // .1 of (-1, 1) where the child turned it and .9 of (0, 2) where the root keeps it
+    assert.deepEqual(points(o.parts[0].mesh)[2].map((n)=> Math.round(n * 1e4) / 1e4), [-.1, 1.9, 0]);
+    o.destroy(true);
+});
+
+test('destroying an object frees its skinned meshes, and play of the animation playing with a blend goes on', async ()=>
+{
+    const model = await parseGLTF(gltfOf({ nodes: nodesOf(), animations: [{ name: 'bend', angle: Math.PI / 2 }] }));
+    const o = model.createObject(vec3()), mesh = o.parts[0].mesh;
+    let freed = 0;
+    mesh.dispose = ()=> ++freed;
+    o.play('bend', true, 1, .2);
+    for (let i = 10; i--;)
+    {
+        o.play('bend', true, 1, .2); // as a game's state code calls it each frame
+        engineStep();
+    }
+    assert.ok(o.animationTime > .1, 'it went on, ' + o.animationTime);
+    o.destroy(true);
+    assert.equal(freed, 1);
 });

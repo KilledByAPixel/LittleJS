@@ -14,7 +14,7 @@
 
 /**
  *  @callback EditorPlayFromCallback - Puts the player at a world position, for the level editor's Play from mouse
- *  @param {Vector2} pos - Where to start playing
+ *  @param {any} pos - Where to start playing, a Vector2 from the 2D editor and a Vector3 from the 3D one
  *  @memberof Editor
  */
 
@@ -32,8 +32,10 @@
  */
 
 /**
- *  @typedef {Object} EditorToolAt - What the level editor gives the callbacks of a tool of the game's own
- *  @property {Vector2|Vector3|undefined} pos - Where the mouse is in the level: a Vector2 in the 2D editor; in the 3D one a Vector3 on
+ *  @template [P=Vector2]
+ *  @typedef {Object} EditorToolAt - What the level editor gives the callbacks of a tool of the game's own; P is
+ *    the type of pos, a Vector2 for a 2D tool, the default, and Vector3|undefined for a 3D one
+ *  @property {P} pos - Where the mouse is in the level: a Vector2 in the 2D editor; in the 3D one a Vector3 on
  *    the level or the ground, undefined when the mouse is over the panel
  *  @property {Vector2|undefined} cell - 2D: the tile cell under the mouse on the selected tile layer
  *  @property {Ray3D|undefined} ray - 3D: the mouse's Ray3D
@@ -43,14 +45,16 @@
  */
 
 /**
- *  @typedef {Object} EditorTool - A tool of the game's own for the level editor, see LevelEditor.addTool
+ *  @template [P=Vector2]
+ *  @typedef {Object} EditorTool - A tool of the game's own for the level editor, see LevelEditor.addTool; P is the
+ *    type of its pos, as EditorToolAt has it
  *  @property {string} [key] - The key that picks it, as addKey spells one
  *  @property {string} [hint] - The hint line while it is on
- *  @property {function(EditorToolAt): any} [onPress] - The left button went down in the level; returning false
+ *  @property {function(EditorToolAt<P>): any} [onPress] - The left button went down in the level; returning false
  *    says the press was not the tool's
- *  @property {function(EditorToolAt): any} [onDrag] - Each frame it is held
- *  @property {function(EditorToolAt): any} [onRelease] - It was let go
- *  @property {function(EditorToolAt): any} [onDraw] - Each frame the tool is on, to draw its cursor or preview
+ *  @property {function(EditorToolAt<P>): any} [onDrag] - Each frame it is held
+ *  @property {function(EditorToolAt<P>): any} [onRelease] - It was let go
+ *  @property {function(EditorToolAt<P>): any} [onDraw] - Each frame the tool is on, to draw its cursor or preview
  *  @memberof Editor
  */
 
@@ -143,7 +147,7 @@ class LevelEditor
         this.keys = {};
         /** @type {Array<{label: string, onClick: Function, title: string}>} */
         this.buttons = [];
-        /** @type {Object<string, EditorTool>} */
+        /** @type {Object<string, EditorTool<any>>} */
         this.tools = {};
     }
 
@@ -161,7 +165,7 @@ class LevelEditor
 
     /** Put the player at a position, a Vector2 in the 2D editor and a Vector3 in the 3D one; set it or override it
      *  and the editor has Play from mouse, which starts play there
-     *  @param {Vector2|Vector3} pos */
+     *  @param {any} pos - A Vector2 from the 2D editor, a Vector3 from the 3D one */
     onPlayFrom(pos) {}
 
     /** Called when the editor opens, to set or override */
@@ -244,8 +248,9 @@ class LevelEditor
      *    in 3D
      *  - What the callbacks change through edit2D or edit3D is one undo: the editor ends the stroke at the release,
      *    and takes it back when the right button or Escape ends the press
+     *  @template [P=Vector2]
      *  @param {string} name
-     *  @param {EditorTool} tool - {key, hint, onPress, onDrag, onRelease, onDraw}, each optional; onPress returning
+     *  @param {EditorTool<P>} tool - {key, hint, onPress, onDrag, onRelease, onDraw}, each optional; onPress returning
      *    false says the press was not the tool's */
     addTool(name, tool)
     {

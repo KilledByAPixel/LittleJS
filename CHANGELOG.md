@@ -7,13 +7,14 @@ What changed in each release, newest first. Releases before 1.20.0 are on the
 
 ### New Changes
 
-- glTF skinned animation: a rigged character plays its animations, its mesh bent by its joints each frame, four a vertex, on the CPU, so shadows, picking and custom shaders work with it; `object.play(name, loop, speed, blend)` cross-fades from the pose it is in over `blend` seconds, and `object.getJointMatrix(name)` gives a joint's place to hang a sword on a hand
+- glTF skinned animation: a rigged character plays its animations, its mesh bent by its joints each frame, the four strongest of up to eight a vertex, on the CPU, so shadows, picking and custom shaders work with it; `object.play(name, loop, speed, blend)` cross-fades from the pose it is in over `blend` seconds, and `object.getJointMatrix(name)` gives a joint's place to hang a sword on a hand
 - Tilt shift and depth of field post effects: `postProcessTiltShift(focus, size, blur)` keeps a band across the screen sharp, in 2D or 3D, and `postProcessDepthOfField(focus, range, blur)` keeps what is at a distance sharp, reading the 3D depth, with the edges of what is in focus kept crisp; the new 3D Focus Blur example focuses either with the mouse
 - `postProcess.values`: a game's own values for the post process shader, set every frame, and any effect setting may name one in place of a number, to change it live without making the shader again, all but glow's size; the shader is made at the first render, so values set right after the plugin is made are in it
 - The 3D Mesh example steps through a dropped model's animations with two buttons or the arrow keys, each cross-faded from the one before
 
 ### Fixes
 
+- In a browser with no audio, a zzfx sound and the page hiding do nothing, where they threw
 - A resume of the audio the browser refuses is caught, where it showed as an uncaught error in the console
 - `debug`, `debugOverlay` and `debugWatermark` are `false` in a release build, as their types say, where they were 0
 - `Box2dPinJoint`'s docs say its point defaults to objectA's position, which the d.ts showed as objectB's

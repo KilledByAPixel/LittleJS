@@ -21,7 +21,7 @@
 let audioContext = typeof AudioContext == 'undefined' ? undefined : new AudioContext;
 
 // resume the audio, a refusal caught so it is not an uncaught error in the console, the next gesture tries again
-function audioResume() { audioContext.resume()?.catch?.(()=> {}); }
+function audioResume() { audioContext?.resume()?.catch?.(()=> {}); }
 
 /** Master gain node for all audio to pass through, made at load so effects can connect to it any time
  *  @type {GainNode}
@@ -79,6 +79,7 @@ function audioSetSession()
 let audioSuspendedWhenHidden = false;
 function audioVisibilityChange()
 {
+    if (!audioContext) return; // a browser with no audio has none to pause
     if (document.hidden)
     {
         if (!soundPauseWhenHidden || audioContext.state != 'running') return;
