@@ -1,0 +1,138 @@
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { parseGLTF, vec3, engineObjectsUpdate, engineObjects, setEngineManualStep, engineInit, engineStep, timeDelta }
+    from '../dist/littlejs.esm.js';
+
+// Skinned glTF: a mesh moved by its joints, each vertex by up to four of them, posed by the model's animations, and
+// a cross-fade between two animations. The model is made here: two joints, a root at the origin and a child one
+// unit up, and a quad two units tall whose bottom two vertices follow the root and top two follow the child.
+
+setEngineManualStep(true);
+await engineInit(()=> {}, ()=> {}, ()=> {});
+
+// a buffer of typed arrays end to end, as a data uri, and an accessor for each
+function gltfOf({ nodes, animations=[], skins, extra })
+{
+    const arrays = [], views = [], accessors = [];
+    let offset = 0;
+    const add = (array, type, componentType, more={})=>
+    {
+        const bytes = new Uint8Array(array.buffer, array.byteOffset, array.byteLength);
+        arrays.push(bytes);
+        views.push({ buffer: 0, byteOffset: offset, byteLength: bytes.length });
+        offset += bytes.length + (4 - bytes.length % 4) % 4;
+        arrays.push(new Uint8Array((4 - bytes.length % 4) % 4));
+        const count = array.length / { SCALAR: 1, VEC3: 3, VEC4: 4, MAT4: 16 }[type];
+        accessors.push({ bufferView: views.length - 1, componentType, count, type, ...more });
+        return accessors.length - 1;
+    };
+    const f32 = (a, type)=> add(new Float32Array(a), type, 5126);
+    const position = f32([0, 0, 0,  1, 0, 0,  0, 2, 0,  1, 2, 0], 'VEC3');
+    const normal = f32([0, 0, 1,  0, 0, 1,  0, 0, 1,  0, 0, 1], 'VEC3');
+    const joints = add(new Uint16Array([0, 0, 0, 0,  0, 0, 0, 0,  1, 0, 0, 0,  1, 0, 0, 0]), 'VEC4', 5123);
+    const weights = f32(extra?.weights ?? [1, 0, 0, 0,  1, 0, 0, 0,  1, 0, 0, 0,  1, 0, 0, 0], 'VEC4');
+    const indices = add(new Uint16Array([0, 1, 2,  2, 1, 3]), 'SCALAR', 5123);
+    const inverseBind = f32([1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1,   1,0,0,0, 0,1,0,0, 0,0,1,0, 0,-1,0,1], 'MAT4');
+    // the child joint turns about z: a quarter turn at time 1, or none, as each animation says
+    const times = f32([0, 1], 'SCALAR');
+    const turns = (angle)=> f32([0, 0, 0, 1,  0, 0, Math.sin(angle / 2), Math.cos(angle / 2)], 'VEC4');
+    const anims = animations.map(({ name, angle })=> ({ name, samplers: [{ input: times, output: turns(angle) }],
+        channels: [{ sampler: 0, target: { node: 2, path: 'rotation' } }] }));
+    const size = arrays.reduce((n, a)=> n + a.length, 0), all = new Uint8Array(size);
+    let at = 0;
+    for (const a of arrays) all.set(a, at), at += a.length;
+    return {
+        asset: { version: '2.0' }, scenes: [{ nodes: [0, 1] }], nodes,
+        meshes: [{ primitives: [{ attributes: { POSITION: position, NORMAL: normal, JOINTS_0: joints, WEIGHTS_0: weights },
+            indices }] }],
+        skins: skins ?? [{ joints: [1, 2], inverseBindMatrices: inverseBind }],
+        animations: anims, accessors, bufferViews: views,
+        buffers: [{ byteLength: size, uri: 'data:application/octet-stream;base64,' + Buffer.from(all).toString('base64') }],
+    };
+}
+const nodesOf = (meshNode={})=> [{ mesh: 0, skin: 0, ...meshNode }, { children: [2] }, { translation: [0, 1, 0] }];
+const round = (v)=> [v.x, v.y, v.z].map((n)=> Math.round(n * 1e6) / 1e6 + 0);
+const points = (mesh)=> mesh.points.map(round);
+
+test('a skinned mesh rests as its joints place it, and its node\'s own transform is left out, as the format says', async ()=>
+{
+    const model = await parseGLTF(gltfOf({ nodes: nodesOf({ translation: [5, 0, 0], scale: [3, 3, 3] }) }));
+    assert.deepEqual(points(model.parts[0].mesh), [[0, 0, 0], [1, 0, 0], [0, 2, 0], [1, 2, 0]]);
+    assert.ok(model.parts[0].skin, 'the part keeps its skin');
+});
+
+test('a skinned object follows its joints through an animation, each vertex by its own joint', async ()=>
+{
+    const model = await parseGLTF(gltfOf({ nodes: nodesOf(), animations: [{ name: 'bend', angle: Math.PI / 2 }] }));
+    const o = model.createObject(vec3());
+    o.play('bend', false);
+    o.setAnimationTime(1);
+    // the top two turn a quarter about the child joint at (0, 1): (0, 2) to (-1, 1), (1, 2) to (-1, 2)
+    assert.deepEqual(points(o.parts[0].mesh), [[0, 0, 0], [1, 0, 0], [-1, 1, 0], [-1, 2, 0]]);
+    assert.deepEqual(round(o.parts[0].mesh.normals[2]), [0, 0, 1], 'normals turn with them, about z they stay');
+    assert.deepEqual(points(model.parts[0].mesh), [[0, 0, 0], [1, 0, 0], [0, 2, 0], [1, 2, 0]], 'the model is not posed');
+    o.destroy(true);
+});
+
+test('two objects of one model hold two poses', async ()=>
+{
+    const model = await parseGLTF(gltfOf({ nodes: nodesOf(), animations: [{ name: 'bend', angle: Math.PI / 2 }] }));
+    const a = model.createObject(vec3()), b = model.createObject(vec3());
+    a.play('bend', false), b.play('bend', false);
+    a.setAnimationTime(1), b.setAnimationTime(0);
+    assert.notEqual(a.parts[0].mesh, b.parts[0].mesh);
+    assert.deepEqual([points(a.parts[0].mesh)[3], points(b.parts[0].mesh)[3]], [[-1, 2, 0], [1, 2, 0]]);
+    a.destroy(true), b.destroy(true);
+});
+
+test('weights are made to sum to one, and a model fitted to a size skins at that size', async ()=>
+{
+    const halves = [.5, 0, 0, 0,  .5, 0, 0, 0,  .5, 0, 0, 0,  .5, 0, 0, 0];
+    const model = await parseGLTF(gltfOf({ nodes: nodesOf(), animations: [{ name: 'bend', angle: Math.PI / 2 }],
+        extra: { weights: halves } }));
+    assert.deepEqual(points(model.parts[0].mesh)[3], [1, 2, 0], 'half weights count as whole');
+    model.fit(1); // two units tall becomes one
+    const o = model.createObject(vec3());
+    o.play('bend', false);
+    o.setAnimationTime(1);
+    const top = points(o.parts[0].mesh)[3], bottom = points(o.parts[0].mesh)[0];
+    assert.deepEqual([top[0] - bottom[0], top[1] - bottom[1]], [-.5, 1], 'the bend at half size');
+    o.destroy(true);
+});
+
+test('play with a blend time cross-fades from the pose it is in to the new animation', async ()=>
+{
+    const model = await parseGLTF(gltfOf({ nodes: nodesOf(),
+        animations: [{ name: 'still', angle: 0 }, { name: 'bend', angle: Math.PI / 2 }] }));
+    const o = model.createObject(vec3());
+    o.play('still', false);
+    o.setAnimationTime(1);
+    o.play('bend', false, 0, 1); // speed 0 holds bend at its start, so only the blend moves it
+    o.setAnimationTime(1);
+    const step = (seconds)=> { o.blendTime += 0; o.blendElapsed = seconds; o.setAnimationTime(o.animationTime); };
+    step(0);
+    assert.deepEqual(points(o.parts[0].mesh)[2], [0, 2, 0], 'at its start the old pose');
+    step(.5);
+    const s = Math.SQRT1_2;
+    assert.deepEqual(points(o.parts[0].mesh)[2].map((n)=> Math.round(n * 1e4) / 1e4), [-s, 1 + s, 0].map((n)=> Math.round(n * 1e4) / 1e4),
+        'half way, half the turn, the short way round');
+    step(1);
+    assert.deepEqual(points(o.parts[0].mesh)[2], [-1, 1, 0], 'at its end the new pose');
+    o.destroy(true);
+});
+
+test('a blend runs on in update and ends, and a joint can be found to hang things on', async ()=>
+{
+    const model = await parseGLTF(gltfOf({ nodes: [{ mesh: 0, skin: 0 }, { children: [2] }, { translation: [0, 1, 0], name: 'hand' }],
+        animations: [{ name: 'still', angle: 0 }, { name: 'bend', angle: Math.PI / 2 }] }));
+    const o = model.createObject(vec3(10, 0, 0));
+    o.play('bend', false);
+    o.setAnimationTime(1);
+    o.play('still', false, 1, .5);
+    for (let i = 60; i--;) engineStep();
+    assert.equal(o.blendFrom, undefined, 'the blend is over');
+    const hand = o.getJointMatrix('hand');
+    assert.deepEqual(round(hand.getTranslation()), [10, 1, 0], 'the hand joint in the world, where the object put it');
+    assert.equal(o.getJointMatrix('foot'), undefined);
+    o.destroy(true);
+});

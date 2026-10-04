@@ -188,7 +188,8 @@ its longest side is 5 units. Both exist on a `Mesh` and on a
 - A `Mesh` goes into one `EngineObject3D`, with a color.
 - A `GLTFModel` has parts, each with its own color and texture.
   `createObject(pos3D)` makes an object with a child for each part, and
-  `play()` starts the model's first animation when it has one.
+  `play()` starts the model's first animation when it has one, a rigged
+  character's walk included.
 
 `model?.destroy(true)` removes the model shown before. Destroying an
 object destroys its children too.

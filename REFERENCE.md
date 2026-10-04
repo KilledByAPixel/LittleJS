@@ -1687,8 +1687,9 @@ await loadOBJ(url, smooth) // fetch then parse, in an async gameInit; chain .cen
                            // units
 
 // glTF models - the glTF plugin, .gltf with its files beside it or .glb in one file; meshes with their node placement,
-// vertex colors, material colors and base color textures, and node animations; no skins or morph targets, and no
-// Draco or meshopt compressed geometry, which throws saying so
+// vertex colors, material colors and base color textures, node animations and skinned characters, four joints a
+// vertex, bent on the CPU each frame; no morph targets, and no Draco or meshopt compressed geometry, which throws
+// saying so
 const model = await loadGLTF(url)   // a GLTFModel, in an async gameInit; or await parseGLTF(data, baseUrl, files) on
                                      // bytes or JSON you already have; files, a Map of the .bin and image files a
                                      // .gltf names by their paths, like the files of a drop, in place of fetching,
@@ -1709,15 +1710,20 @@ model.createObject(pos3D)            // a GLTFObject, an EngineObject3D with a c
                                      // emissive 1 for an unlit one; move and turn the root and the parts follow
 model.animations                     // one GLTFAnimation each: name, duration in seconds, and the channels that
                                      // move, turn and scale nodes; model.getAnimation(nameOrNumber) finds one
-object.play(animation=0, loop=true, speed=1) // play one on a GLTFObject by name or number, its parts move with it;
-                                     // speed below 0 plays it backward, and one that does not loop holds its end
+object.play(animation=0, loop=true, speed=1, blend=0) // play one on a GLTFObject by name or number, its parts move
+                                     // and a skinned mesh bends with it; speed below 0 plays it backward, one that
+                                     // does not loop holds its end, and blend is seconds to cross-fade from the pose
+                                     // it is in, the animation it leaves going on through the fade
+object.getJointMatrix(name)          // a node's world Matrix4 as posed now, by its name in the file, to hang a sword
+                                     // on a hand; undefined for a name the model does not have
 object.stop()                        // hold the pose where it is; object.setAnimationTime(t) poses it at a time
 object.animation .animationTime .animationSpeed .animationLoop .animationPlaying
 model.getPose(animation, time)       // one Matrix4 per part, how far it moved from its resting place
 model.dispose()                      // free the part meshes, the combined mesh and the textures of a model that
                                      // is done with; destroy the objects createObject made first
 // colors come in converted from glTF's linear values, a NEAREST sampler makes a part pixelated, sparse accessors
-// are read, and object.parts is what an animation poses
+// are read, and object.parts is what an animation poses; a skinned part's object bends a mesh of its own, so
+// characters of one model hold their own poses, and part.skin is what bends it
 model.center().fit(size)             // move the model's bounds onto the origin and scale its largest extent to
                                      // size, every part together, like Mesh.center and fit; getBounds and
                                      // transform(matrix) as well
@@ -1840,8 +1846,8 @@ new THREE.Raycaster()                     // render3D.screenToRay, pick and engi
 OBJLoader                                 // loadOBJ(url) or parseOBJ(text)
 GLTFLoader                                // loadGLTF(url): model.createObject(pos) is the scene as objects, model.mesh
                                           // is everything as one Mesh
-mixer.clipAction(clip).play()             // object.play(name) on the object createObject made, node animation only,
-                                          // no skinned characters
+mixer.clipAction(clip).play()             // object.play(name) on the object createObject made, skinned characters
+crossFadeTo(next, seconds)                // object.play(next, true, 1, seconds); bone.getWorldPosition: getJointMatrix
 EffectComposer and UnrealBloomPass        // postProcessBloom()
 renderer.render(scene, camera)            // nothing to do, the engine draws every frame and handles resizing
 position.setUsage(THREE.DynamicDrawUsage) // mesh.dynamicDraw = true once, then mesh.dirty = true when the points

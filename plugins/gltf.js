@@ -3,9 +3,11 @@
  * - Loads glTF 2.0 models: a .gltf with its .bin and images beside it, or a .glb with everything in one file
  * - A model comes back as parts, one Mesh per primitive of every node placed by the node tree, each with its
  *   material's color and base color texture, plus everything combined into one Mesh
- * - Geometry: positions, normals, uvs, vertex colors and indices; skins and morph targets are not read
- * - Node animations play: parts that move, turn and scale, like doors, wheels and propellers, through the
- *   GLTFObject that createObject makes; a skinned character's walk is not read
+ * - Geometry: positions, normals, uvs, vertex colors and indices, and skins, four joints a vertex; morph targets
+ *   are not read
+ * - Animations play through the GLTFObject that createObject makes: parts that move, turn and scale, like doors,
+ *   wheels and propellers, and skinned characters, their meshes bent by their joints each frame; play takes a
+ *   blend time to cross-fade from one animation to the next
  * - Materials give a base color and texture and whether they blend; glass made with KHR_materials_transmission blends too,
  *   and a KHR_materials_unlit material comes in emissive, its own color with no shading
  * - A material's normal map and emissive map load too, with its normal scale and emissive factor, read at the base
@@ -23,6 +25,7 @@
  * const model = await loadGLTF('ship.glb');   // in an async gameInit
  * const ship = model.createObject(vec3(0, 1, 0)); // an object with a child per part, textures and all
  * ship.play('fly');                            // and its animation, by name or number
+ * ship.play('land', false, 1, .3);             // then another, cross-faded over .3 seconds
  * new EngineObject3D(vec3(), model.mesh);      // or the whole thing as one mesh, still
  */
 
@@ -69,8 +72,28 @@ class GLTFPart
         this.emissiveMap = undefined;
         /** @property {Color} - The emissiveFactor, which multiplies the emissive map */
         this.emissiveMapColor = WHITE;
+        /** @property {GLTFSkin|undefined} - For a skinned mesh, what bends it: mesh is its resting pose, and the
+         *  object createObject makes bends a copy of its own to each pose
+         *  @type {GLTFSkin|undefined} */
+        this.skin = undefined;
+        // which of the file's vertices each of the mesh's is, when flat normals split them, for a skin
+        /** @type {Array<number>|undefined} */
+        this.vertexSource = undefined;
     }
 }
+
+/**
+ * What bends a skinned part: its joints, the nodes that move it, their inverse bind matrices, and for each vertex
+ * of its mesh four joints and four weights, with the place and normal each pose bends from
+ * @typedef {Object} GLTFSkin
+ * @property {Array<number>} joints - The joints, as node numbers
+ * @property {Array<Matrix4>} inverseBind - Each joint's inverse bind matrix
+ * @property {Uint16Array} vertexJoints - Four joints a vertex, as places in joints
+ * @property {Float32Array} vertexWeights - Four weights a vertex, summing to 1
+ * @property {Float32Array} bindPoints - Each vertex's place as stored, x y z
+ * @property {Float32Array} bindNormals - Each vertex's normal as stored, x y z
+ * @memberof GLTF
+ */
 
 /**
  * GLTFAnimation - One animation of a model: keys that move, turn and scale its nodes over time
@@ -114,7 +137,7 @@ class GLTFModel
          *  and blending and unlit stay with the parts, which createObject draws */
         this.mesh = new Mesh;
         for (const part of parts) // a part baked at scale 1 from a node resting at 0 goes in as it rests
-            this.mesh.combine(part.mesh, nodeTree?.restPose?.[part.node] || RENDER3D_IDENTITY, part.color);
+            this.mesh.combine(part.mesh, !part.skin && nodeTree?.restPose?.[part.node] || RENDER3D_IDENTITY, part.color);
         // the one texture every part uses, when they all do; a part without one has no uvs into it, so a model
         // that mixes plain and textured parts, or uses several textures, is drawn through createObject instead
         const textures = new Set(parts.map(p=> p.textureInfo));
@@ -180,29 +203,18 @@ class GLTFModel
      *  @return {Array<Matrix4>} */
     getPose(animation, time)
     {
-        const tree = this.nodeTree;
-        if (!tree) return this.parts.map(()=> new Matrix4);
+        if (!this.nodeTree) return this.parts.map(()=> new Matrix4);
+        return this.partPoses(gltfNodeWorlds(this.nodeTree, gltfPoseNodes(this.nodeTree, animation, time)));
+    }
 
-        // the nodes the animation moves get its values at this time, every other node keeps its own
-        const moved = new Map;
-        for (const channel of animation.channels)
-        {
-            let node = moved.get(channel.node);
-            node || moved.set(channel.node, node = gltfNodeTRS(tree.nodes[channel.node]));
-            gltfSample(channel, time, node[channel.path]);
-        }
-
-        // then each node's place in the model through its parents, and each part's move from where it rests,
-        // through what center and fit did: modelMatrix * now * rest inverse * modelMatrix inverse
-        const world = [];
-        const worldOf = (i)=>
-        {
-            if (world[i]) return world[i];
-            const local = gltfNodeMatrix(moved.get(i) || tree.nodes[i]), parent = tree.parents[i];
-            return world[i] = parent === undefined ? local : worldOf(parent).copy().multiply(local);
-        };
-        const model = this.modelMatrix, modelInverse = model.copy().invert();
-        return this.parts.map(part=> model.copy().multiply(worldOf(part.node)).multiply(tree.restInverse[part.node]).multiply(modelInverse));
+    // each part's move from where it rests, with each node's place in the model from worldOf, through what center
+    // and fit did: modelMatrix * now * rest inverse * modelMatrix inverse; a skinned part is posed by its joints
+    // and stays where it is
+    partPoses(worldOf)
+    {
+        const tree = this.nodeTree, model = this.modelMatrix, modelInverse = model.copy().invert();
+        return this.parts.map(part=> part.skin ? new Matrix4 :
+            model.copy().multiply(worldOf(part.node)).multiply(tree.restInverse[part.node]).multiply(modelInverse));
     }
 
     /** Free the GPU buffers of every part's mesh and of the combined mesh, and the textures, for a model that is
@@ -263,19 +275,27 @@ class GLTFObject extends EngineObject3D
         this.animationLoop = true;
         /** @property {boolean} - Whether it is moving through the animation now */
         this.animationPlaying = false;
+        // what a cross-fade comes from: an animation going on as it was, or a pose held, and how far it is
+        this.blendFrom = undefined;
+        this.blendTime = 0;
+        this.blendElapsed = 0;
+        // each node's values and place in the model as last posed, for a fade from here and for getJointMatrix
+        this.poseNodes = undefined;
+        this.poseWorldOf = undefined;
         /** @property {Array<EngineObject3D>} - The child that draws each of the model's parts, in the order of
          *  model.parts, which an animation poses; one destroyed or taken off the object is left alone
          *  @type {Array<EngineObject3D>} */
         this.parts = [];
         for (const part of model.parts)
         {
-            const o = new EngineObject3D(vec3(), part.mesh, part.textureInfo, part.color);
+            // a skinned part bends a mesh of its own, so objects of one model each hold their own pose
+            const o = new EngineObject3D(vec3(), part.skin ? gltfSkinMeshCopy(part.mesh) : part.mesh, part.textureInfo, part.color);
             o.transparent = part.transparent;
             o.pixelated = part.pixelated;
             o.emissive = part.unlit ? 1 : 0;
             o.normalMap = part.normalMap, o.normalScale = part.normalScale;
             o.emissiveMap = part.emissiveMap, o.emissiveMapColor = part.emissiveMapColor.copy(); // its own, as color is
-            const rest = model.nodeTree?.restPose?.[part.node];
+            const rest = !part.skin && model.nodeTree?.restPose?.[part.node];
             if (rest)
             {
                 // baked at scale 1 from a node resting at 0, it starts as it rests, where a pose would put it
@@ -290,15 +310,27 @@ class GLTFObject extends EngineObject3D
         }
     }
 
-    /** Play an animation from its start
+    /** Play an animation from its start, at once or cross-faded from the pose it is in
      *  @param {string|number|GLTFAnimation} [animation] - Its name, its number in model.animations, or itself
      *  @param {boolean} [loop] - Start again at the end, or stop there
-     *  @param {number} [speed] - 1 is as made, negative plays it backward from its end */
-    play(animation=0, loop=true, speed=1)
+     *  @param {number} [speed] - 1 is as made, negative plays it backward from its end
+     *  @param {number} [blend] - Seconds to cross-fade from the pose it is in, 0 to switch at once; the animation
+     *    it comes from goes on through the fade, and a fade started during another fades from the mix there */
+    play(animation=0, loop=true, speed=1, blend=0)
     {
         const found = this.model.getAnimation(animation);
         ASSERT(found, 'the model has no animation ' + animation, this.model.animations.map(a=> a.name));
         if (!found) return;
+        this.blendFrom = undefined;
+        if (blend > 0)
+        {
+            // from the animation playing, going on as it was, or from the pose held, a fade's mix included
+            const from = this.animation && !this.blendFrom ? {animation: this.animation, time: this.animationTime,
+                speed: this.animationPlaying ? this.animationSpeed : 0, loop: this.animationLoop} : undefined;
+            this.blendFrom = from || {nodes: this.poseNodes || new Map};
+            this.blendTime = blend;
+            this.blendElapsed = 0;
+        }
         this.animation = found;
         this.animationLoop = loop;
         this.animationSpeed = speed;
@@ -314,13 +346,31 @@ class GLTFObject extends EngineObject3D
     setAnimationTime(time)
     {
         this.animationTime = time;
-        if (!this.animation) return;
+        const model = this.model, tree = model.nodeTree;
+        if (!this.animation || !tree) return;
+
+        // each node's values now, mixed with what a fade comes from by how far it is, eased in and out
+        let nodes = gltfPoseNodes(tree, this.animation, time);
+        const from = this.blendFrom;
+        if (from)
+        {
+            const fromNodes = from.nodes || gltfPoseNodes(tree, from.animation, from.time);
+            nodes = gltfPoseBlend(tree, fromNodes, nodes, smoothStep(clamp(this.blendElapsed / this.blendTime)));
+        }
+        const worldOf = gltfNodeWorlds(tree, nodes);
+        this.poseNodes = nodes, this.poseWorldOf = worldOf;
+
         // its own list of the part objects, so a child removed or added does not hand a part another's pose
-        const pose = this.model.getPose(this.animation, time), parts = this.parts;
+        const pose = model.partPoses(worldOf), parts = this.parts;
         for (let i = 0; i < pose.length && i < parts.length; ++i)
         {
-            const o = parts[i], m = pose[i];
+            const o = parts[i], m = pose[i], skin = model.parts[i].skin;
             if (o.destroyed || o.parent !== this) continue;
+            if (skin)
+            {
+                gltfSkinApply(skin, worldOf, model.modelMatrix, o.mesh); // bent by its joints, where it is
+                continue;
+            }
             // drawn with the whole pose, which a parent's uneven scale can shear, the parts kept for what reads them
             o.localMatrix = m;
             o.pos3D = m.getTranslation();
@@ -329,23 +379,40 @@ class GLTFObject extends EngineObject3D
         }
     }
 
-    /** Move through the animation, called automatically each frame */
+    /** Move through the animation, and a cross-fade into it, called automatically each frame */
     update()
     {
         super.update();
-        const animation = this.animation;
-        if (!this.animationPlaying || !animation) return;
-        const duration = animation.duration;
-        let t = this.animationTime + timeDelta * this.animationSpeed;
-        if (this.animationLoop)
-            t = duration ? mod(t, duration) : 0;
-        else if (t >= duration || t <= 0)
+        const animation = this.animation, from = this.blendFrom;
+        if (!animation || !this.animationPlaying && !from) return;
+        let t = this.animationTime;
+        if (this.animationPlaying)
         {
-            // the end, or the start when playing backward: hold the last pose there
-            t = clamp(t, 0, duration);
-            this.animationPlaying = false;
+            t = gltfAnimationStep(animation, t, this.animationSpeed, this.animationLoop);
+            if (!this.animationLoop && (t >= animation.duration || t <= 0))
+                this.animationPlaying = false; // the end, or the start when playing backward: hold the last pose there
+        }
+        if (from)
+        {
+            this.blendElapsed += timeDelta;
+            if (from.animation) // what it fades from goes on as it was
+                from.time = gltfAnimationStep(from.animation, from.time, from.speed, from.loop);
         }
         this.setAnimationTime(t);
+        if (from && this.blendElapsed >= this.blendTime)
+            this.blendFrom = undefined; // faded all the way, the pose just set is the animation's own
+    }
+
+    /** A node's matrix in the world as the model is posed now, by its name in the file, to hang something on a
+     *  joint, a sword on a hand or a hat on a head; undefined when the model has no node of that name
+     *  @param {string} name
+     *  @return {Matrix4|undefined} */
+    getJointMatrix(name)
+    {
+        const tree = this.model.nodeTree, index = tree?.nodes?.findIndex(node=> node.name === name) ?? -1;
+        if (index < 0) return;
+        const worldOf = this.poseWorldOf || gltfNodeWorlds(tree, new Map);
+        return this.getMatrix().multiply(this.model.modelMatrix).multiply(worldOf(index));
     }
 }
 
@@ -506,11 +573,18 @@ async function parseGLTF(data, baseUrl='', files)
         if (node.mesh !== undefined)
         {
             const mesh = json.meshes[node.mesh];
+            // a skinned mesh is placed by its joints and not by its node, as the format says, so it is read as stored
+            const skin = node.skin !== undefined ? json.skins?.[node.skin] : undefined;
             for (const primitive of mesh.primitives)
             {
-                const part = gltfPart(json, buffers, textures, primitive, matrix, node.name || mesh.name || 'part ' + parts.length);
+                const skinned = skin?.joints?.length && primitive.attributes.JOINTS_0 !== undefined &&
+                    primitive.attributes.WEIGHTS_0 !== undefined;
+                const part = gltfPart(json, buffers, textures, primitive, skinned ? new Matrix4 : matrix,
+                    node.name || mesh.name || 'part ' + parts.length);
                 if (!part) continue;
                 part.node = index;
+                if (skinned)
+                    part.skin = gltfSkin(json, buffers, skin, primitive, part);
                 parts.push(part);
             }
         }
@@ -555,7 +629,160 @@ async function parseGLTF(data, baseUrl='', files)
     const used = new Set(parts.flatMap(p=> [p.textureInfo, p.normalMap, p.emissiveMap]));
     for (const texture of textures)
         texture && !used.has(texture) && texture.destroyWebGLTexture();
-    return new GLTFModel(parts, animations, {nodes: json.nodes, parents, restInverse, restPose});
+    // a skinned part rests as its joints place it, with nothing moved
+    const nodeTree = {nodes: json.nodes, parents, restInverse, restPose}, restWorlds = gltfNodeWorlds(nodeTree, new Map);
+    for (const part of parts)
+        part.skin && gltfSkinApply(part.skin, restWorlds, RENDER3D_IDENTITY, part.mesh);
+    return new GLTFModel(parts, animations, nodeTree);
+}
+
+// the values of each node an animation moves at a time, a Map of node to its translation, rotation and scale;
+// every other node keeps its own
+function gltfPoseNodes(tree, animation, time)
+{
+    const moved = new Map;
+    for (const channel of animation.channels)
+    {
+        let node = moved.get(channel.node);
+        node || moved.set(channel.node, node = gltfNodeTRS(tree.nodes[channel.node]));
+        gltfSample(channel, time, node[channel.path]);
+    }
+    return moved;
+}
+
+// two such sets of node values mixed by a weight, 0 all a, 1 all b: places and scales in a line, turns the short
+// way round; a node only one moves has its own values in the other
+function gltfPoseBlend(tree, a, b, weight)
+{
+    const mixed = new Map, lerp3 = (p, q)=> p.map((v, i)=> v + (q[i] - v) * weight);
+    for (const node of new Set([...a.keys(), ...b.keys()]))
+    {
+        const p = a.get(node) || gltfNodeTRS(tree.nodes[node]), q = b.get(node) || gltfNodeTRS(tree.nodes[node]);
+        mixed.set(node, {translation: lerp3(p.translation, q.translation), scale: lerp3(p.scale, q.scale),
+            rotation: gltfSlerp(p.rotation, q.rotation, weight)});
+    }
+    return mixed;
+}
+
+// the turn between two quaternions, x y z w, a part of the way along the short way round
+function gltfSlerp(a, b, t)
+{
+    let dot = a[0]*b[0] + a[1]*b[1] + a[2]*b[2] + a[3]*b[3], sign = 1;
+    if (dot < 0)
+        dot = -dot, sign = -1; // the same turn the other way round is shorter
+    let wa = 1 - t, wb = t * sign;
+    if (dot < .9995)
+    {
+        // along the arc; nearly the same turn is done in a line, where the arc's sine goes to nothing
+        const angle = Math.acos(dot), s = sin(angle);
+        wa = sin(wa * angle) / s, wb = sin(t * angle) / s * sign;
+    }
+    const out = a.map((v, i)=> v * wa + b[i] * wb), l = hypot(...out) || 1;
+    return out.map(v=> v / l);
+}
+
+// each node's place in the model through its parents, with the values in moved for the nodes there, kept as found
+function gltfNodeWorlds(tree, moved)
+{
+    const world = [];
+    const worldOf = (i)=>
+    {
+        if (world[i]) return world[i];
+        const local = gltfNodeMatrix(moved.get(i) || tree.nodes[i]), parent = tree.parents[i];
+        return world[i] = parent === undefined ? local : worldOf(parent).copy().multiply(local);
+    };
+    return worldOf;
+}
+
+// an animation's time a frame on, at a speed, around again when it loops, held at its ends when it does not
+function gltfAnimationStep(animation, time, speed, loop)
+{
+    const duration = animation.duration, t = time + timeDelta * speed;
+    return loop ? duration ? mod(t, duration) : 0 : clamp(t, 0, duration);
+}
+
+// a skinned primitive's skin: its joints, the nodes that bend it, their inverse bind matrices, and for each vertex
+// of the part's mesh four joints, as places in that list, and four weights made to sum to 1, with its place and
+// normal as stored, which each pose bends from; a mesh split for flat normals maps its corners to the file's
+function gltfSkin(json, buffers, skin, primitive, part)
+{
+    const joints = skin.joints, mesh = part.mesh, count = mesh.points.length;
+    const bind = skin.inverseBindMatrices !== undefined ? gltfAccessor(json, buffers, skin.inverseBindMatrices).data : undefined;
+    const inverseBind = joints.map((_, j)=> bind ? new Matrix4(bind.subarray(j * 16, j * 16 + 16)) : new Matrix4);
+    const fileJoints = gltfAccessor(json, buffers, primitive.attributes.JOINTS_0).data;
+    const fileWeights = gltfAccessor(json, buffers, primitive.attributes.WEIGHTS_0).data;
+    ASSERT(primitive.attributes.JOINTS_1 === undefined, 'glTF reads four joints a vertex, JOINTS_1 is left out');
+    const vertexJoints = new Uint16Array(count * 4), vertexWeights = new Float32Array(count * 4);
+    const bindPoints = new Float32Array(count * 3), bindNormals = new Float32Array(count * 3);
+    for (let v = 0; v < count; ++v)
+    {
+        const from = part.vertexSource ? part.vertexSource[v] : v;
+        let total = 0;
+        for (let k = 0; k < 4; ++k)
+            total += fileWeights[from * 4 + k];
+        for (let k = 0; k < 4; ++k)
+        {
+            const joint = fileJoints[from * 4 + k];
+            vertexJoints[v * 4 + k] = joint < joints.length ? joint : 0;
+            vertexWeights[v * 4 + k] = total ? fileWeights[from * 4 + k] / total : k ? 0 : 1;
+        }
+        const p = mesh.points[v], n = mesh.normals[v];
+        bindPoints.set([p.x, p.y, p.z], v * 3);
+        bindNormals.set([n.x, n.y, n.z], v * 3);
+        // vectors of its own, as each pose writes into them, where a flat normal is shared by a face's corners
+        mesh.points[v] = p.copy(), mesh.normals[v] = n.copy();
+    }
+    return {joints, inverseBind, vertexJoints, vertexWeights, bindPoints, bindNormals};
+}
+
+// a skinned part's mesh copied with vectors of its own for an object to bend, its upload rewriting only the values
+function gltfSkinMeshCopy(mesh)
+{
+    const copy = new Mesh;
+    copy.points = mesh.points.map(p=> p.copy());
+    copy.normals = mesh.normals.map(n=> n.copy());
+    copy.uvs = mesh.uvs.slice();
+    copy.colors = mesh.colors.slice();
+    copy.indices = mesh.indices && mesh.indices.slice();
+    copy.doubleSided = mesh.doubleSided;
+    copy.dynamicDraw = true;
+    return copy;
+}
+
+// bend a skinned mesh to a pose: each vertex its stored place moved by its four joints, weighted, and its normal by
+// their normal matrices, each joint's matrix modelMatrix * its place now * its inverse bind; written into the
+// mesh's own vectors, so a pose makes nothing for each vertex
+function gltfSkinApply(skin, worldOf, modelMatrix, mesh)
+{
+    const matrices = [], normalMatrices = [];
+    for (let j = 0; j < skin.joints.length; ++j)
+    {
+        const m = modelMatrix.copy().multiply(worldOf(skin.joints[j])).multiply(skin.inverseBind[j]);
+        matrices.push(m.m), normalMatrices.push(render3DNormalMatrix(m).m);
+    }
+    const {vertexJoints, vertexWeights, bindPoints, bindNormals} = skin, points = mesh.points, normals = mesh.normals;
+    for (let v = 0; v < points.length; ++v)
+    {
+        const px = bindPoints[v*3], py = bindPoints[v*3+1], pz = bindPoints[v*3+2];
+        const qx = bindNormals[v*3], qy = bindNormals[v*3+1], qz = bindNormals[v*3+2];
+        let x = 0, y = 0, z = 0, nx = 0, ny = 0, nz = 0;
+        for (let k = 0; k < 4; ++k)
+        {
+            const w = vertexWeights[v*4+k];
+            if (!w) continue;
+            const m = matrices[vertexJoints[v*4+k]], n = normalMatrices[vertexJoints[v*4+k]];
+            x += w * (m[0]*px + m[4]*py + m[8]*pz + m[12]);
+            y += w * (m[1]*px + m[5]*py + m[9]*pz + m[13]);
+            z += w * (m[2]*px + m[6]*py + m[10]*pz + m[14]);
+            nx += w * (n[0]*qx + n[4]*qy + n[8]*qz);
+            ny += w * (n[1]*qx + n[5]*qy + n[9]*qz);
+            nz += w * (n[2]*qx + n[6]*qy + n[10]*qz);
+        }
+        const p = points[v], normal = normals[v], l = (nx*nx + ny*ny + nz*nz) ** .5 || 1;
+        p.x = x, p.y = y, p.z = z;
+        normal.x = nx / l, normal.y = ny / l, normal.z = nz / l;
+    }
+    mesh.dirty = true;
 }
 
 // a node's translation, rotation and scale as arrays to animate, copies so the file's stay as they rest
@@ -823,7 +1050,10 @@ function gltfPart(json, buffers, textures, primitive, matrix, name)
     else if (mode === 6) // a fan around the first entry
         indices = indices.flatMap((_, i, s)=> i < 2 ? [] : [s[0], s[i-1], s[i]]);
     const mesh = new Mesh().addTriangles(points, indices, normals, uvs, colors);
-    normals || mesh.computeNormals(false); // flat when the file gives none, as the format says
+    // flat when the file gives none, as the format says, which gives each corner a vertex of its own: which of the
+    // file's each one is, kept for a skin
+    const vertexSource = normals ? undefined : mesh.indices.slice();
+    normals || mesh.computeNormals(false);
     mesh.transform(matrix);
     const factor = pbr.baseColorFactor || [1, 1, 1, 1];
     mesh.doubleSided = !!material.doubleSided;
@@ -836,6 +1066,7 @@ function gltfPart(json, buffers, textures, primitive, matrix, name)
     const part = new GLTFPart(name, mesh, rgb(gltfSRGB(factor[0]), gltfSRGB(factor[1]), gltfSRGB(factor[2]), alpha),
         textureRef ? textures[textureRef.index] : undefined, blend || transmission > 0);
     part.pixelated = json.samplers?.[texture?.sampler]?.magFilter === 9728; // NEAREST
+    part.vertexSource = vertexSource;
     part.unlit = !!material.extensions?.KHR_materials_unlit;
 
     // the normal and emissive maps, read at the base color texture's uvs; the emissive texture is multiplied by the
