@@ -62,15 +62,3 @@ test('a joint made to a destroyed object asserts and is not linked into the worl
     a.destroy();
 });
 
-test('the weld joint still takes setSpringDampingRatio and getSpringDampingRatio, deprecated since 1.20', () =>
-{
-    const a = new Box2dObject(vec2(0, 200)), b = new Box2dObject(vec2(1, 200));
-    a.addBox();
-    b.addBox();
-    const weld = new Box2dWeldJoint(a, b, vec2(.5, 200));
-    weld.setSpringDampingRatio(.4);
-    assert.ok(Math.abs(weld.getDampingRatio() - .4) < 1e-6);
-    assert.ok(Math.abs(weld.getSpringDampingRatio() - .4) < 1e-6);
-    a.destroy();
-    b.destroy();
-});

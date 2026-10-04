@@ -35,7 +35,7 @@ const engineName = 'LittleJS';
  *  @type {string}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.24.3';
+const engineVersion = '1.25.0';
 
 /** Frames per second to update
  *  @type {number}
@@ -322,7 +322,8 @@ function engineLoadingScreenDraw(elapsed)
  *    ()=> { drawHUD(); },                 // gameRenderPost
  *    ['tiles.png', 'tilesLevel.png']       // images to load
  *  );
- *  @memberof Engine */
+ *  @memberof Engine
+ *  @return {Promise<void>} - Done when the images have loaded and gameInit has run */
 async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost, imageSources=[], rootElement)
 {
     showEngineVersion && console.log(`${engineName} Engine v${engineVersion}`);
@@ -822,9 +823,12 @@ function engineObjectsUpdate()
         const start = engineChildStack.length;
         for (const child of children)
             engineChildStack.push(child);
-        for (let i = start; i < engineChildStack.length; ++i)
-            updateChildObject(engineChildStack[i]);
-        engineChildStack.length = start;
+        try
+        {
+            for (let i = start; i < engineChildStack.length; ++i)
+                updateChildObject(engineChildStack[i]);
+        }
+        finally { engineChildStack.length = start; } // put back when an update throws too, or it keeps them
     }
     const pass = engineObjectsUpdateCount;
     function updateChildObject(o)
@@ -1061,7 +1065,7 @@ function LOG(...output) { console.log(...output); }
 
 /** Draw a debug rectangle in world space, or on the screen with screenSpace
  *  @param {Vector2} pos
- *  @param {Vector2} [size=vec2(0)]
+ *  @param {Vector2} [size=vec2()]
  *  @param {Color|string} [color]
  *  @param {number} [time]
  *  @param {number} [angle]
@@ -1733,7 +1737,8 @@ function debugRenderPost() { debugVideoCaptureIsActive() && debugVideoCaptureUpd
 let debugVideoCapture, debugVideoCaptureIcon;
 
 /** Check if video capture is active
- *  @memberof Debug */
+ *  @memberof Debug
+ *  @return {boolean} */
 function debugVideoCaptureIsActive() { return !!debugVideoCapture; }
 
 /** Start capturing video
@@ -2349,8 +2354,10 @@ function lineTest(posStart, posEnd, testFunction, normal)
     const totalLength = (dx*dx + dy*dy)**.5;
     if (!totalLength) return;
 
-    // current integer cell we are in
+    // current integer cell we are in, the one below a whole start heading down the grid, which it goes into
     const pos = posStart.floor();
+    if (dx < 0 && pos.x === posStart.x) --pos.x;
+    if (dy < 0 && pos.y === posStart.y) --pos.y;
 
     // normalize ray direction
     const dirX = dx / totalLength;
@@ -2623,11 +2630,6 @@ function isVector2(v) { return v instanceof Vector2 && v.isValid(); }
 // vector2 asserts
 function ASSERT_VECTOR2_VALID(v) { ASSERT(isVector2(v), 'Vector2 is invalid.', v); }
 function ASSERT_NUMBER_VALID(n) { ASSERT(isNumber(n), 'Number is invalid.', n); }
-function ASSERT_VECTOR2_NORMAL(v)
-{
-    ASSERT_VECTOR2_VALID(v);
-    ASSERT(abs(v.lengthSquared()-1) < .01, 'Vector2 is not normal.', v);
-}
 
 /**
  * 2D Vector object with vector math library
@@ -3330,17 +3332,28 @@ function formatTime(t)
 
 /** Fetches a JSON file from a URL and returns the parsed JSON object. Must be used with await!
  *  @param {string} url - URL of JSON file
- *  @return {Promise<object>}
+ *  @return {Promise<any>} - The parsed JSON, any shape, as response.json() gives it
  *  @memberof Utilities */
 async function fetchJSON(url)
 {
     const response = await fetch(url);
     if (!response.ok)
         throw new Error(`Failed to fetch JSON from ${url}: ${response.status} ${response.statusText}`);
-    const json = await response.json();
+    const text = await response.text();
+    let json;
+    try { json = JSON.parse(text); }
+    catch (e)
+    {
+        // a dev server answers a mistyped path with its own page, which is no JSON, so the error says which file
+        throw new Error(`fetchJSON: ${url} is not JSON` + (loadIsWebPage(text) ?
+            ', it is a web page, so the path may be wrong' : ': ' + e.message));
+    }
     editorJSONFetched(url, json); // debug builds remember the file a level came from, to save it by that name
     return json;
 }
+
+// is a file's text a web page, as a dev server sends for a path it does not have
+const loadIsWebPage = (text)=> /^\s*</.test(text);
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -3452,6 +3465,8 @@ function readSaveData(saveName, defaultSaveData)
         {
             try { loadedData = JSON.parse(data); }
             catch { LOG('readSaveData: corrupt JSON for', saveName, '— using defaults'); }
+            if (!loadedData || typeof loadedData !== 'object' || isArray(loadedData))
+                loadedData = {}; // only an object of saved values, never a string spread into its letters
         }
     }
     catch { LOG('readSaveData: localStorage unavailable — using defaults'); }
@@ -4876,19 +4891,23 @@ class EngineObject
     }
 
     /** Convert from local space to world space
-     *  @param {Vector2} pos - local space point */
+     *  @param {Vector2} pos - local space point
+     *  @return {Vector2} */
     localToWorld(pos) { return this.pos.add(pos.rotate(this.angle)); }
 
     /** Convert from world space to local space
-     *  @param {Vector2} pos - world space point */
+     *  @param {Vector2} pos - world space point
+     *  @return {Vector2} */
     worldToLocal(pos) { return pos.subtract(this.pos).rotate(-this.angle); }
 
     /** Convert from local space to world space for a vector (rotation only)
-     *  @param {Vector2} vec - local space vector */
+     *  @param {Vector2} vec - local space vector
+     *  @return {Vector2} */
     localToWorldVector(vec) { return vec.rotate(this.angle); }
 
     /** Convert from world space to local space for a vector (rotation only)
-     *  @param {Vector2} vec - world space vector */
+     *  @param {Vector2} vec - world space vector
+     *  @return {Vector2} */
     worldToLocalVector(vec) { return vec.rotate(-this.angle); }
 
     /** Called to check if a tile collision should be resolved. Return true for physics to resolve the collision or false to ignore and resolve it manually.
@@ -5026,11 +5045,6 @@ class EngineObject
         this.collideLevel = collideLevel;
         this.collideRaycast = collideRaycast;
     }
-
-    /** @deprecated since 1.20, use collideLevel
-     *  @type {boolean} */
-    get collideTiles() { return this.collideLevel; }
-    set collideTiles(collide) { this.collideLevel = collide; }
 
     /** Returns string containing info about this object for debugging
      *  @return {string} */
@@ -5172,7 +5186,7 @@ function isBlack(c) { return c.r <= 0 && c.g <= 0 && c.b <= 0 && c.a <= 0; }
  * Create a tile info object using a grid based system
  * - This can take vecs or floats for easier use and conversion
  * - If an index is passed in, the tile size and index will determine the position
- * @param {Vector2|number} [index=0] - Index of the tile in 1d or 2d form
+ * @param {Vector2|number} [index] - Index of the tile in 1d or 2d form
  * @param {Vector2|number} [size] - Size of tile in pixels
  * @param {TextureInfo|number} [texture] - Texture index or info to use
  * @param {number} [padding] - How many pixels padding around tiles
@@ -5656,10 +5670,10 @@ class Shader
  *  @param {TileInfo} [tileInfo] - Tile info to use, untextured if undefined
  *  @param {Color}    [color=WHITE] - Color to modulate with
  *  @param {number}   [angle] - Angle to rotate by
- *  @param {boolean}  [mirror] - Is image flipped along the Y axis?
+ *  @param {boolean}  [mirror] - Is the image flipped left to right?
  *  @param {Color}    [additiveColor] - Additive color to be applied if any
  *  @param {boolean}  [useWebGL=glEnable] - Use accelerated WebGL rendering?
- *  @param {boolean}  [screenSpace=drawScreenSpace] - Are the pos and size are in screen space?
+ *  @param {boolean}  [screenSpace=drawScreenSpace] - Are the pos and size in screen space?
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context] - Canvas 2D context to draw to
  *  @memberof Draw */
 function drawTile(pos, size=vec2(1), tileInfo, color=WHITE,
@@ -5829,9 +5843,9 @@ function drawRectGradient(pos, size=vec2(1), colorTop=WHITE, colorBottom=CLEAR_W
  *  @param {Vector2}  pos          - Center of the rect in world space
  *  @param {Vector2}  size         - Size of the rect in world space
  *  @param {Vector2}  wrapCount    - How many times the texture repeats (x, y)
- *  @param {TextureInfo|number} [texture=0] - TextureInfo or texture index into textureInfos
+ *  @param {TextureInfo|number} [texture] - TextureInfo or texture index into textureInfos
  *  @param {Color}    [color=WHITE] - Color to modulate with
- *  @param {number}   [angle=0] - Angle to rotate by
+ *  @param {number}   [angle] - Angle to rotate by
  *  @param {Color}    [additiveColor] - Additive color to be applied if any
  *  @param {boolean}  [useWebGL=glEnable] - Use accelerated WebGL rendering?
  *  @param {boolean}  [screenSpace=drawScreenSpace] - Are pos and size in screen space?
@@ -6173,9 +6187,9 @@ function drawEllipse(pos, size=vec2(1), color=WHITE, angle=0, lineWidth=0, lineC
 
 /** Draw colored circle using passed in point
  *  @param {Vector2} pos
- *  @param {number}  [size=1] - Diameter
+ *  @param {number}  [size] - Diameter
  *  @param {Color}   [color=WHITE]
- *  @param {number}  [lineWidth=0]
+ *  @param {number}  [lineWidth]
  *  @param {Color}   [lineColor=BLACK]
  *  @param {boolean} [useWebGL=glEnable]
  *  @param {boolean} [screenSpace=drawScreenSpace]
@@ -6270,7 +6284,7 @@ function drawEllipseGradient(pos, size=vec2(1), colorInner=WHITE, colorOuter=CLE
  *  - If drawing mostly textured sprites, bake the gradient into a texture and use drawTile instead
  *  - Stacking gradients at the exact same position may show a faint vertical artifact
  *  @param {Vector2} pos
- *  @param {number}  [size=1] - Diameter
+ *  @param {number}  [size] - Diameter
  *  @param {Color}   [colorInner=WHITE]
  *  @param {Color}   [colorOuter=CLEAR_WHITE]
  *  @param {boolean} [useWebGL=glEnable]
@@ -6335,7 +6349,7 @@ function drawCanvas2D(pos, size, angle=0, mirror=false, drawFunction, screenSpac
  *  @param {Color}   [color=WHITE]
  *  @param {number}  [lineWidth]
  *  @param {Color}   [lineColor=BLACK]
- *  @param {'left'|'center'|'right'} [textAlign='center']
+ *  @param {'left'|'center'|'right'} [textAlign]
  *  @param {string}  [font=fontDefault]
  *  @param {string}  [fontStyle]
  *  @param {number}  [maxWidth]
@@ -7253,7 +7267,6 @@ function keyDirection(up='ArrowUp', down='ArrowDown', left='ArrowLeft', right='A
 }
 
 /** Returns true if mouse button is down
- *  @function
  *  @param {number} button
  *  @return {boolean}
  *  @memberof Input */
@@ -7264,7 +7277,6 @@ function mouseIsDown(button)
 }
 
 /** Returns true if mouse button was pressed
- *  @function
  *  @param {number} button
  *  @return {boolean}
  *  @memberof Input */
@@ -7275,7 +7287,6 @@ function mouseWasPressed(button)
 }
 
 /** Returns true if mouse button was released
- *  @function
  *  @param {number} button
  *  @return {boolean}
  *  @memberof Input */
@@ -7503,7 +7514,7 @@ function inputInit()
     {
         // fix stalled audio requiring user interaction, a keyboard only game has no other gesture
         if (soundEnable && !headlessMode && audioContext && !audioIsRunning())
-            audioContext.resume();
+            audioResume();
 
         // keys typed into an html text field are the player's typing, not game input;
         // a key already down still releases on keyup, which only lets go of keys that are down
@@ -7589,7 +7600,7 @@ function inputInit()
 
         // fix stalled audio requiring user interaction
         if (soundEnable && !headlessMode && audioContext && !audioIsRunning())
-            audioContext.resume();
+            audioResume();
 
         // a press in the bars around a letterboxed canvas is not one on its edge; a drag out of it still moves; under
         // pointer lock the mouse stays where the lock began, which may be in a bar, and every click is the game's
@@ -7689,7 +7700,7 @@ function inputInit()
 
             // fix stalled audio requiring user interaction
             if (soundEnable && !headlessMode && audioContext && !audioIsRunning())
-                audioContext.resume();
+                audioResume();
 
             // when the touch gamepad is enabled it owns touch input: suppress the
             // touch->mouse passthrough entirely unless touchGamepadPassthrough is set
@@ -8454,7 +8465,7 @@ function touchGamepadPointerDown(e, zone)
 
     // resume audio on first interaction
     if (soundEnable && !headlessMode && audioContext && !audioIsRunning())
-        audioContext.resume();
+        audioResume();
 
     // while paused, any touch is the start button; a control belongs to the first finger on it until that
     // finger lifts, so a second finger landing on the same one neither takes it over nor lets it go
@@ -8549,6 +8560,9 @@ function touchGamepadPointerUp(e)
  *  @memberof Audio */
 let audioContext = typeof AudioContext == 'undefined' ? undefined : new AudioContext;
 
+// resume the audio, a refusal caught so it is not an uncaught error in the console, the next gesture tries again
+function audioResume() { audioContext?.resume()?.catch?.(()=> {}); }
+
 /** Master gain node for all audio to pass through, made at load so effects can connect to it any time
  *  @type {GainNode}
  *  @memberof Audio */
@@ -8605,6 +8619,7 @@ function audioSetSession()
 let audioSuspendedWhenHidden = false;
 function audioVisibilityChange()
 {
+    if (!audioContext) return; // a browser with no audio has none to pause
     if (document.hidden)
     {
         if (!soundPauseWhenHidden || audioContext.state != 'running') return;
@@ -8614,7 +8629,7 @@ function audioVisibilityChange()
     else if (audioSuspendedWhenHidden)
     {
         audioSuspendedWhenHidden = false;
-        audioContext.resume();
+        audioResume();
     }
 }
 
@@ -8753,7 +8768,7 @@ function audioParamRamp(param, value, fadeTime=0)
 class Sound
 {
     /** Create a sound object and cache the audio for later use
-     *  @param {string|URL|Array} [asset] - Filename or URL of an audio file, or a zzfx array
+     *  @param {string|URL|Array<number|undefined>} [asset] - Filename or URL of an audio file, or a zzfx array
      *  @param {number} [randomness] - How much to randomize frequency each time sound plays, for zzfx sounds it overrides the array's own randomness, which is used if undefined
      *  @param {number} [range=soundDefaultRange] - World space max range of sound
      *  @param {number} [taper=soundDefaultTaper] - At what percentage of range should it start tapering
@@ -9324,7 +9339,7 @@ function getNoteFrequency(semitoneOffset, rootFrequency=220)
  *  @param {number}   [rate] - The playback rate to use
  *  @param {number}   [pan] - How much to apply stereo panning
  *  @param {boolean}  [loop] - True if the sound should loop when it reaches the end
- *  @param {number}   [sampleRate=44100] - Sample rate for the sound
+ *  @param {number}   [sampleRate=audioDefaultSampleRate] - Sample rate for the sound
  *  @param {GainNode} [gainNode] - Optional gain node for volume control while playing (disconnected when the sound ends)
  *  @param {number}   [offset] - Where to start in the sound, in its own seconds whatever the rate
  *  @param {AudioEndedCallback} [onended] - Callback for when the sound ends
@@ -9341,7 +9356,7 @@ function playSamples(sampleChannels, volume=1, rate=1, pan=0, loop=false, sample
         // fix stalled audio, don't build a buffer that can't be played;
         // but a context suspended because the page is hidden stays suspended until it shows
         if (!audioSuspendedWhenHidden)
-            audioContext.resume();
+            audioResume();
         return;
     }
 
@@ -9351,7 +9366,7 @@ function playSamples(sampleChannels, volume=1, rate=1, pan=0, loop=false, sample
 
 /** Copy arrays of samples into a new audio buffer
  *  @param {Array}  sampleChannels - Array of arrays of samples (for stereo playback)
- *  @param {number} [sampleRate=44100] - Sample rate for the sound
+ *  @param {number} [sampleRate=audioDefaultSampleRate] - Sample rate for the sound
  *  @return {AudioBuffer} - The audio buffer holding the samples
  *  @memberof Audio */
 function createAudioBuffer(sampleChannels, sampleRate=audioDefaultSampleRate)
@@ -9386,7 +9401,7 @@ function playAudioBuffer(buffer, volume=1, rate=1, pan=0, loop=false, gainNode, 
         // fix stalled audio, this sound won't be able to play;
         // but a context suspended because the page is hidden stays suspended until it shows
         if (!audioSuspendedWhenHidden)
-            audioContext.resume();
+            audioResume();
         return;
     }
 
@@ -9592,12 +9607,34 @@ function zzfxG
  * - TileLayer for rendering, TileCollisionLayer for physics
  * - Collision callbacks for tile interactions with objects
  * - Optimized raycast support for tile-based physics
- * - Integration with Box2D physics via Box2DTileLayer plugin
+ * - Integration with Box2D physics via the Box2dTileLayer plugin
  * @namespace TileLayers
  */
 
 ///////////////////////////////////////////////////////////////////////////////
 // Tile Layer System
+
+/** A Tiled map as Tiled saves it as JSON, what tileLayersLoad and objectLayersLoad take and tileLayersFromLDtk
+ *  makes; the fields read are listed, and the rest of the file is kept as it is
+ *  @typedef {Object} TiledMap
+ *  @property {number} width - Cells across
+ *  @property {number} height - Cells up
+ *  @property {number} [tilewidth] - A tile's width in pixels
+ *  @property {number} [tileheight] - A tile's height in pixels
+ *  @property {Array<Object>} layers - Tile layers, object layers and groups of them, bottom first
+ *  @property {Array<Object>} [tilesets] - The first one's margin, spacing and columns are read
+ *  @property {number} [nextlayerid]
+ *  @property {number} [nextobjectid]
+ *  @property {string} [orientation]
+ *  @property {string} [renderorder]
+ *  @property {boolean} [infinite]
+ *  @property {string} [type]
+ *  @property {string|number} [version] - A number in files from Tiled before 1.6
+ *  @property {string} [tiledversion]
+ *  @property {number} [compressionlevel]
+ *  @property {string} [backgroundcolor]
+ *  @property {Array<Object>} [properties]
+ *  @memberof TileLayers */
 
 /** Keep track of all tile layers with collision
  *  @type {Array<TileCollisionLayer>}
@@ -9673,7 +9710,7 @@ function tileCollisionTest(pos, size=vec2(), callbackObject, solidOnly=true)
  *  @param {Vector2} posEnd
  *  @param {EngineObject|TileCollisionCallback} [callbackObject] - Callback, engine object, or undefined
  *  @param {Vector2} [normal] - Optional normal of the surface hit
- *  @param {boolean} [solidOnly=true] - Only check solid layers?
+ *  @param {boolean} [solidOnly] - Only check solid layers?
  *  @return {Vector2|undefined} - where the ray meets the first tile hit, nudged just inside it, or undefined if no hit
  *  @memberof TileLayers */
 function tileCollisionRaycast(posStart, posEnd, callbackObject, normal, solidOnly=true)
@@ -9734,7 +9771,7 @@ function tileLayerTileInfo(t, tile)
  * - An object or image layer keeps its index, with its slot in the returned array left empty
  * - A hidden layer (visible false) is loaded, its collision included, but not drawn; its render
  *   is a no-op, delete that and call redraw() to show it
- *  @param {Object}   tileMapData - Level data from exported data
+ *  @param {TiledMap} [tileMapData] - Level data from exported data, a 50 by 50 empty level when left out
  *  @param {TileInfo} [tileInfo] - Default tile info (used for size and texture), tile() by default, none when no image is loaded
  *  @param {number}   [renderOrder] - Render order of the top layer
  *  @param {number|string} [collisionLayer] - Layer to use for collision if any, by its index or its name
@@ -9748,10 +9785,7 @@ function tileLayersLoad(tileMapData, tileInfo=tileLayerDefaultTile(), renderOrde
     {
         // default level data if loading failed
         const s = 50;
-        tileMapData = {};
-        tileMapData.height = tileMapData.width = s;
-        tileMapData.layers = [{}];
-        tileMapData.layers[0].data = new Array(s*s).fill(0);
+        tileMapData = {width: s, height: s, layers: [{data: new Array(s*s).fill(0)}]};
     }
 
     // the editor, in debug builds, keeps the map as the source of its edits and brings back autosaved ones
@@ -9893,7 +9927,7 @@ const tileLayersLDtkTypes = {Int: 'int', Float: 'float', Bool: 'bool', String: '
  * - The level editor edits the map this returns, and saves it as a Tiled map
  * @param {Object} ldtk - The LDtk project, its JSON
  * @param {number|string} [level] - Which level, by its index or its identifier
- * @return {Object} - A Tiled map: width, height, tilewidth, tileheight, tilesets and layers
+ * @return {TiledMap} - A Tiled map: width, height, tilewidth, tileheight, tilesets and layers
  * @example
  * const map = tileLayersFromLDtk(await fetchJSON('world.ldtk'), 'Level_0');
  * const layers = tileLayersLoad(map, tile(0, 16), 0, 'Collisions'); // its IntGrid layer is solid
@@ -10024,7 +10058,7 @@ const objectLayersTypes = new Map;
  *  - Adding a name again replaces it
  *  @param {string} name - The type the objects have in Tiled
  *  @param {Function} make - A class made at each object's position, or a function called with it
- *  @param {Object} [defaults] - Properties set on each one made, the level editor shows inputs for them
+ *  @param {Object<string, any>} [defaults] - Properties set on each one made, the level editor shows inputs for them
  *  @param {TileInfo} [tileInfo] - An icon for the level editor
  *  @memberof TileLayers
  *  @example
@@ -10045,7 +10079,7 @@ function objectLayersAddType(name, make, defaults={}, tileInfo)
  *  - The object's properties in Tiled are set over the type's defaults: numbers, booleans, strings, and colors,
  *    and for a Vector2 default the string x,y
  *  - An object whose type was not added is skipped, with a warning in debug builds
- *  @param {Object} tileMapData - The same Tiled map given to tileLayersLoad
+ *  @param {TiledMap} tileMapData - The same Tiled map given to tileLayersLoad
  *  @return {Array<any>} - What each object's type made, a function that made nothing is left out
  *  @memberof TileLayers */
 function objectLayersLoad(tileMapData)
@@ -10139,7 +10173,7 @@ class TileLayerData
     /** Create a tile layer data object, one for each tile in a TileLayer
      *  @param {number}  [tile] - The tile to use, from 0 like tile(); undefined is an empty cell that draws nothing
      *  @param {number}  [direction] - Integer direction of tile, in 90 degree increments
-     *  @param {boolean} [mirror] - If the tile should be mirrored along the x axis
+     *  @param {boolean} [mirror] - If the tile is flipped left to right
      *  @param {Color}   [color] - Color of the tile */
     constructor(tile, direction=0, mirror=false, color=new Color)
     {
@@ -10148,7 +10182,7 @@ class TileLayerData
         this.tile = tile;
         /** @property {number} - Integer direction of tile, in 90 degree increments */
         this.direction = direction;
-        /** @property {boolean} - If the tile should be mirrored along the x axis */
+        /** @property {boolean} - If the tile is flipped left to right */
         this.mirror = mirror;
         /** @property {Color} - Color of the tile */
         this.color = color.copy();
@@ -10224,7 +10258,7 @@ class CanvasLayer extends EngineObject
     *  @param {Vector2} [size] - Size in world space
     *  @param {Color}   [color] - Color to modulate with
     *  @param {number}  [angle] - Angle to rotate by
-    *  @param {boolean} [mirror] - If true image is flipped along the Y axis
+    *  @param {boolean} [mirror] - If true the image is flipped left to right
     *  @param {Color}   [additiveColor] - Additive color to be applied if any
     *  @param {boolean} [screenSpace=drawScreenSpace] - If true the pos and size are in screen space
     *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context] - Canvas 2D context to draw to */
@@ -10514,7 +10548,7 @@ class TileLayer extends CanvasLayer
      *  @param {TileInfo} [tileInfo] - Tile info to use, untextured if undefined
      *  @param {Color}    [color=WHITE] - Color to modulate with
      *  @param {number}   [angle] - Angle to rotate by
-     *  @param {boolean}  [mirror] - Is image flipped along the Y axis?
+     *  @param {boolean}  [mirror] - Is the image flipped left to right?
      *  @param {Color}    [additiveColor] - Additive color to be applied if any */
     drawLayerTile(pos, size=vec2(1), tileInfo, color=WHITE,
     angle=0, mirror, additiveColor)
@@ -10831,13 +10865,13 @@ class TileCollisionLayer extends TileLayer
  * let pos = vec2(2,3);
  * let particleEmitter = new ParticleEmitter
  * (
- *     pos, 0, 1, 0, 500, PI,      // pos, angle, emitSize, emitTime, emitRate, emitCone
+ *     pos, 0, 1, 0, 500, PI,      // pos, angle, emitSize, emitTime, emitRate, emitConeAngle
  *     tile(0, 16),                // tileInfo
  *     rgb(1,1,1,1), rgb(0,0,0,1), // colorStartA, colorStartB
  *     rgb(1,1,1,0), rgb(0,0,0,0), // colorEndA, colorEndB
- *     1, .2, .2, .1, .05,  // particleTime, sizeStart, sizeEnd, particleSpeed, particleAngleSpeed
- *     .99, 1, 1, PI, .05,  // damping, angleDamping, gravityScale, particleCone, fadeRate
- *     .5, true             // randomness, collide
+ *     1, .2, .2, .1, .05,  // particleTime, sizeStart, sizeEnd, speed, angleSpeed
+ *     .99, 1, 1, PI, .05,  // damping, angleDamping, gravityScale, particleConeAngle, fadeRate
+ *     .5, true             // randomness, collideLevel
  * );
  */
 class ParticleEmitter extends EngineObject
@@ -11130,7 +11164,8 @@ class ParticleEmitter extends EngineObject
         this.additive && setAdditiveBlendMode(false);
     }
 
-    /** is emitter actively spawning */
+    /** is emitter actively spawning
+     *  @return {boolean} */
     isActive() { return !this.emitTime || this.getAliveTime() < this.emitTime; }
 
     /** Destroy the particle emitter
@@ -11342,8 +11377,8 @@ class Particle
                 }
                 if (isBlockedY || !isBlockedX)
                 {
-                    // down is the world's gravity, or the emitter's own fall in a world with none
-                    const down = gravity.y || emitter.gravity || 0;
+                    // down is the way it falls, the world's gravity by its gravityScale and the emitter's own
+                    const down = gravityY;
                     const wasFalling = this.velocity.y < 0 && down < 0 || this.velocity.y > 0 && down > 0;
                     if (wasFalling)
                         this.groundObject = hitLayer;
@@ -11491,11 +11526,12 @@ let glAntialias = true;
 
 // WebGL internal variables not exposed to documentation
 let glMipmappedTextures = new WeakSet, glMipmapsUntilTarget = new WeakSet, glMipmapsStale = new Set, glPremultipliedTextures = new WeakSet, glShaderPremultiplied, glEnableBeforeLoss = true, glShader, glPolyShader, glPolyMode, glAdditive, glBatchAdditive, glActiveTexture, glArrayBuffer, glGeometryBuffer, glPositionData, glColorData, glBatchCount, glTextureInfos = new Set, glInstancedVAO, glPolyVAO, glFramebuffer, glRenderTarget, glShaderObjects = [], glCustomShader, glBatchShader, glProgramCustom, glTransform, glRenderTargetSaved, glUniformLocations = new WeakMap, glCanBeEnabled = true;
+let glFailedPrograms = new WeakSet; // programs that did not build in a release build, which nothing draws with
 // ANDed onto every packed color as a draw is queued; the light system's shadow pass sets 0xff000000
 // to draw everything black with its alpha kept (rgbaInt packs alpha in the top byte)
 let glColorMask = -1;
 // ORed onto the additive color of every quad and onto every poly point's color as a draw is queued; the light system's
-// emissive pass sets a grey with the mask at 0xff000000, so a draw comes out that grey in its own shape
+// emissive pass sets a gray with the mask at 0xff000000, so a draw comes out that gray in its own shape
 let glColorAdditive = 0;
 // a texture drawn into with the canvas's own transform and its size, the light system's lightmap while its pass
 // runs: a target set and ended inside it, like a tile layer redrawn in a renderLight, goes back to it, not the canvas
@@ -11662,6 +11698,14 @@ function glInit(rootElement)
             'c=d;'+                   // set color
             '}'                       // end of shader
         );
+
+        // a device that can not build the engine's own programs draws with Canvas2D, as after a lost context
+        if (glFailedPrograms.has(glShader) || glFailedPrograms.has(glPolyShader))
+        {
+            console.error('LittleJS: WebGL can not draw on this device, using Canvas2D');
+            glEnable = glCanBeEnabled = false;
+            glCanvas.style.display = 'none';
+        }
 
         // init buffers
         const glInstanceData = new ArrayBuffer(gl_ARRAY_BUFFER_SIZE);
@@ -11909,13 +11953,23 @@ function glCreateProgram(vsSource, fsSource)
 
     // build the program
     const program = glContext.createProgram();
-    glContext.attachShader(program, glCompileShader(vsSource, glContext.VERTEX_SHADER));
-    glContext.attachShader(program, glCompileShader(fsSource, glContext.FRAGMENT_SHADER));
+    const vertexShader = glCompileShader(vsSource, glContext.VERTEX_SHADER);
+    const fragmentShader = glCompileShader(fsSource, glContext.FRAGMENT_SHADER);
+    glContext.attachShader(program, vertexShader);
+    glContext.attachShader(program, fragmentShader);
     glContext.linkProgram(program);
 
-    // check for errors
-    if (debug && !glContext.getProgramParameter(program, glContext.LINK_STATUS))
-        throw glContext.getProgramInfoLog(program);
+    // check for errors in every build, as a driver may refuse what another takes: a debug build throws, a release
+    // one says why once and marks the program, which the engine's draws then do without
+    if (!glContext.getProgramParameter(program, glContext.LINK_STATUS))
+    {
+        const log = glContext.getProgramInfoLog(program) + '\n' +
+            glContext.getShaderInfoLog(vertexShader) + glContext.getShaderInfoLog(fragmentShader);
+        if (debug)
+            throw log;
+        console.error('LittleJS: a shader failed to build\n' + log);
+        glFailedPrograms.add(program);
+    }
     return program;
 }
 
@@ -11931,7 +11985,7 @@ function glUniformLocation(program, name)
 // color, then the sprite's color and additive color apply as the engine's own fragment shader does
 function glShaderProgram(shader)
 {
-    return shader.program ||= glCreateProgram(gl_VERTEX_SOURCE,
+    const program = shader.program ||= glCreateProgram(gl_VERTEX_SOURCE,
         '#version 300 es\n' +
         'precision highp float;' +
         'uniform sampler2D iChannel0;' + // the texture
@@ -11942,6 +11996,7 @@ function glShaderProgram(shader)
         '#define localUV l\n' +
         shader.fragmentCode + '\n' +
         'void main(){vec4 t;mainImage(t,v);' + gl_FRAGMENT_TINT_SOURCE + '}');
+    return glFailedPrograms.has(program) ? glShader : program;
 }
 
 /** Create WebGL texture from an image and init the texture settings
@@ -12118,6 +12173,8 @@ function glFlush()
                 const height = glRenderTarget ? mainCanvasSize.y : glCanvas.height;
                 glContext.uniform3f(uniform('iResolution'), width, height, 1);
                 glContext.uniform1i(uniform('premultipliedTexture'), +premultiplied);
+                if (program === glShader)
+                    glShaderPremultiplied = premultiplied; // a Shader that did not build draws with the engine's
             }
         }
         if (!glPolyMode && !glBatchShader && glShaderPremultiplied !== premultiplied)
@@ -12175,8 +12232,8 @@ function glSetAntialias(antialias=true)
  *  @param {number} [uv0Y]
  *  @param {number} [uv1X]
  *  @param {number} [uv1Y]
- *  @param {number} [rgba=-1] - white is -1
- *  @param {number} [rgbaAdditive=0] - black is 0
+ *  @param {number} [rgba] - white is -1
+ *  @param {number} [rgbaAdditive] - black is 0
  *  @memberof WebGL */
 function glDraw(x, y, sizeX, sizeY, angle=0, uv0X=0, uv0Y=0, uv1X=1, uv1Y=1, rgba=-1, rgbaAdditive=0)
 {
@@ -13147,7 +13204,7 @@ let newgrounds;
 const newgroundsUnlocksToResend = new Set; // pending medals whose request did not reach the server
 const newgroundsUnlocksRefused = new Set; // medals the server refused this visit, asked again they answer no unsent
 const newgroundsSecureComponents = ['Medal.unlock', 'ScoreBoard.postScore']; // the calls encrypted with a cipher
-const newgroundsSessionErrors = [104, 110, 111]; // expired session, login required, session cancelled
+const newgroundsSessionErrors = [104, 110, 111]; // expired session, login required, session canceled
 const newgroundsTimeoutMS = 15e3; // how long a request may take before it fails
 
 // whether the server answered that the session is gone, as opposed to a request that failed on the way
@@ -13302,9 +13359,6 @@ class NewgroundsPlugin
         /** @property {Promise<NewgroundsPlugin>} - Resolves once the session is checked and the lists are in, empty if the server could not be reached */
         this.ready = this.init();
     }
-
-    /** @deprecated since 1.20, the view is logged when the plugin starts, so this does nothing */
-    logView() {}
 
     /** Log the view, check the session, fetch the medals and scoreboards, then keep the session alive; the constructor runs it once
      *  @private */
@@ -13570,6 +13624,18 @@ class PostProcessPlugin
         /** @property {string} - The shadertoy style mainImage code it shades with, see setShaderCode */
         this.shaderCode = shaderCode || postProcessEffects(); // no code passes the frame through
 
+        /** @property {Object<string, number|Array<number>>} - The game's own values for the shader, a uniform each
+         *  by its name, a number a float and a list of 2 to 4 numbers a vector, set every frame as they are; an
+         *  effect setting can be one of these names, so it changes every frame without making the shader again, all
+         *  but glow's size, which sets how many samples it takes; adding or removing a name makes the shader again,
+         *  and the shader is first made at the first render, so values set right after the plugin are in it; a name
+         *  is a GLSL name not starting with an underscore, which the effects keep for their own, nor i and a capital
+         *  or gl_, and not c, uv or p, the names mainImage works on
+         *  @type {Object<string, number|Array<number>>} */
+        this.values = {};
+        // the names of the values the shader was made with
+        this.valueNames = '';
+
         /** @property {WebGLProgram|undefined} - Shader for post processing
          *  @type {WebGLProgram|undefined} */
         this.shader = undefined;
@@ -13583,18 +13649,14 @@ class PostProcessPlugin
          *  @type {WebGLVertexArrayObject|undefined} */
         this.vao = undefined;
 
-        // setup the post processing plugin
-        initPostProcess();
+        // the shader is made at the first render, so values the game sets after this, which its code may name, are
+        // declared in it
+        !headlessMode && !glEnable && console.warn('PostProcessPlugin: WebGL not enabled!');
         engineAddPlugin(undefined, postProcessRender, postProcessContextLost, postProcessContextRestored);
 
         function initPostProcess()
         {
-            if (headlessMode) return;
-            if (!glEnable)
-            {
-                console.warn('PostProcessPlugin: WebGL not enabled!');
-                return;
-            }
+            if (headlessMode || !glEnable) return;
 
             // create resources, the feedback starting black, as if the frame before the first were empty
             if (feedbackTexture)
@@ -13614,8 +13676,9 @@ class PostProcessPlugin
                 'gl_Position=vec4(p+p-1.,1,1);'+ // set position
                 '}'                              // end of shader
                 ,
-                postProcessFragmentSource(postProcess.shaderCode)
+                postProcessFragmentSource(postProcess.shaderCode, postProcess.values)
             );
+            postProcess.valueNames = postProcessValueKey(postProcess.values);
 
             // setup VAO for post processing
             postProcess.vao = glContext.createVertexArray();
@@ -13651,13 +13714,17 @@ class PostProcessPlugin
             // clear out the buffer, before anything here binds its own
             glFlush();
 
-            // made now if WebGL was off when the plugin was made, when a lost context came back, or when
-            // setShaderCode gave it new code
+            // made now if WebGL was off when the plugin was made, when a lost context came back, when setShaderCode
+            // gave it new code, or when the game added or took away a value, which the shader declares
+            if (postProcess.shader && postProcessValueKey(postProcess.values) !== postProcess.valueNames)
+                postProcess.setShaderCode(postProcess.shaderCode);
             if (!postProcess.shader)
             {
                 if (glContext.isContextLost()) return;
                 initPostProcess();
             }
+            if (glFailedPrograms.has(postProcess.shader))
+                return; // a shader that did not build in a release build, the frame shows as it is
 
             // ensure we render to the default framebuffer (in case any earlier
             // caller this frame left a render target bound)
@@ -13715,9 +13782,10 @@ class PostProcessPlugin
             glContext.activeTexture(glContext.TEXTURE2);
             glContext.bindTexture(glContext.TEXTURE_2D, depth?.cameraDepthTexture || null);
             glContext.activeTexture(glContext.TEXTURE0);
+            // all 0 without one, which an effect reads as no depth
             const camera = depth?.camera;
-            camera && glContext.uniform3f(glUniformLocation(postProcess.shader, 'iDepthRange'), camera.near,
-                camera.far == Infinity ? 0 : camera.far, camera.orthographic ? 1 : 0);
+            glContext.uniform3f(glUniformLocation(postProcess.shader, 'iDepthRange'), camera?.near || 0,
+                !camera || camera.far == Infinity ? 0 : camera.far, camera?.orthographic ? 1 : 0);
 
             // set uniforms and draw
             const uniformLocation = (name)=>glUniformLocation(postProcess.shader, name);
@@ -13726,6 +13794,14 @@ class PostProcessPlugin
             glContext.uniform1i(uniformLocation('iChannel2'), 2);
             glContext.uniform1f(uniformLocation('iTime'), time);
             glContext.uniform3f(uniformLocation('iResolution'), mainCanvas.width, mainCanvas.height, 1);
+            for (const name in postProcess.values)
+            {
+                const value = postProcess.values[name], location = uniformLocation(name);
+                if (isArray(value))
+                    [, , glContext.uniform2fv, glContext.uniform3fv, glContext.uniform4fv][value.length]?.call(glContext, location, value);
+                else
+                    glContext.uniform1f(location, value);
+            }
             glContext.drawArrays(glContext.TRIANGLE_STRIP, 0, 4);
 
             if (feedbackTexture)
@@ -13775,24 +13851,40 @@ class PostProcessPlugin
 
 ///////////////////////////////////////////////////////////////////////////////
 
+// what the shader declares of the game's values, each name and its length, so a value that changes either makes the
+// shader again
+const postProcessValueKey = (values)=> Object.entries(values).map(([name, v])=> name + ':' + (isArray(v) ? v.length : 1)).join();
+
 // the fragment shader of the post process pass around its mainImage snippet: the frame on iChannel0, the last output
 // on iChannel1 with a feedback texture, and the 3D depth on iChannel2 when render3D.depthTexture is on, read with
-// sceneDepth(uv), the distance from the camera along its view in world units, uv 0 to 1 across the screen
-function postProcessFragmentSource(shaderCode)
+// sceneDepth(uv), the distance from the camera along its view in world units, uv 0 to 1 across the screen; and a
+// uniform for each of the game's values, a float or a vector of the list's length
+function postProcessFragmentSource(shaderCode, values={})
 {
+    let declared = '';
+    for (const name in values)
+    {
+        const value = values[name], length = isArray(value) ? value.length : 1;
+        ASSERT(postProcessNameCheck(name), 'a postProcess value needs a name GLSL takes that the shader does not use', name);
+        ASSERT(!isArray(value) || length >= 2 && length <= 4, 'a postProcess value is a number or 2 to 4 of them', name);
+        declared += `uniform ${length > 1 ? 'vec' + length : 'float'} ${name};`;
+    }
     return '#version 300 es\n' +        // specify GLSL ES version
         'precision highp float;'+        // use highp for accuracy
         'uniform sampler2D iChannel0;'+  // input texture
         'uniform sampler2D iChannel1;'+  // the previous frame's output, when feedbackTexture is set
-        'uniform sampler2D iChannel2;'+  // the 3D depth, when render3D.depthTexture is on
+        'uniform highp sampler2D iChannel2;'+ // the 3D depth, when render3D.depthTexture is on, highp or it is 11 bits
         'uniform vec3 iResolution;'+     // size of output texture
         'uniform float iTime;'+          // time
         'uniform vec3 iDepthRange;'+     // the camera's near, its far or 0 for none, and 1 when orthographic
+        declared +                       // the game's own values
         'out vec4 c;'+                   // out color
         // the depth texture's value back to a distance, as the camera's projection put it there
         'float sceneDepth(vec2 uv){'+
         'float d=texture(iChannel2,uv).r*2.-1.,n=iDepthRange.x,f=iDepthRange.y;'+
-        'return iDepthRange.z>0.?(d*(f-n)+f+n)/2.:f>0.?2.*n*f/(f+n-d*(f-n)):2.*n/(1.-d);}'+
+        'return iDepthRange.z>0.?(d*(f-n)+f+n)/2.:f>0.?2.*n*f/(f+n-d*(f-n)):2.*n/max(1.-d,1e-7);}'+
+        // whether there is depth to read: a range of all 0 is none, an orthographic near plane may be behind
+        '\n#define LJS_HAS_DEPTH (iDepthRange != vec3(0))\n'+ // a define needs a line of its own
         '\n' + shaderCode + '\n'+        // insert custom shader code
         'void main(){'+                  // shader entry point
         'mainImage(c,gl_FragCoord.xy);'+ // call post process function
@@ -13803,9 +13895,10 @@ function postProcessFragmentSource(shaderCode)
 /**
  * Shader code for a bloom effect, the bright parts of the image blurred back over it
  * - Pass it to PostProcessPlugin, or edit the string to build an effect on top of it
- * @param {number} [threshold] - Brightness where the glow starts, 0 is everything and 1 is only pure white
- * @param {number} [strength] - How much glow to add
- * @param {number} [size] - How far the glow spreads in pixels, which also sets how many samples it takes
+ * @param {number|string} [threshold] - Brightness where the glow starts, 0 is everything and 1 is only pure white
+ * @param {number|string} [strength] - How much glow to add
+ * @param {number} [size] - How far the glow spreads in pixels, which also sets how many samples it takes, so a
+ *   number and not a value's name
  * @return {string}
  * @memberof PostProcess
  */
@@ -13816,8 +13909,8 @@ function postProcessBloomShader(threshold=.6, strength=1, size=6)
 
 /**
  * Set up post processing with a bloom effect, so bright colors and lights glow
- * @param {number} [threshold] - Brightness where the glow starts, 0 is everything and 1 is only pure white
- * @param {number} [strength] - How much glow to add
+ * @param {number|string} [threshold] - Brightness where the glow starts, 0 is everything and 1 is only pure white
+ * @param {number|string} [strength] - How much glow to add
  * @param {number} [size] - How far the glow spreads in pixels
  * @param {boolean} [includeMainCanvas] - Glow the 2D canvas too, off by default so HUD text stays crisp
  *   (a HUD drawn with WebGL in gameRenderPost glows either way, draw it with useWebGL=false)
@@ -13835,7 +13928,32 @@ function postProcessBloom(threshold=.6, strength=1, size=6, includeMainCanvas=fa
 // its pixel; one that bends uv or samples the frame, the curve, chromatic and glow, goes before the ones that shade
 
 // a number as GLSL writes it, a float with a point
-const postProcessNumber = (n)=> (ASSERT(isNumber(n), 'effect settings must be numbers', n), n.toFixed(4));
+// an effect setting: a number written into the code, or the name of a postProcess value, read from it each frame
+const postProcessNumber = (n)=> typeof n === 'string' ?
+    (ASSERT(postProcessNameCheck(n), 'an effect setting is a number or the name of a postProcess value', n), n) :
+    (ASSERT(isNumber(n) && isFinite(n), 'an effect setting is a finite number or the name of a postProcess value', n),
+        n && abs(n) < .01 ? String(n) : n.toFixed(4)); // a small one keeps its digits, as 1.5e-7 or 0.00015
+
+// a GLSL name for a value or a setting, which no part of the shader uses already: not the engine's own, i and a
+// capital, nor those of mainImage or an effect's own locals, which start with an underscore, nor a GLSL word
+const postProcessGLSLWords = new Set(('c uv p sceneDepth mainImage main ' +
+    // keywords and reserved words
+    'attribute const uniform varying layout centroid flat smooth noperspective patch sample break continue do for ' +
+    'while switch case default if else subroutine in out inout float double int void bool true false invariant ' +
+    'precise discard return lowp mediump highp precision struct common partition active asm class union enum ' +
+    'typedef template this resource goto inline noinline public static extern external interface long short half ' +
+    'fixed unsigned superp input output filter sizeof cast namespace using coherent volatile restrict readonly ' +
+    'writeonly atomic_uint uint mat2 mat3 mat4 vec2 vec3 vec4 ivec2 ivec3 ivec4 bvec2 bvec3 bvec4 uvec2 uvec3 uvec4 ' +
+    // built in functions
+    'radians degrees sin cos tan asin acos atan sinh cosh tanh asinh acosh atanh pow exp log exp2 log2 sqrt ' +
+    'inversesqrt abs sign floor trunc round roundEven ceil fract mod modf min max clamp mix step smoothstep isnan ' +
+    'isinf length distance dot cross normalize faceforward reflect refract matrixCompMult outerProduct transpose ' +
+    'determinant inverse lessThan lessThanEqual greaterThan greaterThanEqual equal notEqual any all not textureSize ' +
+    'texture textureProj textureLod textureOffset texelFetch texelFetchOffset textureProjOffset textureLodOffset ' +
+    'textureProjLod textureProjLodOffset textureGrad textureGradOffset textureProjGrad textureProjGradOffset dFdx ' +
+    'dFdy fwidth').split(' '));
+const postProcessNameCheck = (name)=> /^[A-Za-z][A-Za-z0-9_]*$/.test(name) && !name.includes('__') &&
+    !/^(i[A-Z]|gl_|webgl_|GL_|mat[2-4]|[dfh]vec[2-4]|[iu]?(sampler|image)([123]D|Cube|Buffer|External))/.test(name) && !postProcessGLSLWords.has(name);
 
 /**
  * Join effects into one post process shader, in the order given, for PostProcessPlugin or setShaderCode
@@ -13860,15 +13978,16 @@ function postProcessEffects(...effects)
 
 /**
  * Bright parts glow, the bloom as an effect to join with others; postProcessBloom sets up bloom on its own
- * @param {number} [threshold] - Brightness where the glow starts, 0 is everything and 1 is only pure white
- * @param {number} [strength] - How much glow to add
- * @param {number} [size] - How far the glow spreads in pixels, which also sets how many samples it takes
+ * @param {number|string} [threshold] - Brightness where the glow starts, 0 is everything and 1 is only pure white
+ * @param {number|string} [strength] - How much glow to add
+ * @param {number} [size] - How far the glow spreads in pixels, which also sets how many samples it takes, so a
+ *   number and not a value's name
  * @return {string}
  * @memberof PostProcess
  */
 function postProcessGlow(threshold=.6, strength=1, size=6)
 {
-    ASSERT(isNumber(threshold) && isNumber(strength) && isNumber(size), 'glow settings must be numbers');
+    ASSERT(isNumber(size), 'glow size is a number, it sets how many samples the glow takes');
     ASSERT(size > 0, 'glow size must be above zero');
     ASSERT(size <= 32, 'a glow this wide takes a sample every few pixels of every ring, which is hundreds of samples a pixel', size);
 
@@ -13886,21 +14005,22 @@ function postProcessGlow(threshold=.6, strength=1, size=6)
         const count = max(5 + 2 * j, round(2 * radius)) | 1;
         taps += count;
         code += `
-        for (int k = 0; k < ${count}; ++k)
+        for (int _k = 0; _k < ${count}; ++_k)
         {
-            float a = float(k) * ${(2 * PI / count).toFixed(7)}${j ? ' + ' + (j * 2.3999632).toFixed(7) : ''};
-            glow += max(vec3(0), texture(iChannel0, uv + vec2(cos(a), sin(a)) * ${radius.toFixed(4)} / iResolution.xy).rgb - ${threshold.toFixed(4)});
+            float _a = float(_k) * ${(2 * PI / count).toFixed(7)}${j ? ' + ' + (j * 2.3999632).toFixed(7) : ''};
+            _glow += max(vec3(0), texture(iChannel0, uv + vec2(cos(_a), sin(_a)) * ${radius.toFixed(4)} / iResolution.xy).rgb - ${postProcessNumber(threshold)});
         }`;
     }
     return `        // glow
-        vec3 glow = vec3(0);${code}
-        c.rgb += glow * ${(strength / taps).toFixed(6)};`;
+        vec3 _glow = vec3(0);${code}
+        c.rgb += _glow * ${typeof strength === 'string' ? postProcessNumber(strength) + ' / ' + taps + '.' :
+            (strength / taps).toFixed(6)};`; // a number as before, a value's name divided in the shader
 }
 
 /**
  * Scan lines across the screen, like an old TV
- * @param {number} [strength] - How dark the lines are, and how bright between them
- * @param {number} [spacing] - Pixels from one line to the next
+ * @param {number|string} [strength] - How dark the lines are, and how bright between them
+ * @param {number|string} [spacing] - Pixels from one line to the next
  * @return {string}
  * @memberof PostProcess
  */
@@ -13912,66 +14032,130 @@ function postProcessScanlines(strength=.5, spacing=6)
 
 /**
  * Static noise over the picture, changing every frame
- * @param {number} [strength] - How bright the static is
- * @param {number} [size] - Size of a speck in pixels
+ * @param {number|string} [strength] - How bright the static is
+ * @param {number|string} [size] - Size of a speck in pixels
  * @return {string}
  * @memberof PostProcess
  */
 function postProcessNoise(strength=.1, size=2)
 {
     return `        // noise
-        vec2 q = fract((floor(p / ${postProcessNumber(size)}) + mod(iTime * 500., 1e3)) * .3197);
-        c.rgb += ${postProcessNumber(strength)} * fract(1. + sin(51. * q.x + 73. * q.y) * 13753.3);`;
+        vec2 _q = fract((floor(p / ${postProcessNumber(size)}) + mod(iTime * 500., 1e3)) * .3197);
+        c.rgb += ${postProcessNumber(strength)} * fract(1. + sin(51. * _q.x + 73. * _q.y) * 13753.3);`;
 }
 
 /**
  * Darken toward the edges and corners
- * @param {number} [strength] - How dark the corners get, 1 is black
- * @param {number} [falloff] - How far in it reaches, low darkens most of the screen, high only the corners
+ * @param {number|string} [strength] - How dark the corners get, 1 is black
+ * @param {number|string} [falloff] - How far in it reaches, low darkens most of the screen, high only the corners
  * @return {string}
  * @memberof PostProcess
  */
 function postProcessVignette(strength=1, falloff=3)
 {
     return `        // vignette
-        vec2 d = uv * 2. - 1.;
-        c.rgb *= 1. - ${postProcessNumber(strength)} * min(1., pow(dot(d, d) / 2., ${postProcessNumber(falloff)}));`;
+        vec2 _d = uv * 2. - 1.;
+        c.rgb *= 1. - ${postProcessNumber(strength)} * min(1., pow(dot(_d, _d) / 2., ${postProcessNumber(falloff)}));`;
 }
 
 /**
  * Bend the picture like the bulged glass of an old TV, black past the corners; put it first
- * @param {number} [strength] - How much it bends
+ * @param {number|string} [strength] - How much it bends
  * @return {string}
  * @memberof PostProcess
  */
 function postProcessCurve(strength=.1)
 {
     return `        // curve
-        vec2 d = uv * 2. - 1.;
-        d *= 1. + ${postProcessNumber(strength)} * dot(d, d);
-        uv = d * .5 + .5;
-        c = all(lessThan(abs(d), vec2(1))) ? texture(iChannel0, uv) : vec4(0, 0, 0, 1);`;
+        vec2 _d = uv * 2. - 1.;
+        _d *= 1. + ${postProcessNumber(strength)} * dot(_d, _d);
+        uv = _d * .5 + .5;
+        c = all(lessThan(abs(_d), vec2(1))) ? texture(iChannel0, uv) : vec4(0, 0, 0, 1);`;
 }
 
 /**
  * Split red and blue apart toward the edges, like a cheap lens; put it before what shades the picture
- * @param {number} [strength] - How far apart at the edge, as a part of the screen
+ * @param {number|string} [strength] - How far apart at the edge, as a part of the screen
  * @return {string}
  * @memberof PostProcess
  */
 function postProcessChromatic(strength=.005)
 {
     return `        // chromatic
-        vec2 d = (uv - .5) * ${postProcessNumber(strength)} * 2.;
-        c.r = texture(iChannel0, uv + d).r;
-        c.b = texture(iChannel0, uv - d).b;`;
+        vec2 _d = (uv - .5) * ${postProcessNumber(strength)} * 2.;
+        c.r = texture(iChannel0, uv + _d).r;
+        c.b = texture(iChannel0, uv - _d).b;`;
+}
+
+// a blur's widest is 32 pixels, past which its 24 taps sit far enough apart to show; a value's is the game's to keep
+const postProcessBlurCheck = (blur)=>
+    ASSERT(typeof blur === 'string' || blur <= 32, 'a blur of more than 32 pixels shows its taps as copies', blur);
+
+// a blur over a disc of radius _r pixels around uv, of 24 taps spread evenly by the golden angle; weight, when given,
+// is GLSL for how much a tap at _puv, _s of the radius out, counts, from 0 to 1
+function postProcessDiscBlur(weight)
+{
+    return `
+        vec3 _sum = vec3(0);
+        float _total = 0.;
+        for (int _k = 0; _k < 24; ++_k)
+        {
+            float _s = sqrt((float(_k) + .5) / 24.), _a = float(_k) * 2.39996;
+            vec2 _puv = uv + vec2(cos(_a), sin(_a)) * _s * _r / iResolution.xy;
+            float _w = ${weight || '1.'};
+            _sum += texture(iChannel0, _puv).rgb * _w;
+            _total += _w;
+        }
+        c.rgb = _total > 0. ? _sum / _total : c.rgb;`;
+}
+
+/**
+ * Keep a band across the screen sharp and blur the picture above and below it, as a tilt shift lens does, which
+ * makes a scene look like a small model; it reads only the screen, so it works in 2D and 3D; put it first
+ * @param {number|string} [focus] - Height of the middle of the sharp band, 0 the bottom of the screen and 1 the top
+ * @param {number|string} [size] - Height of the sharp band, as a part of the screen
+ * @param {number|string} [blur] - Widest blur in pixels, reached half the screen past the band, at most 32
+ * @return {string}
+ * @memberof PostProcess
+ * @example
+ * new PostProcessPlugin(postProcessEffects(postProcessTiltShift(.4, .2, 10), postProcessVignette(.5)));
+ */
+function postProcessTiltShift(focus=.5, size=.25, blur=8)
+{
+    postProcessBlurCheck(blur);
+    const n = postProcessNumber;
+    return `        // tilt shift
+        float _r = ${n(blur)} * smoothstep(0., .5, abs(uv.y - ${n(focus)}) - ${n(size)} * .5);${postProcessDiscBlur()}`;
+}
+
+/**
+ * Keep what is a distance from the camera sharp and blur what is nearer or farther, as a camera lens does; needs
+ * render3D.depthTexture on, and blurs 3D only, 2D draws having no depth; put it first
+ * - What is in focus stays sharp at its edges: a blur in front of or behind it leaves out what is in focus
+ * @param {number|string} [focus] - Distance from the camera, along its view, that is sharpest, in world units
+ * @param {number|string} [range] - How deep the sharp part is; the blur grows over as far again past it
+ * @param {number|string} [blur] - Widest blur in pixels, at most 32
+ * @return {string}
+ * @memberof PostProcess
+ * @example
+ * render3D.depthTexture = true;
+ * new PostProcessPlugin(postProcessEffects(postProcessDepthOfField(10, 4, 8)));
+ */
+function postProcessDepthOfField(focus=10, range=4, blur=8)
+{
+    postProcessBlurCheck(blur);
+    const n = postProcessNumber;
+    const amount = (depth)=> `${n(blur)} * smoothstep(0., ${n(range)}, abs(${depth} - ${n(focus)}) - ${n(range)} * .5)`;
+    // a tap counts as far as its own blur reaches back to here, so a sharp thing in front is not smeared over
+    return `        // depth of field, none where there is no depth, as with render3D.depthTexture off
+        float _r = LJS_HAS_DEPTH ? ${amount('sceneDepth(uv)')} : 0.;${postProcessDiscBlur(`clamp(${amount('sceneDepth(_puv)')} - _s * _r + 1., 0., 1.)`)}`;
 }
 
 /**
  * Draw lines where the 3D depth jumps, around objects and along their creases; needs render3D.depthTexture on
  * @param {Color} [color] - The lines' color, its alpha how strong they are
- * @param {number} [thickness] - How wide the lines are in pixels
- * @param {number} [threshold] - How big a jump makes a line, as a part of the distance, lower draws more
+ * @param {number|string} [thickness] - How wide the lines are in pixels
+ * @param {number|string} [threshold] - How big a jump makes a line, as a part of the distance, lower draws more
  * @return {string}
  * @memberof PostProcess
  */
@@ -13980,24 +14164,25 @@ function postProcessOutline(color=BLACK, thickness=1, threshold=.02)
     ASSERT(isColor(color), 'outline color must be a Color');
     const n = postProcessNumber;
     return `        // outline
-        vec2 o = ${n(thickness)} / iResolution.xy;
-        float d = sceneDepth(uv);
-        float dx = abs(sceneDepth(uv + vec2(o.x, 0)) + sceneDepth(uv - vec2(o.x, 0)) - 2. * d);
-        float dy = abs(sceneDepth(uv + vec2(0, o.y)) + sceneDepth(uv - vec2(0, o.y)) - 2. * d);
-        vec4 line = vec4(${n(color.r)}, ${n(color.g)}, ${n(color.b)}, ${n(color.a)});
-        c.rgb = mix(c.rgb, line.rgb, line.a * step(${n(threshold)}, max(dx, dy) / d));`;
+        vec2 _o = ${n(thickness)} / iResolution.xy;
+        float _d = sceneDepth(uv);
+        float _dx = abs(sceneDepth(uv + vec2(_o.x, 0)) + sceneDepth(uv - vec2(_o.x, 0)) - 2. * _d);
+        float _dy = abs(sceneDepth(uv + vec2(0, _o.y)) + sceneDepth(uv - vec2(0, _o.y)) - 2. * _d);
+        vec4 _line = vec4(${n(color.r)}, ${n(color.g)}, ${n(color.b)}, ${n(color.a)});
+        if (LJS_HAS_DEPTH)
+            c.rgb = mix(c.rgb, _line.rgb, _line.a * step(${n(threshold)}, max(_dx, _dy) / max(abs(_d), 1e-6)));`;
 }
 
 /**
  * The look of an old TV, as one effect to use alone or join with others: static noise, scan lines, a soft glow and
  * a vignette, and a bulged screen when curve is set; any setting at 0 leaves that part out
  * @param {Object} [settings]
- * @param {number} [settings.noise] - Static noise strength
- * @param {number} [settings.scanlines] - Scan line strength
- * @param {number} [settings.scanlineSpacing] - Pixels from one scan line to the next
- * @param {number} [settings.glow] - Soft glow strength
- * @param {number} [settings.vignette] - Vignette strength
- * @param {number} [settings.curve] - How much the screen bulges, 0 by default for flat
+ * @param {number|string} [settings.noise] - Static noise strength
+ * @param {number|string} [settings.scanlines] - Scan line strength
+ * @param {number|string} [settings.scanlineSpacing] - Pixels from one scan line to the next
+ * @param {number|string} [settings.glow] - Soft glow strength
+ * @param {number|string} [settings.vignette] - Vignette strength
+ * @param {number|string} [settings.curve] - How much the screen bulges, 0 by default for flat
  * @return {string}
  * @example
  * new PostProcessPlugin(postProcessEffects(postProcessTV({scanlines: .4, curve: .1})));
@@ -14490,7 +14675,7 @@ class LightSystemPlugin
                     o.renderLight();
                 }
 
-                // 3b. emissive objects draw their shape in grey at their emissive level, white at 1, adding that much
+                // 3b. emissive objects draw their shape in gray at their emissive level, white at 1, adding that much
                 //     light where they are so they show their own colors; text goes to the 1x1 canvas as in the
                 //     shadow pass, so it is not drawn twice
                 const saved = [drawContext, glCustomShader];
@@ -14502,7 +14687,7 @@ class LightSystemPlugin
                     {
                         if (o.destroyed || !(o.emissive > 0)) continue;
                         const level = clamp(o.emissive)*255+.5|0; // packed like rgbaInt, red in the low byte
-                        glColorMask = 0xff000000; // its own alpha, and the grey from the additive color
+                        glColorMask = 0xff000000; // its own alpha, and the gray from the additive color
                         glColorAdditive = level | level<<8 | level<<16;
                         glAdditive || setAdditiveBlendMode(); // added, an emitter ends its render with it off
                         setShader(o.shader);
@@ -15186,8 +15371,14 @@ let uiDebug = 0;
 function uiSetDebug(debugMode)
 { uiDebug = typeof debugMode === 'boolean' ? (debugMode ? 1 : 0) : debugMode; }
 
+/**
+ * @callback DragAndDropCallback - Callback for drag and drop events
+ * @param {DragEvent} event - The drag event
+ * @memberof UISystem
+ */
+
 ///////////////////////////////////////////////////////////////////////////////
-/** 
+/**
  * UI System Global Object
  * @memberof UISystem
  */
@@ -15664,7 +15855,7 @@ class UISystemPlugin
     *  @param {'left'|'center'|'right'} [align]
     *  @param {string}  [font=uiSystem.defaultFont]
     *  @param {string}  [fontStyle]
-    *  @param {boolean} [applyMaxWidth=true]
+    *  @param {boolean} [applyMaxWidth]
     *  @param {Vector2} [textShadow]
     *  @param {Color}   [shadowColor]
     *  @param {number}  [shadowBlur]
@@ -15678,12 +15869,6 @@ class UISystemPlugin
         drawTextScreen(text, pos, size.y, color, lineWidth, lineColor, align, font, fontStyle, applyMaxWidth ? size.x : undefined, 0, context);
         context.shadowColor = '#0000';
     }
-
-    /**
-     * @callback DragAndDropCallback - Callback for drag and drop events
-     * @param {DragEvent} event - The drag event
-     * @memberof UISystem
-     */
 
     /** Setup drag and drop event handlers
     *  Automatically prevents defaults and calls the given functions
@@ -16363,19 +16548,24 @@ class UIObject
     /** Called when the navigation button is pressed on this object */
     navigatePressed() { this.click(); }
 
-    /** @return {boolean} - Is the mouse hovering over this element */
+    /** Is the mouse hovering over this element
+     *  @return {boolean} */
     isHoverObject() { return uiSystem.hoverObject === this; }
 
-    /** @return {boolean} - Is the mouse held onto this element */
+    /** Is the mouse held onto this element
+     *  @return {boolean} */
     isActiveObject() { return uiSystem.activeObject === this; }
 
-    /** @return {boolean} - Is the gamepad or keyboard navigation object */
+    /** Is the gamepad or keyboard navigation object
+     *  @return {boolean} */
     isNavigationObject() { return uiSystem.navigationObject === this; }
 
-    /** @return {boolean} - Is this object in keyboard input mode */
+    /** Is this object in keyboard input mode
+     *  @return {boolean} */
     isKeyInputObject() { return uiSystem.keyInputObject === this; }
 
-    /** @return {boolean} - Can it be interacted with, it and every parent visible and enabled */
+    /** Can it be interacted with, it and every parent visible and enabled
+     *  @return {boolean} */
     isInteractive() { return this.interactive && uiObjectIsUsable(this); }
 
     /** Returns string containing info about this object for debugging
@@ -16906,9 +17096,9 @@ class UIVideo extends UIObject
      *  @param {Vector2} pos
      *  @param {Vector2} size
      *  @param {string} src - Video file path or URL
-     *  @param {boolean} [autoplay=false] - Start playing immediately?
-     *  @param {boolean} [loop=false] - Loop the video?
-     *  @param {number} [volume=1] - Volume percent scaled by global volume (0-1)
+     *  @param {boolean} [autoplay] - Start playing immediately?
+     *  @param {boolean} [loop] - Loop the video?
+     *  @param {number} [volume] - Volume percent scaled by global volume (0-1)
      */
     constructor(pos, size, src, autoplay=false, loop=false, volume=1)
     {
@@ -17063,10 +17253,10 @@ class UILayout extends UIObject
 {
     /** Create a UILayout container that auto-arranges children
      *  @param {Vector2} [pos]
-     *  @param {number}  [columns=1]     - Number of columns (1 = vertical list)
-     *  @param {number}  [gap=10]        - Space between children
-     *  @param {number}  [padding=10]    - Space between container border and children
-     *  @param {boolean} [transparent=false] - If true, draws no background, outline, or shadow
+     *  @param {number}  [columns]     - Number of columns (1 = vertical list)
+     *  @param {number}  [gap]        - Space between children
+     *  @param {number}  [padding]    - Space between container border and children
+     *  @param {boolean} [transparent] - If true, draws no background, outline, or shadow
      */
     constructor(pos, columns=1, gap=10, padding=10, transparent=false)
     {
@@ -17485,7 +17675,8 @@ class Box2dObject extends EngineObject
      *  @param {number}  [density]
      *  @param {number}  [friction]
      *  @param {number}  [restitution]
-     *  @param {boolean} [isSensor] */
+     *  @param {boolean} [isSensor]
+     *  @return {Object} - The fixture made, Box2D's own */
     addShape(shape, density=1, friction=.2, restitution=0, isSensor=false)
     {
         ASSERT(isNumber(density), 'density must be a number');
@@ -17514,7 +17705,8 @@ class Box2dObject extends EngineObject
      *  @param {number}  [density]
      *  @param {number}  [friction]
      *  @param {number}  [restitution]
-     *  @param {boolean} [isSensor] */
+     *  @param {boolean} [isSensor]
+     *  @return {Object|undefined} - The fixture made, Box2D's own, undefined for a shape too small to make */
     addBox(size=vec2(1), offset=vec2(), angle=0, density, friction, restitution, isSensor)
     {
         ASSERT(isVector2(size), 'size must be a Vector2');
@@ -17539,7 +17731,8 @@ class Box2dObject extends EngineObject
      *  @param {number}  [density]
      *  @param {number}  [friction]
      *  @param {number}  [restitution]
-     *  @param {boolean} [isSensor] */
+     *  @param {boolean} [isSensor]
+     *  @return {Object|undefined} - The fixture made, Box2D's own, undefined for a shape too small to make */
     addPoly(points, density, friction, restitution, isSensor)
     {
         ASSERT(isArray(points), 'points must be an array');
@@ -17586,7 +17779,8 @@ class Box2dObject extends EngineObject
      *  @param {number}  [density]
      *  @param {number}  [friction]
      *  @param {number}  [restitution]
-     *  @param {boolean} [isSensor] */
+     *  @param {boolean} [isSensor]
+     *  @return {Object|undefined} - The fixture made, Box2D's own, undefined for a shape too small to make */
     addRegularPoly(diameter=1, sides=8, density, friction, restitution, isSensor)
     {
         ASSERT(isNumber(diameter) && diameter>0, 'diameter must be a positive number');
@@ -17606,7 +17800,8 @@ class Box2dObject extends EngineObject
      *  @param {number}  [density]
      *  @param {number}  [friction]
      *  @param {number}  [restitution]
-     *  @param {boolean} [isSensor] */
+     *  @param {boolean} [isSensor]
+     *  @return {Object|undefined} - The fixture made, Box2D's own, undefined for a shape too small to make */
     addRandomPoly(diameter=1, density, friction, restitution, isSensor)
     {
         ASSERT(isNumber(diameter) && diameter>0, 'diameter must be a positive number');
@@ -17625,7 +17820,8 @@ class Box2dObject extends EngineObject
      *  @param {number}  [density]
      *  @param {number}  [friction]
      *  @param {number}  [restitution]
-     *  @param {boolean} [isSensor] */
+     *  @param {boolean} [isSensor]
+     *  @return {Object} - The fixture made, Box2D's own */
     addCircle(diameter=1, offset=vec2(), density, friction, restitution, isSensor)
     {
         ASSERT(isNumber(diameter) && diameter>0, 'diameter must be a positive number');
@@ -17645,7 +17841,8 @@ class Box2dObject extends EngineObject
      *  @param {number}  [density]
      *  @param {number}  [friction]
      *  @param {number}  [restitution]
-     *  @param {boolean} [isSensor] */
+     *  @param {boolean} [isSensor]
+     *  @return {Object} - The fixture made, Box2D's own */
     addEdge(point1, point2, density, friction, restitution, isSensor)
     {
         ASSERT(isVector2(point1), 'point1 must be a Vector2');
@@ -17663,7 +17860,8 @@ class Box2dObject extends EngineObject
      *  @param {number}  [density]
      *  @param {number}  [friction]
      *  @param {number}  [restitution]
-     *  @param {boolean} [isSensor] */
+     *  @param {boolean} [isSensor]
+     *  @return {Array<Object>} - The fixtures made, Box2D's own */
     addEdgeList(points, density, friction, restitution, isSensor)
     {
         ASSERT(isArray(points), 'points must be an array');
@@ -17696,7 +17894,8 @@ class Box2dObject extends EngineObject
      *  @param {number}  [density]
      *  @param {number}  [friction]
      *  @param {number}  [restitution]
-     *  @param {boolean} [isSensor] */
+     *  @param {boolean} [isSensor]
+     *  @return {Array<Object>} - The fixtures made, Box2D's own */
     addEdgeLoop(points, density, friction, restitution, isSensor)
     {
         ASSERT(isArray(points), 'points must be an array');
@@ -18614,6 +18813,8 @@ class Box2dRevoluteJoint extends Box2dJoint
  * Box2D Pin Joint
  * - Pins two objects together at a point, where they still turn freely, like a nail through two boards
  * - A revolute joint at that point, so it holds exactly and its limits and motor work too
+ * - new Box2dPinJoint(objectA, objectB, pos, collide): the point defaults to objectA's position, where a revolute
+ *   joint's anchor defaults to objectB's
  * @extends Box2dRevoluteJoint
  * @memberof Box2D
  */
@@ -18969,14 +19170,6 @@ class Box2dWeldJoint extends Box2dJoint
     /** Get the damping ratio
      *  @return {number} */
     getDampingRatio() { return this.box2dJoint.GetDampingRatio(); }
-
-    /** @deprecated since 1.20, use setDampingRatio
-     *  @param {number} ratio */
-    setSpringDampingRatio(ratio) { this.setDampingRatio(ratio); }
-
-    /** @deprecated since 1.20, use getDampingRatio
-     *  @return {number} */
-    getSpringDampingRatio() { return this.getDampingRatio(); }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -19504,7 +19697,8 @@ class Box2dPlugin
     // helper functions
 
     /** converts a box2d vec2 to a Vector2
-     *  @param {Object} v */
+     *  @param {Object} v
+     *  @return {Vector2} */
     vec2From(v)
     {
         ASSERT(v instanceof box2d.instance.b2Vec2);
@@ -19512,7 +19706,8 @@ class Box2dPlugin
     }
 
     /** converts a box2d vec2 pointer to a Vector2
-     *  @param {Object} vp */
+     *  @param {Object} vp
+     *  @return {Vector2} */
     vec2FromPointer(vp)
     {
         const v = box2d.instance.wrapPointer(vp, box2d.instance.b2Vec2);
@@ -19521,7 +19716,8 @@ class Box2dPlugin
 
     /** converts a Vector2 to a new box2d vec2, which stays until destroyed with box2d.instance.destroy;
      *  the plugin itself passes Box2D reused ones, since Box2D copies every vector it is given
-     *  @param {Vector2} v */
+     *  @param {Vector2} v
+     *  @return {Object} - A Box2D vector, its b2Vec2 */
     vec2dTo(v)
     {
         ASSERT(isVector2(v));
@@ -19529,11 +19725,13 @@ class Box2dPlugin
     }
 
     /** checks if a box2d object is null
-     *  @param {Object} o */
+     *  @param {Object} o
+     *  @return {boolean} */
     isNull(o) { return !box2d.instance.getPointer(o); }
 
     /** casts a box2d object to a shape type
-     *  @param {Object} o */
+     *  @param {Object} o
+     *  @return {Object} - The shape as its own Box2D type */
     castShapeObject(o)
     {
         switch (o.GetType())
@@ -19552,7 +19750,8 @@ class Box2dPlugin
     }
 
     /** casts a box2d object to a joint type
-     *  @param {Object} o */
+     *  @param {Object} o
+     *  @return {Object} - The joint as its own Box2D type */
     castJointObject(o)
     {
         switch (o.GetType())
@@ -19716,7 +19915,7 @@ async function box2dInit()
  *  @param {Vector2} pos - Screen space position
  *  @param {Vector2} size - Screen space size
  *  @param {TileInfo} startTile - Top-left tile of the 3x3 block to sample (see drawNineSlice)
- *  @param {Color|number} [color=WHITE] - Color to modulate with; a number here is the borderSize of the order before 1.20, deprecated
+ *  @param {Color} [color=WHITE] - Color to modulate with
  *  @param {number} [borderSize] - Rendered thickness of the border sections
  *  @param {Color} [additiveColor] - Additive color
  *  @param {number} [extraSpace] - Extra spacing adjustment
@@ -19726,12 +19925,9 @@ async function box2dInit()
  *  @memberof DrawUtilities */
 function drawNineSliceScreen(pos, size, startTile, color=WHITE, borderSize=32, additiveColor, extraSpace=2, angle=0, useWebGL=false, context)
 {
-    if (isNumber(color)) // deprecated since 1.20, the order before it: borderSize, extraSpace and angle after startTile
-    {
-        [borderSize, extraSpace, angle] = [/** @type {number} */ (color), arguments[4] ?? 2, arguments[5] ?? 0];
-        color = WHITE, additiveColor = undefined;
-    }
-    drawNineSlice(pos, size, startTile, /** @type {Color} */ (color), borderSize, additiveColor, extraSpace, angle, useWebGL, true, context);
+    // the order before 1.20 had borderSize, extraSpace and angle after startTile
+    ASSERT(isColor(color), 'drawNineSliceScreen takes a color after startTile, then borderSize', color);
+    drawNineSlice(pos, size, startTile, color, borderSize, additiveColor, extraSpace, angle, useWebGL, true, context);
 }
 
 /** Draw a scalable nine-slice UI element in world space
@@ -19810,7 +20006,7 @@ function drawNineSlice(pos, size, startTile, color, borderSize, additiveColor, e
  *  @param {Vector2} pos - Screen space position
  *  @param {Vector2} size - Screen space size
  *  @param {TileInfo} startTile - First of 3 consecutive tiles: corner, side, center (see drawThreeSlice)
- *  @param {Color|number} [color=WHITE] - Color to modulate with; a number here is the borderSize of the order before 1.20, deprecated
+ *  @param {Color} [color=WHITE] - Color to modulate with
  *  @param {number} [borderSize] - Rendered thickness of the border sections
  *  @param {Color} [additiveColor] - Additive color
  *  @param {number} [extraSpace] - Extra spacing adjustment
@@ -19820,12 +20016,9 @@ function drawNineSlice(pos, size, startTile, color, borderSize, additiveColor, e
  *  @memberof DrawUtilities */
 function drawThreeSliceScreen(pos, size, startTile, color=WHITE, borderSize=32, additiveColor, extraSpace=2, angle=0, useWebGL=false, context)
 {
-    if (isNumber(color)) // deprecated since 1.20, the order before it: borderSize, extraSpace and angle after startTile
-    {
-        [borderSize, extraSpace, angle] = [/** @type {number} */ (color), arguments[4] ?? 2, arguments[5] ?? 0];
-        color = WHITE, additiveColor = undefined;
-    }
-    drawThreeSlice(pos, size, startTile, /** @type {Color} */ (color), borderSize, additiveColor, extraSpace, angle, useWebGL, true, context);
+    // the order before 1.20 had borderSize, extraSpace and angle after startTile
+    ASSERT(isColor(color), 'drawThreeSliceScreen takes a color after startTile, then borderSize', color);
+    drawThreeSlice(pos, size, startTile, color, borderSize, additiveColor, extraSpace, angle, useWebGL, true, context);
 }
 
 /** Draw a scalable three-slice UI element in world space
@@ -20689,7 +20882,8 @@ function setTextureSheetPadding(padding) { textureSheetPadding = padding; }
 
 ///////////////////////////////////////////////////////////////////////////////
 
-// Module-private list of tweens currently running, each with its active flag set while it is in it.
+// Module-private list of tweens currently running, each with its active flag set while it is in it; a stopped
+// one stays listed, inactive, until the next update takes it out, so stopping many is not a search for each
 const tweenActive = [];
 const tweenUpdateList = []; // the tweens an update moves, the ones active when it began
 let tweenUpdatePass = 0; // counts the updates, a tween started during one waits for the next
@@ -20700,14 +20894,10 @@ function tweenActivate(tween)
     tween.activePass = tweenUpdatePass; // started again, even while active, so this update leaves it alone
     if (tween.active) return;
     tween.active = true;
-    tweenActive.push(tween);
+    tween.listed || tweenActive.push(tween); // one stopped this update is still listed, in its place
+    tween.listed = true;
 }
-function tweenDeactivate(tween)
-{
-    if (!tween.active) return;
-    tween.active = false;
-    tweenActive.splice(tweenActive.indexOf(tween), 1);
-}
+function tweenDeactivate(tween) { tween.active = false; }
 
 // True if the value is an instance of a class that exposes a numeric-percent
 // `lerp(other, percent)` method (Vector2, Color, or any future class).
@@ -20735,9 +20925,9 @@ class Tween
      *  callback receives the interpolated value (a number, or a fresh instance
      *  for lerp-able types). Both endpoints must be the same type.
      *  @param {function(NonNullable<T>):void} callback - Called with the interpolated value each frame
-     *  @param {T} [start=0] - Starting value
-     *  @param {T} [end=1] - Ending value
-     *  @param {number} [duration=1] - Duration in seconds
+     *  @param {T} [start] - Starting value
+     *  @param {T} [end] - Ending value
+     *  @param {number} [duration] - Duration in seconds
      *  @param {Object} [options]
      *  @param {function(number):number} [options.ease] - Easing function (defaults to LINEAR)
      *  @param {boolean} [options.useRealTime=false] - Advance even when the game is paused (matches Timer's useRealTime)
@@ -20789,9 +20979,12 @@ class Tween
         /** Remaining iterations including the current run (loop/pingPong only).
          *  @private */
         this.loopRemaining = 0;
-        /** Whether it is in the active list, see isActive
+        /** Whether it is running, see isActive
          *  @private */
         this.active = false;
+        /** Whether it is in the active list, which a stopped one leaves at the next update
+         *  @private */
+        this.listed = false;
         /** The update it was started in, it first moves on the one after
          *  @private */
         this.activePass = 0;
@@ -20812,7 +21005,7 @@ class Tween
 
     /** Set the easing curve and return this for chaining.
      *  @param {function(number):number} easeFn
-     *  @returns {Tween<T>} */
+     *  @return {Tween<T>} */
     setEase(easeFn)
     {
         this.ease = easeFn;
@@ -20827,7 +21020,7 @@ class Tween
      *  - It is kept by `restart`, so a restarted tween calls it again when it completes
      *  - `stop` and `tweenStopAll` end a tween without calling it
      *  @param {function():void} callback
-     *  @returns {Tween<T>} */
+     *  @return {Tween<T>} */
     then(callback)
     {
         this.onComplete = callback;
@@ -20843,7 +21036,7 @@ class Tween
      *  A `then` callback, set before or after, is called when the last
      *  iteration ends.
      *  @param {number} [count=Infinity]
-     *  @returns {Tween<T>} */
+     *  @return {Tween<T>} */
     loop(count = Infinity)
     {
         this.loopRemaining = count;
@@ -20858,7 +21051,7 @@ class Tween
      *  A `then` callback, set before or after, is called when the last
      *  iteration ends.
      *  @param {number} [count=Infinity]
-     *  @returns {Tween<T>} */
+     *  @return {Tween<T>} */
     pingPong(count = Infinity)
     {
         this.loopRemaining = count;
@@ -20891,7 +21084,7 @@ class Tween
     }
 
     /** True if this tween is in the active list and not paused.
-     *  @returns {boolean} */
+     *  @return {boolean} */
     isActive()
     {
         return !this.paused && this.active;
@@ -20899,7 +21092,7 @@ class Tween
 
     /** Get how far this tween has progressed, from 0 (just started) to 1
      *  (completed). Clamped — overshoot past completion still reads 1.
-     *  @returns {number} */
+     *  @return {number} */
     getPercent()
     {
         return percent(this.duration - this.life, 0, this.duration);
@@ -20908,7 +21101,7 @@ class Tween
     /** Get the current interpolated value (the value most recently passed to
      *  the callback). Returns a number, Vector2, Vector3 or Color depending on the
      *  tween's start/end types.
-     *  @returns {T} */
+     *  @return {T} */
     getValue()
     {
         return this.interp(this.life);
@@ -20920,7 +21113,7 @@ class Tween
      *  - A vector goes past its ends as far as the easing does, as a number does; a Color stays between them,
      *    so its channels stay in range, and any other type goes as far as its own lerp takes it
      *  @param {number} life
-     *  @returns {T} */
+     *  @return {T} */
     interp(life)
     {
         // the ends of whatever type it tweens, each kind is handled below
@@ -20963,44 +21156,44 @@ const Ease =
 {
     /** Linear (identity) curve.
      *  @param {number} x
-     *  @returns {number}
+     *  @return {number}
      *  @memberof TweenSystem.Ease */
     LINEAR: (x) => x,
 
     /** Power curve factory: `Ease.POWER(n)` returns `x => x**n`.
      *  Use n=2 for quadratic, n=3 for cubic, etc.
      *  @param {number} n
-     *  @returns {function(number):number}
+     *  @return {function(number):number}
      *  @memberof TweenSystem.Ease */
     POWER: (n) => (x) => x ** n,
 
     /** Sine ease-in curve: starts slow, ends fast.
      *  @param {number} x
-     *  @returns {number}
+     *  @return {number}
      *  @memberof TweenSystem.Ease */
     SINE: (x) => 1 - cos(x * (PI / 2)),
 
     /** Circular ease-in curve.
      *  @param {number} x
-     *  @returns {number}
+     *  @return {number}
      *  @memberof TweenSystem.Ease */
     CIRC: (x) => 1 - (1 - x * x)**.5,
 
     /** Exponential ease-in curve (`2^(10x-10)`).
      *  @param {number} x
-     *  @returns {number}
+     *  @return {number}
      *  @memberof TweenSystem.Ease */
     EXPO: (x) => x === 0 ? 0 : 2 ** (10 * x - 10),
 
     /** Back ease-in: overshoots backward at the start before snapping forward.
      *  @param {number} x
-     *  @returns {number}
+     *  @return {number}
      *  @memberof TweenSystem.Ease */
     BACK: (x) => x * x * (2.70158 * x - 1.70158),
 
     /** Elastic ease-in: oscillations that grow toward the end.
      *  @param {number} x
-     *  @returns {number}
+     *  @return {number}
      *  @memberof TweenSystem.Ease */
     ELASTIC: (x) =>
         x === 0 ? 0 :
@@ -21010,7 +21203,7 @@ const Ease =
     /** Spring ease-in: wobbles around the start before springing to the end;
      *  `Ease.OUT(Ease.SPRING)` overshoots and settles on the target.
      *  @param {number} x
-     *  @returns {number}
+     *  @return {number}
      *  @memberof TweenSystem.Ease */
     SPRING: (x) =>
         1 -
@@ -21024,7 +21217,7 @@ const Ease =
      *  classic "object falls and hits the ground" shape (bounces near x=1),
      *  wrap with `Ease.OUT`: `Ease.OUT(Ease.BOUNCE)`.
      *  @param {number} x
-     *  @returns {number}
+     *  @return {number}
      *  @memberof TweenSystem.Ease
      *  @example
      *  Ease.BOUNCE                  // ease-in bounce (bouncy at start)
@@ -21047,7 +21240,7 @@ const Ease =
      *  convention, so wrapping a curve in `IN` is a no-op — useful when
      *  picking the direction programmatically.
      *  @param {function(number):number} f - Curve to use as ease-in (returned unchanged)
-     *  @returns {function(number):number}
+     *  @return {function(number):number}
      *  @memberof TweenSystem.Ease
      *  @example
      *  // Pick direction at runtime
@@ -21058,7 +21251,7 @@ const Ease =
 
     /** Reverse a curve so it eases out instead of in: `x => 1 - f(1 - x)`.
      *  @param {function(number):number} f
-     *  @returns {function(number):number}
+     *  @return {function(number):number}
      *  @memberof TweenSystem.Ease
      *  @example
      *  Ease.OUT(Ease.POWER(2)) // ease-out quadratic
@@ -21067,7 +21260,7 @@ const Ease =
 
     /** Combine the first half of `f` with `Ease.OUT(f)` for a symmetric curve.
      *  @param {function(number):number} f
-     *  @returns {function(number):number}
+     *  @return {function(number):number}
      *  @memberof TweenSystem.Ease */
     IN_OUT: (f) => Ease.PIECEWISE(f, Ease.OUT(f)),
 
@@ -21075,7 +21268,7 @@ const Ease =
      *  Each curve is mapped to its section: section i runs over [i/n, (i+1)/n]
      *  and its output is mapped to [i/n, (i+1)/n] of the overall range.
      *  @param {...function(number):number} fns
-     *  @returns {function(number):number}
+     *  @return {function(number):number}
      *  @memberof TweenSystem.Ease */
     PIECEWISE: (...fns) =>
     {
@@ -21093,7 +21286,7 @@ const Ease =
      *  @param {number} y1
      *  @param {number} x2
      *  @param {number} y2
-     *  @returns {function(number):number}
+     *  @return {function(number):number}
      *  @memberof TweenSystem.Ease
      *  @example
      *  Ease.BEZIER(0.25, 0.1, 0.25, 1) // CSS "ease"
@@ -21143,12 +21336,12 @@ const Ease =
  *  @param {string} propertyPath - Dot-separated path, e.g. `'pos.x'` or `'color'`
  *  @param {T} start - Starting value
  *  @param {T} end - Ending value
- *  @param {number} [duration=1] - Duration in seconds
+ *  @param {number} [duration] - Duration in seconds
  *  @param {Object} [options] - Same options as the Tween constructor
  *  @param {function(number):number} [options.ease] - Easing function (defaults to LINEAR)
  *  @param {boolean} [options.useRealTime=false] - Advance even when the game is paused
  *  @param {boolean} [options.paused=false] - Start in paused state
- *  @returns {Tween<T>}
+ *  @return {Tween<T>}
  *  @memberof TweenSystem
  *  @example
  *  // Numeric: slide an object's x with an ease-out sine curve
@@ -21269,8 +21462,13 @@ function tweenUpdate(gameDelta, realDelta)
     // from the next update. Newest first, as the list has always been walked.
     // a callback that calls tweenUpdate itself gets a list of its own, the outer update is still walking this one
     const list = tweenUpdateList.length ? [] : tweenUpdateList, pass = ++tweenUpdatePass;
+    let kept = 0;
     for (const t of tweenActive)
-        list.push(t);
+        if (t.active)
+            list.push(tweenActive[kept++] = t);
+        else
+            t.listed = false; // stopped since the last update, out of the list now
+    tweenActive.length = kept;
     // the list is let go however the walk ends: a callback that throws must not leave it held, or every
     // update after would take it for an update still going and make a list of its own
     try
@@ -21323,7 +21521,7 @@ function tweenUpdate(gameDelta, realDelta)
 function tweenStopAll()
 {
     for (const t of tweenActive)
-        t.thenCallback = undefined, t.active = false;
+        t.thenCallback = undefined, t.active = t.listed = false;
     tweenActive.length = 0;
 }
 
@@ -21587,7 +21785,8 @@ const PATHFINDER_TILE_VEC = vec2(1);
  *  @memberof PathFinding */
 class PathFinderNode
 {
-    /** @param {number} x - Tile x
+    /** Make the node of a grid cell, as PathFinder does for each
+     *  @param {number} x - Tile x
      *  @param {number} y - Tile y */
     constructor(x, y)
     {
@@ -21627,7 +21826,8 @@ class PathFinderNode
     /** Reset per-search state and walkability (called by buildNodeData). */
     reset() { this.walkable = false; this.cost = 0; this.resetSearch(); }
 
-    /** True if walkable and not blocked by cost. */
+    /** True if walkable and not blocked by cost.
+     *  @return {boolean} */
     isClear()
     {
         return this.walkable && this.cost === 0;
@@ -21649,7 +21849,8 @@ class PathFinderNode
  */
 class PathFinder
 {
-    /** @param {TileCollisionLayer|Vector2} source - Either a TileCollisionLayer
+    /** Make a path finder over a tile layer or a grid
+     *  @param {TileCollisionLayer|Vector2} source - Either a TileCollisionLayer
      *  (size and walkability auto-derived) or a Vector2 grid size (user
      *  overrides isWalkable). */
     constructor(source)
@@ -21718,7 +21919,7 @@ class PathFinder
      *  the instance or via a subclass.
      *  @param {number} x - Tile x
      *  @param {number} y - Tile y
-     *  @returns {boolean} */
+     *  @return {boolean} */
     isWalkable(x, y)
     {
         if (!this.tileLayer) return true;
@@ -21729,7 +21930,7 @@ class PathFinder
      *  Override to add cost-weighted terrain (mud, swamp, etc).
      *  @param {number} x - Tile x
      *  @param {number} y - Tile y
-     *  @returns {number} */
+     *  @return {number} */
     getCost(x, y)
     {
         return 0;
@@ -21738,7 +21939,7 @@ class PathFinder
     /** Get the node at tile coords, or null if out of bounds.
      *  @param {number} x
      *  @param {number} y
-     *  @returns {PathFinderNode|null} */
+     *  @return {PathFinderNode|null} */
     getNode(x, y)
     {
         if (x < 0 || y < 0 || x >= this.size.x || y >= this.size.y) return null;
@@ -21747,7 +21948,7 @@ class PathFinder
 
     /** Convert a world-space position to integer tile coords (no clamping).
      *  @param {Vector2} worldPos
-     *  @returns {Vector2} */
+     *  @return {Vector2} */
     worldToTile(worldPos)
     {
         const ox = this.tileLayer ? this.tileLayer.pos.x : 0;
@@ -21758,7 +21959,7 @@ class PathFinder
     /** Convert integer tile coords to the world-space center of that tile.
      *  @param {number} x
      *  @param {number} y
-     *  @returns {Vector2} */
+     *  @return {Vector2} */
     tileToWorld(x, y)
     {
         const ox = this.tileLayer ? this.tileLayer.pos.x : 0;
@@ -21802,7 +22003,7 @@ class PathFinder
      *  reached; false on disconnected goal or maxLoop exhaustion, which sets searchGaveUp.
      *  @param {PathFinderNode} startNode
      *  @param {PathFinderNode} endNode
-     *  @returns {boolean}
+     *  @return {boolean}
      *  @private */
     aStarSearch(startNode, endNode)
     {
@@ -21946,9 +22147,9 @@ class PathFinder
      *  unchanged walkability, pass `rebuild=false` and call `buildNodeData()`
      *  once externally to avoid redundant work.
      *  @param {Vector2} worldPos
-     *  @param {number} [searchRange=10] - Max box-radius in tiles
-     *  @param {boolean} [rebuild=true] - Whether to call buildNodeData first
-     *  @returns {PathFinderNode|null} */
+     *  @param {number} [searchRange] - Max box-radius in tiles
+     *  @param {boolean} [rebuild] - Whether to call buildNodeData first
+     *  @return {PathFinderNode|null} */
     getNearestClearNode(worldPos, searchRange = 10, rebuild = true)
     {
         ASSERT(isVector2(worldPos), 'worldPos must be a Vector2');
@@ -22111,20 +22312,36 @@ class PathFinder
     {
         if (path.length <= 2) return;
 
-        // Greedy: from each kept node, jump to the furthest node with a clear
-        // line to it, or else the next node. Every segment is one isLineClear
+        // Greedy: from each kept node, jump to the furthest corner with a clear
+        // line to it, then on along the straight run past it as far as one is
+        // clear, or else the next node. Every segment is one isLineClear
         // accepted or one the path already had, so none can cross a wall.
-        const original = path.slice();
+        // Corners first, so a winding path costs a check per corner and not
+        // per cell of it.
+        const original = path.slice(), last = original.length - 1;
+        const corners = [];
+        for (let i = 1; i < last; ++i)
+        {
+            const a = original[i - 1].pos, b = original[i].pos, c = original[i + 1].pos;
+            if ((b.x - a.x) * (c.y - a.y) !== (b.y - a.y) * (c.x - a.x))
+                corners.push(i);
+        }
+        corners.push(last);
         path.length = 0;
         path.push(original[0]);
-        for (let k = 0; k < original.length - 1;)
+        for (let k = 0; k < last;)
         {
-            let j = original.length - 1;
+            let j = k + 1;
             if (original[k].isClear()) // isLineClear needs both ends clear
-                while (j > k + 1 && !(original[j].isClear() && this.isLineClear(original[k].pos, original[j].pos)))
-                    --j;
-            else
-                j = k + 1;
+            {
+                const clear = (i)=> original[i].isClear() && this.isLineClear(original[k].pos, original[i].pos);
+                let c = corners.length - 1, next = last + 1; // next is the corner past the one found
+                while (c >= 0 && corners[c] > k + 1 && !clear(corners[c]))
+                    next = corners[c--];
+                j = c >= 0 && corners[c] > k + 1 ? corners[c] : k + 1;
+                for (let i = next - 1; i > j; --i)
+                    if (clear(i)) { j = i; break; }
+            }
             path.push(original[j]);
             k = j;
         }
@@ -22139,20 +22356,25 @@ class PathFinder
      *  @private */
     dropCollinearNodes(path)
     {
-        for (let i = path.length - 2; i >= 1; --i)
+        // one pass, a node kept only where the way turns from the last one kept
+        if (path.length < 3) return;
+        let kept = 1;
+        for (let i = 1; i < path.length - 1; ++i)
         {
-            const a = path[i - 1], b = path[i], c = path[i + 1];
-            if ((b.pos.x - a.pos.x) * (c.pos.y - a.pos.y) ===
+            const a = path[kept - 1], b = path[i], c = path[i + 1];
+            if ((b.pos.x - a.pos.x) * (c.pos.y - a.pos.y) !==
                 (b.pos.y - a.pos.y) * (c.pos.x - a.pos.x))
-                path.splice(i, 1);
+                path[kept++] = b;
         }
+        path[kept++] = path[path.length - 1];
+        path.length = kept;
     }
 
     /** Lookup helper: true when the node at tile coords (x, y) is in-bounds
      *  and clear (walkable, zero-cost). Used by isLineClear's hot path.
      *  @param {number} x
      *  @param {number} y
-     *  @returns {boolean}
+     *  @return {boolean}
      *  @private */
     isNodeClear(x, y)
     {
@@ -22169,7 +22391,7 @@ class PathFinder
      *  CheckLine() in pathFinding.cpp.
      *  @param {Vector2} startPos - Tile coords
      *  @param {Vector2} endPos - Tile coords
-     *  @returns {boolean}
+     *  @return {boolean}
      *  @private */
     isLineClear(startPos, endPos)
     {
@@ -22292,7 +22514,7 @@ class PathFinder
      *  @param {Vector2} startPos - World-space start
      *  @param {Vector2} endPos - World-space end
      *  @param {boolean} [rebuild] - Whether to call buildNodeData first
-     *  @returns {Vector2[]} */
+     *  @return {Vector2[]} */
     findPath(startPos, endPos, rebuild = true)
     {
         ASSERT(isVector2(startPos) && isVector2(endPos), 'findPath needs Vector2 endpoints');
@@ -22670,7 +22892,6 @@ class Vector3
 
 // scratch for multiply, nothing keeps a reference to it
 const matrix4Scratch = new Float32Array(16);
-const matrix4Identity = new Float32Array([1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1]);
 
 /**
  * 4x4 transform matrix for moving, rotating and scaling points in 3D
@@ -24101,7 +24322,8 @@ class Render3DPlugin
         this.streamCount = 0;
         /** @type {TextureInfo|undefined} */
         this.streamTileInfo = undefined;
-        this.streamState = undefined; // captured state the pending batch was drawn under
+        /** @type {Object|undefined} */
+        this.streamState = undefined; // captured state the pending batch was drawn under, render3DCaptureBatchState's
         this.streamUnlit = false;     // the pending batch is drawn unlit whatever that state says, billboards are
         /** @type {Mesh|undefined} */
         this.capture = undefined;     // the mesh a bake is filling
@@ -25066,7 +25288,7 @@ const RENDER3D_VERTEX_SOURCE =
     'gl_Position=viewProj*w;' +
     'P=w.xyz;' +
     'vec3 c0=m0.xyz,c1=m1.xyz,c2=m2.xyz;' +
-    'N=mat3(c0/dot(c0,c0),c1/dot(c1,c1),c2/dot(c2,c2))*n;' +
+    'N=mat3(c0/max(dot(c0,c0),1e-20),c1/max(dot(c1,c1),1e-20),c2/max(dot(c2,c2),1e-20))*n;' +
     'T=uvRect.xy+t*uvRect.zw;' +
     'L=t;' +
     'C=c*tint;' +
@@ -25188,7 +25410,7 @@ function render3DFragmentSource(fragmentCode)
         // shadow does not dim it
         'if(materialParams.z>0.){' +
         'vec3 w=normalize(P-cameraPos),q=reflect(w,n);' +
-        'float f=materialParams.z+(1.-materialParams.z)*pow(1.-max(dot(n,-w),0.),5.);' +
+        'float f=materialParams.z+(1.-materialParams.z)*pow(clamp(1.-dot(n,-w),0.,1.),5.);' +
         'c.rgb=mix(c.rgb,q.y>0.?mix(skyHorizon.rgb,skyTop.rgb,q.y):mix(skyHorizon.rgb,skyBottom.rgb,-q.y),f);' +
         '}}else c.rgb*=e;' + // fully emissive: its own color, or brighter, with no lighting to work out
         // the emissive map adds its light on top, lit or not
@@ -25205,7 +25427,8 @@ function render3DFragmentSource(fragmentCode)
 function render3DShaderProgram(shader)
 {
     ASSERT(shader instanceof Shader, 'render3D.shader must be a Shader, not the snippet itself');
-    return shader.program3D ||= glCreateProgram(RENDER3D_VERTEX_SOURCE, render3DFragmentSource(shader.fragmentCode));
+    const program = shader.program3D ||= glCreateProgram(RENDER3D_VERTEX_SOURCE, render3DFragmentSource(shader.fragmentCode));
+    return glFailedPrograms.has(program) ? render3D.program : program; // one that did not build draws as with none
 }
 
 // make a program current for the pass and send it the pass uniforms: the matrices, the camera and the lights,
@@ -25430,7 +25653,7 @@ function render3DSetMaterialUniforms(state)
 {
     const r = render3D, loaded = (map)=> render3DTextureOf(map)?.glTexture ? map : undefined;
     const normalMap = state.normalScale ? loaded(state.normalMap) : undefined, emissiveMap = loaded(state.emissiveMap);
-    render3DUniform4f('materialParams', normalMap ? state.normalScale : 0, state.shininess, state.reflectivity, 0);
+    render3DUniform4f('materialParams', normalMap ? state.normalScale : 0, max(state.shininess, 1e-3), state.reflectivity, 0);
     const ec = state.emissiveMapColor || WHITE;
     emissiveMap ? render3DUniform4f('emissiveTint', ec.r, ec.g, ec.b, 1) : render3DUniform4f('emissiveTint', 0, 0, 0, 0);
     render3DBindMap(2, normalMap, state);
@@ -25586,7 +25809,7 @@ function render3DSetDrawUniforms(matrix, tileInfo, tint, uvRect, state=render3D)
     // its alpha says whether the ground color is on
     gc ? render3DUniform4f('ambientGround', gc.r, gc.g, gc.b, 1) : render3DUniform4f('ambientGround', 0, 0, 0, 0);
 
-    render3DUniform4f('fogColor', fc.r, fc.g, fc.b, r.fogStart);
+    render3DUniform4f('fogColor', fc.r, fc.g, fc.b, r.fogEnd ? min(r.fogStart, r.fogEnd - 1e-3) : r.fogStart);
     // how the fragment shader finishes: 1 drops see through texels and keeps the draw opaque,
     // 0 blends them away instead, and -1 is additive, which has to fade into fog differently
     const blendMode = state.blend ? (state.additive ? -1 : 0) : 1;
@@ -30245,7 +30468,11 @@ async function loadOBJ(url, smooth=render3D?.smoothShading)
     const response = await fetch(url);
     if (!response.ok)
         throw new Error('loadOBJ failed: ' + url);
-    return parseOBJ(await response.text(), smooth);
+    const text = await response.text(), mesh = parseOBJ(text, smooth);
+    // a mesh of nothing draws nothing, so it says why, a web page being what a dev server sends for a mistyped path
+    mesh.points.length || console.warn('loadOBJ: ' + url + ' has no faces' +
+        (loadIsWebPage(text) ? ', it is a web page, so the path may be wrong' : ''));
+    return mesh;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -30416,8 +30643,22 @@ function render3DCSGNear(polygons, polygonsOther)
     const near = [], far = [];
     const faces = [[vec3(1, 0, 0), hi.x], [vec3(-1, 0, 0), -lo.x], [vec3(0, 1, 0), hi.y],
         [vec3(0, -1, 0), -lo.y], [vec3(0, 0, 1), hi.z], [vec3(0, 0, -1), -lo.z]];
+    const e = RENDER3D_CSG_EPSILON;
     for (const polygon of polygons)
     {
+        // wholly beyond a face, as most of a mesh cut many times is, it is far as it is: splitting it at the faces
+        // before would only cut it into parts that all end up far too
+        let x0 = Infinity, y0 = Infinity, z0 = Infinity, x1 = -Infinity, y1 = -Infinity, z1 = -Infinity;
+        for (const {pos} of polygon.vertices)
+        {
+            x0 = min(x0, pos.x); y0 = min(y0, pos.y); z0 = min(z0, pos.z);
+            x1 = max(x1, pos.x); y1 = max(y1, pos.y); z1 = max(z1, pos.z);
+        }
+        if (x0 > hi.x + e || x1 < lo.x - e || y0 > hi.y + e || y1 < lo.y - e || z0 > hi.z + e || z1 < lo.z - e)
+        {
+            far.push(polygon);
+            continue;
+        }
         let inside = [polygon];
         for (const [normal, w] of faces)
         {
@@ -30573,7 +30814,6 @@ function render3DCSGMesh(polygons)
     };
 
     // each loop with the points along its edges put in, as a fan
-    const flat = (a, b, c)=> b.subtract(a).cross(c.subtract(a)).lengthSquared() < 1e-18;
     for (const loop of loops)
     {
         if (loop.length < 3) continue;
@@ -31194,6 +31434,16 @@ class VoxelMap extends EngineObject3D
 
 const LEVEL3D_VERSION = 1; // the format a level's littlejs3D names
 
+/** A 3D level as it is saved, what level3DLoad takes and the 3D level editor edits
+ *  @typedef {Object} Level3D
+ *  @property {number} [littlejs3D] - The format's version, 1
+ *  @property {Array<Object>} objects - Each {id, type, pos, rotation, scale, properties}, all but type optional
+ *  @property {Object} [scene] - The scene block: sky, ambient, sunDirection, sunColor, fog, fogColor, shadows, lensFlare
+ *  @property {Object} [voxels] - A block map: {pos, size, blocks}
+ *  @property {Object} [terrain] - A height map: {pos, size, height, color, heights, paint}
+ *  @property {Object} [prefabs] - The level's own prefabs by name, each {objects, attached}
+ *  @memberof Level3D */
+
 // the types a level's objects are made from, by name
 const level3DTypes = new Map;
 
@@ -31212,7 +31462,7 @@ const level3DBaseScale = new WeakMap;
  *  - Adding a name again replaces it, Box, Sphere, Cylinder and Light too
  *  @param {string} name - The type the objects have in the level
  *  @param {Function} make - A class made at each object's position, or a function called with it
- *  @param {Object} [defaults] - Properties of each one made, the level editor shows inputs for them
+ *  @param {Object<string, any>} [defaults] - Properties of each one made, the level editor shows inputs for them
  *  @param {TileInfo} [tileInfo] - An icon for the level editor
  *  @memberof Level3D
  *  @example
@@ -31266,7 +31516,7 @@ function level3DAddMesh(name, mesh, tileInfo, color=WHITE)
  *    sunColor, fog, its start and end, fogColor, the horizon color when not given, shadows, and lensFlare, the
  *    sun's lens flare; what the block leaves out stays as the game set it, and a level with no block changes
  *    nothing
- *  @param {Object} level - The level, the level editor edits this same object
+ *  @param {Level3D} level - The level, the level editor edits this same object
  *  @return {Array<any>} - What each object's type made, a function that made nothing is left out
  *  @memberof Level3D */
 function level3DLoad(level)
@@ -31599,7 +31849,7 @@ function level3DMakeAt(object, pos, rotation, scale)
  *  @param {Vector3} [pos3D]
  *  @param {Vector3} [rotation3D] - In radians, as an object has it
  *  @param {Vector3} [scale3D] - Times the scale the type makes it with
- *  @param {Object} [properties] - Over the type's defaults
+ *  @param {Object<string, any>} [properties] - Over the type's defaults
  *  @return {any} - What the type made, a Prefab3D for a prefab, undefined when there is no such type
  *  @memberof Level3D
  *  @example
@@ -31638,7 +31888,8 @@ const level3DPrefabMaking = [];
  *    by hand does
  *  - Adding a name again replaces it
  *  @param {string} name - The type its instances have in a level
- *  @param {Object} prefab - {objects, attached}
+ *  @param {{objects: Array<Object>, attached?: boolean}} prefab - Its objects, about its own origin, and whether
+ *    they are attached
  *  @memberof Level3D
  *  @example
  *  level3DAddPrefab('Tower', {objects: [{type: 'Box', pos: [0, 1, 0], scale: [2, 2, 2]},
@@ -32041,7 +32292,6 @@ function particleEffectSanitize(raw)
     const text = typeof raw?.name === 'string' ? raw.name.replace(/[\x00-\x1f\x7f]+/g, ' ').trim() : '';
     const name = text ? text.slice(0, 60).trim() : 'Effect'; // no space left where it was cut
     const input = raw?.settings && typeof raw.settings === 'object' ? {...raw.settings} : {};
-    input.collideLevel ??= input.collideTiles; // its name before 1.20
     // a library saved before shapes names its tile and no shape, it keeps its tile
     if (input.shape === undefined && isNumber(input.tileIndex))
         input.shape = '';
@@ -32091,10 +32341,10 @@ function particleEffectSanitize(raw)
 }
 
 /** A copy of an effect with its four colors turned around the color wheel and their saturation scaled; lightness and
- *  alpha stay, and grey and white have no hue to turn
+ *  alpha stay, and gray and white have no hue to turn
  *  @param {Object} effect
  *  @param {number} [hue] - How far around the wheel, 1 is all the way
- *  @param {number} [saturation] - Multiplies the saturation, 0 is grey, clamped to 1
+ *  @param {number} [saturation] - Multiplies the saturation, 0 is gray, clamped to 1
  *  @return {Object}
  *  @memberof ParticleEffects */
 function particleEffectRecolor(effect, hue=0, saturation=1)
@@ -32384,7 +32634,7 @@ function particleEffectResolve(nameOrEffect, options)
  *  @param {Object} [options] - What to change for this play, each left out when not wanted:
  *    scale grows the whole effect, the built-ins fit a one unit object at 1;
  *    hue turns its colors around the color wheel, 1 is all the way;
- *    saturation multiplies its saturation, 0 is grey;
+ *    saturation multiplies its saturation, 0 is gray;
  *    angle is its direction, 0 is up, the effect's own angle when not given;
  *    tileInfo, a TileInfo or a TextureInfo, is the game's own art to draw with in place of the effect's shape,
  *    tinted by its colors, a whole texture drawn as one tile;
@@ -32643,9 +32893,11 @@ const particleEffectsBuiltIn = [];
  * - Loads glTF 2.0 models: a .gltf with its .bin and images beside it, or a .glb with everything in one file
  * - A model comes back as parts, one Mesh per primitive of every node placed by the node tree, each with its
  *   material's color and base color texture, plus everything combined into one Mesh
- * - Geometry: positions, normals, uvs, vertex colors and indices; skins and morph targets are not read
- * - Node animations play: parts that move, turn and scale, like doors, wheels and propellers, through the
- *   GLTFObject that createObject makes; a skinned character's walk is not read
+ * - Geometry: positions, normals, uvs, vertex colors and indices, and skins, the four strongest joints of a vertex
+ *   of up to eight; morph targets are not read
+ * - Animations play through the GLTFObject that createObject makes: parts that move, turn and scale, like doors,
+ *   wheels and propellers, and skinned characters, their meshes bent by their joints each frame; play takes a
+ *   blend time to cross-fade from one animation to the next
  * - Materials give a base color and texture and whether they blend; glass made with KHR_materials_transmission blends too,
  *   and a KHR_materials_unlit material comes in emissive, its own color with no shading
  * - A material's normal map and emissive map load too, with its normal scale and emissive factor, read at the base
@@ -32663,6 +32915,7 @@ const particleEffectsBuiltIn = [];
  * const model = await loadGLTF('ship.glb');   // in an async gameInit
  * const ship = model.createObject(vec3(0, 1, 0)); // an object with a child per part, textures and all
  * ship.play('fly');                            // and its animation, by name or number
+ * ship.play('land', false, 1, .3);             // then another, cross-faded over .3 seconds
  * new EngineObject3D(vec3(), model.mesh);      // or the whole thing as one mesh, still
  */
 
@@ -32673,7 +32926,8 @@ const particleEffectsBuiltIn = [];
  */
 class GLTFPart
 {
-    /** @param {string} name @param {Mesh} mesh @param {Color} color @param {TextureInfo|undefined} textureInfo @param {boolean} transparent */
+    /** Make a part, as the loader does for each primitive
+     *  @param {string} name @param {Mesh} mesh @param {Color} color @param {TextureInfo|undefined} textureInfo @param {boolean} transparent */
     constructor(name, mesh, color, textureInfo, transparent)
     {
         /** @property {string} - The node's name, or its mesh's */
@@ -32707,8 +32961,28 @@ class GLTFPart
         this.emissiveMap = undefined;
         /** @property {Color} - The emissiveFactor, which multiplies the emissive map */
         this.emissiveMapColor = WHITE;
+        /** @property {GLTFSkin|undefined} - For a skinned mesh, what bends it: mesh is its resting pose, and the
+         *  object createObject makes bends a copy of its own to each pose
+         *  @type {GLTFSkin|undefined} */
+        this.skin = undefined;
+        // which of the file's vertices each of the mesh's is, when flat normals split them, for a skin
+        /** @type {Array<number>|undefined} */
+        this.vertexSource = undefined;
     }
 }
+
+/**
+ * What bends a skinned part: its joints, the nodes that move it, their inverse bind matrices, and for each vertex
+ * of its mesh four joints and four weights, with the place and normal each pose bends from
+ * @typedef {Object} GLTFSkin
+ * @property {Array<number>} joints - The joints, as node numbers
+ * @property {Array<Matrix4>} inverseBind - Each joint's inverse bind matrix
+ * @property {Uint16Array} vertexJoints - Four joints a vertex, as places in joints
+ * @property {Float32Array} vertexWeights - Four weights a vertex, summing to 1
+ * @property {Float32Array} bindPoints - Each vertex's place as stored, x y z
+ * @property {Float32Array} bindNormals - Each vertex's normal as stored, x y z
+ * @memberof GLTF
+ */
 
 /**
  * GLTFAnimation - One animation of a model: keys that move, turn and scale its nodes over time
@@ -32717,7 +32991,8 @@ class GLTFPart
  */
 class GLTFAnimation
 {
-    /** @param {string} name @param {Array<Object>} channels */
+    /** Make an animation from its channels, as the loader does
+     *  @param {string} name @param {Array<Object>} channels */
     constructor(name, channels)
     {
         /** @property {string} - Its name in the file, or 'animation' and its number when it has none */
@@ -32738,7 +33013,8 @@ class GLTFAnimation
  */
 class GLTFModel
 {
-    /** @param {Array<GLTFPart>} parts @param {Array<GLTFAnimation>} [animations] @param {Object} [nodeTree] */
+    /** Make a model from its parts, as the loader does
+     *  @param {Array<GLTFPart>} parts @param {Array<GLTFAnimation>} [animations] @param {Object} [nodeTree] */
     constructor(parts, animations=[], nodeTree)
     {
         /** @property {Array<GLTFPart>} - One per primitive of every node that has a mesh */
@@ -32752,7 +33028,7 @@ class GLTFModel
          *  and blending and unlit stay with the parts, which createObject draws */
         this.mesh = new Mesh;
         for (const part of parts) // a part baked at scale 1 from a node resting at 0 goes in as it rests
-            this.mesh.combine(part.mesh, nodeTree?.restPose?.[part.node] || RENDER3D_IDENTITY, part.color);
+            this.mesh.combine(part.mesh, !part.skin && nodeTree?.restPose?.[part.node] || RENDER3D_IDENTITY, part.color);
         // the one texture every part uses, when they all do; a part without one has no uvs into it, so a model
         // that mixes plain and textured parts, or uses several textures, is drawn through createObject instead
         const textures = new Set(parts.map(p=> p.textureInfo));
@@ -32818,29 +33094,18 @@ class GLTFModel
      *  @return {Array<Matrix4>} */
     getPose(animation, time)
     {
-        const tree = this.nodeTree;
-        if (!tree) return this.parts.map(()=> new Matrix4);
+        if (!this.nodeTree) return this.parts.map(()=> new Matrix4);
+        return this.partPoses(gltfNodeWorlds(this.nodeTree, gltfPoseNodes(this.nodeTree, animation, time)));
+    }
 
-        // the nodes the animation moves get its values at this time, every other node keeps its own
-        const moved = new Map;
-        for (const channel of animation.channels)
-        {
-            let node = moved.get(channel.node);
-            node || moved.set(channel.node, node = gltfNodeTRS(tree.nodes[channel.node]));
-            gltfSample(channel, time, node[channel.path]);
-        }
-
-        // then each node's place in the model through its parents, and each part's move from where it rests,
-        // through what center and fit did: modelMatrix * now * rest inverse * modelMatrix inverse
-        const world = [];
-        const worldOf = (i)=>
-        {
-            if (world[i]) return world[i];
-            const local = gltfNodeMatrix(moved.get(i) || tree.nodes[i]), parent = tree.parents[i];
-            return world[i] = parent === undefined ? local : worldOf(parent).copy().multiply(local);
-        };
-        const model = this.modelMatrix, modelInverse = model.copy().invert();
-        return this.parts.map(part=> model.copy().multiply(worldOf(part.node)).multiply(tree.restInverse[part.node]).multiply(modelInverse));
+    // each part's move from where it rests, with each node's place in the model from worldOf, through what center
+    // and fit did: modelMatrix * now * rest inverse * modelMatrix inverse; a skinned part is posed by its joints
+    // and stays where it is
+    partPoses(worldOf)
+    {
+        const tree = this.nodeTree, model = this.modelMatrix, modelInverse = model.copy().invert();
+        return this.parts.map(part=> part.skin ? new Matrix4 :
+            model.copy().multiply(worldOf(part.node)).multiply(tree.restInverse[part.node]).multiply(modelInverse));
     }
 
     /** Free the GPU buffers of every part's mesh and of the combined mesh, and the textures, for a model that is
@@ -32901,19 +33166,32 @@ class GLTFObject extends EngineObject3D
         this.animationLoop = true;
         /** @property {boolean} - Whether it is moving through the animation now */
         this.animationPlaying = false;
+        // what a cross-fade comes from: an animation going on as it was, or a pose held, and how far it is
+        /** @type {{animation?: GLTFAnimation, time?: number, speed?: number, loop?: boolean, nodes?: Map<number, Object>}|undefined} */
+        this.blendFrom = undefined;
+        this.blendTime = 0;
+        this.blendElapsed = 0;
+        // each node's values and place in the model as last posed, for a fade from here and for getJointMatrix, and
+        // whether that pose was a mix, as a fade stopped part way holds it
+        /** @type {Map<number, Object>|undefined} */
+        this.poseNodes = undefined;
+        this.poseMixed = false;
+        /** @type {(function(number): Matrix4)|undefined} */
+        this.poseWorldOf = undefined;
         /** @property {Array<EngineObject3D>} - The child that draws each of the model's parts, in the order of
          *  model.parts, which an animation poses; one destroyed or taken off the object is left alone
          *  @type {Array<EngineObject3D>} */
         this.parts = [];
         for (const part of model.parts)
         {
-            const o = new EngineObject3D(vec3(), part.mesh, part.textureInfo, part.color);
+            // a skinned part bends a mesh of its own, so objects of one model each hold their own pose
+            const o = new EngineObject3D(vec3(), part.skin ? gltfSkinMeshCopy(part.mesh) : part.mesh, part.textureInfo, part.color);
             o.transparent = part.transparent;
             o.pixelated = part.pixelated;
             o.emissive = part.unlit ? 1 : 0;
             o.normalMap = part.normalMap, o.normalScale = part.normalScale;
             o.emissiveMap = part.emissiveMap, o.emissiveMapColor = part.emissiveMapColor.copy(); // its own, as color is
-            const rest = model.nodeTree?.restPose?.[part.node];
+            const rest = !part.skin && model.nodeTree?.restPose?.[part.node];
             if (rest)
             {
                 // baked at scale 1 from a node resting at 0, it starts as it rests, where a pose would put it
@@ -32928,15 +33206,44 @@ class GLTFObject extends EngineObject3D
         }
     }
 
-    /** Play an animation from its start
+    /** Destroy the object and its parts, and free the meshes its skinned parts bend, which are its own
+     *  @param {boolean} [immediate] */
+    destroy(immediate)
+    {
+        if (this.destroyed) return;
+        this.parts.forEach((o, i)=> this.model.parts[i]?.skin && o.mesh?.dispose());
+        super.destroy(immediate);
+    }
+
+    /** Play an animation from its start, at once or cross-faded from the pose it is in
+     *  - A play with a blend of the animation already playing goes on with it, so state code may call it each
+     *    frame; without a blend it starts the animation again
      *  @param {string|number|GLTFAnimation} [animation] - Its name, its number in model.animations, or itself
      *  @param {boolean} [loop] - Start again at the end, or stop there
-     *  @param {number} [speed] - 1 is as made, negative plays it backward from its end */
-    play(animation=0, loop=true, speed=1)
+     *  @param {number} [speed] - 1 is as made, negative plays it backward from its end
+     *  @param {number} [blend] - Seconds to cross-fade from the pose it is in, 0 to switch at once; the animation
+     *    it comes from goes on through the fade, and a fade started during another fades from the mix there */
+    play(animation=0, loop=true, speed=1, blend=0)
     {
         const found = this.model.getAnimation(animation);
         ASSERT(found, 'the model has no animation ' + animation, this.model.animations.map(a=> a.name));
         if (!found) return;
+        if (blend > 0 && found === this.animation && this.animationPlaying)
+        {
+            this.animationLoop = loop, this.animationSpeed = speed;
+            return;
+        }
+        const fading = this.blendFrom;
+        this.blendFrom = undefined;
+        if (blend > 0)
+        {
+            // from the animation playing, going on as it was, or from the pose held, a fade's mix included
+            const from = this.animation && !fading && !this.poseMixed ? {animation: this.animation, time: this.animationTime,
+                speed: this.animationPlaying ? this.animationSpeed : 0, loop: this.animationLoop} : undefined;
+            this.blendFrom = from || {nodes: this.poseNodes || new Map};
+            this.blendTime = blend;
+            this.blendElapsed = 0;
+        }
         this.animation = found;
         this.animationLoop = loop;
         this.animationSpeed = speed;
@@ -32944,21 +33251,39 @@ class GLTFObject extends EngineObject3D
         this.setAnimationTime(speed < 0 ? found.duration : 0);
     }
 
-    /** Stop the animation where it is, the parts hold that pose */
-    stop() { this.animationPlaying = false; }
+    /** Stop the animation where it is, the parts hold that pose; a cross-fade going on stops too, holding the mix */
+    stop() { this.animationPlaying = false; this.blendFrom = undefined; }
 
     /** Put the parts where the animation has them at a time, playing or not
      *  @param {number} time - Seconds into the animation */
     setAnimationTime(time)
     {
         this.animationTime = time;
-        if (!this.animation) return;
+        const model = this.model, tree = model.nodeTree;
+        if (!this.animation || !tree) return;
+
+        // each node's values now, mixed with what a fade comes from by how far it is, eased in and out
+        let nodes = gltfPoseNodes(tree, this.animation, time);
+        const from = this.blendFrom;
+        if (from)
+        {
+            const fromNodes = from.nodes || gltfPoseNodes(tree, from.animation, from.time);
+            nodes = gltfPoseBlend(tree, fromNodes, nodes, smoothStep(clamp(this.blendElapsed / this.blendTime)));
+        }
+        const worldOf = gltfNodeWorlds(tree, nodes);
+        this.poseNodes = nodes, this.poseWorldOf = worldOf, this.poseMixed = !!from;
+
         // its own list of the part objects, so a child removed or added does not hand a part another's pose
-        const pose = this.model.getPose(this.animation, time), parts = this.parts;
+        const pose = model.partPoses(worldOf), parts = this.parts;
         for (let i = 0; i < pose.length && i < parts.length; ++i)
         {
-            const o = parts[i], m = pose[i];
+            const o = parts[i], m = pose[i], skin = model.parts[i].skin;
             if (o.destroyed || o.parent !== this) continue;
+            if (skin)
+            {
+                gltfSkinApply(skin, worldOf, model.modelMatrix, o.mesh); // bent by its joints, where it is
+                continue;
+            }
             // drawn with the whole pose, which a parent's uneven scale can shear, the parts kept for what reads them
             o.localMatrix = m;
             o.pos3D = m.getTranslation();
@@ -32967,23 +33292,40 @@ class GLTFObject extends EngineObject3D
         }
     }
 
-    /** Move through the animation, called automatically each frame */
+    /** Move through the animation, and a cross-fade into it, called automatically each frame */
     update()
     {
         super.update();
-        const animation = this.animation;
-        if (!this.animationPlaying || !animation) return;
-        const duration = animation.duration;
-        let t = this.animationTime + timeDelta * this.animationSpeed;
-        if (this.animationLoop)
-            t = duration ? mod(t, duration) : 0;
-        else if (t >= duration || t <= 0)
+        const animation = this.animation, from = this.blendFrom;
+        if (!animation || !this.animationPlaying && !from) return;
+        let t = this.animationTime;
+        if (this.animationPlaying)
         {
-            // the end, or the start when playing backward: hold the last pose there
-            t = clamp(t, 0, duration);
-            this.animationPlaying = false;
+            t = gltfAnimationStep(animation, t, this.animationSpeed, this.animationLoop);
+            if (!this.animationLoop && (t >= animation.duration || t <= 0))
+                this.animationPlaying = false; // the end, or the start when playing backward: hold the last pose there
+        }
+        if (from)
+        {
+            this.blendElapsed += timeDelta;
+            if (from.animation) // what it fades from goes on as it was
+                from.time = gltfAnimationStep(from.animation, from.time, from.speed, from.loop);
         }
         this.setAnimationTime(t);
+        if (from && this.blendElapsed >= this.blendTime)
+            this.blendFrom = undefined; // faded all the way, the pose just set is the animation's own
+    }
+
+    /** A node's matrix in the world as the model is posed now, by its name in the file, to hang something on a
+     *  joint, a sword on a hand or a hat on a head; undefined when the model has no node of that name
+     *  @param {string} name
+     *  @return {Matrix4|undefined} */
+    getJointMatrix(name)
+    {
+        const tree = this.model.nodeTree, index = tree?.nodes?.findIndex(node=> node.name === name) ?? -1;
+        if (index < 0) return;
+        const worldOf = this.poseWorldOf || gltfNodeWorlds(tree, new Map);
+        return this.getMatrix().multiply(this.model.modelMatrix).multiply(worldOf(index));
     }
 }
 
@@ -33005,7 +33347,14 @@ async function loadGLTF(url)
     let base = '';
     if (!/^(blob|data):/i.test(from))
         base = response.url ? new URL('.', from).href : from.slice(0, from.lastIndexOf('/') + 1);
-    return parseGLTF(await response.arrayBuffer(), base);
+    const data = await response.arrayBuffer();
+    try { return await parseGLTF(data, base); }
+    catch (e)
+    {
+        // which file, and a web page, as a dev server sends for a mistyped path, said as one
+        const page = loadIsWebPage(String.fromCharCode(...new Uint8Array(data, 0, min(data.byteLength, 64))));
+        throw new Error('loadGLTF ' + url + (page ? ' is a web page, so the path may be wrong' : ': ' + e.message));
+    }
 }
 
 /** Parse a model from GLB bytes or glTF JSON, fetching the buffers and images it refers to
@@ -33112,6 +33461,9 @@ async function parseGLTF(data, baseUrl='', files)
     // the parts: the scene's nodes walked with their transforms, every primitive of a node's mesh placed by it;
     // each node's parent and resting place are kept, so an animation can move a part from where it rests
     const parts = [], parents = [], restInverse = [], restPose = [], visited = new Set;
+    // every node's parent from the children lists, so a joint outside the scene's nodes keeps its own; the walk
+    // below sets them again for the nodes it reaches
+    (json.nodes || []).forEach((node, i)=> (node.children || []).forEach((child)=> parents[child] ??= i));
     const visit = (index, parentMatrix, parentIndex, parentRest)=>
     {
         // nodes are trees, so one reached again is a cycle or a node with two parents, a file problem
@@ -33137,11 +33489,18 @@ async function parseGLTF(data, baseUrl='', files)
         if (node.mesh !== undefined)
         {
             const mesh = json.meshes[node.mesh];
+            // a skinned mesh is placed by its joints and not by its node, as the format says, so it is read as stored
+            const skin = node.skin !== undefined ? json.skins?.[node.skin] : undefined;
             for (const primitive of mesh.primitives)
             {
-                const part = gltfPart(json, buffers, textures, primitive, matrix, node.name || mesh.name || 'part ' + parts.length);
+                const skinned = skin?.joints?.length && primitive.attributes.JOINTS_0 !== undefined &&
+                    primitive.attributes.WEIGHTS_0 !== undefined;
+                const part = gltfPart(json, buffers, textures, primitive, skinned ? new Matrix4 : matrix,
+                    node.name || mesh.name || 'part ' + parts.length);
                 if (!part) continue;
                 part.node = index;
+                if (skinned)
+                    part.skin = gltfSkin(json, buffers, skin, primitive, part);
                 parts.push(part);
             }
         }
@@ -33186,7 +33545,165 @@ async function parseGLTF(data, baseUrl='', files)
     const used = new Set(parts.flatMap(p=> [p.textureInfo, p.normalMap, p.emissiveMap]));
     for (const texture of textures)
         texture && !used.has(texture) && texture.destroyWebGLTexture();
-    return new GLTFModel(parts, animations, {nodes: json.nodes, parents, restInverse, restPose});
+    // a skinned part rests as its joints place it, with nothing moved
+    const nodeTree = {nodes: json.nodes, parents, restInverse, restPose}, restWorlds = gltfNodeWorlds(nodeTree, new Map);
+    for (const part of parts)
+        part.skin && gltfSkinApply(part.skin, restWorlds, RENDER3D_IDENTITY, part.mesh);
+    return new GLTFModel(parts, animations, nodeTree);
+}
+
+// the values of each node an animation moves at a time, a Map of node to its translation, rotation and scale;
+// every other node keeps its own
+function gltfPoseNodes(tree, animation, time)
+{
+    const moved = new Map;
+    for (const channel of animation.channels)
+    {
+        let node = moved.get(channel.node);
+        node || moved.set(channel.node, node = gltfNodeTRS(tree.nodes[channel.node]));
+        gltfSample(channel, time, node[channel.path]);
+    }
+    return moved;
+}
+
+// two such sets of node values mixed by a weight, 0 all a, 1 all b: places and scales in a line, turns the short
+// way round; a node only one moves has its own values in the other
+function gltfPoseBlend(tree, a, b, weight)
+{
+    const mixed = new Map, lerp3 = (p, q)=> p.map((v, i)=> v + (q[i] - v) * weight);
+    for (const node of new Set([...a.keys(), ...b.keys()]))
+    {
+        const p = a.get(node) || gltfNodeTRS(tree.nodes[node]), q = b.get(node) || gltfNodeTRS(tree.nodes[node]);
+        mixed.set(node, {translation: lerp3(p.translation, q.translation), scale: lerp3(p.scale, q.scale),
+            rotation: gltfSlerp(p.rotation, q.rotation, weight)});
+    }
+    return mixed;
+}
+
+// the turn between two quaternions, x y z w, a part of the way along the short way round
+function gltfSlerp(a, b, t)
+{
+    let dot = a[0]*b[0] + a[1]*b[1] + a[2]*b[2] + a[3]*b[3], sign = 1;
+    if (dot < 0)
+        dot = -dot, sign = -1; // the same turn the other way round is shorter
+    let wa = 1 - t, wb = t * sign;
+    if (dot < .9995)
+    {
+        // along the arc; nearly the same turn is done in a line, where the arc's sine goes to nothing
+        const angle = Math.acos(dot), s = sin(angle);
+        wa = sin(wa * angle) / s, wb = sin(t * angle) / s * sign;
+    }
+    const out = a.map((v, i)=> v * wa + b[i] * wb), l = hypot(...out) || 1;
+    return out.map(v=> v / l);
+}
+
+// each node's place in the model through its parents, with the values in moved for the nodes there, kept as found
+function gltfNodeWorlds(tree, moved)
+{
+    const world = [];
+    const worldOf = (i)=>
+    {
+        if (world[i]) return world[i];
+        const local = gltfNodeMatrix(moved.get(i) || tree.nodes[i]), parent = tree.parents[i];
+        return world[i] = parent === undefined ? local : worldOf(parent).copy().multiply(local);
+    };
+    return worldOf;
+}
+
+// an animation's time a frame on, at a speed, around again when it loops, held at its ends when it does not
+function gltfAnimationStep(animation, time, speed, loop)
+{
+    const duration = animation.duration, t = time + timeDelta * speed;
+    return loop ? duration ? mod(t, duration) : 0 : clamp(t, 0, duration);
+}
+
+// a skinned primitive's skin: its joints, the nodes that bend it, their inverse bind matrices, and for each vertex
+// of the part's mesh four joints, as places in that list, and four weights made to sum to 1, with its place and
+// normal as stored, which each pose bends from; a mesh split for flat normals maps its corners to the file's
+function gltfSkin(json, buffers, skin, primitive, part)
+{
+    const joints = skin.joints, mesh = part.mesh, count = mesh.points.length;
+    const bind = skin.inverseBindMatrices !== undefined ? gltfAccessor(json, buffers, skin.inverseBindMatrices).data : undefined;
+    const inverseBind = joints.map((_, j)=> bind ? new Matrix4(bind.subarray(j * 16, j * 16 + 16)) : new Matrix4);
+    // a second set of four, as rigs from many tools have, is read too, and each vertex keeps its four strongest
+    const attributes = primitive.attributes, read = (name)=> gltfAccessor(json, buffers, attributes[name]).data;
+    const sets = [[read('JOINTS_0'), read('WEIGHTS_0')]];
+    attributes.JOINTS_1 !== undefined && attributes.WEIGHTS_1 !== undefined && sets.push([read('JOINTS_1'), read('WEIGHTS_1')]);
+    const vertexJoints = new Uint16Array(count * 4), vertexWeights = new Float32Array(count * 4);
+    const bindPoints = new Float32Array(count * 3), bindNormals = new Float32Array(count * 3);
+    for (let v = 0; v < count; ++v)
+    {
+        const from = part.vertexSource ? part.vertexSource[v] : v, influences = [];
+        for (const [fileJoints, fileWeights] of sets)
+            for (let k = 0; k < 4; ++k)
+                influences.push([fileJoints[from * 4 + k], fileWeights[from * 4 + k]]);
+        sets.length > 1 && influences.sort((a, b)=> b[1] - a[1]); // the strongest four first
+        let total = 0;
+        for (let k = 0; k < 4; ++k)
+            total += influences[k][1];
+        for (let k = 0; k < 4; ++k)
+        {
+            const [joint, weight] = influences[k];
+            vertexJoints[v * 4 + k] = joint < joints.length ? joint : 0;
+            vertexWeights[v * 4 + k] = total ? weight / total : k ? 0 : 1;
+        }
+        const p = mesh.points[v], n = mesh.normals[v];
+        bindPoints.set([p.x, p.y, p.z], v * 3);
+        bindNormals.set([n.x, n.y, n.z], v * 3);
+        // vectors of its own, as each pose writes into them, where a flat normal is shared by a face's corners
+        mesh.points[v] = p.copy(), mesh.normals[v] = n.copy();
+    }
+    return {joints, inverseBind, vertexJoints, vertexWeights, bindPoints, bindNormals};
+}
+
+// a skinned part's mesh copied with vectors of its own for an object to bend, its upload rewriting only the values
+function gltfSkinMeshCopy(mesh)
+{
+    const copy = new Mesh;
+    copy.points = mesh.points.map(p=> p.copy());
+    copy.normals = mesh.normals.map(n=> n.copy());
+    copy.uvs = mesh.uvs.slice();
+    copy.colors = mesh.colors.slice();
+    copy.indices = mesh.indices && mesh.indices.slice();
+    copy.doubleSided = mesh.doubleSided;
+    copy.dynamicDraw = true;
+    return copy;
+}
+
+// bend a skinned mesh to a pose: each vertex its stored place moved by its four joints, weighted, and its normal by
+// their normal matrices, each joint's matrix modelMatrix * its place now * its inverse bind; written into the
+// mesh's own vectors, so a pose makes nothing for each vertex
+function gltfSkinApply(skin, worldOf, modelMatrix, mesh)
+{
+    const matrices = [], normalMatrices = [];
+    for (let j = 0; j < skin.joints.length; ++j)
+    {
+        const m = modelMatrix.copy().multiply(worldOf(skin.joints[j])).multiply(skin.inverseBind[j]);
+        matrices.push(m.m), normalMatrices.push(render3DNormalMatrix(m).m);
+    }
+    const {vertexJoints, vertexWeights, bindPoints, bindNormals} = skin, points = mesh.points, normals = mesh.normals;
+    for (let v = 0; v < points.length; ++v)
+    {
+        const px = bindPoints[v*3], py = bindPoints[v*3+1], pz = bindPoints[v*3+2];
+        const qx = bindNormals[v*3], qy = bindNormals[v*3+1], qz = bindNormals[v*3+2];
+        let x = 0, y = 0, z = 0, nx = 0, ny = 0, nz = 0;
+        for (let k = 0; k < 4; ++k)
+        {
+            const w = vertexWeights[v*4+k];
+            if (!w) continue;
+            const m = matrices[vertexJoints[v*4+k]], n = normalMatrices[vertexJoints[v*4+k]];
+            x += w * (m[0]*px + m[4]*py + m[8]*pz + m[12]);
+            y += w * (m[1]*px + m[5]*py + m[9]*pz + m[13]);
+            z += w * (m[2]*px + m[6]*py + m[10]*pz + m[14]);
+            nx += w * (n[0]*qx + n[4]*qy + n[8]*qz);
+            ny += w * (n[1]*qx + n[5]*qy + n[9]*qz);
+            nz += w * (n[2]*qx + n[6]*qy + n[10]*qz);
+        }
+        const p = points[v], normal = normals[v], l = (nx*nx + ny*ny + nz*nz) ** .5 || 1;
+        p.x = x, p.y = y, p.z = z;
+        normal.x = nx / l, normal.y = ny / l, normal.z = nz / l;
+    }
+    mesh.dirty = true;
 }
 
 // a node's translation, rotation and scale as arrays to animate, copies so the file's stay as they rest
@@ -33454,7 +33971,10 @@ function gltfPart(json, buffers, textures, primitive, matrix, name)
     else if (mode === 6) // a fan around the first entry
         indices = indices.flatMap((_, i, s)=> i < 2 ? [] : [s[0], s[i-1], s[i]]);
     const mesh = new Mesh().addTriangles(points, indices, normals, uvs, colors);
-    normals || mesh.computeNormals(false); // flat when the file gives none, as the format says
+    // flat when the file gives none, as the format says, which gives each corner a vertex of its own: which of the
+    // file's each one is, kept for a skin
+    const vertexSource = normals ? undefined : mesh.indices.slice();
+    normals || mesh.computeNormals(false);
     mesh.transform(matrix);
     const factor = pbr.baseColorFactor || [1, 1, 1, 1];
     mesh.doubleSided = !!material.doubleSided;
@@ -33467,6 +33987,7 @@ function gltfPart(json, buffers, textures, primitive, matrix, name)
     const part = new GLTFPart(name, mesh, rgb(gltfSRGB(factor[0]), gltfSRGB(factor[1]), gltfSRGB(factor[2]), alpha),
         textureRef ? textures[textureRef.index] : undefined, blend || transmission > 0);
     part.pixelated = json.samplers?.[texture?.sampler]?.magFilter === 9728; // NEAREST
+    part.vertexSource = vertexSource;
     part.unlit = !!material.extensions?.KHR_materials_unlit;
 
     // the normal and emissive maps, read at the base color texture's uvs; the emissive texture is multiplied by the
@@ -34218,7 +34739,7 @@ function debugPoint3D(pos, color=WHITE, time=0, size=.2)
 
 /**
  *  @callback EditorPlayFromCallback - Puts the player at a world position, for the level editor's Play from mouse
- *  @param {Vector2} pos - Where to start playing
+ *  @param {any} pos - Where to start playing, a Vector2 from the 2D editor and a Vector3 from the 3D one
  *  @memberof Editor
  */
 
@@ -34236,25 +34757,29 @@ function debugPoint3D(pos, color=WHITE, time=0, size=.2)
  */
 
 /**
- *  @typedef {Object} EditorToolAt - What the level editor gives the callbacks of a tool of the game's own
- *  @property {any} pos - Where the mouse is in the level: a Vector2 in the 2D editor; in the 3D one a Vector3 on
+ *  @template [P=Vector2]
+ *  @typedef {Object} EditorToolAt - What the level editor gives the callbacks of a tool of the game's own; P is
+ *    the type of pos, a Vector2 for a 2D tool, the default, and Vector3|undefined for a 3D one
+ *  @property {P} pos - Where the mouse is in the level: a Vector2 in the 2D editor; in the 3D one a Vector3 on
  *    the level or the ground, undefined when the mouse is over the panel
  *  @property {Vector2|undefined} cell - 2D: the tile cell under the mouse on the selected tile layer
- *  @property {any} ray - 3D: the mouse's Ray3D
+ *  @property {Ray3D|undefined} ray - 3D: the mouse's Ray3D
  *  @property {boolean} shift - Is Shift held
  *  @property {boolean} ctrl - Is Ctrl held
  *  @memberof Editor
  */
 
 /**
- *  @typedef {Object} EditorTool - A tool of the game's own for the level editor, see LevelEditor.addTool
+ *  @template [P=Vector2]
+ *  @typedef {Object} EditorTool - A tool of the game's own for the level editor, see LevelEditor.addTool; P is the
+ *    type of its pos, as EditorToolAt has it
  *  @property {string} [key] - The key that picks it, as addKey spells one
  *  @property {string} [hint] - The hint line while it is on
- *  @property {function(EditorToolAt): any} [onPress] - The left button went down in the level; returning false
+ *  @property {function(EditorToolAt<P>): any} [onPress] - The left button went down in the level; returning false
  *    says the press was not the tool's
- *  @property {function(EditorToolAt): any} [onDrag] - Each frame it is held
- *  @property {function(EditorToolAt): any} [onRelease] - It was let go
- *  @property {function(EditorToolAt): any} [onDraw] - Each frame the tool is on, to draw its cursor or preview
+ *  @property {function(EditorToolAt<P>): any} [onDrag] - Each frame it is held
+ *  @property {function(EditorToolAt<P>): any} [onRelease] - It was let go
+ *  @property {function(EditorToolAt<P>): any} [onDraw] - Each frame the tool is on, to draw its cursor or preview
  *  @memberof Editor
  */
 
@@ -34347,7 +34872,7 @@ class LevelEditor
         this.keys = {};
         /** @type {Array<{label: string, onClick: Function, title: string}>} */
         this.buttons = [];
-        /** @type {Object<string, EditorTool>} */
+        /** @type {Object<string, EditorTool<any>>} */
         this.tools = {};
     }
 
@@ -34365,7 +34890,7 @@ class LevelEditor
 
     /** Put the player at a position, a Vector2 in the 2D editor and a Vector3 in the 3D one; set it or override it
      *  and the editor has Play from mouse, which starts play there
-     *  @param {any} pos */
+     *  @param {any} pos - A Vector2 from the 2D editor, a Vector3 from the 3D one */
     onPlayFrom(pos) {}
 
     /** Called when the editor opens, to set or override */
@@ -34448,8 +34973,9 @@ class LevelEditor
      *    in 3D
      *  - What the callbacks change through edit2D or edit3D is one undo: the editor ends the stroke at the release,
      *    and takes it back when the right button or Escape ends the press
+     *  @template [P=Vector2]
      *  @param {string} name
-     *  @param {EditorTool} tool - {key, hint, onPress, onDrag, onRelease, onDraw}, each optional; onPress returning
+     *  @param {EditorTool<P>} tool - {key, hint, onPress, onDrag, onRelease, onDraw}, each optional; onPress returning
      *    false says the press was not the tool's */
     addTool(name, tool)
     {
@@ -34464,7 +34990,10 @@ class LevelEditor
     open()
     {
         if (editorOther?.wanted())
-            return editorOther.open();
+        {
+            editorOther.open();
+            return;
+        }
         if (!editorSession)
             editorCameraScale = cameraScale; // a new session starts at the game's zoom, a return keeps the editor's
         editorSession = true;
@@ -34476,7 +35005,10 @@ class LevelEditor
     close()
     {
         if (editorOther?.active())
-            return editorOther.close();
+        {
+            editorOther.close();
+            return;
+        }
         editorSession = false;
         editorSetOpen(false);
     }
@@ -35288,6 +35820,8 @@ let editorStroke;
 
 // during a big edit, the layers whose cell by cell redraws are held off, with the redraw each had of its own
 let editorHeldRedraws;
+// the live layers a change can only show by drawing them again whole, drawn when it is done
+const editorRedrawWhole = new Set;
 
 // make a big edit, a fill, clear, undo, apply or revert, with each layer's cell by cell redraws held off, a game's
 // tile callback's included; the stroke's end draws each layer it touched again whole
@@ -35313,6 +35847,11 @@ function editorSetCell(layer, pos, gid)
         return before; // the same, unless the layer lost the tile in play, a ghost painted with its own tile
     source.data[index] = gid;
     if (live.destroyed) return before; // a layer the game let go of, the map still has the change
+
+    // a plain cell draws itself here; held draws, a game's onTile, which may change the cells around, and its own
+    // drawing over the layer show only when the whole layer draws again, once the change is done
+    if (editorHeldRedraws || editorHas('onTile') || live.onRedraw !== TileLayer.prototype.onRedraw)
+        editorRedrawWhole.add(live);
 
     if (editorHeldRedraws && !editorHeldRedraws.has(live))
     {
@@ -35391,8 +35930,7 @@ function editorUndo(redo=false)
     editorChanged(stroke);
 }
 
-// after a change the tile layers it touched draw again whole, so a game's onRedraw decoration sees the new tiles,
-// and the maps it touched are autosaved; a resized map is made again by the game, with the editor staying open
+// after a change the tile layers it touched that need it draw again whole, and the maps it touched are autosaved; a resized map is made again by the game, with the editor staying open
 function editorChanged(stroke)
 {
     editorRedraw(stroke);
@@ -35401,11 +35939,11 @@ function editorChanged(stroke)
     stroke.some((entry)=> entry.resize) && editorHas('onRestart') && levelEditor.onRestart();
 }
 
-// the tile layers a stroke touched draw again whole
+// the tile layers a stroke touched that need it draw again whole
 function editorRedraw(stroke)
 {
     for (const layer of new Set(stroke.filter((entry)=> entry.layer).map((entry)=> entry.layer)))
-        layer.live.destroyed || layer.live.redraw();
+        editorRedrawWhole.delete(layer.live) && !layer.live.destroyed && layer.live.redraw();
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -35912,6 +36450,40 @@ function editorGidMirror(gid)
     return t ? editorTileToGid(t.tile, (4 - t.direction) % 4, !t.mirror) : gid;
 }
 
+// a stamp's object turned a quarter clockwise with it: its place by the stamp, its body by its own rotation, which
+// Tiled turns clockwise about the object's place, so the place needs no other move
+function editorStampObjectTurn(entry, width)
+{
+    const offset = vec2(entry.offset.y, width - entry.offset.x), object = entry.object;
+    return {...entry, offset, ...(object && {object: {...object, rotation: ((object.rotation || 0) + 90) % 360}})};
+}
+
+// a stamp's object mirrored left to right with it: its rotation the other way, a polygon's points mirrored about its
+// place, a tile object's image flipped, and a box, ellipse, text or tile, placed by a corner, placed by the corner
+// that becomes it, its width along its turn from the mirrored place; mirrored twice it is as it was
+function editorStampObjectMirror(entry, width)
+{
+    const offset = vec2(width - entry.offset.x, entry.offset.y), object = entry.object;
+    if (!object) return {...entry, offset};
+    const mirrored = {...object, rotation: object.rotation ? -object.rotation : 0};
+    const points = (list)=> list.map((p)=> ({...p, x: -p.x}));
+    if (object.polygon || object.polyline)
+    {
+        object.polygon && (mirrored.polygon = points(object.polygon));
+        object.polyline && (mirrored.polyline = points(object.polyline));
+    }
+    else
+    {
+        // Tiled's pixels run down, the stamp's cells up
+        const angle = (object.rotation || 0) * PI / 180, w = object.width || 0, {x: tw, y: th} = entry.tileSize ?? vec2(1);
+        offset.x -= w * cos(angle) / tw;
+        offset.y -= w * sin(angle) / th;
+    }
+    if (object.gid)
+        mirrored.gid = (object.gid ^ 0x80000000) >>> 0; // Tiled's flip across
+    return {...entry, offset, object: mirrored};
+}
+
 // a stamp turned a quarter turn clockwise on screen, or back, its cells, their tiles and its objects together; cell
 // (x, y) goes to (y, width - 1 - x), so the bottom row becomes the left column, its left end at the top
 function editorStampTurn(stamp, back=false)
@@ -35919,7 +36491,7 @@ function editorStampTurn(stamp, back=false)
     for (let turns = back ? 3 : 1; turns--;)
     {
         const {width, height} = stamp;
-        const objects = stamp.objects?.map((object)=> ({...object, offset: vec2(object.offset.y, width - object.offset.x)}));
+        const objects = stamp.objects?.map((entry)=> editorStampObjectTurn(entry, width));
         stamp = {width: height, height: width, grids: stamp.grids.map((grid)=>
         {
             const turned = [];
@@ -35936,7 +36508,7 @@ function editorStampTurn(stamp, back=false)
 function editorStampMirror(stamp)
 {
     const {width, height} = stamp;
-    const objects = stamp.objects?.map((object)=> ({...object, offset: vec2(width - object.offset.x, object.offset.y)}));
+    const objects = stamp.objects?.map((entry)=> editorStampObjectMirror(entry, width));
     return {width, height, grids: stamp.grids.map((grid)=>
     {
         const mirrored = [];
@@ -36068,8 +36640,9 @@ function editorClear()
     editorStrokeEnd();
 }
 
-// the objects of a map's object layers inside a tile area, each {group, type, offset, object}: the index of its
-// object layer, its offset from the area's bottom left corner, and a copy of it, as a stamp keeps them
+// the objects of a map's object layers inside a tile area, each {group, type, offset, object, tileSize}: the index of
+// its object layer, its offset from the area's bottom left corner, a copy of it, and the map's tile size in pixels,
+// which a mirror reads its width in cells by, as a stamp keeps them
 function editorAreaObjects(layer, area)
 {
     const corner = layer.live.pos.add(area.min), far = layer.live.pos.add(area.max).add(vec2(1));
@@ -36078,7 +36651,7 @@ function editorAreaObjects(layer, area)
         const ids = new Set(editorObjectsIn(objectLayer, corner, far));
         return (objectLayer.group?.objects ?? []).filter((object)=> ids.has(object.id)).map((object)=>
             ({group, type: object.type || object.class, offset: editorObjectPos(layer.record, object).subtract(corner),
-            object: editorObjectsCopy(object)}));
+            object: editorObjectsCopy(object), tileSize: vec2(layer.record.map.tilewidth || 1, layer.record.map.tileheight || 1)}));
     });
 }
 
@@ -38431,7 +39004,7 @@ function editor3DPrefabHolds(type, name, depth=0)
         !!level3DPrefabs.get(type)?.objects.some((o)=> editor3DPrefabHolds(o.type, name, depth + 1));
 }
 
-// make the selected objects a prefab of the level's own, about the bottom centre of their box, and put one
+// make the selected objects a prefab of the level's own, about the bottom center of their box, and put one
 // instance of it where they were, as one undo; a name the level's prefabs have replaces that prefab, and every
 // instance of it changes; true, or why not, which the panel shows
 function editor3DMakePrefab(name='')
@@ -38450,7 +39023,7 @@ function editor3DMakePrefab(name='')
     if (selected.some((o)=> editor3DPrefabHolds(o.type, name)))
         return refuse(name + ' can not hold itself');
 
-    // its origin is the bottom centre of the selection, so an instance stands on the ground
+    // its origin is the bottom center of the selection, so an instance stands on the ground
     const low = vec3(Infinity), high = vec3(-Infinity);
     for (const object of selected)
         editor3DWorldBox(object, low, high);
@@ -38659,7 +39232,7 @@ function editor3DPrefabEnter(id)
 // no prefab is open
 function editor3DPrefabBack()
 {
-    const frame = editor3DPrefabStack.pop(), edited = editor3DLevel;
+    const frame = editor3DPrefabStack.pop();
     if (!frame) return false;
     editor3DStrokeEnd();
     editor3DDrag = editor3DHover = undefined;

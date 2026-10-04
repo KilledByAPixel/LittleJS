@@ -18,7 +18,7 @@ if(location.hash.indexOf('#.')==0)location.replace('#'+location.hash.slice(2))</
 <body>
 <header class="top">
 <button class="menu" aria-label="Menu"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
-<a class="brand" href="index.html"><img src="examples/logo.png" alt="" width="36" height="36"> LittleJS <span class="ver">1.24.0</span></a>
+<a class="brand" href="index.html"><img src="examples/logo.png" alt="" width="36" height="36"> LittleJS <span class="ver">1.25.0</span></a>
 <nav class="links"><a href="https://github.com/KilledByAPixel/LittleJS">GitHub</a><a href="https://killedbyapixel.github.io/LittleJS/examples/">Examples</a><a href="https://github.com/KilledByAPixel/LittleJS/blob/main/REFERENCE.md">Reference</a><a href="https://github.com/KilledByAPixel/LittleJS/blob/main/FAQ.md">FAQ</a></nav>
 <div class="search"><input type="search" placeholder="Search" aria-label="Search"><ul class="results" hidden></ul></div>
 <button class="theme" aria-label="Toggle theme"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M12 3a9 9 0 1 0 9 9c0-.5 0-1-.1-1.4A6 6 0 0 1 12 3z" fill="currentColor"/></svg></button>
@@ -30,9 +30,11 @@ if(location.hash.indexOf('#.')==0)location.replace('#'+location.hash.slice(2))</
 <li>Loads glTF 2.0 models: a .gltf with its .bin and images beside it, or a .glb with everything in one file</li>
 <li>A model comes back as parts, one Mesh per primitive of every node placed by the node tree, each with its
 material's color and base color texture, plus everything combined into one Mesh</li>
-<li>Geometry: positions, normals, uvs, vertex colors and indices; skins and morph targets are not read</li>
-<li>Node animations play: parts that move, turn and scale, like doors, wheels and propellers, through the
-GLTFObject that createObject makes; a skinned character's walk is not read</li>
+<li>Geometry: positions, normals, uvs, vertex colors and indices, and skins, the four strongest joints of a vertex
+of up to eight; morph targets are not read</li>
+<li>Animations play through the GLTFObject that createObject makes: parts that move, turn and scale, like doors,
+wheels and propellers, and skinned characters, their meshes bent by their joints each frame; play takes a
+blend time to cross-fade from one animation to the next</li>
 <li>Materials give a base color and texture and whether they blend; glass made with KHR_materials_transmission blends too,
 and a KHR_materials_unlit material comes in emissive, its own color with no shading</li>
 <li>A material's normal map and emissive map load too, with its normal scale and emissive factor, read at the base
@@ -45,13 +47,26 @@ is not read</li>
 <li>Material and vertex colors are linear in glTF and are converted to sRGB at load, the space textures are in</li>
 <li>glTF and LittleJS agree on the axes, y up and -z forward, on counter clockwise triangles and on uvs running down</li>
 <li>Requires the Render3D plugin</li>
-</ul></div><section class="index"><h3>Classes</h3><ul><li><a href="GLTF.GLTFAnimation.html">GLTFAnimation</a></li><li><a href="GLTF.GLTFModel.html">GLTFModel</a></li><li><a href="GLTF.GLTFObject.html">GLTFObject</a></li><li><a href="GLTF.GLTFPart.html">GLTFPart</a></li></ul><h3>Functions</h3><ul><li><a href="#loadGLTF">loadGLTF</a></li><li><a href="#parseGLTF">parseGLTF</a></li></ul></section><h2 id="functions">Functions</h2><div class="entry" id="loadGLTF"><div class="head"><code class="sig"><span class="name">loadGLTF</span>(url) → Promise&lt;<a href="GLTF.GLTFModel.html">GLTFModel</a>&gt;</code><span class="badge async">async</span><a class="src" href="https://github.com/KilledByAPixel/LittleJS/blob/v1.24.0/plugins/gltf.js#L359" title="plugins/gltf.js">gltf.js:359</a></div><div class="desc"><p>Load a glTF or GLB model, the .bin and images of a .gltf from beside it</p>
+</ul></div><section class="index"><h3>Classes</h3><ul><li><a href="GLTF.GLTFAnimation.html">GLTFAnimation</a></li><li><a href="GLTF.GLTFModel.html">GLTFModel</a></li><li><a href="GLTF.GLTFObject.html">GLTFObject</a></li><li><a href="GLTF.GLTFPart.html">GLTFPart</a></li></ul><h3>Functions</h3><ul><li><a href="#loadGLTF">loadGLTF</a></li><li><a href="#parseGLTF">parseGLTF</a></li></ul><h3>Typedefs</h3><ul><li><a href="#GLTFSkin">GLTFSkin</a></li></ul></section><h2 id="functions">Functions</h2><div class="entry" id="loadGLTF"><div class="head"><code class="sig"><span class="name">loadGLTF</span>(url) → Promise&lt;<a href="GLTF.GLTFModel.html">GLTFModel</a>&gt;</code><span class="badge async">async</span><a class="src" href="https://github.com/KilledByAPixel/LittleJS/blob/v1.25.0/plugins/gltf.js#L451" title="plugins/gltf.js">gltf.js:451</a></div><div class="desc"><p>Load a glTF or GLB model, the .bin and images of a .gltf from beside it</p>
 <ul>
 <li>A texture only OPAQUE materials use loads with its alpha set to 1, so the 3D pass cuts no holes in it</li>
-</ul></div><dl class="params"><dt><code>url</code> string</dt><dd></dd></dl></div><!-- /entry --><div class="entry" id="parseGLTF"><div class="head"><code class="sig"><span class="name">parseGLTF</span>(data, <span class="opt">baseUrl</span>) → Promise&lt;<a href="GLTF.GLTFModel.html">GLTFModel</a>&gt;</code><span class="badge async">async</span><a class="src" href="https://github.com/KilledByAPixel/LittleJS/blob/v1.24.0/plugins/gltf.js#L378" title="plugins/gltf.js">gltf.js:378</a></div><div class="desc"><p>Parse a model from GLB bytes or glTF JSON, fetching the buffers and images it refers to</p></div><dl class="params"><dt><code>data</code> ArrayBuffer<span class="sep">|</span>Object<span class="sep">|</span>string</dt><dd><p>GLB bytes, or the glTF JSON as bytes, text or an object</p></dd><dt><code>baseUrl</code> string <span class="opt">optional</span></dt><dd><p>Where the .bin and image files are, with its trailing slash; loadGLTF passes the file's folder</p></dd></dl></div><!-- /entry --></article>
+</ul></div><dl class="params"><dt><code>url</code> string</dt><dd></dd></dl></div><!-- /entry --><div class="entry" id="parseGLTF"><div class="head"><code class="sig"><span class="name">parseGLTF</span>(data, <span class="opt">baseUrl</span>, <span class="opt">files</span>) → Promise&lt;<a href="GLTF.GLTFModel.html">GLTFModel</a>&gt;</code><span class="badge async">async</span><a class="src" href="https://github.com/KilledByAPixel/LittleJS/blob/v1.25.0/plugins/gltf.js#L490" title="plugins/gltf.js">gltf.js:490</a></div><div class="desc"><p>Parse a model from GLB bytes or glTF JSON, fetching the buffers and images it refers to</p>
+<ul>
+<li>A .gltf names its .bin and image files, which are fetched from baseUrl, or found among files: what a game
+has in hand, like the files dropped on the page, by their paths in the drop; with files, baseUrl is the
+.gltf's own folder among them ('' or 'models/house/'), its names are read from there, and a name found nowhere
+there is taken by its file name alone only when one file of the drop has it; only an http, https or blob uri
+is fetched then</li>
+<li>A file the model needs that is not found is named in the error, and an image that can not be read is named in
+a warning and left out</li>
+</ul></div><dl class="params"><dt><code>data</code> ArrayBuffer<span class="sep">|</span>Object<span class="sep">|</span>string</dt><dd><p>GLB bytes, or the glTF JSON as bytes, text or an object</p></dd><dt><code>baseUrl</code> string <span class="opt">optional</span></dt><dd><p>Where the .bin and image files are, with its trailing slash; loadGLTF passes the file's folder</p></dd><dt><code>files</code> Map&lt;string, Blob&gt; <span class="opt">optional</span></dt><dd><p>The files it refers to, by their paths, in place of fetching them</p></dd></dl><pre><code><span class="c">// the files of a drop, a .gltf with its .bin and textures, by their names</span>
+<span class="k">const</span> files = <span class="k">new</span> Map([...dataTransfer.files].map((file)=&gt; [file.name, file]));
+<span class="k">const</span> gltf = [...files.values()].find((file)=&gt; file.name.endsWith(<span class="s">'.gltf'</span>));
+<span class="k">const</span> model = <span class="k">await</span> parseGLTF(<span class="k">await</span> gltf.text(), <span class="s">''</span>, files);</code></pre></div><!-- /entry --><h2 id="typedefs">Typedefs</h2><div class="entry" id="GLTFSkin"><div class="head"><code class="sig"><span class="name">GLTFSkin</span> : Object</code><a class="src" href="https://github.com/KilledByAPixel/LittleJS/blob/v1.25.0/plugins/gltf.js#L86" title="plugins/gltf.js">gltf.js:86</a></div><div class="desc"><p>What bends a skinned part: its joints, the nodes that move it, their inverse bind matrices, and for each vertex
+of its mesh four joints and four weights, with the place and normal each pose bends from</p></div><dl class="params"><dt><code>joints</code> Array&lt;number&gt;</dt><dd><p>The joints, as node numbers</p></dd><dt><code>inverseBind</code> Array&lt;<a href="Math3D.Matrix4.html">Matrix4</a>&gt;</dt><dd><p>Each joint's inverse bind matrix</p></dd><dt><code>vertexJoints</code> Uint16Array</dt><dd><p>Four joints a vertex, as places in joints</p></dd><dt><code>vertexWeights</code> Float32Array</dt><dd><p>Four weights a vertex, summing to 1</p></dd><dt><code>bindPoints</code> Float32Array</dt><dd><p>Each vertex's place as stored, x y z</p></dd><dt><code>bindNormals</code> Float32Array</dt><dd><p>Each vertex's normal as stored, x y z</p></dd></dl></div><!-- /entry --></article>
 <footer><a href="https://github.com/KilledByAPixel/LittleJS">LittleJS - MIT License - Copyright 2021 Frank Force</a></footer>
 </main>
-<aside class="outline"><h3>On this page</h3><ul><li class="d0"><a href="#functions">Functions</a></li><li class="d1"><a href="#loadGLTF">loadGLTF</a></li><li class="d1"><a href="#parseGLTF">parseGLTF</a></li></ul></aside>
+<aside class="outline"><h3>On this page</h3><ul><li class="d0"><a href="#functions">Functions</a></li><li class="d1"><a href="#loadGLTF">loadGLTF</a></li><li class="d1"><a href="#parseGLTF">parseGLTF</a></li><li class="d0"><a href="#typedefs">Typedefs</a></li><li class="d1"><a href="#GLTFSkin">GLTFSkin</a></li></ul></aside>
 <script src="docs.js"></script>
 </body>
 </html>

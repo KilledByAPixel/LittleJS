@@ -22,7 +22,6 @@ test('the weld joint names its damping like the distance joint, setDampingRatio 
     const weld = new Box2dWeldJoint(a, b, vec2(100, .5));
     weld.setDampingRatio(.5);
     assert.ok(Math.abs(weld.getDampingRatio() - .5) < 1e-6);
-    assert.equal(weld.getSpringDampingRatio(), weld.getDampingRatio(), 'the old name is a deprecated alias of it');
     weld.destroy(); a.destroy(); b.destroy();
 });
 

@@ -18,7 +18,7 @@ if(location.hash.indexOf('#.')==0)location.replace('#'+location.hash.slice(2))</
 <body>
 <header class="top">
 <button class="menu" aria-label="Menu"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
-<a class="brand" href="index.html"><img src="examples/logo.png" alt="" width="36" height="36"> LittleJS <span class="ver">1.24.0</span></a>
+<a class="brand" href="index.html"><img src="examples/logo.png" alt="" width="36" height="36"> LittleJS <span class="ver">1.25.0</span></a>
 <nav class="links"><a href="https://github.com/KilledByAPixel/LittleJS">GitHub</a><a href="https://killedbyapixel.github.io/LittleJS/examples/">Examples</a><a href="https://github.com/KilledByAPixel/LittleJS/blob/main/REFERENCE.md">Reference</a><a href="https://github.com/KilledByAPixel/LittleJS/blob/main/FAQ.md">FAQ</a></nav>
 <div class="search"><input type="search" placeholder="Search" aria-label="Search"><ul class="results" hidden></ul></div>
 <button class="theme" aria-label="Toggle theme"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M12 3a9 9 0 1 0 9 9c0-.5 0-1-.1-1.4A6 6 0 0 1 12 3z" fill="currentColor"/></svg></button>
@@ -116,7 +116,7 @@ The code is very clean and well documented with many examples to get you started
 <li><a href="https://chatgpt.com/g/g-67c7c080b5bc81919736bc8815836be6-littlejs-game-maker">LittleJS GPT</a> - Build LittleJS games right inside ChatGPT</li>
 </ul>
 <h2 id="how-to-use-littlejs">How To Use LittleJS</h2>
-<p>To get started download the latest LittleJS package from GitHub or install via npm:</p>
+<p>To get started download the latest release from GitHub, the engine's builds and source as npm has them (the examples are in the repository), or install via npm:</p>
 <pre class="prettyprint source"><code>npm install littlejsengine
 </code></pre>
 <p>or use <code>degit</code> for an empty Vite template</p>
@@ -206,7 +206,7 @@ engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost);
 </tr>
 </tbody>
 </table>
-<p>Every build includes the plugins. littlejs.min.js is about 100 KB gzipped: the core engine is about 36 KB of that and the 3D plugins about 40 KB. A bundler like Vite leaves out the plugins a game does not use, so a small 2D game comes to about 26 KB gzipped, and a lit 3D scene to about 47 KB.</p>
+<p>Every build includes the plugins. littlejs.min.js is about 125 KB gzipped, and the 3D plugins are a large part of that. A bundler like Vite leaves out the plugins a game does not use, so a small 2D game comes to about 26 KB gzipped, and a lit 3D scene to about 47 KB.</p>
 <h2 id="games-made-with-littlejs">Games Made With LittleJS</h2>
 <p>Here are a few of the many amazing games created with LittleJS...</p>
 <ul>

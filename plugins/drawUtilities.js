@@ -15,7 +15,7 @@
  *  @param {Vector2} pos - Screen space position
  *  @param {Vector2} size - Screen space size
  *  @param {TileInfo} startTile - Top-left tile of the 3x3 block to sample (see drawNineSlice)
- *  @param {Color|number} [color=WHITE] - Color to modulate with; a number here is the borderSize of the order before 1.20, deprecated
+ *  @param {Color} [color=WHITE] - Color to modulate with
  *  @param {number} [borderSize] - Rendered thickness of the border sections
  *  @param {Color} [additiveColor] - Additive color
  *  @param {number} [extraSpace] - Extra spacing adjustment
@@ -25,12 +25,9 @@
  *  @memberof DrawUtilities */
 function drawNineSliceScreen(pos, size, startTile, color=WHITE, borderSize=32, additiveColor, extraSpace=2, angle=0, useWebGL=false, context)
 {
-    if (isNumber(color)) // deprecated since 1.20, the order before it: borderSize, extraSpace and angle after startTile
-    {
-        [borderSize, extraSpace, angle] = [/** @type {number} */ (color), arguments[4] ?? 2, arguments[5] ?? 0];
-        color = WHITE, additiveColor = undefined;
-    }
-    drawNineSlice(pos, size, startTile, /** @type {Color} */ (color), borderSize, additiveColor, extraSpace, angle, useWebGL, true, context);
+    // the order before 1.20 had borderSize, extraSpace and angle after startTile
+    ASSERT(isColor(color), 'drawNineSliceScreen takes a color after startTile, then borderSize', color);
+    drawNineSlice(pos, size, startTile, color, borderSize, additiveColor, extraSpace, angle, useWebGL, true, context);
 }
 
 /** Draw a scalable nine-slice UI element in world space
@@ -109,7 +106,7 @@ function drawNineSlice(pos, size, startTile, color, borderSize, additiveColor, e
  *  @param {Vector2} pos - Screen space position
  *  @param {Vector2} size - Screen space size
  *  @param {TileInfo} startTile - First of 3 consecutive tiles: corner, side, center (see drawThreeSlice)
- *  @param {Color|number} [color=WHITE] - Color to modulate with; a number here is the borderSize of the order before 1.20, deprecated
+ *  @param {Color} [color=WHITE] - Color to modulate with
  *  @param {number} [borderSize] - Rendered thickness of the border sections
  *  @param {Color} [additiveColor] - Additive color
  *  @param {number} [extraSpace] - Extra spacing adjustment
@@ -119,12 +116,9 @@ function drawNineSlice(pos, size, startTile, color, borderSize, additiveColor, e
  *  @memberof DrawUtilities */
 function drawThreeSliceScreen(pos, size, startTile, color=WHITE, borderSize=32, additiveColor, extraSpace=2, angle=0, useWebGL=false, context)
 {
-    if (isNumber(color)) // deprecated since 1.20, the order before it: borderSize, extraSpace and angle after startTile
-    {
-        [borderSize, extraSpace, angle] = [/** @type {number} */ (color), arguments[4] ?? 2, arguments[5] ?? 0];
-        color = WHITE, additiveColor = undefined;
-    }
-    drawThreeSlice(pos, size, startTile, /** @type {Color} */ (color), borderSize, additiveColor, extraSpace, angle, useWebGL, true, context);
+    // the order before 1.20 had borderSize, extraSpace and angle after startTile
+    ASSERT(isColor(color), 'drawThreeSliceScreen takes a color after startTile, then borderSize', color);
+    drawThreeSlice(pos, size, startTile, color, borderSize, additiveColor, extraSpace, angle, useWebGL, true, context);
 }
 
 /** Draw a scalable three-slice UI element in world space

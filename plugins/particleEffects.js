@@ -162,7 +162,6 @@ function particleEffectSanitize(raw)
     const text = typeof raw?.name === 'string' ? raw.name.replace(/[\x00-\x1f\x7f]+/g, ' ').trim() : '';
     const name = text ? text.slice(0, 60).trim() : 'Effect'; // no space left where it was cut
     const input = raw?.settings && typeof raw.settings === 'object' ? {...raw.settings} : {};
-    input.collideLevel ??= input.collideTiles; // its name before 1.20
     // a library saved before shapes names its tile and no shape, it keeps its tile
     if (input.shape === undefined && isNumber(input.tileIndex))
         input.shape = '';

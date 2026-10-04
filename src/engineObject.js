@@ -638,11 +638,6 @@ class EngineObject
         this.collideRaycast = collideRaycast;
     }
 
-    /** @deprecated since 1.20, use collideLevel
-     *  @type {boolean} */
-    get collideTiles() { return this.collideLevel; }
-    set collideTiles(collide) { this.collideLevel = collide; }
-
     /** Returns string containing info about this object for debugging
      *  @return {string} */
     toString()

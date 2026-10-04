@@ -120,7 +120,8 @@ function checkJSDocMessages(output)
     const lines = [];
     for (const line of output.split(/\r?\n/).map(line => line.trim()).filter(line => line))
         /^(ERROR|WARNING)\b/.test(line) || !lines.length ? lines.push(line) : lines[lines.length - 1] += ' ' + line;
-    const expected = (line)=> /Invalid type expression "(\[|\w+ is |Array<\[|[^"]*\w\?: )/.test(line);
+    // tuples, predicates, records with optional fields, and a function type grouped in parentheses to join a union
+    const expected = (line)=> /Invalid type expression "(\[|\(function\(|\w+ is |Array<\[|[^"]*\w\?: )/.test(line);
     const unexpected = lines.filter(line => !expected(line));
     if (unexpected.length)
     {

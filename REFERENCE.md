@@ -2384,19 +2384,6 @@ debugTweakables = false // Is the tweakables panel shown? setDebugTweakables(sho
 debugWatermark       // Should watermark with FPS appear in debug mode?
 ```
 
-## Deprecated
-
-Old names and argument orders that still work, marked `@deprecated` in the types; use the new ones, the old are
-kept until 1.25 at least.
-
-```javascript
-obj.collideTiles                         // since 1.20, use obj.collideLevel, the same flag
-weldJoint.setSpringDampingRatio(ratio)   // since 1.20, use setDampingRatio, and getDampingRatio for the getter
-newgrounds.logView()                     // since 1.20, does nothing, the view is logged when the plugin starts
-drawNineSliceScreen(pos, size, startTile, borderSize, extraSpace, angle) // since 1.20, the order is now
-drawThreeSliceScreen(pos, size, startTile, borderSize, extraSpace, angle) // (pos, size, startTile, color, ...)
-```
-
 [LittleJS Engine](https://github.com/KilledByAPixel/LittleJS) Copyright 2021 Frank Force
 
 ![LittleJS Logo](examples/favicon.png)

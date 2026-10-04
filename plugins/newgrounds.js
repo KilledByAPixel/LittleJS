@@ -181,9 +181,6 @@ class NewgroundsPlugin
         this.ready = this.init();
     }
 
-    /** @deprecated since 1.20, the view is logged when the plugin starts, so this does nothing */
-    logView() {}
-
     /** Log the view, check the session, fetch the medals and scoreboards, then keep the session alive; the constructor runs it once
      *  @private */
     async init()
