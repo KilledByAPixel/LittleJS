@@ -129,3 +129,31 @@ test('in a release build levelEditor.edit2D is there and changes nothing, so a g
         run('edit.toJSON()'), run('edit.objects.length'), run('edit.selection.size'), run('edit.map'),
         run('levelEditor.edit3D')], [false, false, false, '', 0, 0, undefined, undefined]);
 });
+
+// a server that answers every path with its web page, as a dev server does for a mistyped one
+const pageServer = { fetch: async (url)=> ({ ok: true, status: 200, url: 'http://localhost/' + url,
+    text: async ()=> '<!doctype html><html><body>app</body></html>',
+    json: async ()=> { throw new SyntaxError(`Unexpected token '<'`); },
+    arrayBuffer: async ()=> new TextEncoder().encode('<!doctype html><html></html>').buffer }) };
+
+test('a JSON, glTF or particle effect file that is a web page says which file, and that it is a page', async () =>
+{
+    const { run } = loadEngine(pageServer);
+    run('setHeadlessMode(true)');
+    const error = (code)=> run(`(${code}).then(()=> 'loaded', (e)=> String(e.message))`);
+    for (const [code, file] of [[`fetchJSON('levels/one.json')`, 'levels/one.json'],
+        [`particleEffectsLoad('fx.json')`, 'fx.json'], [`loadGLTF('ship.glb')`, 'ship.glb']])
+    {
+        const message = await error(code);
+        assert.ok(message.includes(file) && /web page/.test(message), message);
+    }
+});
+
+test('an OBJ file with no faces warns, naming the file', async () =>
+{
+    const warnings = [];
+    const { run } = loadEngine({ ...pageServer, console: { ...console, warn: (...a)=> warnings.push(a.join(' ')) } });
+    run('setHeadlessMode(true)');
+    await run(`loadOBJ('house.obj')`);
+    assert.ok(warnings.some((w)=> w.includes('house.obj')), JSON.stringify(warnings));
+});

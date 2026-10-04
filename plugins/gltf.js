@@ -367,7 +367,14 @@ async function loadGLTF(url)
     let base = '';
     if (!/^(blob|data):/i.test(from))
         base = response.url ? new URL('.', from).href : from.slice(0, from.lastIndexOf('/') + 1);
-    return parseGLTF(await response.arrayBuffer(), base);
+    const data = await response.arrayBuffer();
+    try { return await parseGLTF(data, base); }
+    catch (e)
+    {
+        // which file, and a web page, as a dev server sends for a mistyped path, said as one
+        const page = loadIsWebPage(String.fromCharCode(...new Uint8Array(data, 0, min(data.byteLength, 64))));
+        throw new Error('loadGLTF ' + url + (page ? ' is a web page, so the path may be wrong' : ': ' + e.message));
+    }
 }
 
 /** Parse a model from GLB bytes or glTF JSON, fetching the buffers and images it refers to

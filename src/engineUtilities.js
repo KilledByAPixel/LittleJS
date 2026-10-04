@@ -124,10 +124,21 @@ async function fetchJSON(url)
     const response = await fetch(url);
     if (!response.ok)
         throw new Error(`Failed to fetch JSON from ${url}: ${response.status} ${response.statusText}`);
-    const json = await response.json();
+    const text = await response.text();
+    let json;
+    try { json = JSON.parse(text); }
+    catch (e)
+    {
+        // a dev server answers a mistyped path with its own page, which is no JSON, so the error says which file
+        throw new Error(`fetchJSON: ${url} is not JSON` + (loadIsWebPage(text) ?
+            ', it is a web page, so the path may be wrong' : ': ' + e.message));
+    }
     editorJSONFetched(url, json); // debug builds remember the file a level came from, to save it by that name
     return json;
 }
+
+// is a file's text a web page, as a dev server sends for a path it does not have
+const loadIsWebPage = (text)=> /^\s*</.test(text);
 
 ///////////////////////////////////////////////////////////////////////////////
 

@@ -7,6 +7,7 @@ What changed in each release, newest first. Releases before 1.20.0 are on the
 
 ### Fixes
 
+- A JSON, glTF or particle effect file that fails to read names the file, and says when it is a web page, as a dev server sends for a mistyped path, where it gave only "Unexpected token '<'"; an OBJ file with no faces warns, naming the file
 - In a release build `levelEditor.edit2D` is there and changes nothing, where it was undefined and a call on it threw, so a game needs no guard around it
 - Level editor: a turned or mirrored stamp turns or mirrors its objects too, each object's rotation with it, a box placed from the corner that becomes its own, a polygon's points and a tile object's image mirrored
 

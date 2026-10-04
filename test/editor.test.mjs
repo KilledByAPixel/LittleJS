@@ -230,7 +230,7 @@ test('a map fetched with fetchJSON saves under its file name', async () =>
 {
     const text = JSON.stringify({ width: 1, height: 1,
         layers: [{ type: 'tilelayer', width: 1, height: 1, data: [1] }] });
-    const { run } = await loadGame({ fetch: async ()=> ({ ok: true, json: async ()=> JSON.parse(text) }) });
+    const { run } = await loadGame({ fetch: async ()=> ({ ok: true, text: async ()=> text }) });
     await run(`fetchJSON('levels/one.json?v=2').then((m)=> { tileLayersLoad(m, undefined, 0, 0, false); })`);
     assert.equal(run('editorMapList.at(-1).fileName'), 'one.json');
     assert.equal(run('editorMapList.at(-1).url'), 'levels/one.json?v=2');

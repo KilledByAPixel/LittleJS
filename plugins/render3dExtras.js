@@ -1921,7 +1921,11 @@ async function loadOBJ(url, smooth=render3D?.smoothShading)
     const response = await fetch(url);
     if (!response.ok)
         throw new Error('loadOBJ failed: ' + url);
-    return parseOBJ(await response.text(), smooth);
+    const text = await response.text(), mesh = parseOBJ(text, smooth);
+    // a mesh of nothing draws nothing, so it says why, a web page being what a dev server sends for a mistyped path
+    mesh.points.length || console.warn('loadOBJ: ' + url + ' has no faces' +
+        (loadIsWebPage(text) ? ', it is a web page, so the path may be wrong' : ''));
+    return mesh;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
