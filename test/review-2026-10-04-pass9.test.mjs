@@ -59,3 +59,30 @@ test('the d.ts takes an old Tiled version as a number, and tileLayersLoad with n
     assert.match(tiled, /version\?: (string \| number|number \| string);/);
     assert.match(dts, /export function tileLayersLoad\(tileMapData\?: TiledMap,/);
 });
+
+test('a child whose update throws leaves the engine\'s child list as it was, so nothing is kept from it', ()=>
+{
+    for (const file of [undefined, 'littlejs.release.js'])
+    {
+        const { run } = loadEngine({}, '', file);
+        run(`setHeadlessMode(true); var parent = new EngineObject(vec2()), child = new EngineObject(vec2());
+            parent.addChild(child); child.update = ()=> { throw new Error('child'); };
+            for (let i = 0; i < 100; ++i) try { engineObjectsUpdate(); } catch (e) {}`);
+        assert.equal(run('engineChildStack.length'), 0, file);
+    }
+});
+
+test('every built in effect names its own locals with an underscore, and a value may not, nor be c, uv or p', async ()=>
+{
+    const LJS = await import('../dist/littlejs.esm.js');
+    const pieces = [LJS.postProcessGlow('a', 'b', 4), LJS.postProcessScanlines(), LJS.postProcessNoise(), LJS.postProcessVignette(),
+        LJS.postProcessCurve(), LJS.postProcessChromatic(), LJS.postProcessOutline(), LJS.postProcessTiltShift(),
+        LJS.postProcessDepthOfField(), LJS.postProcessTV({curve: .1})];
+    for (const piece of pieces)
+        for (const [, name] of piece.matchAll(/\b(?:float|int|vec[234])\s+([A-Za-z_]\w*)/g))
+            assert.ok(name.startsWith('_'), 'a local named ' + name + ' could hide a value of that name');
+    const { run } = loadEngine();
+    for (const name of ['_glow', 'c', 'uv', 'p'])
+        assert.throws(()=> run(`postProcessFragmentSource(postProcessEffects(), {${name}: 1})`), /Assert/, name);
+    assert.doesNotThrow(()=> run(`postProcessFragmentSource(postProcessEffects(), {glow: 1, strength: 1})`));
+});

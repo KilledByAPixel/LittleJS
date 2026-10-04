@@ -820,9 +820,12 @@ function engineObjectsUpdate()
         const start = engineChildStack.length;
         for (const child of children)
             engineChildStack.push(child);
-        for (let i = start; i < engineChildStack.length; ++i)
-            updateChildObject(engineChildStack[i]);
-        engineChildStack.length = start;
+        try
+        {
+            for (let i = start; i < engineChildStack.length; ++i)
+                updateChildObject(engineChildStack[i]);
+        }
+        finally { engineChildStack.length = start; } // put back when an update throws too, or it keeps them
     }
     const pass = engineObjectsUpdateCount;
     function updateChildObject(o)

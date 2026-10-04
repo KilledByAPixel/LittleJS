@@ -53,7 +53,9 @@ class PostProcessPlugin
          *  by its name, a number a float and a list of 2 to 4 numbers a vector, set every frame as they are; an
          *  effect setting can be one of these names, so it changes every frame without making the shader again, all
          *  but glow's size, which sets how many samples it takes; adding or removing a name makes the shader again,
-         *  and the shader is first made at the first render, so values set right after the plugin are in it
+         *  and the shader is first made at the first render, so values set right after the plugin are in it; a name
+         *  is a GLSL name not starting with an underscore, which the effects keep for their own, nor i and a capital
+         *  or gl_, and not c, uv or p, the names mainImage works on
          *  @type {Object<string, number|Array<number>>} */
         this.values = {};
         // the names of the values the shader was made with
@@ -286,8 +288,11 @@ function postProcessFragmentSource(shaderCode, values={})
     for (const name in values)
     {
         const value = values[name], length = isArray(value) ? value.length : 1;
-        ASSERT(/^[A-Za-z_][A-Za-z0-9_]*$/.test(name) && !/^(i[A-Z]|gl_)/.test(name),
-            'a postProcess value needs a name GLSL takes, not i and a capital or gl_, as the engine\'s own are', name);
+        // not the engine's own names, i and a capital, gl_ and those of every effect, nor an underscore and a name,
+        // as the effects' own locals are, which would hide the value
+        ASSERT(/^[A-Za-z][A-Za-z0-9_]*$/.test(name) && !/^(i[A-Z]|gl_)/.test(name) &&
+            !['c', 'uv', 'p', 'sceneDepth', 'mainImage', 'main'].includes(name),
+            'a postProcess value needs a name GLSL takes that the effects do not use themselves', name);
         ASSERT(!isArray(value) || length >= 2 && length <= 4, 'a postProcess value is a number or 2 to 4 of them', name);
         declared += `uniform ${length > 1 ? 'vec' + length : 'float'} ${name};`;
     }
@@ -404,15 +409,15 @@ function postProcessGlow(threshold=.6, strength=1, size=6)
         const count = max(5 + 2 * j, round(2 * radius)) | 1;
         taps += count;
         code += `
-        for (int k = 0; k < ${count}; ++k)
+        for (int _k = 0; _k < ${count}; ++_k)
         {
-            float a = float(k) * ${(2 * PI / count).toFixed(7)}${j ? ' + ' + (j * 2.3999632).toFixed(7) : ''};
-            glow += max(vec3(0), texture(iChannel0, uv + vec2(cos(a), sin(a)) * ${radius.toFixed(4)} / iResolution.xy).rgb - ${postProcessNumber(threshold)});
+            float _a = float(_k) * ${(2 * PI / count).toFixed(7)}${j ? ' + ' + (j * 2.3999632).toFixed(7) : ''};
+            _glow += max(vec3(0), texture(iChannel0, uv + vec2(cos(_a), sin(_a)) * ${radius.toFixed(4)} / iResolution.xy).rgb - ${postProcessNumber(threshold)});
         }`;
     }
     return `        // glow
-        vec3 glow = vec3(0);${code}
-        c.rgb += glow * ${typeof strength === 'string' ? postProcessNumber(strength) + ' / ' + taps + '.' :
+        vec3 _glow = vec3(0);${code}
+        c.rgb += _glow * ${typeof strength === 'string' ? postProcessNumber(strength) + ' / ' + taps + '.' :
             (strength / taps).toFixed(6)};`; // a number as before, a value's name divided in the shader
 }
 
@@ -439,8 +444,8 @@ function postProcessScanlines(strength=.5, spacing=6)
 function postProcessNoise(strength=.1, size=2)
 {
     return `        // noise
-        vec2 q = fract((floor(p / ${postProcessNumber(size)}) + mod(iTime * 500., 1e3)) * .3197);
-        c.rgb += ${postProcessNumber(strength)} * fract(1. + sin(51. * q.x + 73. * q.y) * 13753.3);`;
+        vec2 _q = fract((floor(p / ${postProcessNumber(size)}) + mod(iTime * 500., 1e3)) * .3197);
+        c.rgb += ${postProcessNumber(strength)} * fract(1. + sin(51. * _q.x + 73. * _q.y) * 13753.3);`;
 }
 
 /**
@@ -453,8 +458,8 @@ function postProcessNoise(strength=.1, size=2)
 function postProcessVignette(strength=1, falloff=3)
 {
     return `        // vignette
-        vec2 d = uv * 2. - 1.;
-        c.rgb *= 1. - ${postProcessNumber(strength)} * min(1., pow(dot(d, d) / 2., ${postProcessNumber(falloff)}));`;
+        vec2 _d = uv * 2. - 1.;
+        c.rgb *= 1. - ${postProcessNumber(strength)} * min(1., pow(dot(_d, _d) / 2., ${postProcessNumber(falloff)}));`;
 }
 
 /**
@@ -466,10 +471,10 @@ function postProcessVignette(strength=1, falloff=3)
 function postProcessCurve(strength=.1)
 {
     return `        // curve
-        vec2 d = uv * 2. - 1.;
-        d *= 1. + ${postProcessNumber(strength)} * dot(d, d);
-        uv = d * .5 + .5;
-        c = all(lessThan(abs(d), vec2(1))) ? texture(iChannel0, uv) : vec4(0, 0, 0, 1);`;
+        vec2 _d = uv * 2. - 1.;
+        _d *= 1. + ${postProcessNumber(strength)} * dot(_d, _d);
+        uv = _d * .5 + .5;
+        c = all(lessThan(abs(_d), vec2(1))) ? texture(iChannel0, uv) : vec4(0, 0, 0, 1);`;
 }
 
 /**
@@ -481,31 +486,31 @@ function postProcessCurve(strength=.1)
 function postProcessChromatic(strength=.005)
 {
     return `        // chromatic
-        vec2 d = (uv - .5) * ${postProcessNumber(strength)} * 2.;
-        c.r = texture(iChannel0, uv + d).r;
-        c.b = texture(iChannel0, uv - d).b;`;
+        vec2 _d = (uv - .5) * ${postProcessNumber(strength)} * 2.;
+        c.r = texture(iChannel0, uv + _d).r;
+        c.b = texture(iChannel0, uv - _d).b;`;
 }
 
 // a blur's widest is 32 pixels, past which its 24 taps sit far enough apart to show; a value's is the game's to keep
 const postProcessBlurCheck = (blur)=>
     ASSERT(typeof blur === 'string' || blur <= 32, 'a blur of more than 32 pixels shows its taps as copies', blur);
 
-// a blur over a disc of radius r pixels around uv, of 24 taps spread evenly by the golden angle; weight, when given,
-// is GLSL for how much a tap at puv, s of the radius out, counts, from 0 to 1
+// a blur over a disc of radius _r pixels around uv, of 24 taps spread evenly by the golden angle; weight, when given,
+// is GLSL for how much a tap at _puv, _s of the radius out, counts, from 0 to 1
 function postProcessDiscBlur(weight)
 {
     return `
-        vec3 sum = vec3(0);
-        float total = 0.;
-        for (int k = 0; k < 24; ++k)
+        vec3 _sum = vec3(0);
+        float _total = 0.;
+        for (int _k = 0; _k < 24; ++_k)
         {
-            float s = sqrt((float(k) + .5) / 24.), a = float(k) * 2.39996;
-            vec2 puv = uv + vec2(cos(a), sin(a)) * s * r / iResolution.xy;
-            float w = ${weight || '1.'};
-            sum += texture(iChannel0, puv).rgb * w;
-            total += w;
+            float _s = sqrt((float(_k) + .5) / 24.), _a = float(_k) * 2.39996;
+            vec2 _puv = uv + vec2(cos(_a), sin(_a)) * _s * _r / iResolution.xy;
+            float _w = ${weight || '1.'};
+            _sum += texture(iChannel0, _puv).rgb * _w;
+            _total += _w;
         }
-        c.rgb = total > 0. ? sum / total : c.rgb;`;
+        c.rgb = _total > 0. ? _sum / _total : c.rgb;`;
 }
 
 /**
@@ -524,7 +529,7 @@ function postProcessTiltShift(focus=.5, size=.25, blur=8)
     postProcessBlurCheck(blur);
     const n = postProcessNumber;
     return `        // tilt shift
-        float r = ${n(blur)} * smoothstep(0., .5, abs(uv.y - ${n(focus)}) - ${n(size)} * .5);${postProcessDiscBlur()}`;
+        float _r = ${n(blur)} * smoothstep(0., .5, abs(uv.y - ${n(focus)}) - ${n(size)} * .5);${postProcessDiscBlur()}`;
 }
 
 /**
@@ -547,7 +552,7 @@ function postProcessDepthOfField(focus=10, range=4, blur=8)
     const amount = (depth)=> `${n(blur)} * smoothstep(0., ${n(range)}, abs(${depth} - ${n(focus)}) - ${n(range)} * .5)`;
     // a tap counts as far as its own blur reaches back to here, so a sharp thing in front is not smeared over
     return `        // depth of field, none where there is no depth, as with render3D.depthTexture off
-        float r = iDepthRange.x > 0. ? ${amount('sceneDepth(uv)')} : 0.;${postProcessDiscBlur(`clamp(${amount('sceneDepth(puv)')} - s * r + 1., 0., 1.)`)}`;
+        float _r = iDepthRange.x > 0. ? ${amount('sceneDepth(uv)')} : 0.;${postProcessDiscBlur(`clamp(${amount('sceneDepth(_puv)')} - _s * _r + 1., 0., 1.)`)}`;
 }
 
 /**
@@ -563,12 +568,12 @@ function postProcessOutline(color=BLACK, thickness=1, threshold=.02)
     ASSERT(isColor(color), 'outline color must be a Color');
     const n = postProcessNumber;
     return `        // outline
-        vec2 o = ${n(thickness)} / iResolution.xy;
-        float d = sceneDepth(uv);
-        float dx = abs(sceneDepth(uv + vec2(o.x, 0)) + sceneDepth(uv - vec2(o.x, 0)) - 2. * d);
-        float dy = abs(sceneDepth(uv + vec2(0, o.y)) + sceneDepth(uv - vec2(0, o.y)) - 2. * d);
-        vec4 line = vec4(${n(color.r)}, ${n(color.g)}, ${n(color.b)}, ${n(color.a)});
-        c.rgb = mix(c.rgb, line.rgb, line.a * step(${n(threshold)}, max(dx, dy) / d));`;
+        vec2 _o = ${n(thickness)} / iResolution.xy;
+        float _d = sceneDepth(uv);
+        float _dx = abs(sceneDepth(uv + vec2(_o.x, 0)) + sceneDepth(uv - vec2(_o.x, 0)) - 2. * _d);
+        float _dy = abs(sceneDepth(uv + vec2(0, _o.y)) + sceneDepth(uv - vec2(0, _o.y)) - 2. * _d);
+        vec4 _line = vec4(${n(color.r)}, ${n(color.g)}, ${n(color.b)}, ${n(color.a)});
+        c.rgb = mix(c.rgb, _line.rgb, _line.a * step(${n(threshold)}, max(_dx, _dy) / _d));`;
 }
 
 /**

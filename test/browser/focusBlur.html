@@ -48,6 +48,13 @@ smokeRun(async ()=>
     check('a value moves the band each frame, with the same shader', low[0] > 150 && low[1] < 60 && high[0] < 60 &&
         high[1] > 150 && postProcess.shader === shader, {low, high});
 
+    // a value may be named as an effect's own local once was, glow here, and is not hidden by it
+    postProcess.values = {glow: 0};
+    postProcess.setShaderCode(postProcessEffects(postProcessGlow(0, 'glow')));
+    engineStep(2);
+    const lit = smokePixel(.5, .5)[0], unlit = smokePixel(.5 + 1 / 128, .5)[0];
+    check('a value named glow at 0 adds no glow', Math.max(lit, unlit) > 200 && Math.min(lit, unlit) < 10, {lit, unlit});
+
     // depth of field with no depth texture blurs nothing, where it read a depth of 0 everywhere and blurred it all
     postProcess.values = {};
     postProcess.setShaderCode(postProcessEffects(postProcessDepthOfField(10, 4, 8)));
