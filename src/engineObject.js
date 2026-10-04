@@ -235,7 +235,8 @@ class EngineObject
         {
             // check collisions against solid objects
             const epsilon = .001; // necessary to push slightly outside of the collision
-            for (const o of engineObjectsCollideStaticLast)
+            // with many solids, only those near it, as a grid finds them, in the same order
+            for (const o of engineCollideGrid ? engineCollideGridWalk(this) : engineObjectsCollideStaticLast)
             {
                 // skip destroyed, child objects, self collision, or objects with no box
                 if (o.destroyed || o.parent || o === this || !o.size.x || !o.size.y) continue;
@@ -256,6 +257,8 @@ class EngineObject
                     // notify objects of collision and check if should be resolved
                     const collide1 = this.collideWithObject(o);
                     const collide2 = o.collideWithObject(this);
+                    // a callback may have moved either one, the grid follows
+                    engineCollideGrid && engineCollideGridPlace(engineCollideGrid, o);
                     if (!collide1 || !collide2)
                     {
                         engineObjectsCollidePairAdd(this, o);

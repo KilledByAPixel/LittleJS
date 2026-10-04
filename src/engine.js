@@ -179,6 +179,96 @@ function engineObjectsCollidePairAdd(asker, other, resolve=false)
     others || engineObjectsCollidePairs.set(asker, others = new Map);
     others.set(other, resolve);
 }
+
+// with this many solids or more, a mover finds what is near it through a grid of cells rather than checking every
+// solid, a big game's cost going from every pair to what is close; it resolves the same contacts in the same order,
+// so a game plays the same either way, and a few solids are quicker checked all
+let engineCollideGridMin = 64;
+// the grid for this update, made with the list of solids: each cell's solids, each solid's cells, and each solid's
+// place in the list, which the contacts are taken in; solids too big for cells are near everything
+let engineCollideGrid;
+
+// the grid of a list of solids, its cells about twice a typical solid so most are in one to four
+function engineCollideGridBuild(list)
+{
+    let extent = 0;
+    for (const o of list)
+        extent += min(max(o.size.x, o.size.y), 16) || 0;
+    const grid = {size: max(2 * extent / list.length, .5), cells: new Map, at: new Map, index: new Map, big: new Set};
+    list.forEach((o, i)=> { grid.index.set(o, i); engineCollideGridPlace(grid, o); });
+    return grid;
+}
+
+// put a solid in the cells its box covers now, out of those it was in; a box on a cell's edge is in both cells, so
+// solids that touch share one
+function engineCollideGridPlace(grid, o)
+{
+    if (!grid.index.has(o)) return;
+    const s = grid.size, w = o.size.x / 2, h = o.size.y / 2;
+    const x0 = floor((o.pos.x - w) / s), x1 = floor((o.pos.x + w) / s);
+    const y0 = floor((o.pos.y - h) / s), y1 = floor((o.pos.y + h) / s);
+    const big = !((x1 - x0 + 1) * (y1 - y0 + 1) <= 1024); // and one with no finite box
+    const was = grid.at.get(o);
+    if (was && was[0] === x0 && was[1] === y0 && was[2] === x1 && was[3] === y1 && was[4] === big) return;
+    if (was && !was[4])
+        for (let x = was[0]; x <= was[2]; ++x)
+        for (let y = was[1]; y <= was[3]; ++y)
+        {
+            const cell = grid.cells.get(x * 1048576 + y);
+            cell.splice(cell.indexOf(o), 1);
+        }
+    grid.big.delete(o);
+    if (big)
+        grid.big.add(o);
+    else
+        for (let x = x0; x <= x1; ++x)
+        for (let y = y0; y <= y1; ++y)
+        {
+            const key = x * 1048576 + y;
+            const cell = grid.cells.get(key);
+            cell ? cell.push(o) : grid.cells.set(key, [o]);
+        }
+    grid.at.set(o, [x0, y0, x1, y1, big]);
+}
+
+// the solids a mover is near, after a place in the list, in list order
+function engineCollideGridNear(grid, o, after)
+{
+    const s = grid.size, w = o.size.x / 2, h = o.size.y / 2;
+    const x0 = floor((o.pos.x - w) / s), x1 = floor((o.pos.x + w) / s);
+    const y0 = floor((o.pos.y - h) / s), y1 = floor((o.pos.y + h) / s);
+    const near = new Set(grid.big);
+    if ((x1 - x0 + 1) * (y1 - y0 + 1) <= 1024)
+        for (let x = x0; x <= x1; ++x)
+        for (let y = y0; y <= y1; ++y)
+            for (const other of grid.cells.get(x * 1048576 + y) || [])
+                near.add(other);
+    else
+        grid.index.forEach((i, other)=> near.add(other)); // a mover too big for cells is near everything
+    const index = grid.index;
+    return [...near].filter((other)=> index.get(other) > after).sort((a, b)=> index.get(a) - index.get(b));
+}
+
+// the solids a mover checks, as checking every one would reach them: in list order, and found again from where it is
+// whenever its box has moved, as a push does, so a solid it is pushed into later in the list is still checked
+function* engineCollideGridWalk(o)
+{
+    const grid = engineCollideGrid;
+    let after = -1, x, y, w, h, near = [], k = 0;
+    for (;;)
+    {
+        if (o.pos.x !== x || o.pos.y !== y || o.size.x !== w || o.size.y !== h)
+        {
+            x = o.pos.x, y = o.pos.y, w = o.size.x, h = o.size.y;
+            near = engineCollideGridNear(grid, o, after);
+            k = 0;
+        }
+        if (k >= near.length) return;
+        const other = near[k++];
+        after = grid.index.get(other);
+        yield other;
+    }
+}
 let engineInitialized = false; // engineInit ran, with or without a canvas
 // the loads startup waits for, each counted for the loading screen, and how many are done; undefined once the game
 // loop starts
@@ -806,11 +896,17 @@ function engineObjectsUpdate()
         o.collideSolidObjects && (engineObjectsCollide.push(o), (o.mass ? engineObjectsCollideStaticLast : fixed).push(o));
     for (const o of fixed)
         engineObjectsCollideStaticLast.push(o);
+    engineCollideGrid = engineObjectsCollideStaticLast.length >= engineCollideGridMin ?
+        engineCollideGridBuild(engineObjectsCollideStaticLast) : undefined;
 
-    // update physics before object update
+    // update physics before object update, each solid put where it moved to in the grid, for the movers after it
     for (const o of engineObjects)
         if (!o.parent && !o.destroyed)
+        {
             o.updatePhysics();
+            engineCollideGrid && engineCollideGridPlace(engineCollideGrid, o);
+        }
+    engineCollideGrid = undefined;
 
     // recursive object update: the children are walked from a copy on a shared stack, since a child that
     // destroys itself leaves its parent's list on the spot and the next child would slide past the loop
