@@ -2,6 +2,9 @@ let spriteAtlas;
 
 function gameInit()
 {
+    // each tile in tiles.png has a 1 pixel border, which stops bleeding
+    setTileDefaultPadding(1);
+
     // create a table of all sprites
     const gameTile = (i, size=16)=>  tile(i, size);
     spriteAtlas =
@@ -49,6 +52,8 @@ into a grid. `index` counts cells from 0 at the top left, along each
 row, and `size` is a cell's size in pixels, 16 when left out. The same
 sheet is read with two grids here: at 16 pixels, cells 0, 1 and 2 are
 the small sprites, and at 128 pixels, cells 2 and 3 are the big ones.
+Each cell of this sheet has a 1 pixel border around it, and
+`setTileDefaultPadding(1)`, first in `gameInit`, makes `tile` count it.
 
 `gameTile` only passes its arguments on. It is where a game would put
 its own default size or texture.

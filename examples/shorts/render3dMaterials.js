@@ -127,8 +127,9 @@ of the box.
 `windowTexture` paints a 64 pixel canvas black, then rows of rectangles
 for the windows. `new RandomGenerator(3)` gives the same numbers every run,
 so the same windows are lit: `random.float() < .4` leaves a window out,
-and `random.float(.4, .7)` picks how bright one is. A canvas takes its
-`fillStyle` as text, so each color is written with `toString()`.
+and `random.float(.4, .7)` picks how bright one is. A canvas reads its
+`fillStyle` as text. It would turn a `Color` into text by itself, with
+the color's `toString()`, but calling it says so in the code.
 
 `emissiveMap` is a texture of where an object glows. It is added on top
 of the lit surface, so it shows where no light reaches, and

@@ -1,5 +1,8 @@
 function gameInit()
 {
+    // each tile in tiles.png has a 1 pixel border, which stops bleeding
+    setTileDefaultPadding(1);
+
     new UISystemPlugin;
     uiSystem.defaultColor = WHITE; // show the art as it is
     uiSystem.defaultButtonColor = hsl(.55,.4,.85);
@@ -71,7 +74,9 @@ with. `slices` says how the art is used:
 
 `borderSize` is how thick the corners and edges are drawn. The UI works
 in pixels, so 16 is 16 pixels, the size of the tiles: the border is
-drawn at the art's own size and stays sharp.
+drawn at the art's own size and stays sharp. Each tile of the sheet
+has a 1 pixel border, and `setTileDefaultPadding(1)`, first in
+`gameInit`, makes `tile` count it.
 
 ### The defaults
 `new UISystemPlugin` makes `uiSystem`, and every object copies its

@@ -1,8 +1,10 @@
+let coinMesh; // one mesh all the coins share
+
 class Coin extends EngineObject3D
 {
     constructor(pos, after)
     {
-        super(vec3(pos.x, pos.y), buildTorus(1.5, .5));
+        super(vec3(pos.x, pos.y), coinMesh);
         this.color = hsl(.15,1,.5);
         this.rotation3D.x = PI/2; // face the camera
         this.angleVelocity3D = vec3(0, .04);
@@ -19,6 +21,7 @@ function gameInit()
     setCanvasClearColor(hsl(.6,.3,.3));
 
     // coins in front of and behind the 2D bars
+    coinMesh = buildTorus(1.5, .5);
     for (let i = 6; i--;)
         new Coin(vec2(i*4 - 10, 0), i%2 == 1);
 }
@@ -51,13 +54,16 @@ scene, and so over it. That gives three layers, back to front: 3D, 2D,
 - `render3D.ambientColor` is the light that reaches every side. No sky
   is set here, so the background is the canvas itself, cleared to the
   color given to `setCanvasClearColor`.
+- `coinMesh` is `buildTorus(size, tubeSize)`, a ring 1.5 across with
+  a tube `.5` thick. It is built once and every coin draws it, so the
+  coins of each layer are drawn together, as one instanced draw.
 - The loop makes six coins 4 units apart. `i%2 == 1` is true for every
   other one, and that is passed on as `after`.
 
 ### Coin
 The constructor gets a 2D position and makes a 3D one from it:
-`vec3(x, y)` leaves z at 0, where the 2D scene is. The mesh is
-`buildTorus(size, tubeSize)`, a ring 1.5 across with a tube `.5` thick.
+`vec3(x, y)` leaves z at 0, where the 2D scene is. The mesh is the
+shared `coinMesh`.
 A torus is built lying flat, so `rotation3D.x = PI/2` pitches it up to
 face the camera. `angleVelocity3D` is added to the rotation every
 frame, and `vec3(0, .04)` is a yaw, a turn around the y axis.

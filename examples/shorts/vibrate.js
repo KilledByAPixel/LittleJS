@@ -7,7 +7,8 @@ function gameInit()
     canvasClearColor = hsl(.05,.5,.2);
 
     // create buttons to demo vibrate() and gamepadVibrate()
-    const w = 320, h = 80, gap = 20;
+    // three buttons side by side fit the canvas width
+    const gap = 20, h = 80, w = min(320, (mainCanvasSize.x-4*gap)/3);
     function makeButton(pos, text, onClick)
     {
         pos = pos.multiply(vec2(w+gap, h+gap));
@@ -56,7 +57,9 @@ has its position and size in pixels, not world units, and the position
 is its center, counted from the middle of the canvas with y going down.
 The helper takes a position in whole buttons and multiplies it by a
 button's width and height plus the gap, so `vec2(0,-2)` is the top
-button and `vec2(-1,0)` and `vec2(1,0)` sit side by side. The function
+button and `vec2(-1,0)` and `vec2(1,0)` sit side by side. The width is
+at most 320 and narrower when three buttons and their gaps would not
+fit across `mainCanvasSize.x`, the canvas width in pixels. The function
 given as `onClick` is called when the button is clicked.
 
 ### Device vibration

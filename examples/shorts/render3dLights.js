@@ -1,8 +1,10 @@
+let lampMesh; // one mesh all the lamps share
+
 class Lamp extends EngineObject3D
 {
     constructor(angle, color)
     {
-        super(vec3(), buildSphere(.4, 8, 4));
+        super(vec3(), lampMesh);
         this.color = color;
         this.orbitAngle = angle;
         this.emissive = 1; // drawn in its own color so it looks bright
@@ -35,6 +37,7 @@ function gameInit()
     new EngineObject3D(vec3(0,1,0), buildBox(2).setColor(hsl(0,0,.8)));
 
     // make three lamps with colored point lights
+    lampMesh = buildSphere(.4, 8, 4);
     for (let i = 3; i--;)
         new Lamp(i*2, hsl(i/3,1,.6));
 
@@ -56,8 +59,9 @@ attached to another object, or destroyed like anything else.
 A light draws no lamp, so `Lamp` is the thing you see and the light is
 its child.
 
-- The lamp's mesh is `buildSphere(.4, 8, 4)`: .4 across, 8 sides around
-  and 4 rings from top to bottom.
+- The lamp's mesh is `lampMesh`, built once in `gameInit` with
+  `buildSphere(.4, 8, 4)`: .4 across, 8 sides around and 4 rings from
+  top to bottom. The three lamps share it, as the pillars share theirs.
 - `emissive = 1` draws it in its own color with no shading, so it looks
   lit from inside.
 - `new Light3D(pos3D, radius, color, intensity)` is a point light. It

@@ -20,7 +20,9 @@ const sound_click = new LJS.Sound([1,.5]);
 
 ///////////////////////////////////////////////////////////////////////////////
 
-// html menu system
+// html menu system, its elements are in index.html
+const getElement = (id)=> document.getElementById(id);
+const menu = getElement('menu');
 const getMenuVisible = ()=> menu.style.visibility != 'hidden';
 function setMenuVisible(visible)
 {
@@ -31,10 +33,10 @@ function setMenuVisible(visible)
 ///////////////////////////////////////////////////////////////////////////////
 function gameInit()
 {
-    button_test.onclick = function() { alert('Button was clicked!'); }
-    button_exitMenu.onclick = function() { setMenuVisible(false); }
-    input_test.onchange = function() { alert('New text: ' + this.value); }
-    input_rangeTest.onchange = function() { alert('New value: ' + this.value); }
+    getElement('button_test').onclick = function() { alert('Button was clicked!'); }
+    getElement('button_exitMenu').onclick = function() { setMenuVisible(false); }
+    getElement('input_test').onchange = function() { alert('New text: ' + this.value); }
+    getElement('input_rangeTest').onchange = function() { alert('New value: ' + this.value); }
     LJS.setCanvasClearColor(hsl(0,0,.2));
 
     // show menu for demo

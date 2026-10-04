@@ -1,5 +1,8 @@
 function gameInit()
 {
+    // each tile in tiles.png has a 1 pixel border, which stops bleeding
+    setTileDefaultPadding(1);
+
     // setup ui system plugin
     new UISystemPlugin;
     uiSystem.defaultSoundPress = new Sound([.5,0,220]);
@@ -97,7 +100,9 @@ center and above it. Hiding a parent hides its children too.
 
 - `UIText(pos, size, text)` fits its text into its box. The `\n` makes
   two lines.
-- `UITile(pos, size, tileInfo)` draws a tile.
+- `UITile(pos, size, tileInfo)` draws a tile. Each tile of the sheet
+  has a 1 pixel border, and `setTileDefaultPadding(1)`, first in
+  `gameInit`, makes `tile` count it.
 - `UICheckbox(pos, size)` has a `checked` field.
 - `UITextInput(pos, size, text)` is a field to type in. `textHeight`
   sets the text's height in place of fitting it, and `maxLength` is the

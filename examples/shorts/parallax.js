@@ -26,8 +26,9 @@ function gameRenderPost()
 {
     // the world itself, ground and posts 5 units apart, in front of it all
     drawRect(vec2(cameraPos.x, -28), vec2(1e3, 40), hsl(.3,.4,.25));
-    const first = floor(cameraPos.x/5 - 10)*5;
-    for (let x = first; x < first + 105; x += 5)
+    const w = getCameraSize().x/2 + 1;
+    const first = floor((cameraPos.x - w)/5)*5;
+    for (let x = first; x < cameraPos.x + w; x += 5)
         drawRect(vec2(x, -7), vec2(.4, 2), hsl(.08,.5,.3));
 }
 
@@ -84,9 +85,11 @@ to a unit, and `canvasClearColor` is the sky.
 `gameRenderPost` runs after the objects are drawn, so the ground and
 the posts are in front of the layers. They are drawn at fixed world
 positions, a post every 5 units, and move at the camera's full speed.
-`first` is the post position 50 units left of the camera, rounded down
-to a multiple of 5, and the loop draws the 21 posts from there, enough
-to cover the view wherever the camera is.
+`getCameraSize()` is the view's size in world units, and `w` is half
+its width and a unit more. `first` is the post position `w` left of
+the camera, rounded down to a multiple of 5, and the loop draws posts
+from there until `w` right of it, enough to cover the view wherever the
+camera is and however wide the canvas.
 
 ## Try it
 - Change the parallax, `.3 + far*.5,` to `0,`. Every range now passes

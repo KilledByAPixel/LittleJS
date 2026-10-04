@@ -1,8 +1,10 @@
+let cometMesh; // one mesh all the comets share
+
 class Comet extends EngineObject3D
 {
     constructor(color, phase)
     {
-        super(vec3(), buildSphere(1, 8, 4));
+        super(vec3(), cometMesh);
         this.color = color;
         this.phase = phase;
         this.softShadow = 1.5;
@@ -49,6 +51,7 @@ function gameInit()
     const pole = buildCylinder(.16, 6, 8).setColor(hsl(.1,.3,.4));
     new EngineObject3D(vec3(-2,3,0), pole);
     new Flag(vec3(0,4.5,0));
+    cometMesh = buildSphere(1, 8, 4);
     for (let i = 3; i--;)
         new Comet(hsl(i/3,1,.6), i*2*PI/3);
 }
@@ -63,8 +66,9 @@ Both classes extend `EngineObject3D`, the way a 2D game extends
 `EngineObject`. The engine calls each object's `update` every frame.
 
 ### Comet
-The constructor hands `super` a position and a mesh:
-`buildSphere(size, sides, rings)`, one unit across with few sides.
+The constructor hands `super` a position and a mesh, `cometMesh`, made
+once in `gameInit` with `buildSphere(size, sides, rings)`, one unit
+across with few sides, and shared by the three comets.
 `softShadow = 1.5` draws a soft round shadow of that diameter on the
 ground under the object, at height 0 unless
 `render3D.softShadowHeight` says otherwise. It is much cheaper than the
@@ -104,8 +108,8 @@ the mesh to be sent to the GPU again.
 ### gameInit
 The pole is `buildCylinder(size, height, sides)`, `.16` across and 6
 tall, and `setColor` sets the color of every vertex. Its center is at y
-3, so it stands on the floor. The loop makes the comets with hues a
-third apart.
+3, so it stands on the floor. The comets' mesh is built next, and the
+loop makes the comets with hues a third apart.
 
 ## Try it
 - Change the trail's life from `1.5` to `4` for long trails.

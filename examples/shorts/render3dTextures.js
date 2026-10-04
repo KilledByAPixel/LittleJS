@@ -2,9 +2,9 @@
 function makeBrickTexture()
 {
     const size = 64, context = createCanvasContext(size);
-    context.fillStyle = hsl(.05,.4,.3);
+    context.fillStyle = hsl(.05,.4,.3).toString();
     context.fillRect(0, 0, size, size);
-    context.fillStyle = hsl(.05,.5,.5);
+    context.fillStyle = hsl(.05,.5,.5).toString();
     for (let row = 4; row--;)
     for (let col = 5; col--;)
         context.fillRect(col*32 + (row&1)*8 - 8, row*16, 30, 14);

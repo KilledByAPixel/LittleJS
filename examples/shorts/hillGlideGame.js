@@ -43,10 +43,11 @@ function gameInit()
 function gameRender()
 {
     // background gradient
-    drawRectGradient(cameraPos, vec2(32), WHITE, BLUE);
+    const view = getCameraSize();
+    drawRectGradient(cameraPos, view, WHITE, BLUE);
 
     // draw ground as a series of thin rectangles
-    const h = 100, w = 20;
+    const h = 100, w = view.x/2 + 1;
     const pos = vec2();
     const sizeTop = vec2(.4);
     const size = vec2(.2,h);
@@ -107,11 +108,14 @@ The last line puts the camera 9 units ahead of the bird at a fixed
 height, so the bird stays in the left half of the view.
 
 ### gameRender
-`drawRectGradient` fills the view with a square that goes from `WHITE`
-at the top to `BLUE` at the bottom, centered on the camera.
+`getCameraSize()` is the size of the view in world units, so the
+drawing fills any canvas. `drawRectGradient` fills the view with a
+rectangle that size that goes from `WHITE` at the top to `BLUE` at the
+bottom, centered on the camera.
 
-The ground is drawn as thin columns, one every .1 units across 20 units
-each side of the camera. For each, a black square at the ground height
+The ground is drawn as thin columns, one every .1 units across half
+the view's width each side of the camera, and a unit more so no gap
+shows at the edges. For each, a black square at the ground height
 makes the outline, and a rectangle .2 wide and 100 tall under it is the
 earth. `oscillate(.2, 1, x)` is a wave from 0 to 1 that takes 5 units
 of `x` to repeat, and it moves the hue between .2 and .4 for the

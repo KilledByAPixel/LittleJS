@@ -1,8 +1,10 @@
+let orbMesh; // one mesh all the orbs share
+
 class Orb extends EngineObject3D
 {
     constructor(angle, color)
     {
-        super(vec3(), buildSphere(1.5));
+        super(vec3(), orbMesh);
         this.color = color;
         this.orbitAngle = angle;
         this.emissive = 1; // full brightness
@@ -30,6 +32,7 @@ function gameInit()
     const pillar = buildCylinder(1.5, 5).setColor(hsl(0,0,.8));
     for (let i = 6; i--;)
         new EngineObject3D(vec3(11, 2.5).rotateY(i/6*2*PI), pillar);
+    orbMesh = buildSphere(1.5);
     for (let i = 4; i--;)
         new Orb(i*PI/2, hsl(i/4,1,.6));
 }
@@ -46,8 +49,9 @@ the light on it, and bloom takes the bright pixels of the finished frame
 and spreads them over their neighbors.
 
 ### Orb
-An `Orb` is an `EngineObject3D` with a sphere mesh, `buildSphere(1.5)`,
-1.5 units across.
+An `Orb` is an `EngineObject3D` with a sphere mesh, `orbMesh`, built
+once in `gameInit` with `buildSphere(1.5)`, 1.5 units across, and
+shared by all four.
 
 - `emissive = 1` draws the orb in its own color with no shading, so it
   is bright even on the side away from the sun.
@@ -81,8 +85,9 @@ An `Orb` is an `EngineObject3D` with a sphere mesh, `buildSphere(1.5)`,
   `setColor`, and shared by six objects placed on a circle 11 units out.
   A cylinder is centered on its position, so y is 2.5 to stand a 5 unit
   pillar on the floor.
-- The four orbs start a quarter turn apart, with hues a quarter of the
-  color wheel apart.
+- The orbs' mesh is built the same way, once, after `smoothShading`
+  is set. The four orbs start a quarter turn apart, with hues a quarter
+  of the color wheel apart.
 
 ## Try it
 - Put `//` in front of the `postProcessBloom` line to see the scene

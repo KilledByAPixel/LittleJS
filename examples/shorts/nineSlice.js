@@ -3,9 +3,11 @@ function gameRender()
     const nineSliceTile = tile(16);
     const threeSliceTile = tile(19);
 
+    // the world panels go in the left half, the screen ones in the right
+    const left = -getCameraSize().x/4, right = mainCanvasSize.x*3/4;
     {
         // draw nine slice with thin border and color
-        const pos = vec2(-7,4);
+        const pos = vec2(left,4);
         const size = vec2(11+oscillate(.5,2), 6);
         const color = hsl(.1,.5,.9);
         const border = .5;
@@ -14,7 +16,7 @@ function gameRender()
     }
     {
         // draw nine slice in screen space with color, thick border and rotation
-        const pos = vec2(700,150);
+        const pos = vec2(right,150);
         const size = vec2(250);
         const color = hsl(.55,.5,.9);
         const border = 32;
@@ -25,7 +27,7 @@ function gameRender()
     } 
     {
         // draw three slice with variable border and additive color
-        const pos = vec2(-7,-4);
+        const pos = vec2(left,-4);
         const size = vec2(9, 7);
         const border = 2 + oscillate(.2)*2;
         const additive = hsl(time/30,.5,.5);
@@ -34,7 +36,7 @@ function gameRender()
     }
     {
         // draw three slice in screen space with changing size        
-        const pos = vec2(700,420);
+        const pos = vec2(right,420);
         const size = vec2(350-oscillate(.3,90),120+oscillate(.3,60));
         drawThreeSliceScreen(pos, size, threeSliceTile);
         drawTextScreen('Three Slice\nScreen Space', pos, 30, BLACK);
@@ -95,6 +97,11 @@ in radians. `time/2` keeps it turning.
 
 The labels are `drawText` in the world and `drawTextScreen` on the
 screen, at the same positions as the panels, which are their centers.
+
+The world panels sit a quarter of the view left of the middle, from
+`getCameraSize()`, the view's size in world units, and the screen ones
+three quarters of the way across `mainCanvasSize`, the canvas's size
+in pixels. So the two kinds share the canvas whatever its width.
 
 ## Try it
 - Thicken the first panel's border: `const border = .5;` to

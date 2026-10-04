@@ -33,14 +33,14 @@ function makeTerrainImages(size)
         const n1 = noise2D(x/12, y/12)*.5;
         const n2 = noise2D(x/5, y/5)*.15;
         const h = clamp(n1 + n2 - .15 + edge*edge);
-        heightContext.fillStyle = hsl(0,0,h);
+        heightContext.fillStyle = hsl(0,0,h).toString();
         heightContext.fillRect(x, y, 1, 1);
 
         // grass low, rock high, snow on top
         const grass = hsl(.3,.5,.3 + h*.3);
         const rock = hsl(.1,.3,.4);
         const snow = hsl(0,0,.9);
-        colorContext.fillStyle = h<.5 ? grass : h<.7 ? rock : snow;
+        colorContext.fillStyle = (h<.5 ? grass : h<.7 ? rock : snow).toString();
         colorContext.fillRect(x, y, 1, 1);
     }
     return [heightContext.canvas, colorContext.canvas];

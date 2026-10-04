@@ -15,8 +15,9 @@ class Walker extends EngineObject
     update()
     {
         this.tileInfo = hero.tileInfo; // the frame to show now
-        if (this.pos.x > 14)
-            this.pos.x = -14;
+        const edge = getCameraSize().x/2 + 2; // just off the view
+        if (this.pos.x > edge)
+            this.pos.x = -edge;
     }
 }
 
@@ -93,7 +94,10 @@ here it sets `walk` again.
 moves. Its `velocity` is in world units per frame, so `.05` is 3 units a
 second. `update` is called once a frame: it copies `hero.tileInfo` into
 the object's own `tileInfo`, which is all it takes to animate an
-object, and it puts the walker back at x `-14` once it passes `14`.
+object. Once the walker is off the right of the view it goes back to
+the left: `getCameraSize()` is the view's size in world units, and
+`edge` is half its width and half the walker's, so it never shows
+jumping, whatever the canvas's width.
 
 ### gameUpdate and gameRender
 `mouseWasPressed(0)` is true on the frame the left button goes down.

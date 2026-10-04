@@ -38,6 +38,9 @@ class ShadedSprite extends EngineObject
 
 function gameInit()
 {
+    // each tile in tiles.png has a 1 pixel border, which stops bleeding
+    setTileDefaultPadding(1);
+
     new ShadedSprite(vec2(-9, 2), dissolveShader, hsl(0,0,1));
     new ShadedSprite(vec2(0, 2), hueShader, hsl(0,0,1));
     new ShadedSprite(vec2(9, 2), scanShader, hsl(.1,1,.7)); // tinted too
@@ -104,7 +107,9 @@ Subtracting `iTime*3.` makes the bands roll.
 tile, with `this.shader` set. The engine uses an object's `shader` when
 it draws the object. The last argument of `super` is the object's color:
 two sprites are white, which changes nothing, and the third is tinted
-orange. The tint is applied after the snippet, to its result.
+orange. The tint is applied after the snippet, to its result. Each tile
+of the sheet has a 1 pixel border, and `setTileDefaultPadding(1)`, first
+in `gameInit`, makes `tile` count it.
 
 Draws that are not objects have no `shader` property. In `gameRender`
 `setShader(hueShader)` sets the shader for the `drawTile` calls that

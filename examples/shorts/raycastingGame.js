@@ -13,8 +13,19 @@ function gameUpdate()
     if (pointerLockIsActive() || isTouchDevice)
         playerAngle += mouseDelta.x * .03;
 
+    // on a touch screen, hold the middle to walk and the sides to turn
+    let direction = keyDirection();
+    if (isTouchDevice && mouseIsDown(0))
+    {
+        const third = floor(mousePosScreen.x / mainCanvasSize.x * 3);
+        if (third == 1)
+            direction = vec2(0,1);
+        else
+            playerAngle += third ? .03 : -.03;
+    }
+
     // update player movement, prevent walking through walls
-    const velocity = keyDirection().rotate(playerAngle).scale(.05);
+    const velocity = direction.rotate(playerAngle).scale(.05);
     const normal = vec2();
     let newPos = playerPos.add(velocity);
     if (lineTest(playerPos, newPos, levelTest, normal))
@@ -33,8 +44,8 @@ function gameRender()
 {
     {
         // draw horizontal slices to create floor and ceiling
-        const h = 9;
-        let pos = vec2(), size = vec2(39, .15), color = hsl();
+        const view = getCameraSize(), h = view.y/2;
+        let pos = vec2(), size = vec2(view.x, .15), color = hsl();
         for (let y=-h; y<h; y+=.1)
         {
             const p = 1.01 - abs(y/h)
@@ -46,7 +57,7 @@ function gameRender()
     {
         // draw vertical slices to create the walls
         // create objects in advance for optimal performance
-        const w = 15;
+        const w = getCameraSize().x/2;
         const maxDistance = 50;
         const pos = vec2(), endPos = vec2(), size = vec2(.15);
         const wall = tile(10).pos; // the brick tile, a column at a time
@@ -96,7 +107,9 @@ function gameRender()
 A maze of brick walls seen in first person, drawn with nothing but 2D
 rectangles and tiles: the raycasting trick of the first 3D shooters.
 Click to let the mouse turn the view and press Escape to free it again.
-The arrow keys or WASD walk forward and back and step sideways.
+The arrow keys or WASD walk forward and back and step sideways. On a
+touch screen, hold the middle of the screen to walk and either side to
+turn.
 
 ## How it works
 The world is a flat grid seen from above, and the player is a point in
@@ -119,9 +132,13 @@ how far the mouse moved this frame, turns the player. On a touch device
 the movement is used without a lock.
 
 `keyDirection()` is the keys as a vector, `y` for forward and back and
-`x` for sideways. `rotate(playerAngle)` turns it to the way the player
-faces, where an angle of 0 is up the grid and angles go clockwise, and
-`scale(.05)` makes it the step for one frame.
+`x` for sideways. On a touch device a held finger counts too:
+`mousePosScreen.x` over the canvas width, times 3, says which third of
+the screen it is on. The middle third walks forward, as `vec2(0,1)`,
+and the left and right thirds turn the player. `rotate(playerAngle)`
+turns the direction to the way the player faces, where an angle of 0
+is up the grid and angles go clockwise, and `scale(.05)` makes it the
+step for one frame.
 
 `lineTest(start, end, test, normal)` walks the grid cells from `start`
 to `end` and returns the point where `test` first says yes, or
@@ -136,17 +153,18 @@ faces. Here it checks the step:
 
 ### Floor and ceiling
 The 2D camera never moves from `vec2(0,0)`. The view is drawn around
-it in world units, about 30 wide.
+it in world units, and `getCameraSize()` is how big it is, about 30
+wide in the example browser, so the drawing fills any canvas.
 
-The first loop stacks strips from `y` -9 to 9, each .15 tall. `p` is 1
-at the middle of the screen and near 0 at its top and bottom, and the
-lightness falls as `p` rises, so both halves fade to dark at the
-horizon. The saturation is 0 above the middle and .5 below it, at a hue
-of .1.
+The first loop stacks strips across the view, from its bottom to its
+top, each .15 tall. `p` is 1 at the middle of the screen and near 0 at
+its top and bottom, and the lightness falls as `p` rises, so both
+halves fade to dark at the horizon. The saturation is 0 above the
+middle and .5 below it, at a hue of .1.
 
 ### Walls
-The second loop goes across the screen in steps of .1 from -15 to 15,
-300 columns:
+The second loop goes across the view in steps of .1, from `-w` to `w`,
+half its width each side, 300 columns when it is 30 wide:
 
 1. The ray's angle is the player's plus `pos.x/w/2`, from half a radian
   left to half a radian right. The view is one radian wide, about 57

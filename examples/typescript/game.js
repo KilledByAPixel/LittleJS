@@ -6,7 +6,7 @@
 'use strict';
 // import LittleJS module, by its npm name; index.html maps it to the build in dist
 import * as LJS from 'littlejsengine';
-const { tile, vec2, hsl, PI } = LJS;
+const { tile, vec2, hsl } = LJS;
 // show the LittleJS splash screen
 LJS.setShowSplashScreen(true);
 // each tile in tiles.png has a 1 pixel border, which stops texture bleeding
@@ -51,7 +51,7 @@ function gameInit() {
             const pos = vec2(x, y);
             const tileIndex = 1;
             const direction = LJS.randInt(4);
-            const mirror = !LJS.randInt(2);
+            const mirror = LJS.randBool();
             const color = LJS.randColor();
             const data = new LJS.TileLayerData(tileIndex, direction, mirror, color);
             tileLayer.setData(pos, data);
@@ -59,24 +59,19 @@ function gameInit() {
         }
     // draw tile layer with new data
     tileLayer.redraw();
-    // move camera to center of collision
-    LJS.setCameraPos(tileLayer.size.scale(.5));
+    // setup camera
+    LJS.setCameraPos(vec2(16, 8));
     LJS.setCameraScale(32);
     // enable gravity
     LJS.setGravity(vec2(0, -.01));
-    // create particle emitter
-    particleEmitter = new LJS.ParticleEmitter(vec2(16, 9), 0, // emitPos, emitAngle
-    0, 0, 500, PI, // emitSize, emitTime, emitRate, emitConeAngle
-    tile(0, 16), // tileInfo
-    hsl(1, 1, 1), hsl(0, 0, 0), // colorStartA, colorStartB
-    hsl(0, 0, 0, 0), hsl(0, 0, 0, 0), // colorEndA, colorEndB
-    1, .2, .2, .1, .05, // particleTime, sizeStart, sizeEnd, speed, angleSpeed
-    .99, 1, 1, PI, // damping, angleDamping, gravityScale, particleConeAngle
-    .05, .5, true, true // fadeRate, randomness, collideLevel, additive
-    );
-    particleEmitter.restitution = .3; // bounce when it collides
-    particleEmitter.trailScale = 2; // stretch as it moves
-    particleEmitter.velocityInheritance = .3; // inherit emitter velocity
+    // create a particle effect, built-in sparks twice the size, with some
+    // of its settings replaced: more of them, bouncing off the tiles, and
+    // carrying some of the emitter's motion as it follows the mouse;
+    // particleEffect returns undefined for a name it does not know, and
+    // the ! tells TypeScript that sparks is built in
+    particleEmitter = LJS.particleEffect('sparks', vec2(16, 9), { scale: 2,
+        emitRate: 500, particleTime: 1, collideLevel: true, restitution: .3,
+        velocityInheritance: .3 });
 }
 ///////////////////////////////////////////////////////////////////////////////
 function gameUpdate() {
@@ -90,6 +85,12 @@ function gameUpdate() {
         particleEmitter.colorEndB = particleEmitter.colorStartB.scale(1, 0);
         // unlock medals
         medal_example.unlock();
+    }
+    if (LJS.mouseWheel) {
+        // zoom in and out with mouse wheel, an imported variable is set
+        // through its setter
+        const scale = LJS.cameraScale - LJS.sign(LJS.mouseWheel) * LJS.cameraScale / 5;
+        LJS.setCameraScale(LJS.clamp(scale, 10, 300));
     }
     // move particles to the mouse once it has moved
     if (LJS.mousePosScreen.x)
@@ -107,7 +108,8 @@ function gameRender() {
 }
 ///////////////////////////////////////////////////////////////////////////////
 function gameRenderPost() {
-    LJS.drawTextScreen('LittleJS with TypeScript', vec2(LJS.mainCanvasSize.x / 2, 80), 80);
+    LJS.drawTextScreen('LittleJS with TypeScript', vec2(LJS.mainCanvasSize.x / 2, 70), 80, // position, size
+    hsl(0, 0, 1), 6, hsl(0, 0, 0)); // color, outline size and color
 }
 ///////////////////////////////////////////////////////////////////////////////
 // Startup LittleJS Engine

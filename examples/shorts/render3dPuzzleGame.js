@@ -177,7 +177,7 @@ function gameRenderPost()
     const text = 'arrows or click: move / R: reset';
     drawTextScreen(text, vec2(mainCanvasSize.x/2, 40), 40, BLACK);
     const solvedPos = vec2(mainCanvasSize.x/2, mainCanvasSize.y - 50);
-    const isSolved = goals.every(g=> boxAt(g.cell.x, g.cell.y));
+    const isSolved = goals.every(g=> g.active); // every block has landed
     isSolved && drawTextScreen('SOLVED!', solvedPos, 50, YELLOW);
 }
 
@@ -218,7 +218,9 @@ block that has arrived lights the pad: the pad takes its lit color,
 `emissive = 1` draws it at full brightness and the light's alpha is set
 to 1. An empty pad pulses its `emissive` with `sin(time*4)`. On the
 frame a block arrives, `particleEffect3D` plays the built in explosion
-at .6 of its size with two of its colors replaced.
+at .6 of its size with two of its colors replaced. The pad keeps
+whether it is lit in `active`, and `gameRenderPost` shows SOLVED! when
+every pad is, so it waits for the last block to land too.
 
 ### tryMove
 The rules. The cell ahead must not be a wall. If a block is there, the
