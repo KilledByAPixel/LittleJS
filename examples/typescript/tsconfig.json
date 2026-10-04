@@ -1,18 +1,15 @@
 {
   "compilerOptions": {
-    "allowJs": true,
+    "strict": true,
     "module": "es2020",
     "target": "es2020",
-    "outDir": "build",
-    "rootDir": "../..",
     "moduleResolution": "bundler",
-    "skipLibCheck": true
+    "outDir": "build",
+    "rootDir": ".",
+    "types": []
   },
-  "include": [
-    "*.ts"
-  ],
-  "exclude": [
-    "node_modules",
-    "build"
-  ]
+  // the engine's types, as the npm package gives them; the build in dist is what the import map loads
+  "files": ["../../dist/littlejs.d.ts"],
+  "include": ["*.ts"],
+  "exclude": ["node_modules", "build"]
 }

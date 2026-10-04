@@ -47,8 +47,7 @@ try
 console.log(`Copying js files back to root...`);
 for (const file of jsSourceFiles)
 {
-    // TypeScript outputs to build/examples/typescript/ because of relative paths
-    const buildFile = join(BUILD_FOLDER, 'examples', 'typescript', file);
+    const buildFile = join(BUILD_FOLDER, file);
     const targetFile = join(__dirname, file);
     console.log(`Copying ${file}...`);
     if (fs.existsSync(buildFile))

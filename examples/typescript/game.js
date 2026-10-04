@@ -1,12 +1,12 @@
 /*
     Little JS TypeScript Demo
     - A simple starter project
-    - Shows how to use LittleJS with modules
+    - Shows how to use LittleJS with modules, typed by the littlejs.d.ts the package ships
 */
 'use strict';
-// import LittleJS module
-import * as LJS from '../../dist/littlejs.esm.js';
-const { tile, vec2, hsl } = LJS;
+// import LittleJS module, by its npm name; index.html maps it to the build in dist
+import * as LJS from 'littlejsengine';
+const { tile, vec2, hsl, PI } = LJS;
 // show the LittleJS splash screen
 LJS.setShowSplashScreen(true);
 // each tile in tiles.png has a 1 pixel border, which stops texture bleeding
@@ -66,13 +66,13 @@ function gameInit() {
     LJS.setGravity(vec2(0, -.01));
     // create particle emitter
     particleEmitter = new LJS.ParticleEmitter(vec2(16, 9), 0, // emitPos, emitAngle
-    0, 0, 500, 3.14, // emitSize, emitTime, rate, cone
+    0, 0, 500, PI, // emitSize, emitTime, emitRate, emitConeAngle
     tile(0, 16), // tileInfo
     hsl(1, 1, 1), hsl(0, 0, 0), // colorStartA, colorStartB
     hsl(0, 0, 0, 0), hsl(0, 0, 0, 0), // colorEndA, colorEndB
-    1, .2, .2, .1, .05, // time, sizeStart, sizeEnd, speed, angleSpeed
-    .99, 1, 1, 3.14, // damping, angleDamping, gravityScale, cone
-    .05, .5, true, true // fadeRate, randomness, collide, additive
+    1, .2, .2, .1, .05, // particleTime, sizeStart, sizeEnd, speed, angleSpeed
+    .99, 1, 1, PI, // damping, angleDamping, gravityScale, particleConeAngle
+    .05, .5, true, true // fadeRate, randomness, collideLevel, additive
     );
     particleEmitter.restitution = .3; // bounce when it collides
     particleEmitter.trailScale = 2; // stretch as it moves

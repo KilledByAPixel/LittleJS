@@ -1,14 +1,14 @@
 /*
     Little JS TypeScript Demo
     - A simple starter project
-    - Shows how to use LittleJS with modules
+    - Shows how to use LittleJS with modules, typed by the littlejs.d.ts the package ships
 */
 
 'use strict';
 
-// import LittleJS module
-import * as LJS from '../../dist/littlejs.esm.js';
-const {tile, vec2, hsl} = LJS;
+// import LittleJS module, by its npm name; index.html maps it to the build in dist
+import * as LJS from 'littlejsengine';
+const {tile, vec2, hsl, PI} = LJS;
 
 // show the LittleJS splash screen
 LJS.setShowSplashScreen(true);
@@ -43,10 +43,10 @@ const medal_example = new LJS.Medal(0, 'Example Medal', 'Welcome to LittleJS!');
 LJS.medalsInit('Hello World');
 
 // game variables
-let particleEmitter;
+let particleEmitter: LJS.ParticleEmitter;
 
 ///////////////////////////////////////////////////////////////////////////////
-function gameInit()
+function gameInit(): void
 {
     // create tile collision and visible tile layer from the level map
     const rows = levelMap.trim().split('\n');
@@ -83,13 +83,13 @@ function gameInit()
     // create particle emitter
     particleEmitter = new LJS.ParticleEmitter(
         vec2(16,9), 0,              // emitPos, emitAngle
-        0, 0, 500, 3.14,            // emitSize, emitTime, rate, cone
+        0, 0, 500, PI,              // emitSize, emitTime, emitRate, emitConeAngle
         tile(0, 16),                // tileInfo
         hsl(1,1,1),   hsl(0,0,0),   // colorStartA, colorStartB
         hsl(0,0,0,0), hsl(0,0,0,0), // colorEndA, colorEndB
-        1, .2, .2, .1, .05, // time, sizeStart, sizeEnd, speed, angleSpeed
-        .99, 1, 1, 3.14,    // damping, angleDamping, gravityScale, cone
-        .05, .5, true, true // fadeRate, randomness, collide, additive
+        1, .2, .2, .1, .05, // particleTime, sizeStart, sizeEnd, speed, angleSpeed
+        .99, 1, 1, PI,      // damping, angleDamping, gravityScale, particleConeAngle
+        .05, .5, true, true // fadeRate, randomness, collideLevel, additive
     );
     particleEmitter.restitution = .3; // bounce when it collides
     particleEmitter.trailScale = 2;  // stretch as it moves
@@ -97,7 +97,7 @@ function gameInit()
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-function gameUpdate()
+function gameUpdate(): void
 {
     if (LJS.mouseWasPressed(0))
     {
@@ -120,13 +120,13 @@ function gameUpdate()
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-function gameUpdatePost()
+function gameUpdatePost(): void
 {
 
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-function gameRender()
+function gameRender(): void
 {
     // draw a gray square in the background, inside the walls
     LJS.drawRect(vec2(16,8), vec2(30,14), hsl(0,0,.6));
@@ -136,7 +136,7 @@ function gameRender()
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-function gameRenderPost()
+function gameRenderPost(): void
 {
     LJS.drawTextScreen('LittleJS with TypeScript', vec2(LJS.mainCanvasSize.x/2, 80), 80);
 }
