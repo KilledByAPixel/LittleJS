@@ -21,7 +21,10 @@ smokeRun(async ()=>
     {
         setCameraScale(1);
         new Render3DPlugin;
-        new PostProcessPlugin(postProcessEffects(postProcessTiltShift(.5, .25, 6)));
+        // as REFERENCE has it: the effect named first, its values given after
+        new PostProcessPlugin(postProcessEffects(postProcessTiltShift('focus', .25, 'blur')));
+        postProcess.values.focus = .5;
+        postProcess.values.blur = 6;
     }, ()=> {}, ()=> {}, ()=> // white columns a pixel wide, a pixel apart, across the whole screen
     {
         if (stripes)

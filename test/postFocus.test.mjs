@@ -36,3 +36,26 @@ test('the shader declares each of postProcess.values as a uniform, a number a fl
     assert.ok(source.includes('uniform float focus;') && source.includes('uniform vec2 at;') && source.includes('uniform vec3 light;'));
     assert.ok(!run(`postProcessFragmentSource(postProcessEffects())`).includes('uniform float focus'));
 });
+
+test('glow takes value names for its threshold and strength, its size a number as it sets the sample count', async ()=>
+{
+    const { postProcessGlow, postProcessBloomShader, postProcessTV } = await import('../dist/littlejs.esm.js');
+    const glow = postProcessGlow('edge', 'strength', 6);
+    assert.ok(glow.includes('- edge') && glow.includes('strength'), glow);
+    assert.ok(postProcessBloomShader(.6, 'bloom').includes('bloom'));
+    assert.ok(postProcessTV({glow: 'soft'}).includes('soft'));
+    assert.throws(()=> postProcessGlow(.6, 1, 'wide'), /Assert/);
+});
+
+test('the d.ts lets every setting that takes a value name take a string', async ()=>
+{
+    const { readFileSync } = await import('node:fs');
+    const dts = readFileSync(new URL('../dist/littlejs.d.ts', import.meta.url), 'utf8');
+    const signature = (name)=> dts.split('\n').find((line)=> line.includes('export function ' + name + '('));
+    for (const [name, settings] of [['postProcessScanlines', 2], ['postProcessNoise', 2], ['postProcessVignette', 2],
+        ['postProcessCurve', 1], ['postProcessChromatic', 1], ['postProcessOutline', 2], ['postProcessGlow', 2],
+        ['postProcessBloom', 2], ['postProcessBloomShader', 2]])
+        assert.ok((signature(name).match(/string \| number|number \| string/g) || []).length >= settings, signature(name));
+    const tv = dts.slice(dts.indexOf('export function postProcessTV('), dts.indexOf('export function postProcessTV(') + 400);
+    assert.ok(/glow\?: (string \| number|number \| string)/.test(tv), tv);
+});

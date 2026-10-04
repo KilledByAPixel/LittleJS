@@ -168,3 +168,22 @@ test('joints outside the scene\'s nodes keep their parents', async ()=>
     assert.deepEqual(points(outside.parts[0].mesh), points(inScene.parts[0].mesh));
     assert.deepEqual(points(outside.parts[0].mesh), [[0, 0, 0], [1, 0, 0], [0, 2, 0], [1, 2, 0]]);
 });
+
+test('stop during a fade holds the mix shown, and a later play with a blend fades from that mix', async ()=>
+{
+    const model = await parseGLTF(gltfOf({ nodes: nodesOf(),
+        animations: [{ name: 'still', angle: 0 }, { name: 'bend', angle: Math.PI / 2 }] }));
+    const o = model.createObject(vec3());
+    o.play('still', false, 0);
+    o.play('bend', false, 0, 1);
+    o.setAnimationTime(1);
+    for (let i = 30; i--;) engineStep();
+    o.stop();
+    const held = points(o.parts[0].mesh)[2];
+    for (let i = 30; i--;) engineStep();
+    assert.deepEqual(points(o.parts[0].mesh)[2], held, 'it holds, the fade stopped with it');
+    assert.ok(held[0] < -.1 && held[0] > -.9, 'part way, ' + held);
+    o.play('still', false, 0, 1);
+    assert.deepEqual(points(o.parts[0].mesh)[2], held, 'the next fade starts from the held mix');
+    o.destroy(true);
+});

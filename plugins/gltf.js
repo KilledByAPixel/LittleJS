@@ -279,8 +279,10 @@ class GLTFObject extends EngineObject3D
         this.blendFrom = undefined;
         this.blendTime = 0;
         this.blendElapsed = 0;
-        // each node's values and place in the model as last posed, for a fade from here and for getJointMatrix
+        // each node's values and place in the model as last posed, for a fade from here and for getJointMatrix, and
+        // whether that pose was a mix, as a fade stopped part way holds it
         this.poseNodes = undefined;
+        this.poseMixed = false;
         this.poseWorldOf = undefined;
         /** @property {Array<EngineObject3D>} - The child that draws each of the model's parts, in the order of
          *  model.parts, which an animation poses; one destroyed or taken off the object is left alone
@@ -326,7 +328,7 @@ class GLTFObject extends EngineObject3D
         if (blend > 0)
         {
             // from the animation playing, going on as it was, or from the pose held, a fade's mix included
-            const from = this.animation && !fading ? {animation: this.animation, time: this.animationTime,
+            const from = this.animation && !fading && !this.poseMixed ? {animation: this.animation, time: this.animationTime,
                 speed: this.animationPlaying ? this.animationSpeed : 0, loop: this.animationLoop} : undefined;
             this.blendFrom = from || {nodes: this.poseNodes || new Map};
             this.blendTime = blend;
@@ -339,8 +341,8 @@ class GLTFObject extends EngineObject3D
         this.setAnimationTime(speed < 0 ? found.duration : 0);
     }
 
-    /** Stop the animation where it is, the parts hold that pose */
-    stop() { this.animationPlaying = false; }
+    /** Stop the animation where it is, the parts hold that pose; a cross-fade going on stops too, holding the mix */
+    stop() { this.animationPlaying = false; this.blendFrom = undefined; }
 
     /** Put the parts where the animation has them at a time, playing or not
      *  @param {number} time - Seconds into the animation */
@@ -359,7 +361,7 @@ class GLTFObject extends EngineObject3D
             nodes = gltfPoseBlend(tree, fromNodes, nodes, smoothStep(clamp(this.blendElapsed / this.blendTime)));
         }
         const worldOf = gltfNodeWorlds(tree, nodes);
-        this.poseNodes = nodes, this.poseWorldOf = worldOf;
+        this.poseNodes = nodes, this.poseWorldOf = worldOf, this.poseMixed = !!from;
 
         // its own list of the part objects, so a child removed or added does not hand a part another's pose
         const pose = model.partPoses(worldOf), parts = this.parts;

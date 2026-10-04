@@ -51,8 +51,9 @@ class PostProcessPlugin
 
         /** @property {Object<string, number|Array<number>>} - The game's own values for the shader, a uniform each
          *  by its name, a number a float and a list of 2 to 4 numbers a vector, set every frame as they are; an
-         *  effect setting can be one of these names, so it changes every frame without making the shader again;
-         *  adding or removing a name makes the shader again
+         *  effect setting can be one of these names, so it changes every frame without making the shader again, all
+         *  but glow's size, which sets how many samples it takes; adding or removing a name makes the shader again,
+         *  and the shader is first made at the first render, so values set right after the plugin are in it
          *  @type {Object<string, number|Array<number>>} */
         this.values = {};
         // the names of the values the shader was made with
@@ -71,18 +72,14 @@ class PostProcessPlugin
          *  @type {WebGLVertexArrayObject|undefined} */
         this.vao = undefined;
 
-        // setup the post processing plugin
-        initPostProcess();
+        // the shader is made at the first render, so values the game sets after this, which its code may name, are
+        // declared in it
+        !headlessMode && !glEnable && console.warn('PostProcessPlugin: WebGL not enabled!');
         engineAddPlugin(undefined, postProcessRender, postProcessContextLost, postProcessContextRestored);
 
         function initPostProcess()
         {
-            if (headlessMode) return;
-            if (!glEnable)
-            {
-                console.warn('PostProcessPlugin: WebGL not enabled!');
-                return;
-            }
+            if (headlessMode || !glEnable) return;
 
             // create resources, the feedback starting black, as if the frame before the first were empty
             if (feedbackTexture)
@@ -313,9 +310,10 @@ function postProcessFragmentSource(shaderCode, values={})
 /**
  * Shader code for a bloom effect, the bright parts of the image blurred back over it
  * - Pass it to PostProcessPlugin, or edit the string to build an effect on top of it
- * @param {number} [threshold] - Brightness where the glow starts, 0 is everything and 1 is only pure white
- * @param {number} [strength] - How much glow to add
- * @param {number} [size] - How far the glow spreads in pixels, which also sets how many samples it takes
+ * @param {number|string} [threshold] - Brightness where the glow starts, 0 is everything and 1 is only pure white
+ * @param {number|string} [strength] - How much glow to add
+ * @param {number} [size] - How far the glow spreads in pixels, which also sets how many samples it takes, so a
+ *   number and not a value's name
  * @return {string}
  * @memberof PostProcess
  */
@@ -326,8 +324,8 @@ function postProcessBloomShader(threshold=.6, strength=1, size=6)
 
 /**
  * Set up post processing with a bloom effect, so bright colors and lights glow
- * @param {number} [threshold] - Brightness where the glow starts, 0 is everything and 1 is only pure white
- * @param {number} [strength] - How much glow to add
+ * @param {number|string} [threshold] - Brightness where the glow starts, 0 is everything and 1 is only pure white
+ * @param {number|string} [strength] - How much glow to add
  * @param {number} [size] - How far the glow spreads in pixels
  * @param {boolean} [includeMainCanvas] - Glow the 2D canvas too, off by default so HUD text stays crisp
  *   (a HUD drawn with WebGL in gameRenderPost glows either way, draw it with useWebGL=false)
@@ -373,15 +371,16 @@ function postProcessEffects(...effects)
 
 /**
  * Bright parts glow, the bloom as an effect to join with others; postProcessBloom sets up bloom on its own
- * @param {number} [threshold] - Brightness where the glow starts, 0 is everything and 1 is only pure white
- * @param {number} [strength] - How much glow to add
- * @param {number} [size] - How far the glow spreads in pixels, which also sets how many samples it takes
+ * @param {number|string} [threshold] - Brightness where the glow starts, 0 is everything and 1 is only pure white
+ * @param {number|string} [strength] - How much glow to add
+ * @param {number} [size] - How far the glow spreads in pixels, which also sets how many samples it takes, so a
+ *   number and not a value's name
  * @return {string}
  * @memberof PostProcess
  */
 function postProcessGlow(threshold=.6, strength=1, size=6)
 {
-    ASSERT(isNumber(threshold) && isNumber(strength) && isNumber(size), 'glow settings must be numbers');
+    ASSERT(isNumber(size), 'glow size is a number, it sets how many samples the glow takes');
     ASSERT(size > 0, 'glow size must be above zero');
     ASSERT(size <= 32, 'a glow this wide takes a sample every few pixels of every ring, which is hundreds of samples a pixel', size);
 
@@ -402,18 +401,19 @@ function postProcessGlow(threshold=.6, strength=1, size=6)
         for (int k = 0; k < ${count}; ++k)
         {
             float a = float(k) * ${(2 * PI / count).toFixed(7)}${j ? ' + ' + (j * 2.3999632).toFixed(7) : ''};
-            glow += max(vec3(0), texture(iChannel0, uv + vec2(cos(a), sin(a)) * ${radius.toFixed(4)} / iResolution.xy).rgb - ${threshold.toFixed(4)});
+            glow += max(vec3(0), texture(iChannel0, uv + vec2(cos(a), sin(a)) * ${radius.toFixed(4)} / iResolution.xy).rgb - ${postProcessNumber(threshold)});
         }`;
     }
     return `        // glow
         vec3 glow = vec3(0);${code}
-        c.rgb += glow * ${(strength / taps).toFixed(6)};`;
+        c.rgb += glow * ${typeof strength === 'string' ? postProcessNumber(strength) + ' / ' + taps + '.' :
+            (strength / taps).toFixed(6)};`; // a number as before, a value's name divided in the shader
 }
 
 /**
  * Scan lines across the screen, like an old TV
- * @param {number} [strength] - How dark the lines are, and how bright between them
- * @param {number} [spacing] - Pixels from one line to the next
+ * @param {number|string} [strength] - How dark the lines are, and how bright between them
+ * @param {number|string} [spacing] - Pixels from one line to the next
  * @return {string}
  * @memberof PostProcess
  */
@@ -425,8 +425,8 @@ function postProcessScanlines(strength=.5, spacing=6)
 
 /**
  * Static noise over the picture, changing every frame
- * @param {number} [strength] - How bright the static is
- * @param {number} [size] - Size of a speck in pixels
+ * @param {number|string} [strength] - How bright the static is
+ * @param {number|string} [size] - Size of a speck in pixels
  * @return {string}
  * @memberof PostProcess
  */
@@ -439,8 +439,8 @@ function postProcessNoise(strength=.1, size=2)
 
 /**
  * Darken toward the edges and corners
- * @param {number} [strength] - How dark the corners get, 1 is black
- * @param {number} [falloff] - How far in it reaches, low darkens most of the screen, high only the corners
+ * @param {number|string} [strength] - How dark the corners get, 1 is black
+ * @param {number|string} [falloff] - How far in it reaches, low darkens most of the screen, high only the corners
  * @return {string}
  * @memberof PostProcess
  */
@@ -453,7 +453,7 @@ function postProcessVignette(strength=1, falloff=3)
 
 /**
  * Bend the picture like the bulged glass of an old TV, black past the corners; put it first
- * @param {number} [strength] - How much it bends
+ * @param {number|string} [strength] - How much it bends
  * @return {string}
  * @memberof PostProcess
  */
@@ -468,7 +468,7 @@ function postProcessCurve(strength=.1)
 
 /**
  * Split red and blue apart toward the edges, like a cheap lens; put it before what shades the picture
- * @param {number} [strength] - How far apart at the edge, as a part of the screen
+ * @param {number|string} [strength] - How far apart at the edge, as a part of the screen
  * @return {string}
  * @memberof PostProcess
  */
@@ -541,8 +541,8 @@ function postProcessDepthOfField(focus=10, range=4, blur=8)
 /**
  * Draw lines where the 3D depth jumps, around objects and along their creases; needs render3D.depthTexture on
  * @param {Color} [color] - The lines' color, its alpha how strong they are
- * @param {number} [thickness] - How wide the lines are in pixels
- * @param {number} [threshold] - How big a jump makes a line, as a part of the distance, lower draws more
+ * @param {number|string} [thickness] - How wide the lines are in pixels
+ * @param {number|string} [threshold] - How big a jump makes a line, as a part of the distance, lower draws more
  * @return {string}
  * @memberof PostProcess
  */
@@ -563,12 +563,12 @@ function postProcessOutline(color=BLACK, thickness=1, threshold=.02)
  * The look of an old TV, as one effect to use alone or join with others: static noise, scan lines, a soft glow and
  * a vignette, and a bulged screen when curve is set; any setting at 0 leaves that part out
  * @param {Object} [settings]
- * @param {number} [settings.noise] - Static noise strength
- * @param {number} [settings.scanlines] - Scan line strength
- * @param {number} [settings.scanlineSpacing] - Pixels from one scan line to the next
- * @param {number} [settings.glow] - Soft glow strength
- * @param {number} [settings.vignette] - Vignette strength
- * @param {number} [settings.curve] - How much the screen bulges, 0 by default for flat
+ * @param {number|string} [settings.noise] - Static noise strength
+ * @param {number|string} [settings.scanlines] - Scan line strength
+ * @param {number|string} [settings.scanlineSpacing] - Pixels from one scan line to the next
+ * @param {number|string} [settings.glow] - Soft glow strength
+ * @param {number|string} [settings.vignette] - Vignette strength
+ * @param {number|string} [settings.curve] - How much the screen bulges, 0 by default for flat
  * @return {string}
  * @example
  * new PostProcessPlugin(postProcessEffects(postProcessTV({scanlines: .4, curve: .1})));

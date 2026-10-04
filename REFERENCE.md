@@ -1134,7 +1134,9 @@ postProcessTiltShift(focus=.5, size=.25, blur=8) // a sharp band across the scre
 postProcessDepthOfField(focus=10, range=4, blur=8) // sharp at focus world units from the camera, range deep,
                                              // blurred nearer and farther; needs render3D.depthTexture
 postProcess.values = {focus: .5}             // the game's own values for the shader, a uniform each, set every
-                                             // frame; any effect setting may be such a name, to change it live:
+                                             // frame; any effect setting but glow's size, which sets its sample
+                                             // count, may be such a name, to change it live; set them after the
+                                             // plugin is made, as the shader is made at the first render:
 new PostProcessPlugin(postProcessEffects(postProcessTiltShift('focus'))); postProcess.values.focus = .6; // live
 ```
 
