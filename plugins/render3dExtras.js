@@ -1238,6 +1238,7 @@ class ParticleEmitter3D extends EngineObject3D
 
     // call a particle callback with the particle at k: the emitter's one Particle3D is set from its numbers, and
     // what the callback changes is written back; a particle it destroys has lived its life, the update removes it
+    /** @private */
     particleCall(callback, k, level, pos)
     {
         // a callback that emits runs the create callback inside itself, which gets a view of its own so this one
@@ -1264,6 +1265,7 @@ class ParticleEmitter3D extends EngineObject3D
     // off it, its speed into it turned around by restitution and its speed along it kept by friction, unless the
     // collide callback lets it through; one that starts inside is let go, as a 2D one is; true when the callback
     // destroyed it
+    /** @private */
     particleCollide(k, x, y, z)
     {
         let data = this.particleData;

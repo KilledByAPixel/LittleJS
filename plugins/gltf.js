@@ -479,7 +479,7 @@ async function loadGLTF(url)
  *    is fetched then
  *  - A file the model needs that is not found is named in the error, and an image that can not be read is named in
  *    a warning and left out
- *  @param {ArrayBuffer|Object|string} data - GLB bytes, or the glTF JSON as bytes, text or an object
+ *  @param {ArrayBuffer|ArrayBufferView|Object|string} data - GLB bytes, or the glTF JSON as bytes, text or an object
  *  @param {string} [baseUrl] - Where the .bin and image files are, with its trailing slash; loadGLTF passes the file's folder
  *  @param {Map<string, Blob>} [files] - The files it refers to, by their paths, in place of fetching them
  *  @return {Promise<GLTFModel>}
@@ -491,6 +491,9 @@ async function loadGLTF(url)
  *  @memberof GLTF */
 async function parseGLTF(data, baseUrl='', files)
 {
+    // bytes as a typed array, a Node Buffer or a view into a bigger buffer, read as an ArrayBuffer of just them
+    if (ArrayBuffer.isView(data))
+        data = data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength);
     let json = data, glbBuffer;
     if (data instanceof ArrayBuffer)
     {
@@ -1052,6 +1055,9 @@ function gltfAccessor(json, buffers, index)
     if (view)
     {
         const buffer = buffers[view.buffer], offset = (view.byteOffset || 0) + (a.byteOffset || 0);
+        // the format keeps values on their size, a typed array can not read them off it
+        if (offset % size || stride % size)
+            throw new Error('glTF accessor ' + index + ' is not aligned to its ' + size + ' byte values');
         if (stride === components * size)
             out.set(new Type(buffer, offset, a.count * components)); // packed, one view over all of it
         else
@@ -1066,6 +1072,13 @@ function gltfAccessor(json, buffers, index)
         const indexView = json.bufferViews?.[indices.bufferView], valueView = json.bufferViews?.[values.bufferView];
         if (!IndexType || !indexView || !valueView)
             throw new Error('glTF sparse accessor is missing its indices or values');
+        // its indices and values in their buffers and on their sizes, before typed arrays are made over them
+        const indexAt = (indexView.byteOffset || 0) + (indices.byteOffset || 0);
+        const valueAt = (valueView.byteOffset || 0) + (values.byteOffset || 0);
+        if (indexAt % IndexType.BYTES_PER_ELEMENT || valueAt % size ||
+            !(indexAt + sparse.count * IndexType.BYTES_PER_ELEMENT <= (buffers[indexView.buffer]?.byteLength ?? 0)) ||
+            !(valueAt + sparse.count * components * size <= (buffers[valueView.buffer]?.byteLength ?? 0)))
+            throw new Error('glTF sparse accessor ' + index + ' is not aligned or reaches past its buffer');
         const at = new IndexType(buffers[indexView.buffer], (indexView.byteOffset || 0) + (indices.byteOffset || 0), sparse.count);
         const data = new Type(buffers[valueView.buffer], (valueView.byteOffset || 0) + (values.byteOffset || 0), sparse.count * components);
         for (let i = 0; i < sparse.count; ++i)

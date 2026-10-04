@@ -822,13 +822,11 @@ function pathFinderNearestNode(finder, worldPos, searchRange, test)
         const bound = max(0, offset - .5);
         if (nearest && bound * bound >= nearestDistSq) break;
 
+        // only the ring itself, the inside was searched already: its top and bottom rows whole, its two ends between,
+        // in the same row by row order a full walk of the square visits them in, so ties pick the same node
         for (let dy = -offset; dy <= offset; ++dy)
-        for (let dx = -offset; dx <= offset; ++dx)
+        for (let dx = -offset, step = abs(dy) === offset ? 1 : 2*offset; dx <= offset; dx += step)
         {
-            // only the ring itself, the inside was searched already
-            if (offset > 0 && abs(dx) !== offset && abs(dy) !== offset)
-                continue;
-
             const node = finder.getNode(centerX + dx, centerY + dy);
             if (!node || !test(node)) continue;
 

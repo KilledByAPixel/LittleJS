@@ -600,48 +600,59 @@ function tweenUpdate(gameDelta, realDelta)
     tweenActive.length = kept;
     // the list is let go however the walk ends: a callback that throws must not leave it held, or every
     // update after would take it for an update still going and make a list of its own
+    let failed;
     try
     {
         for (let i = list.length; i--;)
         {
             const t = list[i];
-            // stopped, or started again by a callback this update, or during an update a callback ran inside it, which
-            // counts on from this one
-            if (!t.active || t.activePass >= pass) continue;
-            let dt;
-            if (enginePath)
-            {
-                // a paused tween keeps count too, so it does not jump when resumed
-                dt = t.useRealTime ? timeReal - t.lastTimeReal : time - t.lastTime;
-                t.lastTime = time;
-                t.lastTimeReal = timeReal;
-            }
-            else
-                dt = t.useRealTime ? realDelta : gameDelta;
-            if (t.target?.destroyed) { t.stop(); continue; } // its object is gone, paused or not
-            if (t.paused || dt <= 0) continue;
-
-            t.life -= dt;
-            if (t.life > 1e-9) // the engine's deltas add up a rounding error short of the duration
-            {
-                t.callback(t.interp(t.life));
-            }
-            else
-            {
-                // Completion: fire end value, remove from active, start the next iteration
-                // of a loop or pingPong, or when there is none it has completed, fire onComplete
-                t.callback(t.interp(0));
-                if (!t.active || t.activePass >= pass)
-                    continue; // stopped or restarted by its own callback, the run it was on ends without completing
-                tweenDeactivate(t);
-                const next = t.thenCallback;
-                t.thenCallback = undefined;
-                if (!(next && next()) && t.onComplete)
-                    t.onComplete();
-            }
+            // one that throws does not stop the others: its error comes out once they have all moved
+            try { tweenStep(t, pass, enginePath, gameDelta, realDelta); }
+            catch (error) { failed ??= {error}; }
         }
     }
     finally { list.length = 0; }
+    if (failed)
+        throw failed.error;
+}
+
+// move one tween by an update, as tweenUpdate walks them
+function tweenStep(t, pass, enginePath, gameDelta, realDelta)
+{
+    // stopped, or started again by a callback this update, or during an update a callback ran inside it, which
+    // counts on from this one
+    if (!t.active || t.activePass >= pass) return;
+    let dt;
+    if (enginePath)
+    {
+        // a paused tween keeps count too, so it does not jump when resumed
+        dt = t.useRealTime ? timeReal - t.lastTimeReal : time - t.lastTime;
+        t.lastTime = time;
+        t.lastTimeReal = timeReal;
+    }
+    else
+        dt = t.useRealTime ? realDelta : gameDelta;
+    if (t.target?.destroyed) { t.stop(); return; } // its object is gone, paused or not
+    if (t.paused || dt <= 0) return;
+
+    t.life -= dt;
+    if (t.life > 1e-9) // the engine's deltas add up a rounding error short of the duration
+    {
+        t.callback(t.interp(t.life));
+    }
+    else
+    {
+        // Completion: fire end value, remove from active, start the next iteration
+        // of a loop or pingPong, or when there is none it has completed, fire onComplete
+        t.callback(t.interp(0));
+        if (!t.active || t.activePass >= pass)
+            return; // stopped or restarted by its own callback, the run it was on ends without completing
+        tweenDeactivate(t);
+        const next = t.thenCallback;
+        t.thenCallback = undefined;
+        if (!(next && next()) && t.onComplete)
+            t.onComplete();
+    }
 }
 
 /** Stop every active tween, ending loops too, without calling their then-callbacks.

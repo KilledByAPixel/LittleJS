@@ -117,3 +117,91 @@ test('glDeleteTexture draws what is batched with it and leaves the engine holdin
     assert.equal(run('glActiveTexture'), undefined);
     assert.equal(run('glMipmapsStale.has(texture)'), false);
 });
+
+test('a tween whose callback throws does not stop the other tweens moving, and the error still comes out', ()=>
+{
+    const { run } = loadEngine();
+    run(`var moved = 0; new Tween(()=> ++moved, 0, 1, 10); var bad = new Tween(()=> {}, 0, 1, 10);
+        moved = 0; bad.callback = ()=> { throw new Error('bad'); };`);
+    assert.throws(()=> run('tweenUpdate(.1)'), /bad/);
+    assert.equal(run('moved'), 1, 'the older tween moved this update too');
+});
+
+test('parseGLTF reads a GLB given as a typed array, even a view part way into a bigger buffer', async ()=>
+{
+    const { run } = loadEngine({ ArrayBuffer, Uint8Array, TextDecoder, DataView });
+    const json = new TextEncoder().encode(JSON.stringify({ asset: { version: '2.0' }, scenes: [{ nodes: [] }], nodes: [] }));
+    const padded = json.length + (4 - json.length % 4) % 4;
+    const glb = new Uint8Array(12 + 8 + padded).fill(32);
+    const view = new DataView(glb.buffer);
+    view.setUint32(0, 0x46546C67, true); view.setUint32(4, 2, true); view.setUint32(8, glb.length, true);
+    view.setUint32(12, padded, true); view.setUint32(16, 0x4E4F534A, true);
+    glb.set(json, 20);
+    const big = new Uint8Array(glb.length + 7);
+    big.set(glb, 7);
+    for (const bytes of [glb, big.subarray(7)])
+    {
+        const model = await loadEngine({ ArrayBuffer, Uint8Array, TextDecoder, DataView, bytes }).run('parseGLTF(bytes)');
+        assert.ok(model && Array.isArray(model.parts), 'a model');
+    }
+});
+
+test('the nearest clear node is found as a full search finds it, every distance and tie the same', ()=>
+{
+    const { run } = loadEngine();
+    run(`var finder = new PathFinder(vec2(30, 30)), random = new RandomGenerator(5);
+        finder.isWalkable = (x, y)=> random.float() < .15; finder.buildNodeData();
+        var brute = (pos, range)=>
+        {
+            const c = finder.worldToTile(pos);
+            let best = null, bestD = 0;
+            for (let dy = -range; dy <= range; ++dy) for (let dx = -range; dx <= range; ++dx)
+            {
+                const n = finder.getNode(c.x + dx, c.y + dy);
+                if (!n || !n.isClear()) continue;
+                const d = (n.posWorld.x - pos.x)**2 + (n.posWorld.y - pos.y)**2;
+                if (!best || d < bestD) best = n, bestD = d;
+            }
+            return best;
+        };`);
+    const mismatches = run(`(()=> { let bad = 0; const r = new RandomGenerator(9);
+        for (let i = 0; i < 300; ++i)
+        {
+            const pos = vec2(r.float(0, 30), r.float(0, 30)), range = r.int(0, 8);
+            const found = finder.getNearestClearNode(pos, range), best = brute(pos, range);
+            const d = (n)=> n ? (n.posWorld.x - pos.x)**2 + (n.posWorld.y - pos.y)**2 : -1;
+            if (d(found) !== d(best)) ++bad;
+        }
+        return bad; })()`);
+    assert.equal(mismatches, 0);
+});
+
+test('Matrix4.getRotation gives back a turn just short of straight up or down', ()=>
+{
+    const { run } = loadEngine();
+    for (const pitch of [Math.PI/2 - 1e-4, -Math.PI/2 + 2e-4, Math.PI/2 - 1e-3])
+    {
+        const r = run(`(()=> { const r = Matrix4.rotation(vec3(${pitch}, .3, .2)).getRotation(); return [r.x, r.y, r.z]; })()`);
+        assert.ok(Math.abs(r[0] - pitch) < 1e-6 && Math.abs(r[1] - .3) < 1e-4 && Math.abs(r[2] - .2) < 1e-4, `${pitch}: ${[...r]}`);
+    }
+});
+
+test('a glTF accessor off its values\' alignment says so, naming the accessor', async ()=>
+{
+    const { run } = loadEngine({ ArrayBuffer, atob, Response, fetch });
+    run(`var bad = { asset: { version: '2.0' }, scenes: [{ nodes: [0] }], nodes: [{ mesh: 0 }],
+        meshes: [{ primitives: [{ attributes: { POSITION: 0 } }] }],
+        accessors: [{ bufferView: 0, byteOffset: 1, componentType: 5126, count: 3, type: 'VEC3' }],
+        bufferViews: [{ buffer: 0, byteLength: 40 }],
+        buffers: [{ byteLength: 40, uri: 'data:application/octet-stream;base64,' + 'A'.repeat(56) }] };`);
+    await assert.rejects(run('parseGLTF(bad)'), /accessor 0 is not aligned/);
+});
+
+test('the 3D particle emitter\'s internal methods are private in the d.ts, and parseAtlas says what its groups hold', async ()=>
+{
+    const { readFileSync } = await import('node:fs');
+    const dts = readFileSync(new URL('../dist/littlejs.d.ts', import.meta.url), 'utf8');
+    assert.match(dts, /private particleCall\b/);
+    assert.match(dts, /private particleCollide\b/);
+    assert.match(dts, /function parseAtlas\(data: any\): \{\s*name: string;/);
+});

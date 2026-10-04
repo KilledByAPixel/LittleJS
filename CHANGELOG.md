@@ -17,6 +17,9 @@ What changed in each release, newest first. Releases before 1.20.0 are on the
 - Input: a key, button or tap released and pressed again in one frame reads as both, where the release was lost, and a keydown the browser does not mark as a repeat for a key already held does not press it again
 - Canvas2D draws a texture smooth or pixelated as its own setting says, as WebGL does; the main canvas starts each frame with no alpha, filter or shadow a game left on it; toggleFullscreen refused by the browser leaves no error in the console
 - A tile layer's shadow is cast by its solid cells only, not by negative markers; a color with a NaN in it is black as text in a release build too; glDeleteTexture leaves the engine holding nothing of the texture
+- A tween whose callback throws no longer stops the other tweens moving that update, its error coming out after them
+- glTF: parseGLTF takes the bytes as a typed array or a Node Buffer too, and an accessor off its values' alignment, or a sparse one past its buffer, says so by name where it threw a bare RangeError
+- Matrix4.getRotation is exact just short of straight up or down, where it was off by up to 5e-4; getNearestClearNode searches each ring alone, the same node found
 
 ### Breaking Changes
 

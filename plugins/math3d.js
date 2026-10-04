@@ -553,8 +553,10 @@ class Matrix4
         const m = this.m, s = this.getScale();
         const sx = s.x || 1, sy = s.y || 1, sz = s.z || 1;
         const m1 = m[1] / sx, m5 = m[5] / sy, m8 = m[8] / sz, m9 = m[9] / sz, m10 = m[10] / sz;
-        const pitch = Math.asin(clamp(-m9, -1, 1));
-        if (abs(m9) < 1 - 1e-6)
+        // the pitch from its cosine as well as its sine, which stays exact near straight up where the sine alone
+        // loses its precision
+        const c = hypot(m8, m10), pitch = atan2(-m9, c);
+        if (c > 1e-9)
             return new Vector3(pitch, atan2(m8, m10), atan2(m1, m5));
         // straight up or down: yaw and roll turn about the same axis, so the roll is zero and yaw takes it all
         return new Vector3(pitch, atan2(m[4] / sy * -m9, m[0] / sx), 0);

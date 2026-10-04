@@ -464,7 +464,7 @@ function textureSheetQueueJob(name, job)
  *  - Accepts TexturePacker json (hash and array) and Aseprite json
  *  - Frames tagged in Aseprite or named like run_0, run_1 group into animations
  *  @param {Object} data - Parsed atlas json data
- *  @return {Array<Object>} List of {name, frames} groups in atlas order
+ *  @return {Array<{name: string, frames: Array<Object>}>} List of {name, frames} groups in atlas order
  *  @memberof TextureSheets */
 function parseAtlas(data)
 {
