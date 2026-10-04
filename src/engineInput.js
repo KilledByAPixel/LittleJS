@@ -498,7 +498,7 @@ function inputInit()
     {
         // fix stalled audio requiring user interaction, a keyboard only game has no other gesture
         if (soundEnable && !headlessMode && audioContext && !audioIsRunning())
-            audioContext.resume();
+            audioResume();
 
         // keys typed into an html text field are the player's typing, not game input;
         // a key already down still releases on keyup, which only lets go of keys that are down
@@ -584,7 +584,7 @@ function inputInit()
 
         // fix stalled audio requiring user interaction
         if (soundEnable && !headlessMode && audioContext && !audioIsRunning())
-            audioContext.resume();
+            audioResume();
 
         // a press in the bars around a letterboxed canvas is not one on its edge; a drag out of it still moves; under
         // pointer lock the mouse stays where the lock began, which may be in a bar, and every click is the game's
@@ -684,7 +684,7 @@ function inputInit()
 
             // fix stalled audio requiring user interaction
             if (soundEnable && !headlessMode && audioContext && !audioIsRunning())
-                audioContext.resume();
+                audioResume();
 
             // when the touch gamepad is enabled it owns touch input: suppress the
             // touch->mouse passthrough entirely unless touchGamepadPassthrough is set
@@ -1449,7 +1449,7 @@ function touchGamepadPointerDown(e, zone)
 
     // resume audio on first interaction
     if (soundEnable && !headlessMode && audioContext && !audioIsRunning())
-        audioContext.resume();
+        audioResume();
 
     // while paused, any touch is the start button; a control belongs to the first finger on it until that
     // finger lifts, so a second finger landing on the same one neither takes it over nor lets it go

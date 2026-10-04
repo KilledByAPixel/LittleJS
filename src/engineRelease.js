@@ -10,13 +10,13 @@
 
 'use strict';
 
-let debugWatermark = 0;
+let debugWatermark = false;
 let debugKey = '';
 let debugKeysAlways = false;
 let debugTweakables = false;
 let debugClearCount = 0;
-const debug = 0;
-const debugOverlay = 0;
+const debug = false;
+const debugOverlay = false;
 const debugPhysics = 0;
 const debugParticles = 0;
 const debugRaycast = 0;

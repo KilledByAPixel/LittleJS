@@ -157,3 +157,26 @@ test('an OBJ file with no faces warns, naming the file', async () =>
     await run(`loadOBJ('house.obj')`);
     assert.ok(warnings.some((w)=> w.includes('house.obj')), JSON.stringify(warnings));
 });
+
+test('a resume of the audio that the browser refuses is not an unhandled rejection', async () =>
+{
+    const unhandled = [], listener = (e)=> unhandled.push(e);
+    process.on('unhandledRejection', listener);
+    try
+    {
+        const AudioContext = class { constructor() { this.state = 'suspended'; this.currentTime = 0; this.destination = {}; }
+            createGain() { return { connect(n) { return n; }, disconnect() {}, gain: { value: 0 } }; }
+            resume() { return Promise.reject(new Error('refused')); } };
+        const { handlers } = loadEngine({ AudioContext });
+        handlers.keydown({ code: 'KeyA', key: 'a', target: {}, cancelable: false });
+        await new Promise((resolve)=> setTimeout(resolve, 20));
+    }
+    finally { process.off('unhandledRejection', listener); }
+    assert.deepEqual(unhandled.map(String), []);
+});
+
+test('the debug flags are booleans in a release build too, false', () =>
+{
+    const { run } = loadEngine({}, '', 'littlejs.release.js');
+    assert.deepEqual([run('debug'), run('debugOverlay'), run('debugWatermark')], [false, false, false]);
+});

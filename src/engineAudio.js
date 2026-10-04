@@ -20,6 +20,9 @@
  *  @memberof Audio */
 let audioContext = typeof AudioContext == 'undefined' ? undefined : new AudioContext;
 
+// resume the audio, a refusal caught so it is not an uncaught error in the console, the next gesture tries again
+function audioResume() { audioContext.resume()?.catch?.(()=> {}); }
+
 /** Master gain node for all audio to pass through, made at load so effects can connect to it any time
  *  @type {GainNode}
  *  @memberof Audio */
@@ -85,7 +88,7 @@ function audioVisibilityChange()
     else if (audioSuspendedWhenHidden)
     {
         audioSuspendedWhenHidden = false;
-        audioContext.resume();
+        audioResume();
     }
 }
 
@@ -812,7 +815,7 @@ function playSamples(sampleChannels, volume=1, rate=1, pan=0, loop=false, sample
         // fix stalled audio, don't build a buffer that can't be played;
         // but a context suspended because the page is hidden stays suspended until it shows
         if (!audioSuspendedWhenHidden)
-            audioContext.resume();
+            audioResume();
         return;
     }
 
@@ -857,7 +860,7 @@ function playAudioBuffer(buffer, volume=1, rate=1, pan=0, loop=false, gainNode, 
         // fix stalled audio, this sound won't be able to play;
         // but a context suspended because the page is hidden stays suspended until it shows
         if (!audioSuspendedWhenHidden)
-            audioContext.resume();
+            audioResume();
         return;
     }
 

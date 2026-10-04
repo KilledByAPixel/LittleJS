@@ -7,6 +7,9 @@ What changed in each release, newest first. Releases before 1.20.0 are on the
 
 ### Fixes
 
+- A resume of the audio the browser refuses is caught, where it showed as an uncaught error in the console
+- `debug`, `debugOverlay` and `debugWatermark` are `false` in a release build, as their types say, where they were 0
+- `Box2dPinJoint`'s docs say its point defaults to objectA's position, which the d.ts showed as objectB's
 - TypeScript: `tileLayersLoad` and `objectLayersLoad` take a `TiledMap`, `level3DLoad` a `Level3D`, the types' defaults and properties are records, a tool's `pos` and `ray` and `onPlayFrom`'s position are typed, `levelEditor.open` and `close` return nothing, `Sound` takes a zzfx array as numbers, and `fetchJSON` gives `any`, as JSON is, so its result goes straight into any of them
 - A JSON, glTF or particle effect file that fails to read names the file, and says when it is a web page, as a dev server sends for a mistyped path, where it gave only "Unexpected token '<'"; an OBJ file with no faces warns, naming the file
 - In a release build `levelEditor.edit2D` is there and changes nothing, where it was undefined and a call on it threw, so a game needs no guard around it

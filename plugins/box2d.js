@@ -1432,6 +1432,8 @@ class Box2dRevoluteJoint extends Box2dJoint
  * Box2D Pin Joint
  * - Pins two objects together at a point, where they still turn freely, like a nail through two boards
  * - A revolute joint at that point, so it holds exactly and its limits and motor work too
+ * - new Box2dPinJoint(objectA, objectB, pos, collide): the point defaults to objectA's position, where a revolute
+ *   joint's anchor defaults to objectB's
  * @extends Box2dRevoluteJoint
  * @memberof Box2D
  */
