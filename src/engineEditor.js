@@ -454,6 +454,7 @@ function editorSetOpen(open)
 {
     if (!debug || editorIsOpen === !!open) return;
     editorIsOpen = !!open;
+    editorIsOpen || editorAutosaveFlush(); // the game plays on with what the editor has kept
     if (editorIsOpen)
     {
         editorGameState = {paused, cameraPos: cameraPos.copy(), cameraScale, cameraAngle};
@@ -544,6 +545,7 @@ const editorTileLayerData = (layers)=> editorTileLayers(layers).map((layer)=> la
 // panel to apply or drop, and one that already has the autosaved data, saved from the editor, drops it
 function editorMapRestore(map)
 {
+    editorAutosaveFlush(); // what an earlier map has waiting is written before this one reads the autosaves
     if (editorMapList.some((record)=> record.map === map)) return map; // loaded again, it has the changes
 
     // a map object seen before, its record retired when its layers went, gets it back as it was, its data has the
@@ -764,6 +766,7 @@ async function editorSave(record, pickAgain=false)
 {
     if (!record) return;
     editorStrokeEnd();
+    editorAutosaveFlush();
     const text = editorMapJSON(record); // the map as it is now, later edits wait for a later save
     // its place in line is taken now, and the game's hook is asked when its turn comes, so saves are written in
     // the order they were asked for however long a hook takes
@@ -829,7 +832,9 @@ function editorWriteSaves(saves, key, name=editorSaveName())
 {
     try
     {
-        localStorage.setItem(name, JSON.stringify(saves));
+        const text = JSON.stringify(saves);
+        editorAutosaveSize = text.length; // how much an autosave writes, which says whether the next one waits
+        localStorage.setItem(name, text);
         return editorSaveFailed = false;
     }
     catch { editorSaveFailed = true; }
@@ -899,6 +904,7 @@ const editorSavedFits = (saved, count, width, height)=> isArray(saved.layers) &&
 // remember a map's tile data and objects, or forget them when they are back to the file
 function editorAutosave(record)
 {
+    editorAutosaveWaiting.delete(record); // written now
     if (record.synthetic) return; // a layer made in code has no load to bring it back in, save it to a file
     const saves = editorSaves(), map = record.map, data = editorTileLayerData(map.layers);
     const objects = editorObjectGroups(map.layers).map((group)=> group.objects ?? []);
@@ -913,6 +919,29 @@ function editorAutosave(record)
         saves[record.key] = {hash: record.hash, savedHash: record.savedHash, width: map.width, height: map.height,
             layers: data, objects, nextobjectid: map.nextobjectid};
     editorWriteSaves(saves, record.key);
+}
+
+// an autosave writing more than this many characters, a big map's, waits until the edits stop for a moment, since
+// writing it after every stroke would cost more than the stroke; a small map's is written at once, as always
+const EDITOR_AUTOSAVE_WAIT_SIZE = 1e5;
+let editorAutosaveSize = 0, editorAutosaveTimer;
+const editorAutosaveWaiting = new Set;
+
+// autosave a map after an edit: at once when its autosave is small, or a second after the last of a run of edits
+function editorAutosaveSoon(record)
+{
+    if (editorAutosaveSize < EDITOR_AUTOSAVE_WAIT_SIZE)
+        return editorAutosave(record);
+    editorAutosaveWaiting.add(record);
+    clearTimeout(editorAutosaveTimer);
+    editorAutosaveTimer = setTimeout(editorAutosaveFlush, 1e3);
+}
+
+// write every autosave that is waiting, as the editor closes, the page hides, a map is saved or another loads
+function editorAutosaveFlush()
+{
+    clearTimeout(editorAutosaveTimer);
+    [...editorAutosaveWaiting].forEach(editorAutosave);
 }
 
 // paint every cell of a map's layers from a list of tile data, the tile layers of the map in order, and set its
@@ -1205,12 +1234,13 @@ function editorUndo(redo=false)
     editorChanged(stroke);
 }
 
-// after a change the tile layers it touched that need it draw again whole, and the maps it touched are autosaved; a resized map is made again by the game, with the editor staying open
+// after a change the tile layers it touched that need it draw again whole, and the maps it touched are autosaved;
+// a resized map is made again by the game, with the editor staying open
 function editorChanged(stroke)
 {
     editorRedraw(stroke);
     for (const record of new Set(stroke.map(editorEntryRecord)))
-        editorAutosave(record);
+        editorAutosaveSoon(record);
     stroke.some((entry)=> entry.resize) && editorHas('onRestart') && levelEditor.onRestart();
 }
 
@@ -3015,5 +3045,8 @@ debug && engineAddPlugin(editorUpdate, ()=> { editorRender(); editorRenderGame()
 if (debug && globalThis.document?.addEventListener)
 {
     document.addEventListener('keydown', editorOnKeyDown);
+    // a page going away writes what is waiting, the last event it is sure to get
+    document.addEventListener('visibilitychange', ()=> document.hidden && editorAutosaveFlush());
+    globalThis.addEventListener?.('pagehide', editorAutosaveFlush);
     document.addEventListener('wheel', editorOnWheel, {passive: true});
 }
