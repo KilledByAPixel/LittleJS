@@ -134,10 +134,13 @@ function tile(index=0, size=tileDefaultSize, texture=0, padding=tileDefaultPaddi
     // create tile info object
     const textureInfo = typeof texture === 'number' ?
         textureInfos[texture] : texture;
-    if (headlessMode && !textureInfo?.size.x)
-        return new TileInfo(new Vector2, size.copy(), textureInfo, padding, bleed); // no image loaded, no place in it
-    ASSERT(textureInfo instanceof TextureInfo, 'tile texture is not loaded');
-    ASSERT(textureInfo.size.x > 0, 'tile texture is not loaded');
+    if (!textureInfo?.size.x)
+    {
+        // no image: headless loads none and keeps the size; an image that failed to load, whose warning named it, gives
+        // a tile of no size, which draws nothing; a slot never given an image is a mistake a debug build points out
+        ASSERT(headlessMode || textureInfo instanceof TextureInfo, 'tile texture is not loaded', texture);
+        return new TileInfo(new Vector2, headlessMode ? size.copy() : new Vector2, textureInfo, padding, bleed);
+    }
 
     // get the position of the tile
     const sizePaddedX = size.x + padding*2;
@@ -605,8 +608,8 @@ function drawTile(pos, size=vec2(1), tileInfo, color=WHITE,
     if (headlessMode && !context) return; // headless has no canvas, only a context passed in is drawn to
 
     const textureInfo = tileInfo?.textureInfo;
-    if (textureInfo && !(tileInfo.size.x && tileInfo.size.y))
-        return; // a tile with no area draws nothing, like a sprite still loading
+    if (textureInfo && !(tileInfo.size.x && tileInfo.size.y && textureInfo.size.x))
+        return; // a tile with no area draws nothing, like a sprite still loading, and nor does an image that failed
     const bleed = tileInfo?.bleed ?? 0;
     if (useWebGL && glEnable)
     {
@@ -700,7 +703,7 @@ function drawRect(pos, size, color, angle, useWebGL, screenSpace, context)
  *  @param {boolean} [screenSpace=drawScreenSpace]
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
  *  @memberof Draw */
-function drawRectGradient(pos, size, colorTop=WHITE, colorBottom=CLEAR_WHITE, angle=0, useWebGL=glEnable, screenSpace=drawScreenSpace, context)
+function drawRectGradient(pos, size=vec2(1), colorTop=WHITE, colorBottom=CLEAR_WHITE, angle=0, useWebGL=glEnable, screenSpace=drawScreenSpace, context)
 {
     ASSERT(isVector2(pos), 'pos must be a vec2');
     ASSERT(isVector2(size), 'size must be a vec2');
@@ -1695,8 +1698,7 @@ function bakeTintedImage(image, color, additiveColor)
  *  @param {number} dHeight
  *  @param {Color} color
  *  @param {Color} [additiveColor]
- *  @param {number} [bleed] - How many pixels to shrink the source, used to fix bleeding
- *  @memberof Draw */
+ *  @param {number} [bleed] - How many pixels to shrink the source, used to fix bleeding */
 function drawImageColor(context, image, sx, sy, sWidth, sHeight, dx, dy, dWidth, dHeight, color, additiveColor, bleed=0)
 {
     const sx2 = bleed;

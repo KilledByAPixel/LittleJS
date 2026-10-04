@@ -586,8 +586,9 @@ function inputInit()
         if (soundEnable && !headlessMode && audioContext && !audioIsRunning())
             audioContext.resume();
 
-        // a press in the bars around a letterboxed canvas is not one on its edge; a drag out of it still moves
-        if (!inCanvas(e.x, e.y))
+        // a press in the bars around a letterboxed canvas is not one on its edge; a drag out of it still moves; under
+        // pointer lock the mouse stays where the lock began, which may be in a bar, and every click is the game's
+        if (!pointerLockIsActive() && !inCanvas(e.x, e.y))
             return;
         inputData[0][e.button] = 3;
 
@@ -1004,9 +1005,11 @@ function inputUpdate()
                     (gamepadIsDown(12,i)&&1) - (gamepadIsDown(13,i)&&1));
             }
 
-            // copy dpad to left analog stick when pressed
+            // copy dpad to left analog stick when pressed; a gamepad with no sticks has that one, at rest when not
             if (gamepadDirectionEmulateStick && (dpad.x || dpad.y))
                 sticks[0] = dpad.clampLength();
+            else if (gamepadDirectionEmulateStick && !sticks.length)
+                sticks[0] = vec2();
         }
 
         // disable touch gamepad if using real gamepad

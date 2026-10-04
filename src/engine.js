@@ -165,7 +165,7 @@ let timeFixedStart = 0, frameFixedStart = 0;
 let windowWidthLast = 0, windowHeightLast = 0, windowPixelRatioLast = 0;
 let engineUpdateInternal; // assigned by engineInit so engineStep can drive it
 let engineFrameScheduled = false; // a frame of the loop is asked for and has not run yet
-let engineFrameErrors = 0; // errors a release build's loop went on past
+let engineFrameErrorLast; // the last error a release build's loop went on past, as text
 
 // the pairs of objects asked about a collision this update, so the other's own physics does not ask again: each
 // asker's others, with true for a pair both said to resolve, and false for one left overlapping, ignored or only
@@ -419,20 +419,30 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
                 frameTimeBufferMS = 0;
             }
 
-            // update multiple frames if necessary in case of slow framerate
-            for (; frameTimeBufferMS >= 0; frameTimeBufferMS -= 1e3 / frameRate)
+            // update multiple frames if necessary in case of slow framerate; a tick that throws still spends its time
+            // and the smoothing still comes back, so a release build going on past an error each tick keeps its rate
+            try
             {
-                // read again each tick, so a pause set by the game stops the rest of this frame's catch-up ticks
-                const frozenTick = paused || !(timeScale * debugScale);
+                while (frameTimeBufferMS >= 0)
+                {
+                    try
+                    {
+                        // read again each tick, so a pause set by the game stops the rest of this frame's catch-up ticks
+                        const frozenTick = paused || !(timeScale * debugScale);
 
-                // increment frame and update time, frozen does not advance time
-                if (!frozenTick)
-                    time = timeFixedStart + (frame++ - frameFixedStart) / frameRate;
-                engineTick(frozenTick);
+                        // increment frame and update time, frozen does not advance time
+                        if (!frozenTick)
+                            time = timeFixedStart + (frame++ - frameFixedStart) / frameRate;
+                        engineTick(frozenTick);
+                    }
+                    finally { frameTimeBufferMS -= 1e3 / frameRate; }
+                }
             }
-
-            // add the time smoothing back in
-            frameTimeBufferMS += deltaSmooth;
+            finally
+            {
+                // add the time smoothing back in
+                frameTimeBufferMS += deltaSmooth;
+            }
         }
 
         // one tick of the loop: update game and objects, when frozen update everything except them
@@ -729,9 +739,11 @@ function engineScheduleFrame()
         try { engineUpdateInternal(frameTimeMS); }
         catch (error)
         {
-            // a release build goes on past an error in a frame, a frozen game is the worst a player can get; only the
-            // first is logged, one every frame would flood the console
-            engineFrameErrors++ || console.error(error);
+            // a release build goes on past an error in a frame, a frozen game is the worst a player can get; an error
+            // is logged when it is not the last one again, one every frame would flood the console
+            const text = String(error);
+            text === engineFrameErrorLast || console.error(error);
+            engineFrameErrorLast = text;
             // the frame's input is cleared as its tick would have, or a key press that threw would be pressed again
             inputUpdatePost();
             engineScheduleFrame();

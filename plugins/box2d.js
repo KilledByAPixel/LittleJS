@@ -627,7 +627,7 @@ class Box2dObject extends EngineObject
      *  @param {number} angle */
     setTransform(pos, angle)
     {
-        this.pos = pos.copy();
+        this.pos.set(pos.x, pos.y); // its own pos kept, as an EngineObject's is
         this.angle = angle;
         // box2d uses reverse angle
         const x = pos.x, y = pos.y;
@@ -643,7 +643,7 @@ class Box2dObject extends EngineObject
      *  @param {Vector2} pos */
     setPosition(pos)
     {
-        this.pos = pos.copy();
+        this.pos.set(pos.x, pos.y); // its own pos kept, as an EngineObject's is
         const x = pos.x, y = pos.y;
         box2dWhenUnlocked(()=>
         {
@@ -2434,8 +2434,10 @@ async function box2dInit()
         {
             if (o.body)
             {
+                // moved in place, as the engine moves an EngineObject's pos, so what holds it follows the body;
                 // box2d uses reverse angle
-                o.pos = box2d.vec2From(o.body.GetPosition());
+                const p = o.body.GetPosition();
+                o.pos.set(p.get_x(), p.get_y());
                 o.angle = -o.body.GetAngle();
             }
         }

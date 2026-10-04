@@ -631,9 +631,9 @@ class HeightMap extends EngineObject3D
     levelSegment3D(from, to)
     {
         const m = this.pos3D, size = this.mapSize;
-        if (abs(to.x - m.x) > size.x / 2 || abs(to.z - m.z) > size.y / 2) return; // off the map
+        if (abs(to.x - m.x) > size.x / 2 || abs(to.z - m.z) > size.y / 2) return undefined; // off the map
         const a = from.y - this.getHeight(from.x, from.z), b = to.y - this.getHeight(to.x, to.z);
-        if (a < 0 || b >= 0) return; // above all the way, or under from the start
+        if (a < 0 || b >= 0) return undefined; // above all the way, or under from the start
         const distance = a / (a - b);
         return {distance, normal: this.getNormal(from.x + (to.x - from.x) * distance, from.z + (to.z - from.z) * distance)};
     }
@@ -1671,9 +1671,11 @@ class LensFlare3D extends EngineObject3D
         return this.made;
     }
 
-    // what the flare is of, seen from the camera: the way to it, how far it is, Infinity for the sun and for a
-    // directional light, which shines from its place toward the origin, and a point to find it on the screen by;
-    // undefined with no direction, or a light that is gone or at the camera
+    /** What the flare is of, seen from the camera: the way to it, how far it is, Infinity for the sun and for a
+     *  directional light, which shines from its place toward the origin, and a point to find it on the screen by;
+     *  undefined with no direction, or a light that is gone or at the camera
+     *  @return {{direction: Vector3, distance: number, pos: Vector3}|undefined}
+     *  @ignore */
     flareSource()
     {
         const camera = render3D.camera.pos, light = this.light;
@@ -1689,9 +1691,11 @@ class LensFlare3D extends EngineObject3D
         return distance ? {direction: offset.scale(1 / distance), distance, pos} : undefined;
     }
 
-    // how the flare would show with nothing in the way: where its source is on the screen, how strong it is there,
-    // fading as it leaves the screen, its tint and the height its sizes are parts of; undefined when it would not
-    // show at all, behind the camera, off the screen, or of a light that is off or seen from outside its cone
+    /** How the flare would show with nothing in the way: where its source is on the screen, how strong it is there,
+     *  fading as it leaves the screen, its tint and the height its sizes are parts of; undefined when it would not
+     *  show at all, behind the camera, off the screen, or of a light that is off or seen from outside its cone
+     *  @return {{sun: Vector2, center: Vector2, strength: number, tint: Color, height: number}|undefined}
+     *  @ignore */
     flareLook()
     {
         const source = this.flareSource(), center = mainCanvasSize.scale(.5);

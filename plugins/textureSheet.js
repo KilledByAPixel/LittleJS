@@ -251,7 +251,7 @@ function loadSprite(src, frameSize, padding=textureSheetPadding, sourcePadding=0
             if (!added)
             {
                 // leave the tile empty, no sheet can hold it
-                LOG('loadSprite image is too large to fit on a texture sheet:', src);
+                console.warn('loadSprite image is too large to fit on a texture sheet:', src);
                 return;
             }
             Object.assign(tileInfo, added.tile);
@@ -260,7 +260,7 @@ function loadSprite(src, frameSize, padding=textureSheetPadding, sourcePadding=0
         else
         {
             // leave the tile empty if the image failed to load
-            LOG('loadSprite failed to load image:', src);
+            console.warn('loadSprite failed to load image:', src);
             textureSheetLoadFailed(key, tileInfo);
         }
     });
@@ -397,7 +397,7 @@ function loadAtlas(imageSrc, jsonSrc, padding=textureSheetPadding)
                 const added = textureSheetAdd(blockSize, sourceSize, padding);
                 if (!added)
                 {
-                    LOG('loadAtlas frames are too large to fit on a texture sheet:', group.name);
+                    console.warn('loadAtlas frames are too large to fit on a texture sheet:', group.name);
                     continue;
                 }
                 const {sheet, tile} = added;
@@ -431,7 +431,7 @@ function loadAtlas(imageSrc, jsonSrc, padding=textureSheetPadding)
         else
         {
             // leave the atlas empty if either file failed to load
-            LOG('loadAtlas failed to load:', imageSrc, jsonSrc);
+            console.warn('loadAtlas failed to load:', imageSrc, jsonSrc);
             textureSheetLoadFailed(key, atlas);
         }
     });

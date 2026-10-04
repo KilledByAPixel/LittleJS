@@ -436,7 +436,7 @@ function glSetTextureWrap(texture, wrap=true)
 /** Compile WebGL shader of the given type, will throw errors if in debug mode
  *  @param {string} source
  *  @param {number} type
- *  @return {WebGLShader}
+ *  @return {WebGLShader|undefined} - undefined with no WebGL
  *  @memberof WebGL */
 function glCompileShader(source, type)
 {
@@ -456,7 +456,7 @@ function glCompileShader(source, type)
 /** Create WebGL program with given shaders
  *  @param {string} vsSource
  *  @param {string} fsSource
- *  @return {WebGLProgram}
+ *  @return {WebGLProgram|undefined} - undefined with no WebGL
  *  @memberof WebGL */
 function glCreateProgram(vsSource, fsSource)
 {
@@ -504,7 +504,7 @@ function glShaderProgram(shader)
  *  @param {HTMLImageElement|HTMLCanvasElement|OffscreenCanvas|ImageBitmap} [image]
  *  @param {boolean|Array<number>} [wrap] - true for REPEAT, false for CLAMP_TO_EDGE, or the WebGL modes across and down
  *  @param {boolean} [pixelated] - Hard edged or smooth, undefined follows tilesPixelated
- *  @return {WebGLTexture}
+ *  @return {WebGLTexture|undefined} - undefined with no WebGL
  *  @memberof WebGL */
 function glCreateTexture(image, wrap=false, pixelated=tilesPixelated)
 {

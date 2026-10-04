@@ -7,6 +7,15 @@ What changed in each release, newest first. Releases before 1.20.0 are on the
 
 ### Fixes
 
+- An image that failed to load gives tiles of no size, which draw nothing, where `tile()` gave NaN places in release builds and stopped debug builds at an assert; a texture slot never given an image still asserts in debug
+- A release build says when a sound, a `loadSprite` or a `loadAtlas` fails to load, as it did for textures and tile sets
+- A `Box2dObject` keeps one `pos` for life, moved in place each step as an EngineObject's is, so a camera holding it follows the body
+- `drawRectGradient` takes no size, as its docs say
+- A release build going on past an error logs each new error, not only the first, and an error every tick no longer runs the game at the screen's refresh rate
+- Under pointer lock a click is a press wherever the locked mouse was left, a letterbox bar too
+- A gamepad with no sticks keeps the one its d-pad stands in for, where its stick count flickered
+- A zzfx `Sound` made in a browser with no audio counts as loaded and plays nothing, where it threw
+- `glCompileShader`, `glCreateProgram` and `glCreateTexture` are typed as giving undefined with no WebGL
 - A release build going on past an error clears that frame's input, where a key press whose action threw was pressed again every frame
 - `loadSprite`, `loadTiles` and `loadAtlas` forget a load whose file failed, so loading it again tries again, where a failure once was kept for the session
 - glTF: a file the model names in subfolders is found when what is in its folder was dropped, not the folder, and a file found by its name alone may have capitals in it, where both said the file was not among those given; the 3D Mesh short keeps a dropped folder's name when other files come with it

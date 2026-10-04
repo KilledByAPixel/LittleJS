@@ -232,7 +232,7 @@ class Sound
      */
     constructor(asset, randomness, range, taper=soundDefaultTaper, onloadCallback)
     {
-        if (!soundEnable || headlessMode)
+        if (!soundEnable || headlessMode || !audioContext) // a browser with no audio makes none either
         {
             // no sound is made: it counts as loaded, so a game that waits for its sounds goes on
             this.loadedPercent = 1;
@@ -302,8 +302,8 @@ class Sound
             // load the audio file, a URL object as bundlers give works like its string;
             // report failures rather than leaving an unhandled rejection, the sound just stays unloaded and silent
             const filename = asset + '';
-            engineAddLoad(this.loadSound(filename).catch(e=>
-                LOG('Sound load failed for', filename, '-', e.message))); // startup waits for it
+            engineAddLoad(this.loadSound(filename).catch(e=> // startup waits for it, and a release build says why too
+                console.warn('Sound load failed for', filename, '-', e?.message ?? e)));
         }
     }
 
