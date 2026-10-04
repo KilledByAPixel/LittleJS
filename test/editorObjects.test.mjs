@@ -295,7 +295,8 @@ test('with All Layers, Ctrl+C on a tile area takes the objects inside it, even w
     engine.run(editCode + 'editorAllLayers = true; editorSelection = editorArea(vec2(0, 1), vec2(1, 1));');
     assert.equal(typed(engine, 'c', true), true);
     assert.deepEqual(JSON.parse(engine.run('JSON.stringify(editorBrush.objects)')),
-        [{ group: 0, type: 'Coin', offset: { x: .5, y: .5 }, object: { id: 1, type: 'Coin', point: true, x: 8, y: 8 } }]);
+        [{ group: 0, type: 'Coin', offset: { x: .5, y: .5 }, object: { id: 1, type: 'Coin', point: true, x: 8, y: 8 },
+            tileSize: { x: 16, y: 16 } }]);
     assert.equal(engine.run('editorBrushLabel()'), 'Brush: 2x1 stamp, 1 object');
 });
 
@@ -671,4 +672,43 @@ test('a save leaves out the object layer made for a first object that was undone
     const saved = JSON.parse(run('editorMapJSON(ground.record)'));
     assert.deepEqual(saved.layers.map((layer)=> layer.name), ['ground']);
     assert.equal(saved.nextlayerid, 5);
+});
+
+// a stamp holding one object, a 32 by 16 pixel box at its place, in a map of 16 pixel tiles
+const stampOf = (object)=> `var stamp = { width: 2, height: 1, grids: [[undefined, undefined]], objects: [{ group: 0,
+    type: 'Coin', offset: vec2(.5, .5), tileSize: vec2(16), object: ${JSON.stringify(object)} }] };
+    var entry = (s)=> { const e = s.objects[0]; return [e.offset.x, e.offset.y, e.object.rotation]; };
+    var near = (a)=> a.map((n)=> typeof n == 'number' ? Math.round(n * 1e9) / 1e9 : n);`;
+const box = { id: 1, type: 'Coin', x: 8, y: 8, width: 32, height: 16, rotation: 0 };
+
+test('a turned stamp turns its objects, each a quarter clockwise about its place, and four turns give it back', async () =>
+{
+    const { run } = await loadGame();
+    run(editCode + stampOf(box));
+    assert.deepEqual([...run('entry(editorStampTurn(stamp))')], [.5, 1.5, 90]);
+    assert.deepEqual([...run('entry(editorStampTurn(stamp, true))')].slice(2), [270], 'back');
+    assert.deepEqual([...run('near(entry([0, 0, 0, 0].reduce((s)=> editorStampTurn(s), stamp)))')], [.5, .5, 0]);
+});
+
+test('a mirrored stamp mirrors its objects: a box placed by its corner from the other corner, and twice gives it back', async () =>
+{
+    const { run } = await loadGame();
+    run(editCode + stampOf(box));
+    // the box reached 2 cells right of its place, mirrored it reaches 2 cells left, so its corner moves there
+    assert.deepEqual([...run('near(entry(editorStampMirror(stamp)))')], [-.5, .5, 0]);
+    assert.deepEqual([...run('near(entry(editorStampMirror(editorStampMirror(stamp))))')], [.5, .5, 0]);
+    // turned a quarter it reaches down, so mirrored it turns the other way and its corner is 2 cells lower
+    run(stampOf({ ...box, rotation: 90 }));
+    assert.deepEqual([...run('near(entry(editorStampMirror(stamp)))')], [1.5, -1.5, -90]);
+});
+
+test('a mirrored stamp mirrors a polygon\'s points and flips a tile object\'s image', async () =>
+{
+    const { run } = await loadGame();
+    run(editCode + stampOf({ id: 1, type: 'Coin', x: 8, y: 8, rotation: 0, polygon: [{ x: 0, y: 0 }, { x: 16, y: 4 }] }));
+    assert.deepEqual(JSON.parse(run('JSON.stringify(editorStampMirror(stamp).objects[0].object.polygon)')),
+        [{ x: 0, y: 0 }, { x: -16, y: 4 }]);
+    assert.deepEqual([...run('near(entry(editorStampMirror(stamp)))')], [1.5, .5, 0], 'a polygon\'s place is not moved');
+    run(stampOf({ ...box, gid: 5 }));
+    assert.equal(run('editorStampMirror(stamp).objects[0].object.gid'), (5 | 0x80000000) >>> 0);
 });

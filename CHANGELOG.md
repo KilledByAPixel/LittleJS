@@ -5,7 +5,9 @@ What changed in each release, newest first. Releases before 1.20.0 are on the
 
 ## Unreleased
 
-Nothing yet.
+### Fixes
+
+- Level editor: a turned or mirrored stamp turns or mirrors its objects too, each object's rotation with it, a box placed from the corner that becomes its own, a polygon's points and a tile object's image mirrored
 
 ## 1.24.3 - 2026-10-03
 

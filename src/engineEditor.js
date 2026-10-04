@@ -1708,6 +1708,40 @@ function editorGidMirror(gid)
     return t ? editorTileToGid(t.tile, (4 - t.direction) % 4, !t.mirror) : gid;
 }
 
+// a stamp's object turned a quarter clockwise with it: its place by the stamp, its body by its own rotation, which
+// Tiled turns clockwise about the object's place, so the place needs no other move
+function editorStampObjectTurn(entry, width)
+{
+    const offset = vec2(entry.offset.y, width - entry.offset.x), object = entry.object;
+    return {...entry, offset, ...(object && {object: {...object, rotation: ((object.rotation || 0) + 90) % 360}})};
+}
+
+// a stamp's object mirrored left to right with it: its rotation the other way, a polygon's points mirrored about its
+// place, a tile object's image flipped, and a box, ellipse, text or tile, placed by a corner, placed by the corner
+// that becomes it, its width along its turn from the mirrored place; mirrored twice it is as it was
+function editorStampObjectMirror(entry, width)
+{
+    const offset = vec2(width - entry.offset.x, entry.offset.y), object = entry.object;
+    if (!object) return {...entry, offset};
+    const mirrored = {...object, rotation: object.rotation ? -object.rotation : 0};
+    const points = (list)=> list.map((p)=> ({...p, x: -p.x}));
+    if (object.polygon || object.polyline)
+    {
+        object.polygon && (mirrored.polygon = points(object.polygon));
+        object.polyline && (mirrored.polyline = points(object.polyline));
+    }
+    else
+    {
+        // Tiled's pixels run down, the stamp's cells up
+        const angle = (object.rotation || 0) * PI / 180, w = object.width || 0, {x: tw, y: th} = entry.tileSize ?? vec2(1);
+        offset.x -= w * cos(angle) / tw;
+        offset.y -= w * sin(angle) / th;
+    }
+    if (object.gid)
+        mirrored.gid = (object.gid ^ 0x80000000) >>> 0; // Tiled's flip across
+    return {...entry, offset, object: mirrored};
+}
+
 // a stamp turned a quarter turn clockwise on screen, or back, its cells, their tiles and its objects together; cell
 // (x, y) goes to (y, width - 1 - x), so the bottom row becomes the left column, its left end at the top
 function editorStampTurn(stamp, back=false)
@@ -1715,7 +1749,7 @@ function editorStampTurn(stamp, back=false)
     for (let turns = back ? 3 : 1; turns--;)
     {
         const {width, height} = stamp;
-        const objects = stamp.objects?.map((object)=> ({...object, offset: vec2(object.offset.y, width - object.offset.x)}));
+        const objects = stamp.objects?.map((entry)=> editorStampObjectTurn(entry, width));
         stamp = {width: height, height: width, grids: stamp.grids.map((grid)=>
         {
             const turned = [];
@@ -1732,7 +1766,7 @@ function editorStampTurn(stamp, back=false)
 function editorStampMirror(stamp)
 {
     const {width, height} = stamp;
-    const objects = stamp.objects?.map((object)=> ({...object, offset: vec2(width - object.offset.x, object.offset.y)}));
+    const objects = stamp.objects?.map((entry)=> editorStampObjectMirror(entry, width));
     return {width, height, grids: stamp.grids.map((grid)=>
     {
         const mirrored = [];
@@ -1864,8 +1898,9 @@ function editorClear()
     editorStrokeEnd();
 }
 
-// the objects of a map's object layers inside a tile area, each {group, type, offset, object}: the index of its
-// object layer, its offset from the area's bottom left corner, and a copy of it, as a stamp keeps them
+// the objects of a map's object layers inside a tile area, each {group, type, offset, object, tileSize}: the index of
+// its object layer, its offset from the area's bottom left corner, a copy of it, and the map's tile size in pixels,
+// which a mirror reads its width in cells by, as a stamp keeps them
 function editorAreaObjects(layer, area)
 {
     const corner = layer.live.pos.add(area.min), far = layer.live.pos.add(area.max).add(vec2(1));
@@ -1874,7 +1909,7 @@ function editorAreaObjects(layer, area)
         const ids = new Set(editorObjectsIn(objectLayer, corner, far));
         return (objectLayer.group?.objects ?? []).filter((object)=> ids.has(object.id)).map((object)=>
             ({group, type: object.type || object.class, offset: editorObjectPos(layer.record, object).subtract(corner),
-            object: editorObjectsCopy(object)}));
+            object: editorObjectsCopy(object), tileSize: vec2(layer.record.map.tilewidth || 1, layer.record.map.tileheight || 1)}));
     });
 }
 
