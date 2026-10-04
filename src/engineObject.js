@@ -179,7 +179,7 @@ class EngineObject
                 child.updateTransforms();
     }
 
-    /** Update the object physics, called automatically by engine once each frame. Can be overridden to stop or change how physics works for an object. */
+    /** Update the object physics, called automatically by engine once each frame. Can be overridden to stop or change how physics works for an object */
     updatePhysics()
     {
         // child objects do not have physics
@@ -443,7 +443,7 @@ class EngineObject
         }
     }
 
-    /** Update the object, called automatically by engine once each frame. Does nothing by default. */
+    /** Update the object, called automatically by engine once each frame. Does nothing by default */
     update() {}
 
     /** Render the object, draws a tile by default, automatically called each frame, sorted by renderOrder */
@@ -453,7 +453,7 @@ class EngineObject
         drawTile(this.pos, this.drawSize || this.size, this.tileInfo, this.color, this.angle, this.mirror, this.additiveColor, glEnable, false);
     }
 
-    /** Optional hook called during the light system plugin's lightmap pass to draw this object's lightmap contribution. Does nothing by default. */
+    /** Optional hook called during the light system plugin's lightmap pass to draw this object's lightmap contribution. Does nothing by default */
     renderLight() {}
 
     /** Draw this object into the light system's shadow map, called during its shadow pass when castShadow is set.
@@ -502,7 +502,7 @@ class EngineObject
      *  @return {Vector2} */
     worldToLocalVector(vec) { return vec.rotate(-this.angle); }
 
-    /** Called to check if a tile collision should be resolved. Return true for physics to resolve the collision or false to ignore and resolve it manually.
+    /** Called to check if a tile collision should be resolved. Return true for physics to resolve the collision or false to ignore and resolve it manually
      *  - Called for each solid tile the physics tests, which can be several times a frame for the same tile, and for
      *    positions it only tries, so keep it free of side effects or guard them to once a frame
      *  - this.pos has already moved, so a check on where it came from, like a one way platform, needs the position
@@ -512,7 +512,7 @@ class EngineObject
      *  @return {boolean} - true if the collision should be resolved by modifying it's position and velocity */
     collideWithTile(tileData, pos) { return tileData > 0; }
 
-    /** Called by the engine to check if an object collision should be resolved. Return true for physics to resolve the collision or false to ignore and resolve it manually.
+    /** Called by the engine to check if an object collision should be resolved. Return true for physics to resolve the collision or false to ignore and resolve it manually
      *  - Both objects of a touching pair are asked once a frame, whichever order they update in; an object that
      *    destroys itself here is gone at the end of the frame and is still asked about the pairs left this frame, so a
      *    bullet that should hit one thing checks its own destroyed flag first

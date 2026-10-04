@@ -680,6 +680,7 @@ class Render3DPlugin
         this.cameraDepthHeight = 0;
         this.depthPass = false; // drawing the camera's depth, a shadow pass seen from the camera
         this.contextGeneration = 0;  // counts context losses, a mesh uploaded under an older one uploads again
+        /** @type {Map<WebGLProgram, Object<string, WebGLUniformLocation|null>>} */
         this.uniforms = new Map;     // uniform locations by program
         /** @type {Object<string, Array<number>>} */
         this.uniformValues = {};     // last values sent for the cached vec4 uniforms

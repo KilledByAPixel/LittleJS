@@ -102,10 +102,10 @@ class Tween
          *  @type {undefined|function():void} */
         this.onComplete = undefined;
 
-        /** Continuation when a pass ends, set by loop() and pingPong() to start the next iteration.
+        /** Continuation when a pass ends, set by loop() and pingPong() to start the next iteration
          *  @private */
         this.thenCallback = undefined;
-        /** Remaining iterations including the current run (loop/pingPong only).
+        /** Remaining iterations including the current run (loop/pingPong only)
          *  @private */
         this.loopRemaining = 0;
         /** Whether it is running, see isActive
@@ -132,7 +132,7 @@ class Tween
         callback(this.interp(duration));
     }
 
-    /** Set the easing curve and return this for chaining.
+    /** Set the easing curve and return this for chaining
      *  @param {function(number):number} easeFn
      *  @return {Tween<T>} */
     setEase(easeFn)
@@ -188,10 +188,10 @@ class Tween
         return this;
     }
 
-    /** Pause this tween. While paused, tweenUpdate skips it. */
+    /** Pause this tween. While paused, tweenUpdate skips it */
     pause() { this.paused = true; }
 
-    /** Resume a paused tween. */
+    /** Resume a paused tween */
     resume() { this.paused = false; }
 
     /** Reset this tween to the start: life back to duration, pause cleared,
@@ -212,7 +212,7 @@ class Tween
         this.callback(this.interp(this.duration));
     }
 
-    /** True if this tween is in the active list and not paused.
+    /** True if this tween is in the active list and not paused
      *  @return {boolean} */
     isActive()
     {
@@ -283,7 +283,7 @@ class Tween
  */
 const Ease =
 {
-    /** Linear (identity) curve.
+    /** Linear (identity) curve
      *  @param {number} x
      *  @return {number}
      *  @memberof TweenSystem.Ease */
@@ -296,31 +296,31 @@ const Ease =
      *  @memberof TweenSystem.Ease */
     POWER: (n) => (x) => x ** n,
 
-    /** Sine ease-in curve: starts slow, ends fast.
+    /** Sine ease-in curve: starts slow, ends fast
      *  @param {number} x
      *  @return {number}
      *  @memberof TweenSystem.Ease */
     SINE: (x) => 1 - cos(x * (PI / 2)),
 
-    /** Circular ease-in curve.
+    /** Circular ease-in curve
      *  @param {number} x
      *  @return {number}
      *  @memberof TweenSystem.Ease */
     CIRC: (x) => 1 - (1 - x * x)**.5,
 
-    /** Exponential ease-in curve (`2^(10x-10)`).
+    /** Exponential ease-in curve (`2^(10x-10)`)
      *  @param {number} x
      *  @return {number}
      *  @memberof TweenSystem.Ease */
     EXPO: (x) => x === 0 ? 0 : 2 ** (10 * x - 10),
 
-    /** Back ease-in: overshoots backward at the start before snapping forward.
+    /** Back ease-in: overshoots backward at the start before snapping forward
      *  @param {number} x
      *  @return {number}
      *  @memberof TweenSystem.Ease */
     BACK: (x) => x * x * (2.70158 * x - 1.70158),
 
-    /** Elastic ease-in: oscillations that grow toward the end.
+    /** Elastic ease-in: oscillations that grow toward the end
      *  @param {number} x
      *  @return {number}
      *  @memberof TweenSystem.Ease */
@@ -387,7 +387,7 @@ const Ease =
      */
     OUT: (f) => (x) => 1 - f(1 - x),
 
-    /** Combine the first half of `f` with `Ease.OUT(f)` for a symmetric curve.
+    /** Combine the first half of `f` with `Ease.OUT(f)` for a symmetric curve
      *  @param {function(number):number} f
      *  @return {function(number):number}
      *  @memberof TweenSystem.Ease */

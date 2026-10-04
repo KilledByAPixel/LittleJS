@@ -467,7 +467,7 @@ class Sound
      */
     isLoaded() { return this.loadedPercent === 1; }
     
-    /** Loads a sound from a URL and decodes it into sample data.
+    /** Loads a sound from a URL and decodes it into sample data
     *  @param {string} filename
     *  @return {Promise} */
     async loadSound(filename)

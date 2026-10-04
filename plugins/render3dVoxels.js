@@ -88,9 +88,11 @@ class VoxelMap extends EngineObject3D
         this.chunkTransparentMeshes = []; // each chunk's transparent blocks, drawn blended
         /** @type {Array<Vector3>} */
         this.chunkCenters = []; // a chunk mesh's points are around its center, which it is drawn at
+        /** @type {Set<number>} */
         this.chunksChanged = new Set;
         /** @type {Array<{faces: Array<number>, seeThrough: boolean, transparent: boolean, doubleSided: boolean}|undefined>} */
         this.blockTypes = [];
+        /** @type {Map<number, Array<Vector2>>} */
         this.tiles = new Map; // tile index to the uvs of its corners
 
         // the transparent blocks draw in the transparent stage, blended and sorted, through a child that draws them

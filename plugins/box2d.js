@@ -244,7 +244,7 @@ class Box2dObject extends EngineObject
             this.drawFixtures(this.color, this.lineColor, this.lineWidth);
     }
 
-    /** Render debug info */
+    /** Draw its fixtures for the debug view: yellow asleep, blue static, both when both */
     renderDebugInfo()
     {
         const isAsleep = !this.getIsAwake();
@@ -253,7 +253,7 @@ class Box2dObject extends EngineObject
         this.drawFixtures(color);
     }
 
-    /** Draws all this object's fixtures 
+    /** Draw all this object's fixtures 
      *  @param {Color}   [color]
      *  @param {Color}   [lineColor]
      *  @param {number}  [lineWidth]
@@ -1269,11 +1269,11 @@ class Box2dDistanceJoint extends Box2dJoint
      *  @return {number} */
     getFrequency() { return this.box2dJoint.GetFrequency(); }
     
-    /** Set the damping ratio
+    /** Set how much the spring is damped, 0 for none and 1 to stop it bouncing
      *  @param {number} ratio */
     setDampingRatio(ratio) { this.box2dJoint.SetDampingRatio(ratio); box2dWakeJoint(this.box2dJoint); }
     
-    /** Get the damping ratio
+    /** Get how much the spring is damped, 0 for none and 1 to stop it bouncing
      *  @return {number} */
     getDampingRatio() { return this.box2dJoint.GetDampingRatio(); }
 }
@@ -1426,7 +1426,7 @@ class Box2dRevoluteJoint extends Box2dJoint
      *  @param {number} torque */
     setMaxMotorTorque(torque) { this.box2dJoint.SetMaxMotorTorque(torque); }
 
-    /** Get the max motor torque
+    /** Get the most torque the motor can apply, a magnitude
      *  @return {number} */
     getMaxMotorTorque() { return this.box2dJoint.GetMaxMotorTorque(); }
 
@@ -1616,11 +1616,11 @@ class Box2dPrismaticJoint extends Box2dJoint
      *  @param {boolean} [enable] */
     enableMotor(enable=true) { this.box2dJoint.EnableMotor(enable); }
     
-    /** Set the motor speed
+    /** Set the speed the motor drives the bodies apart along the axis, in meters per second
      *  @param {number} speed */
     setMotorSpeed(speed) { this.box2dJoint.SetMotorSpeed(speed); }
     
-    /** Get the motor speed
+    /** Get the speed the motor drives the bodies apart along the axis, in meters per second
      *  @return {number} */
     getMotorSpeed() { return this.box2dJoint.GetMotorSpeed(); }
     
@@ -1712,7 +1712,7 @@ class Box2dWheelJoint extends Box2dJoint
      *  @param {number} torque */
     setMaxMotorTorque(torque) { this.box2dJoint.SetMaxMotorTorque(torque); }
 
-    /** Get the max motor torque
+    /** Get the most torque the wheel's motor can apply, a magnitude
      *  @return {number} */
     getMaxMotorTorque() { return this.box2dJoint.GetMaxMotorTorque(); }
 
@@ -1729,11 +1729,11 @@ class Box2dWheelJoint extends Box2dJoint
      *  @return {number} */
     getSpringFrequencyHz() { return this.box2dJoint.GetSpringFrequencyHz(); }
 
-    /** Set the spring damping ratio
+    /** Set how much the suspension spring is damped, 0 for none and 1 to stop it bouncing
      *  @param {number} ratio */
     setSpringDampingRatio(ratio) { this.box2dJoint.SetSpringDampingRatio(ratio); box2dWakeJoint(this.box2dJoint); }
 
-    /** Get the spring damping ratio
+    /** Get how much the suspension spring is damped, 0 for none and 1 to stop it bouncing
      *  @return {number} */
     getSpringDampingRatio() { return this.box2dJoint.GetSpringDampingRatio(); }
 }
@@ -1791,11 +1791,11 @@ class Box2dWeldJoint extends Box2dJoint
      *  @return {number} */
     getFrequency() { return this.box2dJoint.GetFrequency(); }
 
-    /** Set the damping ratio
+    /** Set how much the weld's spring is damped, 0 for none and 1 to stop it bouncing
      *  @param {number} ratio */
     setDampingRatio(ratio) { this.box2dJoint.SetDampingRatio(ratio); box2dWakeJoint(this.box2dJoint); }
 
-    /** Get the damping ratio
+    /** Get how much the weld's spring is damped, 0 for none and 1 to stop it bouncing
      *  @return {number} */
     getDampingRatio() { return this.box2dJoint.GetDampingRatio(); }
 }
@@ -1949,11 +1949,11 @@ class Box2dMotorJoint extends Box2dJoint
         super(jointDef);
     }
 
-    /** Set the target linear offset, in frame A, in meters.
+    /** Set the target linear offset, in frame A, in meters
      *  @param {Vector2} offset */
     setLinearOffset(offset) { this.box2dJoint.SetLinearOffset(box2dTemp(offset)); }
 
-    /** Get the target linear offset, in frame A, in meters.
+    /** Get the target linear offset, in frame A, in meters
      *  @return {Vector2} */
     getLinearOffset() { return box2d.vec2From(this.box2dJoint.GetLinearOffset()); }
 

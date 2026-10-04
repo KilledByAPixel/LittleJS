@@ -298,7 +298,7 @@ function noise1D(x)
     return lerp(noiseHash(i), noiseHash(i + 1), smoothStep(x - i));
 }
 
-/** 2D value noise — returns a smooth value in [0, 1] for any real (x, y).
+/** 2D value noise — returns a smooth value in [0, 1] for any real (x, y)
  *  @param {number} x
  *  @param {number} y
  *  @return {number}

@@ -544,12 +544,14 @@ class Prefab3D extends EngineObject3D
         this.prefabName = prefabName;
         /** @property {boolean} - Are its parts its children, moving with it as one body */
         this.attached = !!level3DPrefabs.get(prefabName)?.attached || level3DPrefabAttached > 0;
-        /** @property {Array<any>} - What the prefab's objects made, in the prefab's order */
+        /** @property {Array<EngineObject3D>} - What the prefab's objects made, in the prefab's order
+         *  @type {Array<EngineObject3D>} */
         this.parts = [];
         /** @property {Vector3} - From the prefab's origin to the handle, in the prefab's own space: nothing for
          *  separate parts, and for an attached prefab the middle of the box around its parts, where its handle
          *  is, as an object's place is the middle of its body */
         this.originOffset = vec3();
+        /** @type {Array<{id?: number, type: string, pos?: Array<number>, rotation?: Array<number>, scale?: Array<number>|number, properties?: Object}>} */
         this.partObjects = []; // the prefab's object of each part
         this.partsPlaced = ''; // where the handle was when its parts were last placed, undefined parts not made
         this.partsMade = false;

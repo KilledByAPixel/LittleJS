@@ -157,9 +157,11 @@ class NewgroundsPlugin
         const hasLocation = typeof location != 'undefined';
         /** @property {string} - Hostname sent with the view the plugin logs when it starts */
         this.host = hasLocation ? location.hostname : '';
-        /** @property {Array} - Medals fetched from Newgrounds, empty until ready, with the unlocks only when logged in */
+        /** @property {Array<Object>} - Medals fetched from Newgrounds, empty until ready, with the unlocks only when logged in
+         *  @type {Array<Object>} */
         this.medals = [];
-        /** @property {Array} - Scoreboards fetched from Newgrounds, empty until ready */
+        /** @property {Array<Object>} - Scoreboards fetched from Newgrounds, empty until ready
+         *  @type {Array<Object>} */
         this.scoreboards = [];
         /** @property {{id: number, name: string, url: string, supporter: boolean}|null} - The logged in player once ready, null when not logged in
          *  @type {{id: number, name: string, url: string, supporter: boolean}|null} */

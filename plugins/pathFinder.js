@@ -64,10 +64,10 @@ class PathFinderNode
         this.isOpen = this.isClosed = false;
     }
 
-    /** Reset per-search state and walkability (called by buildNodeData). */
+    /** Reset per-search state and walkability (called by buildNodeData) */
     reset() { this.walkable = false; this.cost = 0; this.resetSearch(); }
 
-    /** True if walkable and not blocked by cost.
+    /** True if walkable and not blocked by cost
      *  @return {boolean} */
     isClear()
     {
@@ -77,7 +77,7 @@ class PathFinderNode
 
 ///////////////////////////////////////////////////////////////////////////////
 
-/** Grid pathfinder using A* with two optional smoothing passes.
+/** Grid pathfinder using A* with two optional smoothing passes
  *  @memberof PathFinding
  *  @example
  *  // Tile-layer driven (most common):
@@ -177,7 +177,7 @@ class PathFinder
         return 0;
     }
 
-    /** Get the node at tile coords, or null if out of bounds.
+    /** Get the node at tile coords, or null if out of bounds
      *  @param {number} x
      *  @param {number} y
      *  @return {PathFinderNode|null} */
@@ -187,7 +187,7 @@ class PathFinder
         return this.nodes[x + y * this.size.x];
     }
 
-    /** Convert a world-space position to integer tile coords (no clamping).
+    /** Convert a world-space position to integer tile coords (no clamping)
      *  @param {Vector2} worldPos
      *  @return {Vector2} */
     worldToTile(worldPos)
@@ -197,7 +197,7 @@ class PathFinder
         return vec2(floor(worldPos.x - ox), floor(worldPos.y - oy));
     }
 
-    /** Convert integer tile coords to the world-space center of that tile.
+    /** Convert integer tile coords to the world-space center of that tile
      *  @param {number} x
      *  @param {number} y
      *  @return {Vector2} */

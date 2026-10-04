@@ -134,6 +134,8 @@ class GLTFModel
         /** @property {Array<GLTFAnimation>} - The animations, play one through createObject's GLTFObject
          *  @type {Array<GLTFAnimation>} */
         this.animations = animations;
+        /** @type {{nodes: Array<Object>, parents: Array<number|undefined>, restInverse: Array<Matrix4>,
+         *  restPose: Array<Matrix4|undefined>}|undefined} */
         this.nodeTree = nodeTree;             // each node's parent and resting place, for animation
         this.modelMatrix = new Matrix4;       // what center, fit and transform did to the parts, animation works through it
         /** @property {Mesh} - Every part combined, each tinted with its material color; the texture is textureInfo,
