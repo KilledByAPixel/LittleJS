@@ -2836,6 +2836,9 @@ class Mesh
         /** @type {{vertices: Array<number>, pointCount: number, data: ArrayBuffer}|undefined} */
         // the strip index of each GPU vertex, the point count and packed data of the last upload, for a dynamicDraw mesh
         this.vertexLayout = undefined;
+        // the layout's data already holds the mesh as it is, with its radius and box, written by a glTF skin as it
+        // bent the mesh, so the next upload sends it without packing it again
+        this.vertexDataPacked = false;
         this.instanceCount = 0; // draws waiting in this mesh's batch, with their values, texture and draw state
         /** @type {Float32Array|undefined} */
         this.instanceData = undefined;
@@ -3233,9 +3236,10 @@ class Mesh
             if (layout.pointCount === this.points.length)
             {
                 gl.bindBuffer(gl.ARRAY_BUFFER, this.buffer);
-                gl.bufferSubData(gl.ARRAY_BUFFER, 0, render3DMeshVertexData(this, layout.vertices, layout.data));
+                gl.bufferSubData(gl.ARRAY_BUFFER, 0,
+                    this.vertexDataPacked ? layout.data : render3DMeshVertexData(this, layout.vertices, layout.data));
                 gl.bindBuffer(gl.ARRAY_BUFFER, glArrayBuffer);
-                this.dirty = false;
+                this.dirty = this.vertexDataPacked = false;
                 return this;
             }
         }
@@ -3248,7 +3252,7 @@ class Mesh
         this.indexBuffer = gl.createBuffer();
         this.bufferCount = indices.length;
         this.indexType = wide ? gl.UNSIGNED_INT : gl.UNSIGNED_SHORT;
-        this.dirty = false;
+        this.dirty = this.vertexDataPacked = false;
         gl.bindBuffer(gl.ARRAY_BUFFER, this.buffer);
         gl.bufferData(gl.ARRAY_BUFFER, data, this.dynamicDraw ? gl.DYNAMIC_DRAW : gl.STATIC_DRAW);
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer);

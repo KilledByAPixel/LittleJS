@@ -1,5 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { loadEngine } from './vmEngine.mjs';
 import { parseGLTF, vec3, setEngineManualStep, engineInit, engineStep }
     from '../dist/littlejs.esm.js';
 
@@ -237,4 +238,36 @@ test('destroying an object frees its skinned meshes, and play of the animation p
     assert.ok(o.animationTime > .1, 'it went on, ' + o.animationTime);
     o.destroy(true);
     assert.equal(freed, 1);
+});
+
+test('a skinned mesh bent each frame writes the GPU data as it bends, so its upload packs nothing again', async ()=>
+{
+    // a gl that keeps what each bufferSubData sends, so the upload's bytes can be compared to a full pack's
+    const sent = [];
+    const gl = new Proxy({ isContextLost: ()=> false, createBuffer: ()=> ({}), getParameter: ()=> 4096,
+        bufferSubData: (target, offset, data)=> sent.push(new Uint8Array(data.slice(0))) },
+        { get: (target, key)=> key in target ? target[key] : ()=> ({}) });
+    const json = gltfOf({ nodes: nodesOf(), animations: [{ name: 'bend', angle: Math.PI / 2 }] });
+    const { run } = loadEngine({ gl, json, fetch, atob, ArrayBuffer, TextDecoder, Blob, Response });
+    run('setHeadlessMode(true); new Render3DPlugin; render3D.program = {}; glContext = gl;');
+    await run('parseGLTF(json).then((model)=> { globalThis.o = model.createObject(vec3(1, 2, 3)); o.play("bend", false); })');
+    run(`var mesh = o.parts[0].mesh; o.setAnimationTime(.3); mesh.upload();
+        var packs = 0; const pack = render3DMeshVertexData;
+        render3DMeshVertexData = (...a)=> (++packs, pack(...a));
+        o.setAnimationTime(.7); mesh.upload();`);
+    assert.equal(run('packs'), 0, 'the skin wrote the data, the upload sends it as it is');
+    assert.equal(run('mesh.dirty'), false);
+    // the same bytes, radius and box a full pack of the bent mesh gives
+    const full = run(`(()=> { const copy = Object.assign(Object.create(Mesh.prototype), mesh, {bounds: undefined});
+        const data = pack(copy, mesh.vertexLayout.vertices);
+        return JSON.stringify({bytes: [...new Uint8Array(data)], radius: copy.radius,
+            bounds: [copy.bounds.min, copy.bounds.max].map((v)=> [v.x, v.y, v.z])}); })()`);
+    const expected = JSON.parse(full);
+    assert.deepEqual([...sent.at(-1)], expected.bytes);
+    assert.equal(run('mesh.radius'), expected.radius);
+    assert.deepEqual(JSON.parse(run('JSON.stringify([mesh.bounds.min, mesh.bounds.max].map((v)=> [v.x, v.y, v.z]))')),
+        expected.bounds);
+    // a mesh made again, as after a lost context, packs in full as before
+    run('mesh.vertexLayout = undefined; o.setAnimationTime(.9); mesh.upload();');
+    assert.equal(run('packs'), 1);
 });

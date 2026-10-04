@@ -784,39 +784,67 @@ function gltfSkinMeshCopy(mesh)
 
 // bend a skinned mesh to a pose: each vertex its stored place moved by its four joints, weighted, and its normal by
 // their normal matrices, each joint's matrix modelMatrix * its place now * its inverse bind; written into the
-// mesh's own vectors, so a pose makes nothing for each vertex
+// mesh's own vectors, so a pose makes nothing for each vertex, and once an upload has laid the mesh out for the GPU
+// into that data too, with the radius and box the upload would measure, so it sends the data as it is
 function gltfSkinApply(skin, worldOf, modelMatrix, mesh)
 {
-    const matrices = [], normalMatrices = [];
-    for (let j = 0; j < skin.joints.length; ++j)
+    // each joint's point matrix, 12 numbers, then its normal matrix, 9, in one array the skin keeps
+    const jointCount = skin.joints.length, M = skin.jointMatrices ||= new Float32Array(jointCount * 21);
+    const m = gltfSkinScratch[0], n = gltfSkinScratch[1];
+    for (let j = 0; j < jointCount; ++j)
     {
-        const m = modelMatrix.copy().multiply(worldOf(skin.joints[j])).multiply(skin.inverseBind[j]);
-        matrices.push(m.m), normalMatrices.push(render3DNormalMatrix(m).m);
+        m.m.set(modelMatrix.m);
+        m.multiply(worldOf(skin.joints[j])).multiply(skin.inverseBind[j]);
+        n.m.set(m.m);
+        n.invert().transpose();
+        const a = m.m, b = n.m, o = j * 21;
+        M[o]    = a[0], M[o+1]  = a[1], M[o+2]  = a[2],  M[o+3]  = a[4], M[o+4]  = a[5], M[o+5]  = a[6];
+        M[o+6]  = a[8], M[o+7]  = a[9], M[o+8]  = a[10], M[o+9]  = a[12], M[o+10] = a[13], M[o+11] = a[14];
+        M[o+12] = b[0], M[o+13] = b[1], M[o+14] = b[2],  M[o+15] = b[4], M[o+16] = b[5], M[o+17] = b[6];
+        M[o+18] = b[8], M[o+19] = b[9], M[o+20] = b[10];
     }
     const {vertexJoints, vertexWeights, bindPoints, bindNormals} = skin, points = mesh.points, normals = mesh.normals;
-    for (let v = 0; v < points.length; ++v)
+    // an indexed mesh's GPU vertex j is its point j, as upload lays it out
+    const layout = mesh.vertexLayout, count = points.length;
+    const floats = layout && mesh.indices && layout.pointCount === count ? new Float32Array(layout.data) : undefined;
+    let r = 0, x0 = Infinity, y0 = Infinity, z0 = Infinity, x1 = -Infinity, y1 = -Infinity, z1 = -Infinity;
+    for (let v = 0; v < count; ++v)
     {
-        const px = bindPoints[v*3], py = bindPoints[v*3+1], pz = bindPoints[v*3+2];
-        const qx = bindNormals[v*3], qy = bindNormals[v*3+1], qz = bindNormals[v*3+2];
+        const v3 = v*3, v4 = v*4, px = bindPoints[v3], py = bindPoints[v3+1], pz = bindPoints[v3+2];
+        const qx = bindNormals[v3], qy = bindNormals[v3+1], qz = bindNormals[v3+2];
         let x = 0, y = 0, z = 0, nx = 0, ny = 0, nz = 0;
         for (let k = 0; k < 4; ++k)
         {
-            const w = vertexWeights[v*4+k];
+            const w = vertexWeights[v4+k];
             if (!w) continue;
-            const m = matrices[vertexJoints[v*4+k]], n = normalMatrices[vertexJoints[v*4+k]];
-            x += w * (m[0]*px + m[4]*py + m[8]*pz + m[12]);
-            y += w * (m[1]*px + m[5]*py + m[9]*pz + m[13]);
-            z += w * (m[2]*px + m[6]*py + m[10]*pz + m[14]);
-            nx += w * (n[0]*qx + n[4]*qy + n[8]*qz);
-            ny += w * (n[1]*qx + n[5]*qy + n[9]*qz);
-            nz += w * (n[2]*qx + n[6]*qy + n[10]*qz);
+            const o = vertexJoints[v4+k] * 21;
+            x += w * (M[o]*px + M[o+3]*py + M[o+6]*pz + M[o+9]);
+            y += w * (M[o+1]*px + M[o+4]*py + M[o+7]*pz + M[o+10]);
+            z += w * (M[o+2]*px + M[o+5]*py + M[o+8]*pz + M[o+11]);
+            nx += w * (M[o+12]*qx + M[o+15]*qy + M[o+18]*qz);
+            ny += w * (M[o+13]*qx + M[o+16]*qy + M[o+19]*qz);
+            nz += w * (M[o+14]*qx + M[o+17]*qy + M[o+20]*qz);
         }
         const p = points[v], normal = normals[v], l = (nx*nx + ny*ny + nz*nz) ** .5 || 1;
         p.x = x, p.y = y, p.z = z;
         normal.x = nx / l, normal.y = ny / l, normal.z = nz / l;
+        if (!floats) continue;
+        const at = v * RENDER3D_VERTEX_FLOATS;
+        floats[at]   = x,        floats[at+1] = y,        floats[at+2] = z;
+        floats[at+3] = normal.x, floats[at+4] = normal.y, floats[at+5] = normal.z;
+        r = max(r, x*x + y*y + z*z);
+        x0 = min(x0, x), y0 = min(y0, y), z0 = min(z0, z);
+        x1 = max(x1, x), y1 = max(y1, y), z1 = max(z1, z);
+    }
+    if (floats)
+    {
+        mesh.radius = r ** .5;
+        mesh.bounds = count ? {min: vec3(x0, y0, z0), max: vec3(x1, y1, z1)} : {min: vec3(), max: vec3()};
+        mesh.vertexDataPacked = true;
     }
     mesh.dirty = true;
 }
+const gltfSkinScratch = [new Matrix4, new Matrix4]; // a joint's matrix and its normal matrix, as it is worked out
 
 // a node's translation, rotation and scale as arrays to animate, copies so the file's stay as they rest
 function gltfNodeTRS(node)
