@@ -1095,6 +1095,8 @@ let editorStroke;
 
 // during a big edit, the layers whose cell by cell redraws are held off, with the redraw each had of its own
 let editorHeldRedraws;
+// the live layers a change can only show by drawing them again whole, drawn when it is done
+const editorRedrawWhole = new Set;
 
 // make a big edit, a fill, clear, undo, apply or revert, with each layer's cell by cell redraws held off, a game's
 // tile callback's included; the stroke's end draws each layer it touched again whole
@@ -1120,6 +1122,11 @@ function editorSetCell(layer, pos, gid)
         return before; // the same, unless the layer lost the tile in play, a ghost painted with its own tile
     source.data[index] = gid;
     if (live.destroyed) return before; // a layer the game let go of, the map still has the change
+
+    // a plain cell draws itself here; held draws, a game's onTile, which may change the cells around, and its own
+    // drawing over the layer show only when the whole layer draws again, once the change is done
+    if (editorHeldRedraws || editorHas('onTile') || live.onRedraw !== TileLayer.prototype.onRedraw)
+        editorRedrawWhole.add(live);
 
     if (editorHeldRedraws && !editorHeldRedraws.has(live))
     {
@@ -1198,8 +1205,7 @@ function editorUndo(redo=false)
     editorChanged(stroke);
 }
 
-// after a change the tile layers it touched draw again whole, so a game's onRedraw decoration sees the new tiles,
-// and the maps it touched are autosaved; a resized map is made again by the game, with the editor staying open
+// after a change the tile layers it touched that need it draw again whole, and the maps it touched are autosaved; a resized map is made again by the game, with the editor staying open
 function editorChanged(stroke)
 {
     editorRedraw(stroke);
@@ -1208,11 +1214,11 @@ function editorChanged(stroke)
     stroke.some((entry)=> entry.resize) && editorHas('onRestart') && levelEditor.onRestart();
 }
 
-// the tile layers a stroke touched draw again whole
+// the tile layers a stroke touched that need it draw again whole
 function editorRedraw(stroke)
 {
     for (const layer of new Set(stroke.filter((entry)=> entry.layer).map((entry)=> entry.layer)))
-        layer.live.destroyed || layer.live.redraw();
+        editorRedrawWhole.delete(layer.live) && !layer.live.destroyed && layer.live.redraw();
 }
 
 ///////////////////////////////////////////////////////////////////////////////

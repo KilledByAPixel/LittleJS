@@ -53,8 +53,11 @@ class Goal extends GridObject
     }
     update()
     {
+        super.update();
+
         // light up while a block is on the pad, with a burst when it lands
-        const active = boxAt(this.cell.x, this.cell.y);
+        const box = boxAt(this.cell.x, this.cell.y);
+        const active = box && !box.moveTimer.active(); // done sliding in
         const particlePos = cellPos(this.cell.x, this.cell.y, .5);
         if (active && !this.active)
             particleEffect3D('explosion', particlePos, {scale: .6,
@@ -107,7 +110,7 @@ function tryMove(moveX, moveZ)
 function gameInit()
 {
     new Render3DPlugin;
-    canvasClearColor = hsl(0,.1,.5);
+    setCanvasClearColor(hsl(0,.1,.5));
     render3D.ambientColor = hsl(.6,.3,.4);
     render3D.shadows = true;
     render3D.shadowRange = levelSize + 4;
@@ -209,7 +212,9 @@ never set gives 0, which leaves a new object at its start.
 ### Goal
 A pad is a `GridObject` with a `Light3D` child. The light's color starts
 with an alpha of 0, which switches a light off. In `update`, `boxAt`
-says whether a block is on the pad. If so the pad takes its lit color,
+says whether a block is on the pad, and `moveTimer.active()` whether
+it is still sliding there: a pushed block's `cell` changes at once. A
+block that has arrived lights the pad: the pad takes its lit color,
 `emissive = 1` draws it at full brightness and the light's alpha is set
 to 1. An empty pad pulses its `emissive` with `sin(time*4)`. On the
 frame a block arrives, `particleEffect3D` plays the built in explosion
@@ -222,7 +227,7 @@ there. Then the player moves. `render3D.playSound` plays the push
 sound at the block's place.
 
 ### gameInit
-- `canvasClearColor` is the background, since there is no sky.
+- `setCanvasClearColor` sets the background, since there is no sky.
 - `shadowCenter` and `shadowRange` keep the shadow map on the board, 4
   units wider than it, in place of following the camera.
 - The camera is put at `vec3(7,8,7)` and `lookAt` aims it at the board.

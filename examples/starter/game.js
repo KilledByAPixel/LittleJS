@@ -111,7 +111,7 @@ function gameUpdate()
 
     // move particles to the mouse once it has moved
     if (mousePosScreen.x)
-        particleEmitter.pos = mousePos;
+        particleEmitter.pos = mousePos.copy();
 }
 
 ///////////////////////////////////////////////////////////////////////////////

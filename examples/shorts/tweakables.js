@@ -23,18 +23,19 @@ class Ball extends EngineObject
         this.color = ballColor;
         this.velocity = this.velocity.add(wind);
 
-        // bounce off the edges of the screen
+        // bounce off the edges of the screen, wherever the camera is
         const edge = getCameraSize().subtract(this.size).scale(.5);
-        if (abs(this.pos.x) > edge.x)
+        const low = cameraPos.subtract(edge), high = cameraPos.add(edge);
+        if (this.pos.x < low.x || this.pos.x > high.x)
         {
-            this.pos.x = clamp(this.pos.x, -edge.x, edge.x);
+            this.pos.x = clamp(this.pos.x, low.x, high.x);
             this.velocity.x *= -ballBounce;
         }
-        if (this.pos.y < -edge.y)
+        if (this.pos.y < low.y)
         {
             const speed = -this.velocity.y;
             speed > .2 && bounceSound.play(this.pos, speed);
-            this.pos.y = -edge.y;
+            this.pos.y = low.y;
             this.velocity.y = speed * ballBounce;
         }
 
@@ -168,7 +169,7 @@ position the smaller and fainter its circle, then the ball.
   and no slider.
 - Widen the wind's range to `{min: -.02, max: .02}`.
 - Add `tweak('cameraPos');` after the `showTrails` line: two numbers
-  that move the camera.
+  that move the camera, and the balls bounce off the view's new edges.
 - Set `debugTweakables` to `false`, then press Escape and 9 to bring
   the panel back.
 

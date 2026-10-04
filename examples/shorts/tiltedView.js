@@ -24,7 +24,6 @@ class Player extends GameObject
         // apply movement controls
         const moveInput = keyDirection().clampLength(1).scale(.2);
         this.velocity = this.velocity.add(moveInput);
-        this.setCollision(); // make object collide
 
         // move camera with player
         cameraPos = this.pos.add(vec2(0,2));
@@ -37,6 +36,7 @@ function gameInit()
     objectDefaultDamping = .7;
     const player = new Player(vec2(), vec2(3,1), tile(5), 0, RED);
     player.drawSize = vec2(3);
+    player.setCollision(); // make object collide
 
     // create background objects
     for (let i=1; i<300; ++i)
@@ -102,8 +102,8 @@ put 2 units above the player's position.
 
 The player is made with a `size` of 3 by 1, the box it collides with,
 and a `drawSize` of 3 by 3 for tile 5 of the tile sheet. The class has
-no constructor, so `setCollision()` is called in `update`. Calling it
-every frame does no harm.
+no constructor, so `setCollision()` is called on it in `gameInit`,
+once, after it is made.
 
 ### gameInit
 The ground is 299 large rectangles in greens, plain `EngineObject`s

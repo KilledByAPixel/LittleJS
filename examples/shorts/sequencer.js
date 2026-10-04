@@ -1,6 +1,6 @@
 const stepCount = 8, trackCount = 12, sequencer = [];
 let currentStep = 0, stepTime = 0, tempo = 240;
-let isPlaying = false, eraseMode = false;
+let isPlaying = false, eraseMode; // undefined until a drag's first cell
 
 // sound sequencer instruments
 const sound_piano = new Sound([.3,0,220,,.1]);
@@ -47,7 +47,7 @@ class UISequencerButton extends UIButton
     onPress()
     {
         // set the button on/off and update sequencer table
-        if (mouseWasPressed(0))
+        if (eraseMode === undefined)
             eraseMode = this.isOn;
         this.isOn = !eraseMode;
         eraseMode || this.playSound();
@@ -105,6 +105,10 @@ function gameInit()
 
 function gameUpdate()
 {
+    // a drag ends when the mouse is let go, the next sets its own mode
+    if (!mouseIsDown(0))
+        eraseMode = undefined;
+
     if (!isPlaying)
         return;
 
@@ -162,9 +166,10 @@ dragged onto it, which is what lets a drag paint cells.
 
 ### Painting and erasing
 `onPress` is called for the cell under the mouse at the click and for
-each cell the drag enters after it. `mouseWasPressed(0)` is true only
-on the frame the button went down, so only the first cell of a drag
-sets `eraseMode`, to whether that cell was already on. Every cell
+each cell the drag enters after it. `gameUpdate` sets `eraseMode`
+back to `undefined` whenever `mouseIsDown(0)` is false, so only the
+first cell a drag touches sets it, to whether that cell was already on,
+even when the drag started outside the grid. Every cell
 touched after it takes the same mode, and a drag either turns cells
 on or turns them off, never a mix.
 

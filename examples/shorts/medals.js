@@ -40,7 +40,7 @@ function gameRenderPost()
     // show unlocked medals
     let medalsCount = 0;
     medalsForEach(medal=> medal.unlocked && medalsCount++);
-    pos = pos.add(vec2((1-medalsCount)*size/2, 100));
+    pos = pos.add(vec2((1-medalsCount)*(size+8)/2, 100));
     medalsForEach(medal=>
     {
         if (!medal.unlocked)
@@ -98,7 +98,8 @@ pixels tall.
 
 `medalsForEach(callback)` calls a function with every medal. The first
 pass counts the unlocked ones, so the row can start further left the
-more there are. The second draws each with `medal.renderIcon(pos,
+more there are, half a step of 88 pixels for each one after the first,
+which keeps the row centered. The second draws each with `medal.renderIcon(pos,
 size)`, which takes a screen position and a size in pixels, and steps
 88 pixels to the right.
 

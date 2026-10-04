@@ -72,8 +72,9 @@ function gameInit()
     // setup canvas
     LJS.setCanvasFixedSize(vec2(1920, 1080)); // 1080p
     LJS.setCanvasClearColor(backgroundColor);
-    // load high score
-    bestScore = localStorage[highScoreKey] || 0;
+    // load high score, storage throws where the browser blocks it
+    try { bestScore = localStorage[highScoreKey] || 0; }
+    catch { bestScore = 0; }
 
     // setup game
     levelSize = vec2(12,6);
@@ -211,7 +212,7 @@ function gameUpdate()
     {
         // update high score
         bestScore = score;
-        localStorage[highScoreKey] = bestScore;
+        try { localStorage[highScoreKey] = bestScore; } catch {}
     }
 
     if (LJS.keyWasPressed('KeyR'))

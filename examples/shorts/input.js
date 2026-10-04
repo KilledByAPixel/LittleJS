@@ -1,7 +1,11 @@
-function gameUpdate()
+function gameInit()
 {
     // show the touch gamepad, and let touches outside it move the mouse
     touchGamepadEnable = touchGamepadPassthrough = true;
+}
+
+function gameUpdate()
+{
     if (isTouchDevice || isUsingGamepad)
     {
         if (isTouchDevice)
@@ -73,9 +77,10 @@ the gamepad view too, for the engine's on screen gamepad, and a point
 that follows a touch outside it.
 
 ## How it works
-All of it is in `gameUpdate`, which runs 60 times a second. Input in
-LittleJS is asked for, not handed over in events: each function below
-says how things are on this frame.
+`gameInit` turns on the touch gamepad, and all the rest is in
+`gameUpdate`, which runs 60 times a second. Input in LittleJS is asked
+for, not handed over in events: each function below says how things
+are on this frame.
 
 The drawing is done with the debug functions, `debugRect`,
 `debugCircle`, `debugLine`, `debugPoint` and `debugText`. They are drawn

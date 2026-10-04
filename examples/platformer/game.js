@@ -100,13 +100,13 @@ function gameUpdate()
     if (LJS.keyWasPressed('KeyE'))
         new GameObjects.Enemy(LJS.mousePos);
 
-    // X = make explosion
-    if (LJS.keyWasPressed('KeyX'))
+    // B = make explosion
+    if (LJS.keyWasPressed('KeyB'))
         GameEffects.explosion(LJS.mousePos);
 
     // M = move player to mouse
     if (LJS.keyWasPressed('KeyM'))
-        player.pos = LJS.mousePos;
+        player.pos = LJS.mousePos.copy();
 
     // R = restart level
     if (LJS.keyWasPressed('KeyR'))

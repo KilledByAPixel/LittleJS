@@ -336,6 +336,10 @@ export class Bullet extends LJS.EngineObject
     
     collideWithObject(o)
     {
+        // already hit something this frame, so it hits nothing else
+        if (this.destroyed)
+            return true;
+
         if (o.isGameObject && o != this.attacker)
         {
             o.damage(this.damage, this);

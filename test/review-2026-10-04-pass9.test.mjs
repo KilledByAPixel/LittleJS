@@ -8,7 +8,7 @@ import { loadEngine } from './vmEngine.mjs';
 
 test('depth of field blurs nothing where there is no depth, as with the depth texture off', ()=>
 {
-    assert.ok(postProcessDepthOfField().includes('iDepthRange.x > 0.'), 'a depth range of 0 is no depth texture');
+    assert.ok(postProcessDepthOfField().includes('LJS_HAS_DEPTH'), 'a depth range of 0 is no depth texture');
 });
 
 test('a postProcess value may be named with an i, only the engine\'s own iUpper names are refused', ()=>

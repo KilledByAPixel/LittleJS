@@ -1,4 +1,4 @@
-let musicVolume = .8, musicSound, musicInstance;
+let musicVolume = .8, musicSound, musicInstance, musicURL;
 let musicPlayer, playButton, stopButton, progressBar;
 
 function gameInit()
@@ -87,9 +87,10 @@ function gameInit()
             if (!file || !file.type.startsWith('audio'))
                 return;
                 
-            // create new sound from dropped file
-            const fileURL = URL.createObjectURL(file);
-            musicSound = new Sound(fileURL);
+            // create new sound from dropped file, freeing the last one's URL
+            musicURL && URL.revokeObjectURL(musicURL);
+            musicURL = URL.createObjectURL(file);
+            musicSound = new Sound(musicURL);
             dropZoneText.text = file.name;
             
             // reset UI
@@ -165,8 +166,10 @@ which is checked so a picture or a document is ignored.
 
 `URL.createObjectURL(file)` makes a temporary address for the file's
 contents. `new Sound` takes a filename or a URL, so it loads the
-dropped file as it would load one from the server. The old instance
-is stopped and forgotten, since it belongs to the old sound.
+dropped file as it would load one from the server. The address of the
+file dropped before is given back with `URL.revokeObjectURL`, so the
+browser can free that file. The old instance is stopped and forgotten,
+since it belongs to the old sound.
 
 ### Seeking
 The progress bar is a `UISlider`, so it has a `value` from 0 to 1 and

@@ -56,7 +56,8 @@ A sliding puzzle: eleven numbered pieces on a grid of 4 by 3, with one
 cell empty. Click a piece beside the empty cell and it slides into it.
 
 The pieces start in order and nothing checks for a win, so it is a toy
-to build on: see Try it.
+to build on: shuffling the pieces and checking for a win are left to
+add.
 
 ## How it works
 The puzzle keeps two kinds of position. A grid position is a cell,

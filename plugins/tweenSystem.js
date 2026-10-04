@@ -11,7 +11,8 @@
 
 ///////////////////////////////////////////////////////////////////////////////
 
-// Module-private list of tweens currently running, each with its active flag set while it is in it.
+// Module-private list of tweens currently running, each with its active flag set while it is in it; a stopped
+// one stays listed, inactive, until the next update takes it out, so stopping many is not a search for each
 const tweenActive = [];
 const tweenUpdateList = []; // the tweens an update moves, the ones active when it began
 let tweenUpdatePass = 0; // counts the updates, a tween started during one waits for the next
@@ -22,14 +23,10 @@ function tweenActivate(tween)
     tween.activePass = tweenUpdatePass; // started again, even while active, so this update leaves it alone
     if (tween.active) return;
     tween.active = true;
-    tweenActive.push(tween);
+    tween.listed || tweenActive.push(tween); // one stopped this update is still listed, in its place
+    tween.listed = true;
 }
-function tweenDeactivate(tween)
-{
-    if (!tween.active) return;
-    tween.active = false;
-    tweenActive.splice(tweenActive.indexOf(tween), 1);
-}
+function tweenDeactivate(tween) { tween.active = false; }
 
 // True if the value is an instance of a class that exposes a numeric-percent
 // `lerp(other, percent)` method (Vector2, Color, or any future class).
@@ -111,9 +108,12 @@ class Tween
         /** Remaining iterations including the current run (loop/pingPong only).
          *  @private */
         this.loopRemaining = 0;
-        /** Whether it is in the active list, see isActive
+        /** Whether it is running, see isActive
          *  @private */
         this.active = false;
+        /** Whether it is in the active list, which a stopped one leaves at the next update
+         *  @private */
+        this.listed = false;
         /** The update it was started in, it first moves on the one after
          *  @private */
         this.activePass = 0;
@@ -591,8 +591,13 @@ function tweenUpdate(gameDelta, realDelta)
     // from the next update. Newest first, as the list has always been walked.
     // a callback that calls tweenUpdate itself gets a list of its own, the outer update is still walking this one
     const list = tweenUpdateList.length ? [] : tweenUpdateList, pass = ++tweenUpdatePass;
+    let kept = 0;
     for (const t of tweenActive)
-        list.push(t);
+        if (t.active)
+            list.push(tweenActive[kept++] = t);
+        else
+            t.listed = false; // stopped since the last update, out of the list now
+    tweenActive.length = kept;
     // the list is let go however the walk ends: a callback that throws must not leave it held, or every
     // update after would take it for an update still going and make a list of its own
     try
@@ -645,7 +650,7 @@ function tweenUpdate(gameDelta, realDelta)
 function tweenStopAll()
 {
     for (const t of tweenActive)
-        t.thenCallback = undefined, t.active = false;
+        t.thenCallback = undefined, t.active = t.listed = false;
     tweenActive.length = 0;
 }
 

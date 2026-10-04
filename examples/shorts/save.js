@@ -10,14 +10,17 @@ function gameInit()
 
 function gameUpdate()
 {
-    if (mouseWasPressed(0))
+    // Space or a click on the top line resets, so a phone can reset too
+    const reset = keyWasPressed('Space') ||
+        mouseWasPressed(0) && mousePos.y > 5;
+    if (mouseWasPressed(0) && !reset)
     {
         // update and persist on every click
         saveData.clicks++;
         saveData.hue = rand();
         writeSaveData(saveName, saveData);
     }
-    if (keyWasPressed('Space'))
+    if (reset)
     {
         // reset save data
         saveData = { clicks: 0, hue: 0 };
@@ -27,7 +30,7 @@ function gameUpdate()
 
 function gameRender()
 {
-    drawText('Click to increment   Space to reset', vec2(0, 6), 1);
+    drawText('Click to add   Space or click here to reset', vec2(0, 6), 1);
     drawText('Clicks: ' + saveData.clicks, vec2(0, 3), 3);
     drawRect(vec2(0, -1), vec2(5), hsl(saveData.hue,.5,.5));
     drawText('Reload the page - data persists!', vec2(0, -5), 1);
@@ -35,8 +38,8 @@ function gameRender()
 
 /* info
 A click counter that is still there after the page is reloaded. Click to
-add one and give the square a new color, and press Space to start again
-from zero.
+add one and give the square a new color, and press Space, or click the
+line of text at the top, to start again from zero.
 
 ## How it works
 The browser's local storage keeps text under a name, for this web site,
@@ -64,8 +67,9 @@ that the stored count and hue do.
 The count goes up by one, `rand()` picks a hue between 0 and 1, and the
 object is written straight away, so there is no save step to forget.
 
-Space sets `saveData` to a new object with the first values and writes
-that. Writing is what resets the save: changing the variable alone
+Space, or a click above `y` 5 where the top line is, sets `saveData`
+to a new object with the first values and writes that, and that click
+does not count. Writing is what resets the save: changing the variable alone
 would bring the old count back at the next reload.
 
 ### gameRender

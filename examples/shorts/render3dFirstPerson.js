@@ -28,7 +28,8 @@ function gameInit()
     render3D.shadowRange = mazeSize.y*cellSize*1.5;
 
     // make a checkered floor and a solid block for every wall
-    const checker = (x, z)=> hsl(0, 0, (x+z)/cellSize&1 ? .45 : .35);
+    const checker = (x, z)=>
+        hsl(0, 0, (floor(x/cellSize) + floor(z/cellSize)) & 1 ? .45 : .35);
     const floorSize = mazeSize.scale(cellSize);
     new EngineObject3D(vec3(), buildGrid(floorSize, mazeSize, checker));
     for (let z = mazeSize.y; z--;)

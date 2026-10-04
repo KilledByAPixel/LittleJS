@@ -2096,8 +2096,22 @@ function render3DCSGNear(polygons, polygonsOther)
     const near = [], far = [];
     const faces = [[vec3(1, 0, 0), hi.x], [vec3(-1, 0, 0), -lo.x], [vec3(0, 1, 0), hi.y],
         [vec3(0, -1, 0), -lo.y], [vec3(0, 0, 1), hi.z], [vec3(0, 0, -1), -lo.z]];
+    const e = RENDER3D_CSG_EPSILON;
     for (const polygon of polygons)
     {
+        // wholly beyond a face, as most of a mesh cut many times is, it is far as it is: splitting it at the faces
+        // before would only cut it into parts that all end up far too
+        let x0 = Infinity, y0 = Infinity, z0 = Infinity, x1 = -Infinity, y1 = -Infinity, z1 = -Infinity;
+        for (const {pos} of polygon.vertices)
+        {
+            x0 = min(x0, pos.x); y0 = min(y0, pos.y); z0 = min(z0, pos.z);
+            x1 = max(x1, pos.x); y1 = max(y1, pos.y); z1 = max(z1, pos.z);
+        }
+        if (x0 > hi.x + e || x1 < lo.x - e || y0 > hi.y + e || y1 < lo.y - e || z0 > hi.z + e || z1 < lo.z - e)
+        {
+            far.push(polygon);
+            continue;
+        }
         let inside = [polygon];
         for (const [normal, w] of faces)
         {

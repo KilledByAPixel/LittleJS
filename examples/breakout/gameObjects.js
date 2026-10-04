@@ -75,7 +75,7 @@ export class Brick extends PhysicsObject
         new LJS.ParticleEmitter(
             this.pos, 0,                          // pos, angle
             this.size, .1, 200, 3.14,             // emitSize, emitTime, rate, cone
-            tile(0, 16),                          // tileIndex, tileSize
+            tile(0, 16),                          // tileInfo
             color1, color2,                       // colorStartA, colorStartB
             color1.scale(1,0), color2.scale(1,0), // colorEndA, colorEndB
             .3, .8, .3, .05, .05,// time, sizeStart, sizeEnd, speed, angleSpeed
@@ -111,7 +111,7 @@ export class Ball extends PhysicsObject
         this.trailEffect = new LJS.ParticleEmitter(
             this.pos, 0,                          // pos, angle
             this.size, 0, 80, 3.14,               // emitSize, emitTime, rate, cone
-            tile(0, 16),                          // tileIndex, tileSize
+            tile(0, 16),                          // tileInfo
             color, color,                         // colorStartA, colorStartB
             color.scale(0), color.scale(0),       // colorEndA, colorEndB
             2, .4, 1, .001, .05,// time, sizeStart, sizeEnd, speed, angleSpeed

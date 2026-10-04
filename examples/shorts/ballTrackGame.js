@@ -26,6 +26,7 @@ function gameUpdate()
         if (!mouseWasPressed(0))
             return;
         gameInit();
+        inputClearKey(0); // the click restarts and does not also jump
     }
     
     // create more track if needed
@@ -166,7 +167,9 @@ it is track. `playerZ + cameraDistance | 0` is its row and
 `i - 3.5` to `i - 2.5`. Then the height and the speed are both set to
 0, or to .1 on the frame of a click, which is the jump. A ball more
 than .3 under the track is past saving, and below -4 the game waits for
-a click and calls `gameInit`.
+a click and calls `gameInit`. `inputClearKey(0)` then clears mouse
+button 0, so the ball, landing on the new track that frame, does not
+take the same click as a jump.
 
 ### gameRender
 `drawRectGradient` fills the view with a sky from one color at the top

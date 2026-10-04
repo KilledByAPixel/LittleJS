@@ -34,7 +34,7 @@ class Player extends EngineObject
     update()
     {
         this.velocity = this.velocity.add(keyDirection().scale(.04));
-        cameraPos = this.pos;
+        cameraPos = this.pos.copy();
     }
 }
 

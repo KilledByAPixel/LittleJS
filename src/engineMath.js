@@ -413,8 +413,10 @@ function lineTest(posStart, posEnd, testFunction, normal)
     const totalLength = (dx*dx + dy*dy)**.5;
     if (!totalLength) return;
 
-    // current integer cell we are in
+    // current integer cell we are in, the one below a whole start heading down the grid, which it goes into
     const pos = posStart.floor();
+    if (dx < 0 && pos.x === posStart.x) --pos.x;
+    if (dy < 0 && pos.y === posStart.y) --pos.y;
 
     // normalize ray direction
     const dirX = dx / totalLength;

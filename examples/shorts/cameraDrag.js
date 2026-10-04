@@ -18,7 +18,7 @@ function gameUpdate()
         cameraPos = cameraPos.subtract(mouseDelta);
 
     // zoom camera with mouse wheel
-    cameraScale = clamp(cameraScale*(1-mouseWheel/5), 1, 1e3);
+    cameraScale = clamp(cameraScale*1.2**-mouseWheel, 1, 1e3);
 }
 
 /* info
@@ -53,14 +53,15 @@ under it. That is what makes it feel like dragging the world. Because
 the delta is in world units it is right at any zoom.
 
 `mouseWheel` is how far the wheel turned this frame, 0 when it did not.
-Each step multiplies the scale by `1 - 1/5` or `1 + 1/5`, so zooming is
-by a fifth of the scale it has, not by a fixed amount, and feels the
-same close up and far out. `clamp` keeps the result between 1 and
-1000 pixels a unit.
+`1.2**-mouseWheel` makes each step multiply the scale by 1.2 or divide
+it by 1.2, so zooming is by a part of the scale it has, not by a fixed
+amount, and feels the same close up and far out. A fast turn of many
+steps at once still only multiplies, so the scale can not reach 0.
+`clamp` keeps the result between 1 and 1000 pixels a unit.
 
 ## Try it
 - Drag with the right button instead: `mouseIsDown(2)`.
-- Change `mouseWheel/5` to `mouseWheel/2` for bigger zoom steps.
+- Change `1.2` to `1.5` for bigger zoom steps.
 - Change the limits from `1, 1e3` to `10, 100` so the view can not zoom
   as far in or out.
 - Make more objects: change `i=500` to `i=5000`.

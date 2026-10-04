@@ -32,10 +32,12 @@ class Ball extends EngineObject3D
     }
     bounce(pushOut)
     {
-        // move out and reflect off the push direction
+        // move out, and reflect off the push direction when moving into it
         const normal = pushOut.normalize();
         this.pos3D = this.pos3D.add(pushOut);
-        this.velocity3D = this.velocity3D.reflect(normal, this.restitution);
+        if (this.velocity3D.dot(normal) < 0)
+            this.velocity3D = this.velocity3D.reflect(normal,
+                this.restitution);
     }
 }
 
@@ -130,6 +132,9 @@ sizes, so `Ball` keeps its `radius` and scales its mesh by twice that.
 
 `bounce` uses the push: it moves the ball by it, and reflects the
 velocity off the push's direction with `reflect(normal, restitution)`.
+It reflects only when `velocity3D.dot(normal)` is below 0, when the
+ball moves into the surface: a ball pushed out while already moving
+away keeps going, rather than being turned back into it.
 `update` runs after the engine has moved and collided every object, so
 the ball is back out before it is drawn.
 

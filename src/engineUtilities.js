@@ -250,6 +250,8 @@ function readSaveData(saveName, defaultSaveData)
         {
             try { loadedData = JSON.parse(data); }
             catch { LOG('readSaveData: corrupt JSON for', saveName, '— using defaults'); }
+            if (!loadedData || typeof loadedData !== 'object' || isArray(loadedData))
+                loadedData = {}; // only an object of saved values, never a string spread into its letters
         }
     }
     catch { LOG('readSaveData: localStorage unavailable — using defaults'); }

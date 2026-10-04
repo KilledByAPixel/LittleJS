@@ -68,7 +68,7 @@ export function explosion(pos, radius=3)
 
     {
         // destroy level
-        const layer = GameLevel.tileLayers[1];
+        const layer = GameLevel.foregroundTileLayer;
         layer.redrawStart();
         for (let x = -radius; x < radius; ++x)
         {
@@ -158,7 +158,7 @@ export function destroyTile(pos, makeSound = 1, cleanup = 1)
     // cleanup neighbors and rebuild WebGL
     if (cleanup)
     {
-        const layer = GameLevel.tileLayers[1];
+        const layer = GameLevel.foregroundTileLayer;
         layer.redrawStart();
         for (let i=-1;i<=1;++i)
         for (let j=-1;j<=1;++j)
@@ -187,7 +187,6 @@ export class Sky extends LJS.EngineObject
     render()
     {
         // fill background with a gradient
-        const canvas = LJS.mainCanvas;
         LJS.drawRectGradient(LJS.cameraPos, LJS.getCameraSize(), this.skyColor, this.horizonColor);
         
         // draw stars
@@ -199,7 +198,8 @@ export class Sky extends LJS.EngineObject
             const speed = random.float() < .9 ? random.float(5) : random.float(9,99);
             const color = hsl(random.float(-.3,.2), random.float(), random.float());
             const extraSpace = 50;
-            const w = canvas.width+2*extraSpace, h = canvas.height+2*extraSpace;
+            const w = LJS.mainCanvasSize.x+2*extraSpace;
+            const h = LJS.mainCanvasSize.y+2*extraSpace;
             const screenPos = vec2(
                 (random.float(w)+LJS.time*speed)%w-extraSpace,
                 (random.float(h)+LJS.time*speed*random.float())%h-extraSpace);

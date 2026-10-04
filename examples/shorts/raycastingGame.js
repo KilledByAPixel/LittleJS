@@ -67,8 +67,11 @@ function gameRender()
             const t = mod(p.x+p.y, 1);
             tileInfo.pos.x = wall.x + 1 + 14*t;
 
+            // the distance straight ahead, not along the ray, so flat walls
+            // stay flat instead of bowing like a fisheye lens
+            const d = p.distance(playerPos)*cos(pos.x/w/2)/maxDistance;
+
             // apply fog and lighting
-            const d = p.distance(playerPos)/maxDistance;
             const l = max(0, normal.dot(light));
             size.y = .5/d;
             color.setHSLA(.6, 1-d, .7-d+l*.3);
@@ -154,8 +157,12 @@ The second loop goes across the screen in steps of .1 from -15 to 15,
   from 0 to 1. It picks which column of the brick tile to draw. The
   `TileInfo` is one pixel wide and 16 tall, and moving its `pos.x`
   slides it across tile 10 of the tile sheet.
-4. `d` is the distance as a fraction of the 50 units. The column's
-  height is `.5/d`: half as tall at twice the distance.
+4. `d` is the distance as a fraction of the 50 units, measured straight
+  ahead rather than along the ray: multiplied by `cos(pos.x/w/2)`, the
+  cosine of the ray's angle from the middle of the view. With the
+  distance along the ray, a flat wall seen at an angle would bow like a
+  fisheye lens. The column's height is `.5/d`: half as tall at twice
+  the distance.
 5. `normal.dot(light)` is larger the more a wall faces the `light`
   direction, and `max` stops it below 0. It brightens the color, and
   `d` darkens it and takes its saturation away, which reads as fog.
@@ -167,7 +174,8 @@ of the canvas. `mainCanvasSize.x/2` centers it.
 
 ## Try it
 - Open the maze up: `%30>5` to `%30>15`.
-- Widen the view: `pos.x/w/2` to `pos.x/w`.
+- Widen the view: both `pos.x/w/2` to `pos.x/w`.
+- See the fisheye: take out `*cos(pos.x/w/2)`.
 - Make the walls twice as tall: `.5/d` to `1/d`.
 - Walk faster: `scale(.05)` to `scale(.1)`.
 - Turn the walls red: `setHSLA(.6,` to `setHSLA(0,`.

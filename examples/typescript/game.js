@@ -67,7 +67,7 @@ function gameInit() {
     // create particle emitter
     particleEmitter = new LJS.ParticleEmitter(vec2(16, 9), 0, // emitPos, emitAngle
     0, 0, 500, 3.14, // emitSize, emitTime, rate, cone
-    tile(0, 16), // tileIndex, tileSize
+    tile(0, 16), // tileInfo
     hsl(1, 1, 1), hsl(0, 0, 0), // colorStartA, colorStartB
     hsl(0, 0, 0, 0), hsl(0, 0, 0, 0), // colorEndA, colorEndB
     1, .2, .2, .1, .05, // time, sizeStart, sizeEnd, speed, angleSpeed
@@ -93,7 +93,7 @@ function gameUpdate() {
     }
     // move particles to the mouse once it has moved
     if (LJS.mousePosScreen.x)
-        particleEmitter.pos = LJS.mousePos;
+        particleEmitter.pos = LJS.mousePos.copy();
 }
 ///////////////////////////////////////////////////////////////////////////////
 function gameUpdatePost() {

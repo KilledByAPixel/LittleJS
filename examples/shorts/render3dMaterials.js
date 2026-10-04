@@ -39,12 +39,12 @@ function gameInit()
 
     normalMap = normalMapFromHeight(vec2(256), brickHeight, 3);
     const stone = hsl(.05,.35,.55);
-    const floor = new EngineObject3D(vec3(), buildGrid(vec2(16), 1),
+    const ground = new EngineObject3D(vec3(), buildGrid(vec2(16), 1),
         undefined, stone);
     const wall = new EngineObject3D(vec3(0,3,-4), render3D.boxMesh,
         undefined, stone);
     wall.scale3D = vec3(12,6,1);
-    for (const o of bumped = [floor, wall])
+    for (const o of bumped = [ground, wall])
     {
         o.normalMap = normalMap;
         o.specular = .3;

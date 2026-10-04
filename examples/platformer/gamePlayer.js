@@ -28,9 +28,9 @@ export class Player extends GameCharacter.Character
         super.update();
     }
 
-    kill()
+    kill(damagingObject)
     {
-        Game.addToDeaths();
-        super.kill();
+        this.isDead() || Game.addToDeaths(); // a death counted once
+        super.kill(damagingObject); // fall away from what killed the player
     }
 }

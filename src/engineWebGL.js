@@ -46,6 +46,7 @@ let glAntialias = true;
 
 // WebGL internal variables not exposed to documentation
 let glMipmappedTextures = new WeakSet, glMipmapsUntilTarget = new WeakSet, glMipmapsStale = new Set, glPremultipliedTextures = new WeakSet, glShaderPremultiplied, glEnableBeforeLoss = true, glShader, glPolyShader, glPolyMode, glAdditive, glBatchAdditive, glActiveTexture, glArrayBuffer, glGeometryBuffer, glPositionData, glColorData, glBatchCount, glTextureInfos = new Set, glInstancedVAO, glPolyVAO, glFramebuffer, glRenderTarget, glShaderObjects = [], glCustomShader, glBatchShader, glProgramCustom, glTransform, glRenderTargetSaved, glUniformLocations = new WeakMap, glCanBeEnabled = true;
+let glFailedPrograms = new WeakSet; // programs that did not build in a release build, which nothing draws with
 // ANDed onto every packed color as a draw is queued; the light system's shadow pass sets 0xff000000
 // to draw everything black with its alpha kept (rgbaInt packs alpha in the top byte)
 let glColorMask = -1;
@@ -217,6 +218,14 @@ function glInit(rootElement)
             'c=d;'+                   // set color
             '}'                       // end of shader
         );
+
+        // a device that can not build the engine's own programs draws with Canvas2D, as after a lost context
+        if (glFailedPrograms.has(glShader) || glFailedPrograms.has(glPolyShader))
+        {
+            console.error('LittleJS: WebGL can not draw on this device, using Canvas2D');
+            glEnable = glCanBeEnabled = false;
+            glCanvas.style.display = 'none';
+        }
 
         // init buffers
         const glInstanceData = new ArrayBuffer(gl_ARRAY_BUFFER_SIZE);
@@ -464,13 +473,23 @@ function glCreateProgram(vsSource, fsSource)
 
     // build the program
     const program = glContext.createProgram();
-    glContext.attachShader(program, glCompileShader(vsSource, glContext.VERTEX_SHADER));
-    glContext.attachShader(program, glCompileShader(fsSource, glContext.FRAGMENT_SHADER));
+    const vertexShader = glCompileShader(vsSource, glContext.VERTEX_SHADER);
+    const fragmentShader = glCompileShader(fsSource, glContext.FRAGMENT_SHADER);
+    glContext.attachShader(program, vertexShader);
+    glContext.attachShader(program, fragmentShader);
     glContext.linkProgram(program);
 
-    // check for errors
-    if (debug && !glContext.getProgramParameter(program, glContext.LINK_STATUS))
-        throw glContext.getProgramInfoLog(program);
+    // check for errors in every build, as a driver may refuse what another takes: a debug build throws, a release
+    // one says why once and marks the program, which the engine's draws then do without
+    if (!glContext.getProgramParameter(program, glContext.LINK_STATUS))
+    {
+        const log = glContext.getProgramInfoLog(program) + '\n' +
+            glContext.getShaderInfoLog(vertexShader) + glContext.getShaderInfoLog(fragmentShader);
+        if (debug)
+            throw log;
+        console.error('LittleJS: a shader failed to build\n' + log);
+        glFailedPrograms.add(program);
+    }
     return program;
 }
 
@@ -486,7 +505,7 @@ function glUniformLocation(program, name)
 // color, then the sprite's color and additive color apply as the engine's own fragment shader does
 function glShaderProgram(shader)
 {
-    return shader.program ||= glCreateProgram(gl_VERTEX_SOURCE,
+    const program = shader.program ||= glCreateProgram(gl_VERTEX_SOURCE,
         '#version 300 es\n' +
         'precision highp float;' +
         'uniform sampler2D iChannel0;' + // the texture
@@ -497,6 +516,7 @@ function glShaderProgram(shader)
         '#define localUV l\n' +
         shader.fragmentCode + '\n' +
         'void main(){vec4 t;mainImage(t,v);' + gl_FRAGMENT_TINT_SOURCE + '}');
+    return glFailedPrograms.has(program) ? glShader : program;
 }
 
 /** Create WebGL texture from an image and init the texture settings
@@ -673,6 +693,8 @@ function glFlush()
                 const height = glRenderTarget ? mainCanvasSize.y : glCanvas.height;
                 glContext.uniform3f(uniform('iResolution'), width, height, 1);
                 glContext.uniform1i(uniform('premultipliedTexture'), +premultiplied);
+                if (program === glShader)
+                    glShaderPremultiplied = premultiplied; // a Shader that did not build draws with the engine's
             }
         }
         if (!glPolyMode && !glBatchShader && glShaderPremultiplied !== premultiplied)

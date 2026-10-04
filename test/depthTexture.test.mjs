@@ -16,7 +16,7 @@ test('the post process shader has the depth on iChannel2 and sceneDepth to read 
 {
     const { run } = loadEngine();
     const source = run('postProcessFragmentSource("void mainImage(out vec4 c, vec2 p){c=vec4(sceneDepth(p));}")');
-    for (const part of ['uniform sampler2D iChannel2', 'uniform vec3 iDepthRange', 'float sceneDepth(vec2 uv)',
+    for (const part of ['uniform highp sampler2D iChannel2', 'uniform vec3 iDepthRange', 'float sceneDepth(vec2 uv)',
         'void mainImage'])
         assert.ok(source.includes(part), part);
     assert.ok(source.indexOf('float sceneDepth') < source.indexOf('void mainImage'), 'defined before the snippet');

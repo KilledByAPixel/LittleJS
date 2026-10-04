@@ -1672,7 +1672,7 @@ const RENDER3D_VERTEX_SOURCE =
     'gl_Position=viewProj*w;' +
     'P=w.xyz;' +
     'vec3 c0=m0.xyz,c1=m1.xyz,c2=m2.xyz;' +
-    'N=mat3(c0/dot(c0,c0),c1/dot(c1,c1),c2/dot(c2,c2))*n;' +
+    'N=mat3(c0/max(dot(c0,c0),1e-20),c1/max(dot(c1,c1),1e-20),c2/max(dot(c2,c2),1e-20))*n;' +
     'T=uvRect.xy+t*uvRect.zw;' +
     'L=t;' +
     'C=c*tint;' +
@@ -1794,7 +1794,7 @@ function render3DFragmentSource(fragmentCode)
         // shadow does not dim it
         'if(materialParams.z>0.){' +
         'vec3 w=normalize(P-cameraPos),q=reflect(w,n);' +
-        'float f=materialParams.z+(1.-materialParams.z)*pow(1.-max(dot(n,-w),0.),5.);' +
+        'float f=materialParams.z+(1.-materialParams.z)*pow(clamp(1.-dot(n,-w),0.,1.),5.);' +
         'c.rgb=mix(c.rgb,q.y>0.?mix(skyHorizon.rgb,skyTop.rgb,q.y):mix(skyHorizon.rgb,skyBottom.rgb,-q.y),f);' +
         '}}else c.rgb*=e;' + // fully emissive: its own color, or brighter, with no lighting to work out
         // the emissive map adds its light on top, lit or not
@@ -1811,7 +1811,8 @@ function render3DFragmentSource(fragmentCode)
 function render3DShaderProgram(shader)
 {
     ASSERT(shader instanceof Shader, 'render3D.shader must be a Shader, not the snippet itself');
-    return shader.program3D ||= glCreateProgram(RENDER3D_VERTEX_SOURCE, render3DFragmentSource(shader.fragmentCode));
+    const program = shader.program3D ||= glCreateProgram(RENDER3D_VERTEX_SOURCE, render3DFragmentSource(shader.fragmentCode));
+    return glFailedPrograms.has(program) ? render3D.program : program; // one that did not build draws as with none
 }
 
 // make a program current for the pass and send it the pass uniforms: the matrices, the camera and the lights,
@@ -2036,7 +2037,7 @@ function render3DSetMaterialUniforms(state)
 {
     const r = render3D, loaded = (map)=> render3DTextureOf(map)?.glTexture ? map : undefined;
     const normalMap = state.normalScale ? loaded(state.normalMap) : undefined, emissiveMap = loaded(state.emissiveMap);
-    render3DUniform4f('materialParams', normalMap ? state.normalScale : 0, state.shininess, state.reflectivity, 0);
+    render3DUniform4f('materialParams', normalMap ? state.normalScale : 0, max(state.shininess, 1e-3), state.reflectivity, 0);
     const ec = state.emissiveMapColor || WHITE;
     emissiveMap ? render3DUniform4f('emissiveTint', ec.r, ec.g, ec.b, 1) : render3DUniform4f('emissiveTint', 0, 0, 0, 0);
     render3DBindMap(2, normalMap, state);
@@ -2192,7 +2193,7 @@ function render3DSetDrawUniforms(matrix, tileInfo, tint, uvRect, state=render3D)
     // its alpha says whether the ground color is on
     gc ? render3DUniform4f('ambientGround', gc.r, gc.g, gc.b, 1) : render3DUniform4f('ambientGround', 0, 0, 0, 0);
 
-    render3DUniform4f('fogColor', fc.r, fc.g, fc.b, r.fogStart);
+    render3DUniform4f('fogColor', fc.r, fc.g, fc.b, r.fogEnd ? min(r.fogStart, r.fogEnd - 1e-3) : r.fogStart);
     // how the fragment shader finishes: 1 drops see through texels and keeps the draw opaque,
     // 0 blends them away instead, and -1 is additive, which has to fade into fog differently
     const blendMode = state.blend ? (state.additive ? -1 : 0) : 1;

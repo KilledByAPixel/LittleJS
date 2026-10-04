@@ -65,7 +65,7 @@ class Ball extends LJS.EngineObject
         this.velocity = this.velocity.normalize(speed);
 
         // play bounce sound with pitch scaled by speed
-        sound_bounce.play(this.pos, 1, speed);
+        sound_bounce.play(this.pos, 1, speed*2);
 
         if (o == paddle)
         {

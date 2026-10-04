@@ -15,14 +15,14 @@ class BounceObject extends EngineObject
         debugPoly(mousePos, trianglePoints, YELLOW);
         debugLine(this.pos, mousePos, BLUE);
 
-        // bounce off screen edges
+        // bounce off screen edges, only when heading out
         const cameraSize = getCameraSize();
-        if (abs(this.pos.x) > cameraSize.x/2)
+        if (abs(this.pos.x) > cameraSize.x/2 && this.pos.x*this.velocity.x > 0)
         {
             debugCircle(this.pos, 3, GREEN, 1);
             this.velocity.x = -this.velocity.x;
         }
-        if (abs(this.pos.y) > cameraSize.y/2)
+        if (abs(this.pos.y) > cameraSize.y/2 && this.pos.y*this.velocity.y > 0)
         {
             debugCircle(this.pos, 3, GREEN, 1);
             this.velocity.y = -this.velocity.y;
@@ -83,7 +83,9 @@ of a unit per frame on both axes. `update` is called once a frame.
 `getCameraSize()` is the size of the view in world units, and the view
 is centered on `vec2(0,0)`, so the object's center has left it when
 the absolute value of `pos.x` or `pos.y` is more than half that size.
-The velocity on that axis is then turned around.
+If it is still heading out, `pos.x*velocity.x` above 0, the velocity
+on that axis is turned around. Checking the heading keeps it from
+turning back and forth at the edge after the view shrinks around it.
 
 ## Try it
 - Give the rectangle a time: in the `debugRect` call, add `, .5`

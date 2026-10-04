@@ -528,7 +528,9 @@ const sound_explosion = new LJS.Sound([.5,.2,72,.01,.01,.2,4,,,,,,,1,,.5,.1,.5,.
 export function explosion(pos, radius=3, strength=300)
 {
     sound_explosion.play(pos);
-    const objects = LJS.box2d.circleCastAll(pos, (radius*2));
+    // circleCastAll takes a diameter, so this finds objects within 2*radius,
+    // full force inside radius and falling to none at 2*radius
+    const objects = LJS.box2d.circleCastAll(pos, radius*4);
     const newColor = LJS.randColor();
     for (const o of objects)
     {
@@ -539,26 +541,29 @@ export function explosion(pos, radius=3, strength=300)
     }
 
     // smoke
-    new LJS.ParticleEmitter(
+    const smoke = new LJS.ParticleEmitter(
         pos, 0,                       // pos, angle
-        radius/2, .2, 50*radius, 3.14,// emitSize, emitTime, rate, cone
+        radius/2, .2, 50*radius, PI,  // emitSize, emitTime, rate, cone
         Game.spriteAtlas.dot,         // tileInfo
         hsl(0,0,0),   hsl(0,0,0),     // colorStartA, colorStartB
         hsl(0,0,0,0), hsl(0,0,0,0),   // colorEndA, colorEndB
         1, 1, 2, .1, .1,      // time, sizeStart, sizeEnd, speed, angleSpeed
-        .9, 1, -.5, 3.14, .1, // damp, angleDamp, gravity, particleCone, fade
+        .9, 1, 0, PI, .1,     // damp, angleDamp, gravity, particleCone, fade
         1, 0, 0, 0, 1e8       // randomness, collide, additive, colorLinear, renderOrder
     );
+    // the engine's gravity is in Box2D units here, far stronger than a
+    // particle's gravityScale expects, so the smoke rises by its own gravity
+    smoke.gravity = .005;
 
     // fire
     new LJS.ParticleEmitter(
         pos, 0,                        // pos, angle
-        radius, .1, 100*radius, 3.14,  // emitSize, emitTime, rate, cone
+        radius, .1, 100*radius, PI,    // emitSize, emitTime, rate, cone
         Game.spriteAtlas.dot,          // tileInfo
         hsl(0,.8,.5),  hsl(.15,.8,.5), // colorStartA, colorStartB
         hsl(0,1,.5,0), hsl(.1, 1,.5,0),// colorEndA, colorEndB
         .7, 1, .5, .1, .1,   // time, sizeStart, sizeEnd, speed, angleSpeed
-        .9, 1, 0, 3.14, .05, // damp, angleDamp, gravity, particleCone, fade
+        .9, 1, 0, PI, .05,   // damp, angleDamp, gravity, particleCone, fade
         1, 0, 1, 0, 1e9      // randomness, collide, additive, colorLinear, renderOrder
     );
 }

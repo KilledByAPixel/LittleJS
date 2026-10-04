@@ -334,7 +334,7 @@ class Box2dObject extends EngineObject
      *  @param {number}  [friction]
      *  @param {number}  [restitution]
      *  @param {boolean} [isSensor]
-     *  @return {Object} - The fixture made, Box2D's own */
+     *  @return {Object|undefined} - The fixture made, Box2D's own, undefined for a shape too small to make */
     addBox(size=vec2(1), offset=vec2(), angle=0, density, friction, restitution, isSensor)
     {
         ASSERT(isVector2(size), 'size must be a Vector2');
@@ -360,7 +360,7 @@ class Box2dObject extends EngineObject
      *  @param {number}  [friction]
      *  @param {number}  [restitution]
      *  @param {boolean} [isSensor]
-     *  @return {Object} - The fixture made, Box2D's own */
+     *  @return {Object|undefined} - The fixture made, Box2D's own, undefined for a shape too small to make */
     addPoly(points, density, friction, restitution, isSensor)
     {
         ASSERT(isArray(points), 'points must be an array');
@@ -408,7 +408,7 @@ class Box2dObject extends EngineObject
      *  @param {number}  [friction]
      *  @param {number}  [restitution]
      *  @param {boolean} [isSensor]
-     *  @return {Object} - The fixture made, Box2D's own */
+     *  @return {Object|undefined} - The fixture made, Box2D's own, undefined for a shape too small to make */
     addRegularPoly(diameter=1, sides=8, density, friction, restitution, isSensor)
     {
         ASSERT(isNumber(diameter) && diameter>0, 'diameter must be a positive number');
@@ -429,7 +429,7 @@ class Box2dObject extends EngineObject
      *  @param {number}  [friction]
      *  @param {number}  [restitution]
      *  @param {boolean} [isSensor]
-     *  @return {Object} - The fixture made, Box2D's own */
+     *  @return {Object|undefined} - The fixture made, Box2D's own, undefined for a shape too small to make */
     addRandomPoly(diameter=1, density, friction, restitution, isSensor)
     {
         ASSERT(isNumber(diameter) && diameter>0, 'diameter must be a positive number');

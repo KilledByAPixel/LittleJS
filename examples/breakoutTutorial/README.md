@@ -53,7 +53,7 @@ for (let y=0; y<=levelSize.y; y+=1)
 ## Move the Camera
 
 Let's move the camera to the center of our level by setting the cameraPos variable to half the level size.
-You can also change the camera zoom by using camaraScale which controls the number of pixels for each world space unit.
+You can also change the camera zoom by using cameraScale which controls the number of pixels for each world space unit.
 For this example the camera will just remain stationary, but in other types of games it is very useful!
 
 ```javascript
@@ -169,6 +169,12 @@ class Ball extends LJS.EngineObject
 }
 ```
 
+We will keep track of the ball in a global variable, so add it near the top of the file with the other globals.
+
+```javascript
+let ball; // keep track of ball object
+```
+
 Then we just need to create the ball in gameInit, passing in the camera position for its location.
 
 ```javascript
@@ -253,12 +259,6 @@ As you can see, the wall objects are still present even though they are now invi
 ## Respawn the Ball
 
 We should respawn the ball when it goes below the screen so players can keep playing.
-
-To do this, we will need to make a global ball object.
-
-```javascript
-let ball; // keep track of ball object
-```
 
 We can remove the old code that was creating a new ball in gameInit, and instead create the ball in gameUpdate, only when it is needed.
 
@@ -355,7 +355,7 @@ const sound_bounce = new LJS.Sound([,,1e3,,.03,.02,1,2,,,940,.03,,,,,.2,.6,,.06]
 
 You can use the sound I chose or copy the code for your own sound from ZzFX. There is a checkbox for LittleJS style sounds to make exporting a little easier.
 
-To play the sound we will override collideWithObject for the Ball class. Also remember we must return 1 for the collision to occur.
+To play the sound we will override collideWithObject for the Ball class. Also remember we must return true for the collision to occur.
 
 ```javascript
 collideWithObject(o)              
@@ -505,7 +505,7 @@ sound_break.play(this.pos); // play brick break sound
 For the ball bounce sound, let's also tweak the pitch by how fast the ball is moving. For the sound play function, the second parameter takes a scalar for volume and the third parameter takes a scalar for pitch.
 
 ```javascript
-sound_bounce.play(this.pos, 1, speed); // play bounce sound with pitch scaled by speed
+sound_bounce.play(this.pos, 1, speed*2); // play bounce sound with pitch scaled by speed
 ```
 
 ## Congratulations on Completing the Breakout Tutorial

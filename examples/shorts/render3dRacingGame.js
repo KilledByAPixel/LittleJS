@@ -162,9 +162,10 @@ function gameInit()
         const x = rand(-half, half), z = rand(-half, half);
         if (trackDistance(x, z) < roadWidth/2 + 6)
             continue;
-        const y = terrain.getHeight(x, z) + 1.5;
+        // the trunk's base is 1.5 below the mesh's center, times the scale
+        const scale = rand(1,2), y = terrain.getHeight(x, z) + 1.5*scale;
         const treeObject = new EngineObject3D(vec3(x, y, z), tree);
-        treeObject.scale3D = vec3(rand(1,2));
+        treeObject.scale3D = vec3(scale);
     }
 
     // make the car on the road, with the camera already behind it
@@ -237,7 +238,9 @@ ground.
 - The tree is one mesh: a trunk from `buildCylinder` with two cones
   joined on by `combine(mesh, position, color)`. Up to 300 objects share
   it, at random places more than 6 units off the road, each with a
-  random `scale3D`.
+  random `scale3D`. The trunk is 3 tall and centered on the mesh's
+  origin, so each tree is lifted by 1.5 times its scale to stand on the
+  ground.
 
 ### Car
 The body is three boxes joined with `combine`. It has to be built

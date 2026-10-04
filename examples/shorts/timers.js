@@ -17,13 +17,13 @@ function gameInit()
         timerButton.isSet = true;
         if (timerButton.timer.isSet())
         {
-            timerSound.play(0, .5, 2);
+            timerSound.play(undefined, .5, 2);
             timerButton.timer.unset();
             timerButton.text = 'Start';
         }
         else
         {
-            timerSound.play(0, .5, .5);
+            timerSound.play(undefined, .5, .5);
             timerButton.timer.set(3);
             timerButton.text = 'Stop';
         }
@@ -32,7 +32,7 @@ function gameInit()
     // create non-interactive slider to display timer
     timerSlider = new UISlider(vec2(0, 100), vec2(400, 50));
     timerSlider.interactive = false;
-    timerSlider.update = ()=>
+    timerSlider.onUpdate = ()=>
     {
         if (timerButton.isSet && timerButton.timer.elapsed())
         {
@@ -88,14 +88,15 @@ match. `timerButton.isSet` is the example's own flag, not the timer's
 function of that name. It is there so the sound for running out plays
 once and not on every frame after.
 
-`timerSound.play(0, .5, 2)` plays the sound with no position, at half
-volume and twice the pitch. The arguments are a position, a volume and a
-pitch, and the same sound at a pitch of `.5` is the start sound.
+`timerSound.play(undefined, .5, 2)` plays the sound with no position,
+at half volume and twice the pitch. The arguments are a position, a
+volume and a pitch, and the same sound at a pitch of `.5` is the start
+sound.
 
 ### The bar
 The bar is a `UISlider` with `interactive` off, so it only shows a
-value. Its `update` function is replaced with one that reads the timer
-every frame:
+value. Its `onUpdate`, which the UI calls every frame before the
+slider's own update, is given a function that reads the timer:
 
 - The text is `get()` with two decimals.
 - `value` is where the handle is, from 0 to 1. `1 + t/setTime` is 0 when
@@ -111,8 +112,8 @@ so its position, `vec2(0, 100)`, is counted from the button's center.
 - Change `set(3)` to `set(10)` for a longer timer.
 - Add `timerSlider.fillMode = true;` after the line that sets
   `interactive`: the bar fills up in place of moving a handle.
-- Change the pitch of the stop sound: `play(0, .5, 2)` to
-  `play(0, .5, 4)`.
+- Change the pitch of the stop sound: `play(undefined, .5, 2)`
+  to `play(undefined, .5, 4)`.
 - Move the button and the bar with it: change `vec2(0, -40)` to
   `vec2(-200, -40)`.
 

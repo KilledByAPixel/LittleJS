@@ -151,8 +151,12 @@ function gameUpdate()
     if (keyWasPressed('Space')) // space toggles shading
     {
         render3D.smoothShading = !render3D.smoothShading;
+        // a skinned part is bent from the file's vertices in their order,
+        // which flat normals would split, so it keeps its shading
+        const skinned = new Set(model.parts?.filter((o, i)=>
+            asset.parts[i].skin));
         for (const o of [model, ...model.children])
-            o.mesh?.computeNormals(render3D.smoothShading);
+            skinned.has(o) || o.mesh?.computeNormals(render3D.smoothShading);
     }
 }
 
@@ -248,8 +252,11 @@ fades. 0 would switch at once.
 `render3D.smoothShading` is the default the mesh builders and
 `parseOBJ` use. Changing it does nothing to a mesh that is already made, so
 the loop calls `computeNormals(smooth)` on the model's mesh and on each
-child's. Flat normals give every face a hard edge, smooth ones round
-the light across the faces.
+child's. A skinned part is left out: its joints bend it each frame from
+the file's vertices in their order, and flat normals would split them,
+so a child whose `GLTFPart` has a `skin` keeps its shading. Flat
+normals give every face a hard edge, smooth ones round the light across
+the faces.
 
 ## Try it
 - Change `modelSize = 5` to `2`. The shadow area shrinks with it.

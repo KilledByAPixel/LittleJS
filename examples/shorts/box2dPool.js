@@ -60,8 +60,7 @@ class Ball extends Box2dObject
             // draw the aim line
             const endPos = this.pos.add(this.getHitOffset());
             const width = this.getHitStrength();
-            drawLine(this.pos, endPos, width, hsl(0,1,.5,.5), 
-                vec2(), 0, false);
+            drawLine(this.pos, endPos, width, hsl(0,1,.5,.5));
         }
     }
 }

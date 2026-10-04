@@ -93,7 +93,7 @@ let remaining = 36000;
 - **Per frame:** speeds and spins, `velocity`, `angleVelocity`, a particle's `speed` and `angleSpeed`, damping and
   gravity, at the fixed 60 updates a second
 - **Seconds:** `Timer`, `Tween`, `time`, a particle emitter's `emitTime` and `particleTime` and its `emitRate` (per
-  second), `lifeTime` and fades
+  second) and `lifeTime`; a particle's `fadeRate` is a part of its life, not seconds
 - **Milliseconds:** `gamepadVibrate`'s duration, `vibrate` patterns and `saveDataURL`'s `revokeTime`
 
 ## LittleJS Utilities Classes and Functions

@@ -148,6 +148,8 @@ class PostProcessPlugin
                 if (glContext.isContextLost()) return;
                 initPostProcess();
             }
+            if (glFailedPrograms.has(postProcess.shader))
+                return; // a shader that did not build in a release build, the frame shows as it is
 
             // ensure we render to the default framebuffer (in case any earlier
             // caller this frame left a render target bound)
@@ -288,11 +290,7 @@ function postProcessFragmentSource(shaderCode, values={})
     for (const name in values)
     {
         const value = values[name], length = isArray(value) ? value.length : 1;
-        // not the engine's own names, i and a capital, gl_ and those of every effect, nor an underscore and a name,
-        // as the effects' own locals are, which would hide the value
-        ASSERT(/^[A-Za-z][A-Za-z0-9_]*$/.test(name) && !/^(i[A-Z]|gl_)/.test(name) &&
-            !['c', 'uv', 'p', 'sceneDepth', 'mainImage', 'main'].includes(name),
-            'a postProcess value needs a name GLSL takes that the effects do not use themselves', name);
+        ASSERT(postProcessNameCheck(name), 'a postProcess value needs a name GLSL takes that the shader does not use', name);
         ASSERT(!isArray(value) || length >= 2 && length <= 4, 'a postProcess value is a number or 2 to 4 of them', name);
         declared += `uniform ${length > 1 ? 'vec' + length : 'float'} ${name};`;
     }
@@ -300,7 +298,7 @@ function postProcessFragmentSource(shaderCode, values={})
         'precision highp float;'+        // use highp for accuracy
         'uniform sampler2D iChannel0;'+  // input texture
         'uniform sampler2D iChannel1;'+  // the previous frame's output, when feedbackTexture is set
-        'uniform sampler2D iChannel2;'+  // the 3D depth, when render3D.depthTexture is on
+        'uniform highp sampler2D iChannel2;'+ // the 3D depth, when render3D.depthTexture is on, highp or it is 11 bits
         'uniform vec3 iResolution;'+     // size of output texture
         'uniform float iTime;'+          // time
         'uniform vec3 iDepthRange;'+     // the camera's near, its far or 0 for none, and 1 when orthographic
@@ -309,7 +307,9 @@ function postProcessFragmentSource(shaderCode, values={})
         // the depth texture's value back to a distance, as the camera's projection put it there
         'float sceneDepth(vec2 uv){'+
         'float d=texture(iChannel2,uv).r*2.-1.,n=iDepthRange.x,f=iDepthRange.y;'+
-        'return iDepthRange.z>0.?(d*(f-n)+f+n)/2.:f>0.?2.*n*f/(f+n-d*(f-n)):2.*n/(1.-d);}'+
+        'return iDepthRange.z>0.?(d*(f-n)+f+n)/2.:f>0.?2.*n*f/(f+n-d*(f-n)):2.*n/max(1.-d,1e-7);}'+
+        // whether there is depth to read: a range of all 0 is none, an orthographic near plane may be behind
+        '\n#define LJS_HAS_DEPTH (iDepthRange != vec3(0))\n'+ // a define needs a line of its own
         '\n' + shaderCode + '\n'+        // insert custom shader code
         'void main(){'+                  // shader entry point
         'mainImage(c,gl_FragCoord.xy);'+ // call post process function
@@ -355,9 +355,30 @@ function postProcessBloom(threshold=.6, strength=1, size=6, includeMainCanvas=fa
 // a number as GLSL writes it, a float with a point
 // an effect setting: a number written into the code, or the name of a postProcess value, read from it each frame
 const postProcessNumber = (n)=> typeof n === 'string' ?
-    (ASSERT(/^[A-Za-z_][A-Za-z0-9_]*$/.test(n), 'an effect setting is a number or the name of a postProcess value', n), n) :
+    (ASSERT(postProcessNameCheck(n), 'an effect setting is a number or the name of a postProcess value', n), n) :
     (ASSERT(isNumber(n) && isFinite(n), 'an effect setting is a finite number or the name of a postProcess value', n),
-        n && abs(n) < 1e-4 ? n.toExponential() : n.toFixed(4)); // a tiny one would be 0.0000
+        n && abs(n) < .01 ? String(n) : n.toFixed(4)); // a small one keeps its digits, as 1.5e-7 or 0.00015
+
+// a GLSL name for a value or a setting, which no part of the shader uses already: not the engine's own, i and a
+// capital, nor those of mainImage or an effect's own locals, which start with an underscore, nor a GLSL word
+const postProcessGLSLWords = new Set(('c uv p sceneDepth mainImage main ' +
+    // keywords and reserved words
+    'attribute const uniform varying layout centroid flat smooth noperspective patch sample break continue do for ' +
+    'while switch case default if else subroutine in out inout float double int void bool true false invariant ' +
+    'precise discard return lowp mediump highp precision struct common partition active asm class union enum ' +
+    'typedef template this resource goto inline noinline public static extern external interface long short half ' +
+    'fixed unsigned superp input output filter sizeof cast namespace using coherent volatile restrict readonly ' +
+    'writeonly atomic_uint uint mat2 mat3 mat4 vec2 vec3 vec4 ivec2 ivec3 ivec4 bvec2 bvec3 bvec4 uvec2 uvec3 uvec4 ' +
+    // built in functions
+    'radians degrees sin cos tan asin acos atan sinh cosh tanh asinh acosh atanh pow exp log exp2 log2 sqrt ' +
+    'inversesqrt abs sign floor trunc round roundEven ceil fract mod modf min max clamp mix step smoothstep isnan ' +
+    'isinf length distance dot cross normalize faceforward reflect refract matrixCompMult outerProduct transpose ' +
+    'determinant inverse lessThan lessThanEqual greaterThan greaterThanEqual equal notEqual any all not textureSize ' +
+    'texture textureProj textureLod textureOffset texelFetch texelFetchOffset textureProjOffset textureLodOffset ' +
+    'textureProjLod textureProjLodOffset textureGrad textureGradOffset textureProjGrad textureProjGradOffset dFdx ' +
+    'dFdy fwidth').split(' '));
+const postProcessNameCheck = (name)=> /^[A-Za-z][A-Za-z0-9_]*$/.test(name) && !name.includes('__') &&
+    !/^(i[A-Z]|gl_|webgl_|GL_|mat[2-4]|[dfh]vec[2-4]|[iu]?(sampler|image)([123]D|Cube|Buffer|External))/.test(name) && !postProcessGLSLWords.has(name);
 
 /**
  * Join effects into one post process shader, in the order given, for PostProcessPlugin or setShaderCode
@@ -552,7 +573,7 @@ function postProcessDepthOfField(focus=10, range=4, blur=8)
     const amount = (depth)=> `${n(blur)} * smoothstep(0., ${n(range)}, abs(${depth} - ${n(focus)}) - ${n(range)} * .5)`;
     // a tap counts as far as its own blur reaches back to here, so a sharp thing in front is not smeared over
     return `        // depth of field, none where there is no depth, as with render3D.depthTexture off
-        float _r = iDepthRange.x > 0. ? ${amount('sceneDepth(uv)')} : 0.;${postProcessDiscBlur(`clamp(${amount('sceneDepth(_puv)')} - _s * _r + 1., 0., 1.)`)}`;
+        float _r = LJS_HAS_DEPTH ? ${amount('sceneDepth(uv)')} : 0.;${postProcessDiscBlur(`clamp(${amount('sceneDepth(_puv)')} - _s * _r + 1., 0., 1.)`)}`;
 }
 
 /**
@@ -573,7 +594,8 @@ function postProcessOutline(color=BLACK, thickness=1, threshold=.02)
         float _dx = abs(sceneDepth(uv + vec2(_o.x, 0)) + sceneDepth(uv - vec2(_o.x, 0)) - 2. * _d);
         float _dy = abs(sceneDepth(uv + vec2(0, _o.y)) + sceneDepth(uv - vec2(0, _o.y)) - 2. * _d);
         vec4 _line = vec4(${n(color.r)}, ${n(color.g)}, ${n(color.b)}, ${n(color.a)});
-        c.rgb = mix(c.rgb, _line.rgb, _line.a * step(${n(threshold)}, max(_dx, _dy) / _d));`;
+        if (LJS_HAS_DEPTH)
+            c.rgb = mix(c.rgb, _line.rgb, _line.a * step(${n(threshold)}, max(_dx, _dy) / max(abs(_d), 1e-6)));`;
 }
 
 /**

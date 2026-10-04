@@ -25,7 +25,7 @@ npm run dev
 ## Vite commands
 
 ```
-npm run dev       # dev server with hot reload
+npm run dev       # dev server, the page reloads on save
 npm run build     # build to dist/
 npm run preview   # preview the production build
 ```

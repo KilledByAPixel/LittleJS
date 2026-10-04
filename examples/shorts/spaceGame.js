@@ -28,7 +28,7 @@ class Player extends EngineObject
         }
 
         // move camera with player
-        cameraPos = this.pos;
+        cameraPos = this.pos.copy();
         cameraAngle = this.angle;
     }
 }

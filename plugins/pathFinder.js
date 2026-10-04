@@ -551,20 +551,36 @@ class PathFinder
     {
         if (path.length <= 2) return;
 
-        // Greedy: from each kept node, jump to the furthest node with a clear
-        // line to it, or else the next node. Every segment is one isLineClear
+        // Greedy: from each kept node, jump to the furthest corner with a clear
+        // line to it, then on along the straight run past it as far as one is
+        // clear, or else the next node. Every segment is one isLineClear
         // accepted or one the path already had, so none can cross a wall.
-        const original = path.slice();
+        // Corners first, so a winding path costs a check per corner and not
+        // per cell of it.
+        const original = path.slice(), last = original.length - 1;
+        const corners = [];
+        for (let i = 1; i < last; ++i)
+        {
+            const a = original[i - 1].pos, b = original[i].pos, c = original[i + 1].pos;
+            if ((b.x - a.x) * (c.y - a.y) !== (b.y - a.y) * (c.x - a.x))
+                corners.push(i);
+        }
+        corners.push(last);
         path.length = 0;
         path.push(original[0]);
-        for (let k = 0; k < original.length - 1;)
+        for (let k = 0; k < last;)
         {
-            let j = original.length - 1;
+            let j = k + 1;
             if (original[k].isClear()) // isLineClear needs both ends clear
-                while (j > k + 1 && !(original[j].isClear() && this.isLineClear(original[k].pos, original[j].pos)))
-                    --j;
-            else
-                j = k + 1;
+            {
+                const clear = (i)=> original[i].isClear() && this.isLineClear(original[k].pos, original[i].pos);
+                let c = corners.length - 1, next = last + 1; // next is the corner past the one found
+                while (c >= 0 && corners[c] > k + 1 && !clear(corners[c]))
+                    next = corners[c--];
+                j = c >= 0 && corners[c] > k + 1 ? corners[c] : k + 1;
+                for (let i = next - 1; i > j; --i)
+                    if (clear(i)) { j = i; break; }
+            }
             path.push(original[j]);
             k = j;
         }
@@ -579,13 +595,18 @@ class PathFinder
      *  @private */
     dropCollinearNodes(path)
     {
-        for (let i = path.length - 2; i >= 1; --i)
+        // one pass, a node kept only where the way turns from the last one kept
+        if (path.length < 3) return;
+        let kept = 1;
+        for (let i = 1; i < path.length - 1; ++i)
         {
-            const a = path[i - 1], b = path[i], c = path[i + 1];
-            if ((b.pos.x - a.pos.x) * (c.pos.y - a.pos.y) ===
+            const a = path[kept - 1], b = path[i], c = path[i + 1];
+            if ((b.pos.x - a.pos.x) * (c.pos.y - a.pos.y) !==
                 (b.pos.y - a.pos.y) * (c.pos.x - a.pos.x))
-                path.splice(i, 1);
+                path[kept++] = b;
         }
+        path[kept++] = path[path.length - 1];
+        path.length = kept;
     }
 
     /** Lookup helper: true when the node at tile coords (x, y) is in-bounds

@@ -69,7 +69,8 @@ through a level with crates, enemies and ground that can be destroyed.
 - Z or the left mouse button shoots, C or the middle button throws a
   grenade, X or the right button dodges
 - The mouse wheel zooms, R restarts the level
-- T drops a crate at the mouse, E an enemy, and M moves the player there
+- T drops a crate at the mouse, E an enemy, B makes an explosion there,
+  and M moves the player there
 
 ## What it shows
 - A level loaded from a Tiled JSON file into tile layers, with the

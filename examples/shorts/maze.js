@@ -4,8 +4,8 @@ function generateMaze(size)
     maze[1 + w] = 1; // start point
     for (let k=w*h*99; k--;)
     {
-        // get a random position on odd coordinates
-        const x = randInt(w/2)*2 + 1, y = randInt(h/2)*2 + 1;
+        // get a random position on odd coordinates inside the outer wall
+        const x = randInt(w/2-1)*2 + 1, y = randInt(h/2-1)*2 + 1;
 
         // get a random direction, and the position 2 cells that way
         const dx = randBool() ? randSign() : 0, dy = dx ? 0 : randSign();
@@ -71,7 +71,8 @@ wall. `maze[1 + w] = 1` opens the cell at x 1, y 1.
 
 - The loop runs `w*h*99` times, here 40095. Most tries do nothing, so
   it takes many more tries than there are cells to reach every room.
-- `x` and `y` are random odd numbers, since `randInt(n)*2 + 1` is odd.
+- `x` and `y` are random odd numbers, since `randInt(n)*2 + 1` is odd,
+  and `n` of `w/2-1` keeps `x` at most `w-2`, inside the outer wall.
   Rooms sit on odd cells, and the even cells between them are the walls
   that get knocked through.
 - `dx` and `dy` are the direction: `randBool()` picks the axis and
