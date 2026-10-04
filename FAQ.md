@@ -225,6 +225,12 @@ There is also a function you can use called getCameraSize() to get the viewable 
 
 One thing to keep in mind: in **world space**, Y increases *upward* and tile coordinates use a bottom-left origin. This often surprises developers coming from Canvas2D or other 2D libraries. **Screen space** (used when you pass `screenSpace=true` to a draw function, or when reading `mousePosScreen`) follows the Canvas2D convention instead — Y increases *downward* with a top-left origin. Pick the right one for what you're doing: world space for gameplay, screen space for HUDs and UI overlays.
 
+### How far can my world go, and how long can my game run?
+
+The GPU draws with 32-bit floats, which hold about 7 digits, so precision runs out far from the origin and late in a long run. These are limits every engine has, not bugs, and most games never come near them:
+- **Distance:** positions go to the GPU as they are, in world units, not relative to the camera. A 32-bit float steps by about .001 at 10,000 units from the origin and .008 at 100,000, so far out sprites and meshes start to jitter as they move. Keep the play area within about ±10,000 units, and a game that travels farther can move the world and the camera back toward the origin together now and then.
+- **Time:** `time` itself is a 64-bit number and is fine, but shaders see it as the 32-bit `iTime`, which steps by about .0002 seconds after an hour and .008, half a frame, after a day, so a shader animated by it gets choppy in a game left running for days. A post process can be given a time of its own that wraps, through `postProcess.values`.
+
 ### How do I configure engine settings?
 
 LittleJS exposes settings through `setX()` functions for every tunable value. Most settings need to be applied **before** `engineInit()` because they affect canvas creation, WebGL setup, or input registration:

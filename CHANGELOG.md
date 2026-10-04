@@ -9,8 +9,11 @@ What changed in each release, newest first. Releases before 1.20.0 are on the
 
 - A skinned glTF model bends about a fifth faster: the skin writes the GPU data as it bends, so the upload sends it without packing it again, and its joints' matrices are worked out with no garbage
 
+- The FAQ and REFERENCE say how far a world can go and how long a game can run before 32-bit floats on the GPU run out of precision
+
 ### Breaking Changes
 
+- The Electron example is removed, with Electron and electron-packager from the dev dependencies: a game for the desktop sets up Electron or another wrapper itself, loading its index.html as any page
 - render3d.js is in three files: `render3d.js`, the renderer, then `render3dMesh.js`, meshes and the basic builders, and `render3dObject.js`, EngineObject3D, instancing and lights; nothing changes for a game on a build in `dist`, one that loads the plugins one by one adds the two after `render3d.js`
 
 ## 1.25.0 - 2026-10-04

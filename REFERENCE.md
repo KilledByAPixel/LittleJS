@@ -95,6 +95,8 @@ let remaining = 36000;
 - **Seconds:** `Timer`, `Tween`, `time`, a particle emitter's `emitTime` and `particleTime` and its `emitRate` (per
   second) and `lifeTime`; a particle's `fadeRate` is a part of its life, not seconds
 - **Milliseconds:** `gamepadVibrate`'s duration, `vibrate` patterns and `saveDataURL`'s `revokeTime`
+- **Limits:** the GPU draws with 32-bit floats: keep the world within about ±10,000 units of the origin, and a
+  shader's `iTime` gets coarse in a game left running for days; the FAQ says more
 
 ## What functions give back
 - **Raycasts:** where the ray hits, a Vector2: `tileCollisionRaycast`, `lineTest`; how far along the ray, a number:
