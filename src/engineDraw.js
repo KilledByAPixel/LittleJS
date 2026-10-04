@@ -105,7 +105,7 @@ function isBlack(c) { return c.r <= 0 && c.g <= 0 && c.b <= 0 && c.a <= 0; }
  * Create a tile info object using a grid based system
  * - This can take vecs or floats for easier use and conversion
  * - If an index is passed in, the tile size and index will determine the position
- * @param {Vector2|number} [index=0] - Index of the tile in 1d or 2d form
+ * @param {Vector2|number} [index] - Index of the tile in 1d or 2d form
  * @param {Vector2|number} [size] - Size of tile in pixels
  * @param {TextureInfo|number} [texture] - Texture index or info to use
  * @param {number} [padding] - How many pixels padding around tiles
@@ -589,10 +589,10 @@ class Shader
  *  @param {TileInfo} [tileInfo] - Tile info to use, untextured if undefined
  *  @param {Color}    [color=WHITE] - Color to modulate with
  *  @param {number}   [angle] - Angle to rotate by
- *  @param {boolean}  [mirror] - Is image flipped along the Y axis?
+ *  @param {boolean}  [mirror] - Is the image flipped left to right?
  *  @param {Color}    [additiveColor] - Additive color to be applied if any
  *  @param {boolean}  [useWebGL=glEnable] - Use accelerated WebGL rendering?
- *  @param {boolean}  [screenSpace=drawScreenSpace] - Are the pos and size are in screen space?
+ *  @param {boolean}  [screenSpace=drawScreenSpace] - Are the pos and size in screen space?
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context] - Canvas 2D context to draw to
  *  @memberof Draw */
 function drawTile(pos, size=vec2(1), tileInfo, color=WHITE,
@@ -762,9 +762,9 @@ function drawRectGradient(pos, size=vec2(1), colorTop=WHITE, colorBottom=CLEAR_W
  *  @param {Vector2}  pos          - Center of the rect in world space
  *  @param {Vector2}  size         - Size of the rect in world space
  *  @param {Vector2}  wrapCount    - How many times the texture repeats (x, y)
- *  @param {TextureInfo|number} [texture=0] - TextureInfo or texture index into textureInfos
+ *  @param {TextureInfo|number} [texture] - TextureInfo or texture index into textureInfos
  *  @param {Color}    [color=WHITE] - Color to modulate with
- *  @param {number}   [angle=0] - Angle to rotate by
+ *  @param {number}   [angle] - Angle to rotate by
  *  @param {Color}    [additiveColor] - Additive color to be applied if any
  *  @param {boolean}  [useWebGL=glEnable] - Use accelerated WebGL rendering?
  *  @param {boolean}  [screenSpace=drawScreenSpace] - Are pos and size in screen space?
@@ -1106,9 +1106,9 @@ function drawEllipse(pos, size=vec2(1), color=WHITE, angle=0, lineWidth=0, lineC
 
 /** Draw colored circle using passed in point
  *  @param {Vector2} pos
- *  @param {number}  [size=1] - Diameter
+ *  @param {number}  [size] - Diameter
  *  @param {Color}   [color=WHITE]
- *  @param {number}  [lineWidth=0]
+ *  @param {number}  [lineWidth]
  *  @param {Color}   [lineColor=BLACK]
  *  @param {boolean} [useWebGL=glEnable]
  *  @param {boolean} [screenSpace=drawScreenSpace]
@@ -1203,7 +1203,7 @@ function drawEllipseGradient(pos, size=vec2(1), colorInner=WHITE, colorOuter=CLE
  *  - If drawing mostly textured sprites, bake the gradient into a texture and use drawTile instead
  *  - Stacking gradients at the exact same position may show a faint vertical artifact
  *  @param {Vector2} pos
- *  @param {number}  [size=1] - Diameter
+ *  @param {number}  [size] - Diameter
  *  @param {Color}   [colorInner=WHITE]
  *  @param {Color}   [colorOuter=CLEAR_WHITE]
  *  @param {boolean} [useWebGL=glEnable]
@@ -1268,7 +1268,7 @@ function drawCanvas2D(pos, size, angle=0, mirror=false, drawFunction, screenSpac
  *  @param {Color}   [color=WHITE]
  *  @param {number}  [lineWidth]
  *  @param {Color}   [lineColor=BLACK]
- *  @param {'left'|'center'|'right'} [textAlign='center']
+ *  @param {'left'|'center'|'right'} [textAlign]
  *  @param {string}  [font=fontDefault]
  *  @param {string}  [fontStyle]
  *  @param {number}  [maxWidth]

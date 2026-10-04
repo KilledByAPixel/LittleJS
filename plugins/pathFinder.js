@@ -26,7 +26,8 @@ const PATHFINDER_TILE_VEC = vec2(1);
  *  @memberof PathFinding */
 class PathFinderNode
 {
-    /** @param {number} x - Tile x
+    /** Make the node of a grid cell, as PathFinder does for each
+     *  @param {number} x - Tile x
      *  @param {number} y - Tile y */
     constructor(x, y)
     {
@@ -89,7 +90,8 @@ class PathFinderNode
  */
 class PathFinder
 {
-    /** @param {TileCollisionLayer|Vector2} source - Either a TileCollisionLayer
+    /** Make a path finder over a tile layer or a grid
+     *  @param {TileCollisionLayer|Vector2} source - Either a TileCollisionLayer
      *  (size and walkability auto-derived) or a Vector2 grid size (user
      *  overrides isWalkable). */
     constructor(source)
@@ -158,7 +160,7 @@ class PathFinder
      *  the instance or via a subclass.
      *  @param {number} x - Tile x
      *  @param {number} y - Tile y
-     *  @returns {boolean} */
+     *  @return {boolean} */
     isWalkable(x, y)
     {
         if (!this.tileLayer) return true;
@@ -169,7 +171,7 @@ class PathFinder
      *  Override to add cost-weighted terrain (mud, swamp, etc).
      *  @param {number} x - Tile x
      *  @param {number} y - Tile y
-     *  @returns {number} */
+     *  @return {number} */
     getCost(x, y)
     {
         return 0;
@@ -178,7 +180,7 @@ class PathFinder
     /** Get the node at tile coords, or null if out of bounds.
      *  @param {number} x
      *  @param {number} y
-     *  @returns {PathFinderNode|null} */
+     *  @return {PathFinderNode|null} */
     getNode(x, y)
     {
         if (x < 0 || y < 0 || x >= this.size.x || y >= this.size.y) return null;
@@ -187,7 +189,7 @@ class PathFinder
 
     /** Convert a world-space position to integer tile coords (no clamping).
      *  @param {Vector2} worldPos
-     *  @returns {Vector2} */
+     *  @return {Vector2} */
     worldToTile(worldPos)
     {
         const ox = this.tileLayer ? this.tileLayer.pos.x : 0;
@@ -198,7 +200,7 @@ class PathFinder
     /** Convert integer tile coords to the world-space center of that tile.
      *  @param {number} x
      *  @param {number} y
-     *  @returns {Vector2} */
+     *  @return {Vector2} */
     tileToWorld(x, y)
     {
         const ox = this.tileLayer ? this.tileLayer.pos.x : 0;
@@ -242,7 +244,7 @@ class PathFinder
      *  reached; false on disconnected goal or maxLoop exhaustion, which sets searchGaveUp.
      *  @param {PathFinderNode} startNode
      *  @param {PathFinderNode} endNode
-     *  @returns {boolean}
+     *  @return {boolean}
      *  @private */
     aStarSearch(startNode, endNode)
     {
@@ -386,9 +388,9 @@ class PathFinder
      *  unchanged walkability, pass `rebuild=false` and call `buildNodeData()`
      *  once externally to avoid redundant work.
      *  @param {Vector2} worldPos
-     *  @param {number} [searchRange=10] - Max box-radius in tiles
-     *  @param {boolean} [rebuild=true] - Whether to call buildNodeData first
-     *  @returns {PathFinderNode|null} */
+     *  @param {number} [searchRange] - Max box-radius in tiles
+     *  @param {boolean} [rebuild] - Whether to call buildNodeData first
+     *  @return {PathFinderNode|null} */
     getNearestClearNode(worldPos, searchRange = 10, rebuild = true)
     {
         ASSERT(isVector2(worldPos), 'worldPos must be a Vector2');
@@ -613,7 +615,7 @@ class PathFinder
      *  and clear (walkable, zero-cost). Used by isLineClear's hot path.
      *  @param {number} x
      *  @param {number} y
-     *  @returns {boolean}
+     *  @return {boolean}
      *  @private */
     isNodeClear(x, y)
     {
@@ -630,7 +632,7 @@ class PathFinder
      *  CheckLine() in pathFinding.cpp.
      *  @param {Vector2} startPos - Tile coords
      *  @param {Vector2} endPos - Tile coords
-     *  @returns {boolean}
+     *  @return {boolean}
      *  @private */
     isLineClear(startPos, endPos)
     {
@@ -753,7 +755,7 @@ class PathFinder
      *  @param {Vector2} startPos - World-space start
      *  @param {Vector2} endPos - World-space end
      *  @param {boolean} [rebuild] - Whether to call buildNodeData first
-     *  @returns {Vector2[]} */
+     *  @return {Vector2[]} */
     findPath(startPos, endPos, rebuild = true)
     {
         ASSERT(isVector2(startPos) && isVector2(endPos), 'findPath needs Vector2 endpoints');

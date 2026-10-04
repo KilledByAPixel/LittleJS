@@ -2267,7 +2267,6 @@ function render3DCSGMesh(polygons)
     };
 
     // each loop with the points along its edges put in, as a fan
-    const flat = (a, b, c)=> b.subtract(a).cross(c.subtract(a)).lengthSquared() < 1e-18;
     for (const loop of loops)
     {
         if (loop.length < 3) continue;

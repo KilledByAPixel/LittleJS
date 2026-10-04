@@ -14,14 +14,13 @@ let debugWatermark = false;
 let debugKey = '';
 let debugKeysAlways = false;
 let debugTweakables = false;
-let debugClearCount = 0;
 const debug = false;
 const debugOverlay = false;
-const debugPhysics = 0;
-const debugParticles = 0;
-const debugRaycast = 0;
-const debugGamepads = 0;
-const debugSound = 0;
+const debugPhysics = false;
+const debugParticles = false;
+const debugRaycast = false;
+const debugGamepads = false;
+const debugSound = false;
 const debugPointSize = .5;
 
 // debug commands are automatically removed from the final build

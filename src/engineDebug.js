@@ -94,7 +94,7 @@ function LOG(...output) { console.log(...output); }
 
 /** Draw a debug rectangle in world space, or on the screen with screenSpace
  *  @param {Vector2} pos
- *  @param {Vector2} [size=vec2(0)]
+ *  @param {Vector2} [size=vec2()]
  *  @param {Color|string} [color]
  *  @param {number} [time]
  *  @param {number} [angle]

@@ -122,7 +122,7 @@ offscreen canvas and returns its 2D context.
   plus `edge*edge`, which grows away from the middle so the map's rim
   rises. `noise2D` returns 0 to 1 and changes smoothly from one point to
   the next. `clamp` keeps `h` from 0 to 1.
-- The height image gets the grey `hsl(0,0,h)`. A `HeightMap` reads the
+- The height image gets the gray `hsl(0,0,h)`. A `HeightMap` reads the
   red channel of an image as the height.
 - The color image gets grass below .5, rock below .7 and snow above.
 

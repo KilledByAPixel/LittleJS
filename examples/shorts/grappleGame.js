@@ -158,7 +158,7 @@ already heading. `mouseWasReleased(0)` sets `grabNode` back to 0.
 
 ### gameRender
 Later draws cover earlier ones. `drawLine` draws the tether .3 units
-wide, white while grabbed and dark grey when it only points at the node
+wide, white while grabbed and dark gray when it only points at the node
 a click would take. `drawCircle` takes a diameter, so the nodes are
 `nodeSize*2` across, and a ball center closer than `nodeSize` has hit
 one. The trail is circles that shrink toward its old end, with the hue

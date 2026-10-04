@@ -196,6 +196,12 @@ This will show you any errors that occur and allows stepping through code to hel
 A common issue is the image data failing to load with a message like "The image element contains cross-origin data, and may not be loaded."
 This is probably because the game was loaded directly without using a web server!
 
+### Why does my game say a name "has already been declared"?
+
+In a script tag build the engine's names are globals, so a top-level `let`, `const` or `class` in your game with the same name is an error, as is any declaration of a name the engine declares with `let` or `const`, like `time`. A `function` or `var` named like an engine function replaces it instead, which breaks the engine wherever it calls that function. The names most likely to clash are the short ones: `time`, `frame`, `paused`, `debug`, `gravity`, `tile`, `rand`, `percent`, `lerp`, `clamp`, `mod`, `sign`, `min`, `max`, `abs`, `floor`, `round`, `ceil`, `sin`, `cos`, `tan`, `PI`, the colors (`RED`, `GREEN`, `BLUE`, `GRAY`, `WHITE`, `BLACK` and the rest), `mousePos`, `cameraPos`, `medals`, `speak`, `vibrate`, `tweak`, the classes `Timer`, `Sound`, `Color`, `Light`, `Mesh`, `Particle` and `Shader`, and the plugin objects `box2d`, `render3D`, `uiSystem`, `postProcess` and `levelEditor`. [REFERENCE.md](REFERENCE.md) lists every name.
+
+Rename yours, keep your game's state inside an object or class, or use the ES module build, where nothing is global and you import only the names you use (`import * as LJS from 'littlejsengine'` keeps them all under `LJS`).
+
 ### Do I need a local server to run LittleJS games, and how do I set one up?
 
 Yes, this is a necessary step because web browsers just have protection from loading local files which includes images.

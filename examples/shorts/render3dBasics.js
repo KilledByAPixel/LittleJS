@@ -72,7 +72,7 @@ is `vec3(x, y, z)` with y up.
 
 - The floor is `buildGrid(size, segments, color)`, 30 units square with
   15 cells a side. The color can be a function called for each cell, and
-  `checker` gives every other cell a lighter grey.
+  `checker` gives every other cell a lighter gray.
 - `buildText3D(text, size, depth)` makes a mesh of the text in the
   engine's built in font, here 2 units tall and 1 thick.
 - `render3D.boxMesh` and `render3D.sphereMesh` are shared meshes one

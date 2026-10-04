@@ -48,7 +48,7 @@ ready. There are more, `BLACK`, `GRAY`, `ORANGE`, `CYAN`, `PURPLE` and
   the one that is easier to adjust by hand.
 - `hsl(h, s, l, a)` makes a color from a hue, a saturation and a
   lightness. The hue goes once around the color wheel from 0 to 1, with
-  red at 0. Saturation is how strong the color is, 0 for grey.
+  red at 0. Saturation is how strong the color is, 0 for gray.
   Lightness goes from black at 0 to white at 1, with the full color at
   `.5`.
 - `hsl(0,1,.5, .5)` is full red with an alpha of `.5`, so the background

@@ -35,7 +35,7 @@ text at the top counts the objects hit.
 
 ## How it works
 ### gameInit
-Twenty grey rectangles are made at random points within 8 units of the
+Twenty gray rectangles are made at random points within 8 units of the
 middle, each 1 to 3 units on a side. They
 are plain `EngineObject`s with no tile, which draw as rectangles of
 their size and color.

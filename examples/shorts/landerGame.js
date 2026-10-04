@@ -100,7 +100,7 @@ The ground is 20 columns, each 2 units wide and 99 tall so its bottom
 is far out of view. The height is a random walk: each step adds a
 random number from -4 to 4 to the last height and halves the sum, which
 keeps neighbors close and pulls the ground back toward the middle.
-`i%.29`, the remainder of `i` over .29, gives each column its own grey.
+`i%.29`, the remainder of `i` over .29, gives each column its own gray.
 A column has `mass = 0`, so it is static.
 
 Collision uses each object's upright box. The angle only turns the

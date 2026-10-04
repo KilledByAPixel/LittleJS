@@ -103,7 +103,7 @@ down.
   rectangle and outline.
 - `UICheckbox(pos, size, checked, text)` draws its text to its right.
   Its `onChange` sets `disabled` on the three buttons, which then tint
-  with the disabled color, a dark grey.
+  with the disabled color, a dark gray.
 - `UISlider(pos, size, value, text)` draws its bar with the default
   slice and its handle with the handle slice. It starts at
   `soundVolume`, and `setSoundVolume` applies the new value.

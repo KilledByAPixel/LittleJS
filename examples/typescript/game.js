@@ -100,7 +100,7 @@ function gameUpdatePost() {
 }
 ///////////////////////////////////////////////////////////////////////////////
 function gameRender() {
-    // draw a grey square in the background, inside the walls
+    // draw a gray square in the background, inside the walls
     LJS.drawRect(vec2(16, 8), vec2(30, 14), hsl(0, 0, .6));
     // draw the logo as a tile, standing on the floor
     LJS.drawTile(vec2(26, 3.25), vec2(4.5), tile(3, 128));

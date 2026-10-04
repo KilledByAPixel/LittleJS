@@ -274,7 +274,7 @@ function gameRender()
         LJS.drawTile(drawPos, vec2(.5), tile(data, 64), color2);
     }
 
-    // draw a grey square at top to cover up incoming tiles
+    // draw a gray square at top to cover up incoming tiles
     LJS.drawRect(LJS.cameraPos.subtract(cameraOffset).add(vec2(0,levelSize.y)), levelSize, backgroundColor);
 }
 

@@ -519,7 +519,7 @@ class UISystemPlugin
     *  @param {'left'|'center'|'right'} [align]
     *  @param {string}  [font=uiSystem.defaultFont]
     *  @param {string}  [fontStyle]
-    *  @param {boolean} [applyMaxWidth=true]
+    *  @param {boolean} [applyMaxWidth]
     *  @param {Vector2} [textShadow]
     *  @param {Color}   [shadowColor]
     *  @param {number}  [shadowBlur]
@@ -1212,19 +1212,24 @@ class UIObject
     /** Called when the navigation button is pressed on this object */
     navigatePressed() { this.click(); }
 
-    /** @return {boolean} - Is the mouse hovering over this element */
+    /** Is the mouse hovering over this element
+     *  @return {boolean} */
     isHoverObject() { return uiSystem.hoverObject === this; }
 
-    /** @return {boolean} - Is the mouse held onto this element */
+    /** Is the mouse held onto this element
+     *  @return {boolean} */
     isActiveObject() { return uiSystem.activeObject === this; }
 
-    /** @return {boolean} - Is the gamepad or keyboard navigation object */
+    /** Is the gamepad or keyboard navigation object
+     *  @return {boolean} */
     isNavigationObject() { return uiSystem.navigationObject === this; }
 
-    /** @return {boolean} - Is this object in keyboard input mode */
+    /** Is this object in keyboard input mode
+     *  @return {boolean} */
     isKeyInputObject() { return uiSystem.keyInputObject === this; }
 
-    /** @return {boolean} - Can it be interacted with, it and every parent visible and enabled */
+    /** Can it be interacted with, it and every parent visible and enabled
+     *  @return {boolean} */
     isInteractive() { return this.interactive && uiObjectIsUsable(this); }
 
     /** Returns string containing info about this object for debugging
@@ -1755,9 +1760,9 @@ class UIVideo extends UIObject
      *  @param {Vector2} pos
      *  @param {Vector2} size
      *  @param {string} src - Video file path or URL
-     *  @param {boolean} [autoplay=false] - Start playing immediately?
-     *  @param {boolean} [loop=false] - Loop the video?
-     *  @param {number} [volume=1] - Volume percent scaled by global volume (0-1)
+     *  @param {boolean} [autoplay] - Start playing immediately?
+     *  @param {boolean} [loop] - Loop the video?
+     *  @param {number} [volume] - Volume percent scaled by global volume (0-1)
      */
     constructor(pos, size, src, autoplay=false, loop=false, volume=1)
     {
@@ -1912,10 +1917,10 @@ class UILayout extends UIObject
 {
     /** Create a UILayout container that auto-arranges children
      *  @param {Vector2} [pos]
-     *  @param {number}  [columns=1]     - Number of columns (1 = vertical list)
-     *  @param {number}  [gap=10]        - Space between children
-     *  @param {number}  [padding=10]    - Space between container border and children
-     *  @param {boolean} [transparent=false] - If true, draws no background, outline, or shadow
+     *  @param {number}  [columns]     - Number of columns (1 = vertical list)
+     *  @param {number}  [gap]        - Space between children
+     *  @param {number}  [padding]    - Space between container border and children
+     *  @param {boolean} [transparent] - If true, draws no background, outline, or shadow
      */
     constructor(pos, columns=1, gap=10, padding=10, transparent=false)
     {

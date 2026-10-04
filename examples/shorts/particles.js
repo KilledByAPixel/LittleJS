@@ -38,7 +38,7 @@ options change it for this one use:
 - `hue` turns the effect's colors around the color wheel, where 1 is
   all the way around. Sparks are yellow as made, and `hue: .5` turns
   them half way, to blue.
-- `saturation` multiplies how strong the colors are, and 0 is grey.
+- `saturation` multiplies how strong the colors are, and 0 is gray.
 - Any emitter setting by its name, like `emitTime`, `emitRate` or
   `speed`, replaces the effect's own.
 
@@ -54,7 +54,7 @@ the trail.
 ## Try it
 - Change `'fire'` to `'magic'` or `'portal'`.
 - Set the fire's `scale` to 1 to see the size the effects are made at.
-- Add `saturation: 0` to the sparks' options for grey sparks.
+- Add `saturation: 0` to the sparks' options for gray sparks.
 - Add `emitTime: 1` to the smoke's options: it stops after a second.
 
 ## See also

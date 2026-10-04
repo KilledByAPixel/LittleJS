@@ -112,7 +112,7 @@ function tileCollisionTest(pos, size=vec2(), callbackObject, solidOnly=true)
  *  @param {Vector2} posEnd
  *  @param {EngineObject|TileCollisionCallback} [callbackObject] - Callback, engine object, or undefined
  *  @param {Vector2} [normal] - Optional normal of the surface hit
- *  @param {boolean} [solidOnly=true] - Only check solid layers?
+ *  @param {boolean} [solidOnly] - Only check solid layers?
  *  @return {Vector2|undefined} - where the ray meets the first tile hit, nudged just inside it, or undefined if no hit
  *  @memberof TileLayers */
 function tileCollisionRaycast(posStart, posEnd, callbackObject, normal, solidOnly=true)
@@ -575,7 +575,7 @@ class TileLayerData
     /** Create a tile layer data object, one for each tile in a TileLayer
      *  @param {number}  [tile] - The tile to use, from 0 like tile(); undefined is an empty cell that draws nothing
      *  @param {number}  [direction] - Integer direction of tile, in 90 degree increments
-     *  @param {boolean} [mirror] - If the tile should be mirrored along the x axis
+     *  @param {boolean} [mirror] - If the tile is flipped left to right
      *  @param {Color}   [color] - Color of the tile */
     constructor(tile, direction=0, mirror=false, color=new Color)
     {
@@ -584,7 +584,7 @@ class TileLayerData
         this.tile = tile;
         /** @property {number} - Integer direction of tile, in 90 degree increments */
         this.direction = direction;
-        /** @property {boolean} - If the tile should be mirrored along the x axis */
+        /** @property {boolean} - If the tile is flipped left to right */
         this.mirror = mirror;
         /** @property {Color} - Color of the tile */
         this.color = color.copy();
@@ -660,7 +660,7 @@ class CanvasLayer extends EngineObject
     *  @param {Vector2} [size] - Size in world space
     *  @param {Color}   [color] - Color to modulate with
     *  @param {number}  [angle] - Angle to rotate by
-    *  @param {boolean} [mirror] - If true image is flipped along the Y axis
+    *  @param {boolean} [mirror] - If true the image is flipped left to right
     *  @param {Color}   [additiveColor] - Additive color to be applied if any
     *  @param {boolean} [screenSpace=drawScreenSpace] - If true the pos and size are in screen space
     *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context] - Canvas 2D context to draw to */
@@ -950,7 +950,7 @@ class TileLayer extends CanvasLayer
      *  @param {TileInfo} [tileInfo] - Tile info to use, untextured if undefined
      *  @param {Color}    [color=WHITE] - Color to modulate with
      *  @param {number}   [angle] - Angle to rotate by
-     *  @param {boolean}  [mirror] - Is image flipped along the Y axis?
+     *  @param {boolean}  [mirror] - Is the image flipped left to right?
      *  @param {Color}    [additiveColor] - Additive color to be applied if any */
     drawLayerTile(pos, size=vec2(1), tileInfo, color=WHITE,
     angle=0, mirror, additiveColor)

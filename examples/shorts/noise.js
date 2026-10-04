@@ -71,7 +71,7 @@ one whole number a second, which is what scrolls the picture.
 the range noise returns. Each channel reads the noise at a different
 y, `1e3` and `2e3` away, far enough that the three have nothing to do
 with each other. With the same input for all three the picture would
-be grey.
+be gray.
 
 The vectors and the color are made once before the loops and reused
 for every square, so the loop does not make new objects each frame.

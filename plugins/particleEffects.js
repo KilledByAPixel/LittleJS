@@ -212,10 +212,10 @@ function particleEffectSanitize(raw)
 }
 
 /** A copy of an effect with its four colors turned around the color wheel and their saturation scaled; lightness and
- *  alpha stay, and grey and white have no hue to turn
+ *  alpha stay, and gray and white have no hue to turn
  *  @param {Object} effect
  *  @param {number} [hue] - How far around the wheel, 1 is all the way
- *  @param {number} [saturation] - Multiplies the saturation, 0 is grey, clamped to 1
+ *  @param {number} [saturation] - Multiplies the saturation, 0 is gray, clamped to 1
  *  @return {Object}
  *  @memberof ParticleEffects */
 function particleEffectRecolor(effect, hue=0, saturation=1)
@@ -505,7 +505,7 @@ function particleEffectResolve(nameOrEffect, options)
  *  @param {Object} [options] - What to change for this play, each left out when not wanted:
  *    scale grows the whole effect, the built-ins fit a one unit object at 1;
  *    hue turns its colors around the color wheel, 1 is all the way;
- *    saturation multiplies its saturation, 0 is grey;
+ *    saturation multiplies its saturation, 0 is gray;
  *    angle is its direction, 0 is up, the effect's own angle when not given;
  *    tileInfo, a TileInfo or a TextureInfo, is the game's own art to draw with in place of the effect's shape,
  *    tinted by its colors, a whole texture drawn as one tile;

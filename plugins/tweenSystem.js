@@ -54,9 +54,9 @@ class Tween
      *  callback receives the interpolated value (a number, or a fresh instance
      *  for lerp-able types). Both endpoints must be the same type.
      *  @param {function(NonNullable<T>):void} callback - Called with the interpolated value each frame
-     *  @param {T} [start=0] - Starting value
-     *  @param {T} [end=1] - Ending value
-     *  @param {number} [duration=1] - Duration in seconds
+     *  @param {T} [start] - Starting value
+     *  @param {T} [end] - Ending value
+     *  @param {number} [duration] - Duration in seconds
      *  @param {Object} [options]
      *  @param {function(number):number} [options.ease] - Easing function (defaults to LINEAR)
      *  @param {boolean} [options.useRealTime=false] - Advance even when the game is paused (matches Timer's useRealTime)
@@ -134,7 +134,7 @@ class Tween
 
     /** Set the easing curve and return this for chaining.
      *  @param {function(number):number} easeFn
-     *  @returns {Tween<T>} */
+     *  @return {Tween<T>} */
     setEase(easeFn)
     {
         this.ease = easeFn;
@@ -149,7 +149,7 @@ class Tween
      *  - It is kept by `restart`, so a restarted tween calls it again when it completes
      *  - `stop` and `tweenStopAll` end a tween without calling it
      *  @param {function():void} callback
-     *  @returns {Tween<T>} */
+     *  @return {Tween<T>} */
     then(callback)
     {
         this.onComplete = callback;
@@ -165,7 +165,7 @@ class Tween
      *  A `then` callback, set before or after, is called when the last
      *  iteration ends.
      *  @param {number} [count=Infinity]
-     *  @returns {Tween<T>} */
+     *  @return {Tween<T>} */
     loop(count = Infinity)
     {
         this.loopRemaining = count;
@@ -180,7 +180,7 @@ class Tween
      *  A `then` callback, set before or after, is called when the last
      *  iteration ends.
      *  @param {number} [count=Infinity]
-     *  @returns {Tween<T>} */
+     *  @return {Tween<T>} */
     pingPong(count = Infinity)
     {
         this.loopRemaining = count;
@@ -213,7 +213,7 @@ class Tween
     }
 
     /** True if this tween is in the active list and not paused.
-     *  @returns {boolean} */
+     *  @return {boolean} */
     isActive()
     {
         return !this.paused && this.active;
@@ -221,7 +221,7 @@ class Tween
 
     /** Get how far this tween has progressed, from 0 (just started) to 1
      *  (completed). Clamped — overshoot past completion still reads 1.
-     *  @returns {number} */
+     *  @return {number} */
     getPercent()
     {
         return percent(this.duration - this.life, 0, this.duration);
@@ -230,7 +230,7 @@ class Tween
     /** Get the current interpolated value (the value most recently passed to
      *  the callback). Returns a number, Vector2, Vector3 or Color depending on the
      *  tween's start/end types.
-     *  @returns {T} */
+     *  @return {T} */
     getValue()
     {
         return this.interp(this.life);
@@ -242,7 +242,7 @@ class Tween
      *  - A vector goes past its ends as far as the easing does, as a number does; a Color stays between them,
      *    so its channels stay in range, and any other type goes as far as its own lerp takes it
      *  @param {number} life
-     *  @returns {T} */
+     *  @return {T} */
     interp(life)
     {
         // the ends of whatever type it tweens, each kind is handled below
@@ -285,44 +285,44 @@ const Ease =
 {
     /** Linear (identity) curve.
      *  @param {number} x
-     *  @returns {number}
+     *  @return {number}
      *  @memberof TweenSystem.Ease */
     LINEAR: (x) => x,
 
     /** Power curve factory: `Ease.POWER(n)` returns `x => x**n`.
      *  Use n=2 for quadratic, n=3 for cubic, etc.
      *  @param {number} n
-     *  @returns {function(number):number}
+     *  @return {function(number):number}
      *  @memberof TweenSystem.Ease */
     POWER: (n) => (x) => x ** n,
 
     /** Sine ease-in curve: starts slow, ends fast.
      *  @param {number} x
-     *  @returns {number}
+     *  @return {number}
      *  @memberof TweenSystem.Ease */
     SINE: (x) => 1 - cos(x * (PI / 2)),
 
     /** Circular ease-in curve.
      *  @param {number} x
-     *  @returns {number}
+     *  @return {number}
      *  @memberof TweenSystem.Ease */
     CIRC: (x) => 1 - (1 - x * x)**.5,
 
     /** Exponential ease-in curve (`2^(10x-10)`).
      *  @param {number} x
-     *  @returns {number}
+     *  @return {number}
      *  @memberof TweenSystem.Ease */
     EXPO: (x) => x === 0 ? 0 : 2 ** (10 * x - 10),
 
     /** Back ease-in: overshoots backward at the start before snapping forward.
      *  @param {number} x
-     *  @returns {number}
+     *  @return {number}
      *  @memberof TweenSystem.Ease */
     BACK: (x) => x * x * (2.70158 * x - 1.70158),
 
     /** Elastic ease-in: oscillations that grow toward the end.
      *  @param {number} x
-     *  @returns {number}
+     *  @return {number}
      *  @memberof TweenSystem.Ease */
     ELASTIC: (x) =>
         x === 0 ? 0 :
@@ -332,7 +332,7 @@ const Ease =
     /** Spring ease-in: wobbles around the start before springing to the end;
      *  `Ease.OUT(Ease.SPRING)` overshoots and settles on the target.
      *  @param {number} x
-     *  @returns {number}
+     *  @return {number}
      *  @memberof TweenSystem.Ease */
     SPRING: (x) =>
         1 -
@@ -346,7 +346,7 @@ const Ease =
      *  classic "object falls and hits the ground" shape (bounces near x=1),
      *  wrap with `Ease.OUT`: `Ease.OUT(Ease.BOUNCE)`.
      *  @param {number} x
-     *  @returns {number}
+     *  @return {number}
      *  @memberof TweenSystem.Ease
      *  @example
      *  Ease.BOUNCE                  // ease-in bounce (bouncy at start)
@@ -369,7 +369,7 @@ const Ease =
      *  convention, so wrapping a curve in `IN` is a no-op — useful when
      *  picking the direction programmatically.
      *  @param {function(number):number} f - Curve to use as ease-in (returned unchanged)
-     *  @returns {function(number):number}
+     *  @return {function(number):number}
      *  @memberof TweenSystem.Ease
      *  @example
      *  // Pick direction at runtime
@@ -380,7 +380,7 @@ const Ease =
 
     /** Reverse a curve so it eases out instead of in: `x => 1 - f(1 - x)`.
      *  @param {function(number):number} f
-     *  @returns {function(number):number}
+     *  @return {function(number):number}
      *  @memberof TweenSystem.Ease
      *  @example
      *  Ease.OUT(Ease.POWER(2)) // ease-out quadratic
@@ -389,7 +389,7 @@ const Ease =
 
     /** Combine the first half of `f` with `Ease.OUT(f)` for a symmetric curve.
      *  @param {function(number):number} f
-     *  @returns {function(number):number}
+     *  @return {function(number):number}
      *  @memberof TweenSystem.Ease */
     IN_OUT: (f) => Ease.PIECEWISE(f, Ease.OUT(f)),
 
@@ -397,7 +397,7 @@ const Ease =
      *  Each curve is mapped to its section: section i runs over [i/n, (i+1)/n]
      *  and its output is mapped to [i/n, (i+1)/n] of the overall range.
      *  @param {...function(number):number} fns
-     *  @returns {function(number):number}
+     *  @return {function(number):number}
      *  @memberof TweenSystem.Ease */
     PIECEWISE: (...fns) =>
     {
@@ -415,7 +415,7 @@ const Ease =
      *  @param {number} y1
      *  @param {number} x2
      *  @param {number} y2
-     *  @returns {function(number):number}
+     *  @return {function(number):number}
      *  @memberof TweenSystem.Ease
      *  @example
      *  Ease.BEZIER(0.25, 0.1, 0.25, 1) // CSS "ease"
@@ -465,12 +465,12 @@ const Ease =
  *  @param {string} propertyPath - Dot-separated path, e.g. `'pos.x'` or `'color'`
  *  @param {T} start - Starting value
  *  @param {T} end - Ending value
- *  @param {number} [duration=1] - Duration in seconds
+ *  @param {number} [duration] - Duration in seconds
  *  @param {Object} [options] - Same options as the Tween constructor
  *  @param {function(number):number} [options.ease] - Easing function (defaults to LINEAR)
  *  @param {boolean} [options.useRealTime=false] - Advance even when the game is paused
  *  @param {boolean} [options.paused=false] - Start in paused state
- *  @returns {Tween<T>}
+ *  @return {Tween<T>}
  *  @memberof TweenSystem
  *  @example
  *  // Numeric: slide an object's x with an ease-out sine curve

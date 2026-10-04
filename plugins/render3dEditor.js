@@ -1261,7 +1261,7 @@ function editor3DPrefabHolds(type, name, depth=0)
         !!level3DPrefabs.get(type)?.objects.some((o)=> editor3DPrefabHolds(o.type, name, depth + 1));
 }
 
-// make the selected objects a prefab of the level's own, about the bottom centre of their box, and put one
+// make the selected objects a prefab of the level's own, about the bottom center of their box, and put one
 // instance of it where they were, as one undo; a name the level's prefabs have replaces that prefab, and every
 // instance of it changes; true, or why not, which the panel shows
 function editor3DMakePrefab(name='')
@@ -1280,7 +1280,7 @@ function editor3DMakePrefab(name='')
     if (selected.some((o)=> editor3DPrefabHolds(o.type, name)))
         return refuse(name + ' can not hold itself');
 
-    // its origin is the bottom centre of the selection, so an instance stands on the ground
+    // its origin is the bottom center of the selection, so an instance stands on the ground
     const low = vec3(Infinity), high = vec3(-Infinity);
     for (const object of selected)
         editor3DWorldBox(object, low, high);
@@ -1489,7 +1489,7 @@ function editor3DPrefabEnter(id)
 // no prefab is open
 function editor3DPrefabBack()
 {
-    const frame = editor3DPrefabStack.pop(), edited = editor3DLevel;
+    const frame = editor3DPrefabStack.pop();
     if (!frame) return false;
     editor3DStrokeEnd();
     editor3DDrag = editor3DHover = undefined;

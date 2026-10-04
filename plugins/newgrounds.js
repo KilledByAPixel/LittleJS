@@ -25,7 +25,7 @@ let newgrounds;
 const newgroundsUnlocksToResend = new Set; // pending medals whose request did not reach the server
 const newgroundsUnlocksRefused = new Set; // medals the server refused this visit, asked again they answer no unsent
 const newgroundsSecureComponents = ['Medal.unlock', 'ScoreBoard.postScore']; // the calls encrypted with a cipher
-const newgroundsSessionErrors = [104, 110, 111]; // expired session, login required, session cancelled
+const newgroundsSessionErrors = [104, 110, 111]; // expired session, login required, session canceled
 const newgroundsTimeoutMS = 15e3; // how long a request may take before it fails
 
 // whether the server answered that the session is gone, as opposed to a request that failed on the way

@@ -689,11 +689,6 @@ function isVector2(v) { return v instanceof Vector2 && v.isValid(); }
 // vector2 asserts
 function ASSERT_VECTOR2_VALID(v) { ASSERT(isVector2(v), 'Vector2 is invalid.', v); }
 function ASSERT_NUMBER_VALID(n) { ASSERT(isNumber(n), 'Number is invalid.', n); }
-function ASSERT_VECTOR2_NORMAL(v)
-{
-    ASSERT_VECTOR2_VALID(v);
-    ASSERT(abs(v.lengthSquared()-1) < .01, 'Vector2 is not normal.', v);
-}
 
 /**
  * 2D Vector object with vector math library

@@ -38,7 +38,8 @@
  */
 class GLTFPart
 {
-    /** @param {string} name @param {Mesh} mesh @param {Color} color @param {TextureInfo|undefined} textureInfo @param {boolean} transparent */
+    /** Make a part, as the loader does for each primitive
+     *  @param {string} name @param {Mesh} mesh @param {Color} color @param {TextureInfo|undefined} textureInfo @param {boolean} transparent */
     constructor(name, mesh, color, textureInfo, transparent)
     {
         /** @property {string} - The node's name, or its mesh's */
@@ -102,7 +103,8 @@ class GLTFPart
  */
 class GLTFAnimation
 {
-    /** @param {string} name @param {Array<Object>} channels */
+    /** Make an animation from its channels, as the loader does
+     *  @param {string} name @param {Array<Object>} channels */
     constructor(name, channels)
     {
         /** @property {string} - Its name in the file, or 'animation' and its number when it has none */
@@ -123,7 +125,8 @@ class GLTFAnimation
  */
 class GLTFModel
 {
-    /** @param {Array<GLTFPart>} parts @param {Array<GLTFAnimation>} [animations] @param {Object} [nodeTree] */
+    /** Make a model from its parts, as the loader does
+     *  @param {Array<GLTFPart>} parts @param {Array<GLTFAnimation>} [animations] @param {Object} [nodeTree] */
     constructor(parts, animations=[], nodeTree)
     {
         /** @property {Array<GLTFPart>} - One per primitive of every node that has a mesh */

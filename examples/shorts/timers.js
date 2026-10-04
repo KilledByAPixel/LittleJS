@@ -102,7 +102,7 @@ slider's own update, is given a function that reads the timer:
 - `value` is where the handle is, from 0 to 1. `1 + t/setTime` is 0 when
   the timer starts, since `t` is `-3` then, and reaches 1 as it runs
   out. With no timer set it stays at 1.
-- The color is cyan while it runs, red once it has run out and grey
+- The color is cyan while it runs, red once it has run out and gray
   when it is not set.
 
 `timerButton.addChild(timerSlider)` makes the bar a child of the button,

@@ -75,7 +75,7 @@ three times each time around.
 
 ### gameInit
 The scene is made dark so the lamps show. `setSky` gets two nearly black
-blues, `sunColor` is the sun's light turned down to a dim blue grey, and
+blues, `sunColor` is the sun's light turned down to a dim blue gray, and
 `ambientColor` is the soft light from above, replacing the one `setSky`
 took from the sky.
 

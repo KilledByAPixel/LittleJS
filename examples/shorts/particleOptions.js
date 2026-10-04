@@ -69,7 +69,7 @@ cells across and 5 units apart, in two rows.
 3. `hue: .6` turns the colors around the color wheel, where 1 is all
   the way around. The fire's orange goes to blue.
 4. `saturation: 0` multiplies how strong the colors are, and 0 leaves
-  grey.
+  gray.
 5. `emitSize: 2` is the diameter of the area the particles start in.
   The fire's own is `.6`, so this is a wider fire of the same
   particles.

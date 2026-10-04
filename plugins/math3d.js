@@ -288,7 +288,6 @@ class Vector3
 
 // scratch for multiply, nothing keeps a reference to it
 const matrix4Scratch = new Float32Array(16);
-const matrix4Identity = new Float32Array([1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1]);
 
 /**
  * 4x4 transform matrix for moving, rotating and scaling points in 3D

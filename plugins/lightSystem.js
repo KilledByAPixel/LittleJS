@@ -476,7 +476,7 @@ class LightSystemPlugin
                     o.renderLight();
                 }
 
-                // 3b. emissive objects draw their shape in grey at their emissive level, white at 1, adding that much
+                // 3b. emissive objects draw their shape in gray at their emissive level, white at 1, adding that much
                 //     light where they are so they show their own colors; text goes to the 1x1 canvas as in the
                 //     shadow pass, so it is not drawn twice
                 const saved = [drawContext, glCustomShader];
@@ -488,7 +488,7 @@ class LightSystemPlugin
                     {
                         if (o.destroyed || !(o.emissive > 0)) continue;
                         const level = clamp(o.emissive)*255+.5|0; // packed like rgbaInt, red in the low byte
-                        glColorMask = 0xff000000; // its own alpha, and the grey from the additive color
+                        glColorMask = 0xff000000; // its own alpha, and the gray from the additive color
                         glColorAdditive = level | level<<8 | level<<16;
                         glAdditive || setAdditiveBlendMode(); // added, an emitter ends its render with it off
                         setShader(o.shader);

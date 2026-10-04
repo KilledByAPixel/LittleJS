@@ -81,7 +81,7 @@ always points at the mouse and never changes length.
 
 ### a.reflect(n)
 `reflect` bounces a vector off a surface. Its argument is the surface's
-normal, a vector of length 1 pointing straight out of it. The grey line
+normal, a vector of length 1 pointing straight out of it. The gray line
 is the surface and its normal is `vec2(0,1)`, straight up, so the yellow
 arrow is the red one with its y turned around.
 

@@ -96,6 +96,22 @@ let remaining = 36000;
   second) and `lifeTime`; a particle's `fadeRate` is a part of its life, not seconds
 - **Milliseconds:** `gamepadVibrate`'s duration, `vibrate` patterns and `saveDataURL`'s `revokeTime`
 
+## What functions give back
+- **Raycasts:** where the ray hits, a Vector2: `tileCollisionRaycast`, `lineTest`; how far along the ray, a number:
+  `raycastBox`, `raycastSphere`, `raycastPlane`, `HeightMap.raycast`; a record of the hit: `VoxelMap.raycast` (a
+  `VoxelHit`), `render3D.pick` (`{object, distance}`), `box2d.raycast` (a `Box2dRaycastResult`); every object
+  hit, a list: `engineObjectsRaycast`; nothing hit is `undefined`, or an empty list
+- **Overlaps:** `isOverlapping` and `isIntersecting` say whether, a boolean, as does a layer's `collisionTest`;
+  `tileCollisionTest` gives the layer hit; the collide helpers (`collideCircleBox`, `collideSphereBox` and the rest)
+  give the push that moves the first shape out, each `undefined` for none
+- **Not found:** `undefined`, but `PathFinder.getNode` and `getNearestClearNode`, which give `null`
+- **Loading:** an image that fails, from `engineInit` or `loadTexture`, and a `Sound` made from a file that fails,
+  warn in the console and the game goes on without them; `fetchJSON`, `loadGLTF`, `loadOBJ` and `Sound.loadSound`
+  reject with an error naming the file, for the game to catch
+- **Ending things:** objects, particles, UI, Box2D objects and joints are ended with `destroy`; a `Mesh` or a
+  `GLTFModel` frees its GPU buffers with `dispose`, a `TextureInfo` its texture with `destroyWebGLTexture`; a
+  playing sound, a `Tween` and an animation `stop`
+
 ## LittleJS Utilities Classes and Functions
 - General purpose math library
 - Vector2 - Fast, simple, easy 2D vector class
@@ -282,6 +298,14 @@ drawCircle(pos, size=1, color=WHITE, lineWidth=0, lineColor=BLACK)
 drawEllipseGradient(pos, size=(1,1), colorInner=WHITE, colorOuter=CLEAR_WHITE, angle=0)
 drawCircleGradient(pos, size=1, colorInner=WHITE, colorOuter=CLEAR_WHITE)
 drawCanvas2D(pos, size, angle=0, mirror=false, drawFunction, screenSpace=drawScreenSpace, context)
+
+// Where the orders differ, worth a look when changing one draw for another:
+// - angle is after the colors in drawTile, drawRect, drawEllipse and the gradients, after size in drawCanvas2D,
+//   after lineColor in drawRegularPoly and after pos in drawLine, drawLineList and drawPoly; drawCircle has none
+// - a line's width is before its color in drawLine and drawLineList, the outline's after the fill color, with
+//   lineColor, in drawPoly, drawRegularPoly, drawEllipse, drawCircle and the text
+// - pos comes first in most draws, but is an offset near the end in drawLine, drawLineList and drawPoly
+// - drawText and drawTextScreen draw with Canvas2D and take no useWebGL or screenSpace
 
 // Text functions
 drawText(text, pos, size=1, color=WHITE, lineWidth=0, lineColor=BLACK, textAlign='center', font, fontStyle, maxWidth, angle=0)
@@ -799,7 +823,7 @@ particleEffectsBuiltIn                  // the built-in names: fire, torch, smok
 // itself, a continuous one goes until destroyed
 'fire'       // hue .08, continuous
 'torch'      // hue .09, continuous
-'smoke'      // no hue, grey, continuous
+'smoke'      // no hue, gray, continuous
 'steam'      // no hue, white, continuous
 'explosion'  // hue .12, one-shot
 'sparks'     // hue .17, continuous

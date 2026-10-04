@@ -33,7 +33,7 @@ function gameRender()
 
 /* info
 3D and 2D in one picture. Six spinning coins are 3D objects, and the
-grey bars and the sliding tile are plain 2D drawing. Every other coin
+gray bars and the sliding tile are plain 2D drawing. Every other coin
 is drawn in front of the bars and the rest behind them.
 
 ## How it works

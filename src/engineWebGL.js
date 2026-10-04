@@ -51,7 +51,7 @@ let glFailedPrograms = new WeakSet; // programs that did not build in a release 
 // to draw everything black with its alpha kept (rgbaInt packs alpha in the top byte)
 let glColorMask = -1;
 // ORed onto the additive color of every quad and onto every poly point's color as a draw is queued; the light system's
-// emissive pass sets a grey with the mask at 0xff000000, so a draw comes out that grey in its own shape
+// emissive pass sets a gray with the mask at 0xff000000, so a draw comes out that gray in its own shape
 let glColorAdditive = 0;
 // a texture drawn into with the canvas's own transform and its size, the light system's lightmap while its pass
 // runs: a target set and ended inside it, like a tile layer redrawn in a renderLight, goes back to it, not the canvas
@@ -752,8 +752,8 @@ function glSetAntialias(antialias=true)
  *  @param {number} [uv0Y]
  *  @param {number} [uv1X]
  *  @param {number} [uv1Y]
- *  @param {number} [rgba=-1] - white is -1
- *  @param {number} [rgbaAdditive=0] - black is 0
+ *  @param {number} [rgba] - white is -1
+ *  @param {number} [rgbaAdditive] - black is 0
  *  @memberof WebGL */
 function glDraw(x, y, sizeX, sizeY, angle=0, uv0X=0, uv0Y=0, uv1X=1, uv1Y=1, rgba=-1, rgbaAdditive=0)
 {

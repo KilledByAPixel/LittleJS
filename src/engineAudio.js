@@ -799,7 +799,7 @@ function getNoteFrequency(semitoneOffset, rootFrequency=220)
  *  @param {number}   [rate] - The playback rate to use
  *  @param {number}   [pan] - How much to apply stereo panning
  *  @param {boolean}  [loop] - True if the sound should loop when it reaches the end
- *  @param {number}   [sampleRate=44100] - Sample rate for the sound
+ *  @param {number}   [sampleRate=audioDefaultSampleRate] - Sample rate for the sound
  *  @param {GainNode} [gainNode] - Optional gain node for volume control while playing (disconnected when the sound ends)
  *  @param {number}   [offset] - Where to start in the sound, in its own seconds whatever the rate
  *  @param {AudioEndedCallback} [onended] - Callback for when the sound ends
@@ -826,7 +826,7 @@ function playSamples(sampleChannels, volume=1, rate=1, pan=0, loop=false, sample
 
 /** Copy arrays of samples into a new audio buffer
  *  @param {Array}  sampleChannels - Array of arrays of samples (for stereo playback)
- *  @param {number} [sampleRate=44100] - Sample rate for the sound
+ *  @param {number} [sampleRate=audioDefaultSampleRate] - Sample rate for the sound
  *  @return {AudioBuffer} - The audio buffer holding the samples
  *  @memberof Audio */
 function createAudioBuffer(sampleChannels, sampleRate=audioDefaultSampleRate)

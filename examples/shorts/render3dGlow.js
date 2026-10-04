@@ -76,7 +76,7 @@ An `Orb` is an `EngineObject3D` with a sphere mesh, `buildSphere(1.5)`,
   everything to 1 for only pure white. The strength is how much glow is
   added, and the size is how far it spreads in pixels. It is called
   after `new Render3DPlugin`.
-- The floor is one grey `buildGrid`. One pillar mesh is built with
+- The floor is one gray `buildGrid`. One pillar mesh is built with
   `buildCylinder(1.5, 5)`, a diameter and a height, colored with
   `setColor`, and shared by six objects placed on a circle 11 units out.
   A cylinder is centered on its position, so y is 2.5 to stand a 5 unit
