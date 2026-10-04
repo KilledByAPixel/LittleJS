@@ -1,0 +1,67 @@
+<!DOCTYPE html><meta charset=utf-8>
+<title>LittleJS smoke: tilt shift and depth of field</title>
+<script src=../../dist/littlejs.js></script>
+<script src=smoke.js></script>
+<pre id=result>PENDING</pre>
+<script>
+'use strict';
+
+// tilt shift keeps its band sharp and blurs above and below, over stripes a pixel wide; a postProcess value moves the
+// band frame to frame with the same shader; depth of field keeps the edge of a box in focus crisp, nothing smeared
+// over the blurred background beside it, and blurs the edge of a box far away
+smokeRun(async ()=>
+{
+    setShowSplashScreen(false);
+    setDebugWatermark(false);
+    setEngineManualStep(true);
+    setCanvasFixedSize(vec2(128));
+    setCanvasClearColor(rgb(0, 0, 0));
+    let stripes = true;
+    await engineInit(()=>
+    {
+        setCameraScale(1);
+        new Render3DPlugin;
+        new PostProcessPlugin(postProcessEffects(postProcessTiltShift(.5, .25, 6)));
+    }, ()=> {}, ()=> {}, ()=> // white columns a pixel wide, a pixel apart, across the whole screen
+    {
+        if (stripes)
+            for (let x = -64; x < 64; x += 2)
+                drawRect(vec2(x + .5, 0), vec2(1, 128), WHITE, 0, true, false);
+    }, ()=> {});
+
+    // the contrast of two neighbouring pixels on a row, high where it is sharp
+    const contrast = (y)=> Math.abs(smokePixel(.5, y)[0] - smokePixel(.5 + 1 / 128, y)[0]);
+    engineStep(2);
+    const band = contrast(.5), edge = contrast(.03);
+    check('tilt shift keeps its band sharp and blurs the bottom', band > 150 && edge < 80, {band, edge});
+
+    postProcess.setShaderCode(postProcessEffects(postProcessTiltShift('focus', .2, 6)));
+    postProcess.values.focus = .1;
+    engineStep(2);
+    const shader = postProcess.shader, low = [contrast(.1), contrast(.9)];
+    postProcess.values.focus = .9;
+    engineStep(2);
+    const high = [contrast(.1), contrast(.9)];
+    check('a value moves the band each frame, with the same shader', low[0] > 150 && low[1] < 60 && high[0] < 60 &&
+        high[1] > 150 && postProcess.shader === shader, {low, high});
+
+    // a box in focus 10 away on the left, one far away on the right, the rest nothing, blurred
+    stripes = false;
+    render3D.depthTexture = true;
+    render3D.camera.pos = vec3();
+    render3D.camera.rotation = vec3();
+    const near = new EngineObject3D(vec3(-3, 0, -10), render3D.boxMesh);
+    near.scale3D = vec3(3, 3, .1); // flat to the camera, so no side shows past its edge
+    const far = new EngineObject3D(vec3(9, 0, -30), render3D.boxMesh);
+    far.scale3D = vec3(9, 9, .1);
+    postProcess.values = {};
+    postProcess.setShaderCode(postProcessEffects(postProcessDepthOfField(10, 3, 8)));
+    engineStep(3);
+    // a pixel and a half past each box's side, where only the background is: dark beside the sharp box, lit beside the far one
+    const at = (x, distance)=> .5 + x / distance / .577 / 2;
+    const besideNear = smokePixel(at(-1.5, 10) + 1.5 / 128, .5)[0], besideFar = smokePixel(at(4.5, 30) - 1.5 / 128, .5)[0];
+    check('depth of field keeps a box in focus crisp and blurs one far away', besideNear < 25 && besideFar > 60,
+        {besideNear, besideFar});
+    checkGLError();
+});
+</script>

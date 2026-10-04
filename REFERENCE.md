@@ -1129,6 +1129,13 @@ postProcessChromatic(strength=.005)          // red and blue split apart toward 
 postProcessGlow(threshold=.6, strength=1, size=6) // the bloom as a piece
 postProcessOutline(color=BLACK, thickness=1, threshold=.02) // lines where the 3D depth jumps, needs
                                              // render3D.depthTexture
+postProcessTiltShift(focus=.5, size=.25, blur=8) // a sharp band across the screen at focus, 0 bottom to 1 top,
+                                             // size its height, blurred above and below, 2D or 3D
+postProcessDepthOfField(focus=10, range=4, blur=8) // sharp at focus world units from the camera, range deep,
+                                             // blurred nearer and farther; needs render3D.depthTexture
+postProcess.values = {focus: .5}             // the game's own values for the shader, a uniform each, set every
+                                             // frame; any effect setting may be such a name, to change it live:
+new PostProcessPlugin(postProcessEffects(postProcessTiltShift('focus'))); postProcess.values.focus = .6; // live
 ```
 
 ## LittleJS 3D Math

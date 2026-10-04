@@ -39,8 +39,8 @@ test('each effect writes its settings into its code', ()=>
 
 test('settings that are not numbers assert', ()=>
 {
-    assert.throws(()=> postProcessScanlines('strong'));
-    assert.throws(()=> postProcessVignette(1, 'far'));
+    assert.throws(()=> postProcessScanlines('very strong')); // a name may be a postProcess value, a phrase may not
+    assert.throws(()=> postProcessVignette(1, ''));
 });
 
 test('the TV look is noise, scanlines, a soft glow and a vignette, with a curve when asked, 0 leaving a part out', ()=>

@@ -37,6 +37,8 @@ export
     postProcessCurve,
     postProcessChromatic,
     postProcessOutline,
+    postProcessTiltShift,
+    postProcessDepthOfField,
     postProcessTV,
 
     // Light System

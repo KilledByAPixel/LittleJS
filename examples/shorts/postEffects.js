@@ -6,6 +6,7 @@ const effects = [
     ['CRT curve', postProcessCurve(.15)],
     ['chromatic aberration', postProcessChromatic(.01)],
     ['glow', postProcessGlow(.5, 2, 8)],
+    ['tilt shift', postProcessTiltShift(.5, .2, 8)],
     ['your own code', 'c.rgb = c.gbr;'],
     ['none', ''],
 ];
@@ -74,6 +75,11 @@ the numbers it was given written into the code:
 - `postProcessGlow(threshold, strength, size)` blurs the bright parts
   back over the picture. The threshold is the brightness where the glow
   starts, and the size is how far it spreads, in pixels.
+- `postProcessTiltShift(focus, size, blur)` keeps a band across the
+  screen sharp and blurs above and below it, the look of a tilt shift
+  lens. The focus is the band's height, 0 at the bottom of the screen
+  and 1 at the top, the size its height, and the blur the widest in
+  pixels. 3D Focus Blur moves the band with the mouse.
 
 The last two entries are plain strings. `'c.rgb = c.gbr;'` is a piece
 written by hand: `c` is the pixel's color, and this gives red the green
@@ -114,5 +120,6 @@ the plugin shades the WebGL canvas, so the words stay sharp.
 ## See also
 Post Processing explains how a piece of your own is written, and WebGL
 Shader draws a whole picture with the plugin. 3D Glow puts bloom on a
-3D scene, and Breakout Game has a post effect over a whole game.
+3D scene, 3D Focus Blur has tilt shift and depth of field, and Breakout
+Game has a post effect over a whole game.
 */
