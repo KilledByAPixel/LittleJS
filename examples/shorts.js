@@ -279,7 +279,7 @@ const exampleList =
     new ExampleInfo('3D Drawing', 'render3dDraw.js', 'Immediate mode, drawn fresh each frame', false, 'immediate, draw, shadow'),
     new ExampleInfo('3D Text', 'render3dText.js', 'Text and sprites extruded into 3D', false, 'text, font, extrude'),
     new ExampleInfo('3D Layers', 'render3dLayers.js', '3D objects in front of and behind 2D', false, 'layers, align2D, renderAfter2D'),
-    new ExampleInfo('3D Mesh', 'render3dMesh.js', 'Load an OBJ or glTF model, or drop one in', false, 'obj, gltf, glb, model, load'),
+    new ExampleInfo('3D Mesh', 'render3dMesh.js', 'Load an OBJ or glTF model, or drop one in', false, 'obj, gltf, glb, model, load, skin, animation'),
     new ExampleInfo('3D Textures', 'render3dTextures.js', 'Repeating, wrapped and mipmapped textures', false, 'texture, uv, wrap, mipmap'),
     new ExampleInfo('3D Focus Blur', 'render3dFocusBlur.js', 'Tilt shift and depth of field, focused with the mouse', false, 'tilt shift, depth of field, dof, blur, focus, bokeh, miniature, post process'),
     new ExampleInfo('3D Glow', 'render3dGlow.js', 'Bloom from the post processing plugin', false, 'bloom, post processing, light'),
