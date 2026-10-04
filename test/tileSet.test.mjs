@@ -67,3 +67,18 @@ test('loading the same image again with the same settings gives back the first l
     assert.deepEqual([run('a === b'), run('a === c'), run('d === e'), run('f === g')], [true, false, true, true]);
     assert.equal(run('jobs'), 2 + 2 + 1, 'hero twice, two tile images, one atlas');
 });
+
+test('a load that failed is not kept, so loading it again tries again', async ()=>
+{
+    const canvas = class { constructor(width, height) { this.width = width; this.height = height; }
+        getContext() { return new Proxy({ canvas: this }, { get: (t, k)=> k in t ? t[k] : ()=> {} }); } };
+    // every image fails, as one does when the server is down, and so does the atlas json
+    const Image = class { set src(v) { Promise.resolve().then(()=> this.onerror()); } };
+    const { run } = loadEngine({ OffscreenCanvas: canvas, Image, fetch: ()=> Promise.reject(new Error('offline')) });
+    run(`glEnable = false; engineInitialized = true; var jobs = 0; const queue = textureSheetQueueJob;
+        textureSheetQueueJob = (...a)=> (++jobs, queue(...a));
+        var a = loadSprite('hero.png'), d = loadTiles(['grass.png'], 16), f = loadAtlas('art.png', 'art.json');`);
+    await run('spritesReady()');
+    run(`var b = loadSprite('hero.png'), e = loadTiles(['grass.png'], 16), g = loadAtlas('art.png', 'art.json');`);
+    assert.deepEqual([run('a === b'), run('d === e'), run('f === g'), run('jobs')], [false, false, false, 6]);
+});

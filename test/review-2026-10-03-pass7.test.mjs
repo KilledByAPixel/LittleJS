@@ -247,3 +247,18 @@ test('a debug build stops at an error, as it shows it', async () =>
     assert.throws(()=> pump(20), /boom/);
     assert.deepEqual([run('frame'), callbacks.length], [3, 0]);
 });
+
+test('a release build clears the frame\'s input after an error, so a key press that threw is not pressed again', async () =>
+{
+    const callbacks = [], errors = [];
+    const { run } = loadEngine({ requestAnimationFrame: (f)=> callbacks.push(f),
+        console: { ...console, error: (e)=> errors.push(String(e)) } }, '', 'littlejs.release.js');
+    run(`setHeadlessMode(true); var updates = 0, cleans = 0, thrown = false; const clean = inputUpdatePost;
+        inputUpdatePost = ()=> { ++cleans; clean(); };`);
+    await run(`engineInit(()=> {}, ()=> { ++updates; if (frame === 3 && !thrown) { thrown = true; throw new Error('boom'); } },
+        ()=> {}, ()=> {}, ()=> {})`);
+    let t = 0;
+    for (let i = 20; i-- && callbacks.length;) callbacks.shift()(t += 1e3 / 60);
+    assert.equal(errors.length, 1);
+    assert.equal(run('cleans'), run('updates'), 'one clean for every update, the one that threw too');
+});

@@ -37,6 +37,8 @@ let textureSheetPendingCount = 0;
 const textureSheetLoaded = new Map;
 // a load's key: what it was given, a vector by its numbers
 const textureSheetLoadKey = (...parts)=> parts.map((p)=> isVector2(p) ? p.x + ',' + p.y : String(p)).join('|');
+// a load whose file failed is forgotten, so loading it again tries again, as when the server comes back
+const textureSheetLoadFailed = (key, loaded)=> textureSheetLoaded.get(key) === loaded && textureSheetLoaded.delete(key);
 
 /**
  * Texture Sheet - A texture that images are packed into as they load
@@ -193,7 +195,8 @@ class TextureSheet
  *  - Pass frameSize for animations, then step through them with TileInfo.frame
  *  - Grid images keep their layout and frames wrap down to the next row
  *  - Pass sourcePadding if the source image has padding baked in around frames
- *  - The same image loaded again with the same settings gives back what the first load did, packed once
+ *  - The same image loaded again with the same settings gives back what the first load did, packed once, unless
+ *    that load failed
  *  @param {string} src - Image source path
  *  @param {Vector2|number} [frameSize] - Size of each animation frame in pixels, or the whole image less its
  *  source padding if not passed
@@ -258,6 +261,7 @@ function loadSprite(src, frameSize, padding=textureSheetPadding, sourcePadding=0
         {
             // leave the tile empty if the image failed to load
             LOG('loadSprite failed to load image:', src);
+            textureSheetLoadFailed(key, tileInfo);
         }
     });
 
@@ -275,7 +279,8 @@ function loadSprite(src, frameSize, padding=textureSheetPadding, sourcePadding=0
  *    is not read, cut it into its tiles first
  *  - An image that fails to load, or that no sheet can hold, adds no tiles and says so in the console, so the tiles
  *    of the images after it move up
- *  - The same images loaded again with the same settings give back what the first load did, packed once
+ *  - The same images loaded again with the same settings give back what the first load did, packed once, unless
+ *    an image of it failed
  *  @param {Array<string>} sources - Image source paths
  *  @param {Vector2|number} [tileSize] - Size of a tile in pixels
  *  @param {number} [padding] - How many pixels padding around each tile on the sheet
@@ -317,6 +322,7 @@ function loadTiles(sources, tileSize=tileDefaultSize, padding=textureSheetPaddin
             // the whole tiles of it, an edge past the last one left out
             const columns = image.width / size.x | 0, rows = image.height / size.y | 0, count = columns * rows;
             const added = count && textureSheetAdd(vec2(columns * size.x, rows * size.y), size, padding, 0);
+            image.width || textureSheetLoadFailed(key, set);
             if (!added)
                 return console.warn('loadTiles: ' + src + (count ? ' does not fit on a texture sheet' :
                     ' failed to load, or is smaller than a tile') + ', its tiles are left out');
@@ -335,7 +341,8 @@ function loadTiles(sources, tileSize=tileDefaultSize, padding=textureSheetPaddin
  *  - Aseprite frame tags become animations, so do names like run_0, run_1
  *  - Trimmed frames are restored to their full source size when packed
  *  - Rotated frames are rotated back upright when packed
- *  - The same atlas loaded again by its paths, with the same padding, gives back what the first load did, packed once
+ *  - The same atlas loaded again by its paths, with the same padding, gives back what the first load did, packed
+ *    once, unless that load failed
  *  @param {string} imageSrc - Atlas image path
  *  @param {string|Object} jsonSrc - Atlas json path, or already parsed json data
  *  @param {number} [padding] - How many pixels padding around each frame
@@ -425,6 +432,7 @@ function loadAtlas(imageSrc, jsonSrc, padding=textureSheetPadding)
         {
             // leave the atlas empty if either file failed to load
             LOG('loadAtlas failed to load:', imageSrc, jsonSrc);
+            textureSheetLoadFailed(key, atlas);
         }
     });
 

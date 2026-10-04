@@ -7,6 +7,8 @@ What changed in each release, newest first. Releases before 1.20.0 are on the
 
 ### Fixes
 
+- A release build going on past an error clears that frame's input, where a key press whose action threw was pressed again every frame
+- `loadSprite`, `loadTiles` and `loadAtlas` forget a load whose file failed, so loading it again tries again, where a failure once was kept for the session
 - glTF: a file the model names in subfolders is found when what is in its folder was dropped, not the folder, and a file found by its name alone may have capitals in it, where both said the file was not among those given; the 3D Mesh short keeps a dropped folder's name when other files come with it
 
 ## 1.24.2 - 2026-10-03

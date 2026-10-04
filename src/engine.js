@@ -732,6 +732,8 @@ function engineScheduleFrame()
             // a release build goes on past an error in a frame, a frozen game is the worst a player can get; only the
             // first is logged, one every frame would flood the console
             engineFrameErrors++ || console.error(error);
+            // the frame's input is cleared as its tick would have, or a key press that threw would be pressed again
+            inputUpdatePost();
             engineScheduleFrame();
         }
     };
