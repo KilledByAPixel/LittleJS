@@ -23,9 +23,11 @@ What changed in each release, newest first. Releases before 1.20.0 are on the
 - A tinted drawTextureWrapped on Canvas2D bakes its tint once and keeps it, where it baked the whole image on every draw, and draws smooth or pixelated as its texture says
 - Level editor: a Save whose file was written is not taken for a failed one when what follows throws, which downloaded a copy; layers a game makes in code again and again no longer pile up in it; a map shrunk from the top drops a point or rectangle on its top edge
 - Docs: align2D with any canvas size, an exported prefab names the prefabs inside it, a large time scale costs as many updates, the engineStep example, and Box2D: the EngineObject physics fields a Box2dObject leaves unused, and why a world made again does not step as a fresh one
+- A medal unlocked before medalsInit stays unlocked and is saved when it is called, where the save it loaded took it back; a later medalsInit with another save name starts from that save
 
 ### Breaking Changes
 
+- Node 22.12 or later for the package's build and tests, the version CI runs; a game in the browser needs no Node at all
 - The Electron example is removed, with Electron and electron-packager from the dev dependencies: a game for the desktop sets up Electron or another wrapper itself, loading its index.html as any page
 - render3d.js is in three files: `render3d.js`, the renderer, then `render3dMesh.js`, meshes and the basic builders, and `render3dObject.js`, EngineObject3D, instancing and lights; nothing changes for a game on a build in `dist`, one that loads the plugins one by one adds the two after `render3d.js`
 

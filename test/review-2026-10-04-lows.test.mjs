@@ -285,3 +285,25 @@ test('a map shrunk from the top drops a point or rectangle object that sat on it
     assert.deepEqual([...run('map.layers[0].objects.map((o)=> o.id)')], [4],
         'the point and rectangle at the top and the tile in the top row go, the one lower down stays');
 });
+
+test('a medal unlocked before medalsInit stays unlocked and is saved once medalsInit is called', ()=>
+{
+    for (const file of [undefined, 'littlejs.release.js'])
+    {
+        const items = {};
+        const { run } = loadEngine({ localStorage: { getItem: (k)=> items[k] ?? null, setItem: (k, v)=> { items[k] = String(v); } } },
+            '', file);
+        run(`var early = new Medal(0, 'Early'), later = new Medal(1, 'Later'); early.unlock(); medalsInit('medals');`);
+        assert.equal(run('early.unlocked'), true, file);
+        assert.equal(run('later.unlocked'), false, file);
+        assert.equal(JSON.parse(items.medals)[0].unlocked, true, 'saved');
+    }
+});
+
+test('a second medalsInit with another save name does not carry the first one\'s unlocks over', ()=>
+{
+    const items = {};
+    const { run } = loadEngine({ localStorage: { getItem: (k)=> items[k] ?? null, setItem: (k, v)=> { items[k] = String(v); } } });
+    run(`var medal = new Medal(0, 'One'); medalsInit('player 1'); medal.unlock(); medalsInit('player 2');`);
+    assert.equal(run('medal.unlocked'), false, 'player 2 has not earned it');
+});

@@ -13,7 +13,7 @@ npm install
 npm run dev
 ```
 
-Requires Node 20.19+ or 22.12+ (Vite 7's requirement; the LittleJS package needs 20.19+ too, for importing its ES module build).
+Requires Node 22.12+, what the LittleJS package and its tools are tested on.
 
 ## Getting started
 

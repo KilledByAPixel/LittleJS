@@ -310,7 +310,7 @@ Key things the template sets up for you:
 - A `public/.nojekyll` marker so GitHub Pages serves Vite's `_`-prefixed chunk files correctly.
 - A full page reload on save instead of partial HMR, since LittleJS has engine-level global state (canvas, WebGL, input listeners, the RAF loop) that doesn't survive a module hot swap. The full reload is a small plugin in `vite.config.js`.
 
-Requires Node 20.19+ or 22.12+ (Vite 7 requirement). Other community projects like [Michael Haynie's LittleJS Jam project](https://github.com/michael-dean-haynie/littlejs-game-jam-2024) are good real-world references for more elaborate Vite setups.
+Requires Node 22.12+. Other community projects like [Michael Haynie's LittleJS Jam project](https://github.com/michael-dean-haynie/littlejs-game-jam-2024) are good real-world references for more elaborate Vite setups.
 
 ### How do I use Box2D with Vite?
 

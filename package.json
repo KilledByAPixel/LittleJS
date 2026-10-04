@@ -52,7 +52,7 @@
     "test:browser": "node test/browser/run.mjs"
   },
   "engines": {
-    "node": "^20.19.0 || >=22.12.0"
+    "node": ">=22.12.0"
   },
   "devDependencies": {
     "bestzip": "^2.2.1",

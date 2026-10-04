@@ -54,13 +54,23 @@ let medalsDisplayQueue = [], medalsSaveName, medalsDisplayTimeLast, medalsRender
  *  - Call this after creating all medals
  *  - Loads which medals are unlocked from the save, and writes the catalog back
  *  - A medal a service like Newgrounds holds is left as it is, see Medal.isLocal
+ *  - A medal unlocked before the first call stays unlocked and is saved by it
  *  @param {string} saveName - The localStorage key the medals are kept under, a different one from the game's own
  *  readSaveData and writeSaveData, or each would overwrite the other
  *  @memberof Medals */
 function medalsInit(saveName)
 {
+    // unlocks from before the first call, which had nowhere to be saved, are kept: medals favour the player; a call
+    // after that, another player's save, starts from its own
+    const early = [];
+    medalsSaveName || medalsForEach((medal)=> medal.unlocked && medal.isLocal() && early.push(medal));
     medalsSaveName = saveName;
     medalsLoad();
+    if (early.length)
+    {
+        early.forEach((medal)=> medal.unlocked = true);
+        medalsSave();
+    }
 
     // add the medal display once, however often this is called
     if (!medalsRenderAdded)
@@ -229,8 +239,7 @@ class Medal
     {
         if (!medalsPreventUnlock && !this.unlocked)
         {
-            ASSERT(medalsSaveName, 'save name must be set');
-            this.unlocked = true;
+            this.unlocked = true; // saved now, or by medalsInit when it comes
             medalsSave();
             medalsDisplayQueue.push(this);
         }
