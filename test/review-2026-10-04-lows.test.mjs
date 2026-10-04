@@ -205,3 +205,83 @@ test('the 3D particle emitter\'s internal methods are private in the d.ts, and p
     assert.match(dts, /private particleCollide\b/);
     assert.match(dts, /function parseAtlas\(data: any\): \{\s*name: string;/);
 });
+
+test('a tinted texture drawn wrapped on Canvas2D is baked once while its tint stays, again when it changes', ()=>
+{
+    // canvases that count their pixel reads, and a main context that keeps its smoothing through save and restore
+    let reads = 0;
+    class OffscreenCanvas
+    {
+        constructor(width, height) { this.width = width; this.height = height; }
+        getContext() { const canvas = this; return { canvas, drawImage() {}, putImageData() {},
+            getImageData: (x, y, w, h)=> (++reads, { data: new Uint8ClampedArray(w * h * 4) }) }; }
+    }
+    class DOMMatrix { translate() { return this; } scale() { return this; } }
+    const smooth = [], saved = [];
+    const context = new Proxy({ imageSmoothingEnabled: false, createPattern: ()=> ({ setTransform() {} }),
+        fillRect() { smooth.push(context.imageSmoothingEnabled); },
+        save() { saved.push(context.imageSmoothingEnabled); }, restore() { context.imageSmoothingEnabled = saved.pop(); } },
+        { get: (target, key)=> key in target ? target[key] : ()=> {}, set: (target, key, value)=> (target[key] = value, true) });
+    const { run } = loadEngine({ OffscreenCanvas, DOMMatrix, Uint8ClampedArray, context });
+    run(`glEnable = false; setCanvasColorTiles(true); setTilesPixelated(true); drawContext = mainContext = context;
+        workReadContext = createCanvasContext(64, 64, true); workReadCanvas = workReadContext.canvas;
+        textureInfos[0] = new TextureInfo({ width: 8, height: 8 }); textureInfos[0].setPixelated(false); textureInfos[0].setWrap(true);
+        const draw = (color)=> drawTextureWrapped(vec2(), vec2(4), vec2(2), 0, color, 0, undefined, false, false, context);
+        draw(RED); draw(RED); draw(RED);`);
+    assert.equal(reads, 1, 'one bake for the same tint');
+    run('drawTextureWrapped(vec2(), vec2(4), vec2(2), 0, BLUE, 0, undefined, false, false, context)');
+    assert.equal(reads, 2, 'a new tint bakes again');
+    assert.deepEqual(smooth, [true, true, true, true], 'drawn smooth as the texture says');
+});
+
+// a headless engine with the 2D editor, a storage and a page path
+async function editorEngine(extra={})
+{
+    const items = {};
+    const engine = loadEngine({ localStorage: { getItem: (k)=> items[k] ?? null, setItem: (k, v)=> { items[k] = String(v); } },
+        location: { pathname: '/game/' }, ...extra });
+    engine.run('setHeadlessMode(true)');
+    await engine.run('setEngineManualStep(true); engineInit(()=> {}, ()=> {}, ()=> {}, ()=> {}, ()=> {})');
+    return engine;
+}
+
+test('a Save whose file was written keeps the file and downloads nothing when what follows the write throws', async ()=>
+{
+    const written = [];
+    const showSaveFilePicker = async (options)=> ({ name: options.suggestedName,
+        createWritable: async ()=> ({ write: async (text)=> written.push(text), close: async ()=> {} }) });
+    const { run } = await editorEngine({ showSaveFilePicker });
+    run(`var map = { width: 2, height: 2, tilewidth: 16, tileheight: 16, tilesets: [{ firstgid: 1 }],
+            layers: [{ type: 'tilelayer', name: 'a', width: 2, height: 2, data: [0, 0, 0, 0] }] };
+        var front = editorLayerRecord(tileLayersLoad(map, undefined, 0, 2)[0]);
+        var downloads = 0; saveText = ()=> ++downloads;
+        editorSetBaseline = ()=> { throw new Error('baseline'); };`);
+    await assert.rejects(run('editorSave(front.record)'), /baseline/, 'the error is its own');
+    assert.equal(written.length, 1);
+    assert.equal(run('downloads'), 0, 'no copy downloaded of a file already written');
+    assert.ok(run('!!front.record.fileHandle'), 'the file is kept for the next Save');
+});
+
+test('layers a game makes in code again and again do not pile up records in the editor once they are gone', async ()=>
+{
+    const { run } = await editorEngine();
+    run(`levelEditor.open();
+        for (let i = 0; i < 30; ++i)
+        {
+            const layer = new TileLayer(vec2(), vec2(4));
+            editorLayers();
+            layer.destroy(); engineObjectsUpdate();
+        }`);
+    assert.ok(run('editorMapList.length') <= 1, 'records: ' + run('editorMapList.length'));
+});
+
+test('a map shrunk from the top drops a point or rectangle object that sat on its top edge', async ()=>
+{
+    const { run } = await editorEngine();
+    run(`var map = { width: 4, height: 4, tilewidth: 16, tileheight: 16, layers: [{ type: 'objectgroup', name: 'o',
+        objects: [{ id: 1, x: 8, y: 0, point: true }, { id: 2, x: 8, y: 0, width: 8, height: 8 },
+            { id: 3, gid: 1, x: 8, y: 16, width: 16, height: 16 }, { id: 4, x: 8, y: 40 }] }] };
+        editorResizeMap(map, 4, 3);`);
+    assert.deepEqual([...run('map.layers[0].objects.map((o)=> o.id)')], [4],
+        'the point and rectangle at the top and the tile in the top row go, the one lower down stays');
+});

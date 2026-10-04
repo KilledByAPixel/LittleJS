@@ -828,12 +828,26 @@ function drawTextureWrapped(pos, size, wrapCount, texture=0, color=WHITE,
     // alpha is baked into pixels by bakeTintedImage's additive branch;
     // in that case globalAlpha must NOT also apply color.a
     const alphaBaked = !noTint && additiveColor && !isBlack(additiveColor);
-    const source = noTint
-        ? textureInfo.image
-        : bakeTintedImage(textureInfo.image, color, additiveColor);
+    let source = textureInfo.image;
+    if (!noTint)
+    {
+        // a bake is a pass over every pixel, so it is kept for the image until its tint changes
+        const key = color.r + ',' + color.g + ',' + color.b + ',' + color.a +
+            (additiveColor ? ',' + additiveColor.r + ',' + additiveColor.g + ',' + additiveColor.b + ',' + additiveColor.a : '');
+        let baked = drawTextureWrappedBakes.get(source);
+        if (baked?.key !== key)
+        {
+            const bakeContext = baked?.context || createCanvasContext(source.width|0, source.height|0, true);
+            bakeTintedImage(source, color, additiveColor, bakeContext);
+            drawTextureWrappedBakes.set(source, baked = {key, context: bakeContext});
+        }
+        source = baked.context.canvas;
+    }
 
     context = context || drawContext;
     context.save();
+    // smooth or pixelated as the texture says, as WebGL draws it
+    textureInfo.pixelated === undefined || (context.imageSmoothingEnabled = !textureInfo.pixelated);
     context.translate(pos.x + .5, pos.y + .5);
     context.rotate(angle);
     context.globalAlpha = alphaBaked ? 1 : color.a;
@@ -1667,23 +1681,26 @@ function tintImageData(data, color, additiveColor)
     return false;
 }
 
-// Internal: bake a color/additive-color tint into workReadCanvas at the
-// image's native resolution. Returns the work canvas, suitable for
-// passing to context.createPattern. Used by drawTextureWrapped's
-// Canvas2D path. Caller is responsible for short-circuiting when no
+// Internal: bake a color/additive-color tint into a context's canvas, the work
+// canvas by default, at the image's native resolution. Returns that canvas,
+// suitable for passing to context.createPattern. Used by drawTextureWrapped's
+// Canvas2D path, which keeps a canvas of its own for each image. Caller is responsible for short-circuiting when no
 // tint is needed (i.e. color is white and additiveColor is black/none).
-function bakeTintedImage(image, color, additiveColor)
+function bakeTintedImage(image, color, additiveColor, context=workReadContext)
 {
     const w = image.width|0, h = image.height|0;
-    workReadCanvas.width = w;
-    workReadCanvas.height = h;
-    workReadContext.drawImage(image, 0, 0);
+    context.canvas.width = w;
+    context.canvas.height = h;
+    context.drawImage(image, 0, 0);
 
-    const imageData = workReadContext.getImageData(0, 0, w, h);
+    const imageData = context.getImageData(0, 0, w, h);
     tintImageData(imageData.data, color, additiveColor);
-    workReadContext.putImageData(imageData, 0, 0);
-    return workReadCanvas;
+    context.putImageData(imageData, 0, 0);
+    return context.canvas;
 }
+
+// the tinted bake drawTextureWrapped keeps for each image, its tint and the context it is in
+const drawTextureWrappedBakes = new WeakMap;
 
 /** Internal: draw an image with color and additive color applied in Canvas2D, drawTile calls it
  *  This is slower than normal drawImage when color is applied

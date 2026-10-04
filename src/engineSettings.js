@@ -472,6 +472,7 @@ function setCameraScale(scale) { cameraScale = scale; }
 
 /** Set scale applied to engine time
  *  - 0 freezes the game like a pause, gameUpdatePost and input still run so the game can set it back
+ *  - Above 1 the fixed step runs that many updates each frame, so a large scale costs as many updates
  *  @param {number} scale - 0 or more
  *  @memberof Settings */
 function setTimeScale(scale)

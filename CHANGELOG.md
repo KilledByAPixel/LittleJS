@@ -20,6 +20,9 @@ What changed in each release, newest first. Releases before 1.20.0 are on the
 - A tween whose callback throws no longer stops the other tweens moving that update, its error coming out after them
 - glTF: parseGLTF takes the bytes as a typed array or a Node Buffer too, and an accessor off its values' alignment, or a sparse one past its buffer, says so by name where it threw a bare RangeError
 - Matrix4.getRotation is exact just short of straight up or down, where it was off by up to 5e-4; getNearestClearNode searches each ring alone, the same node found
+- A tinted drawTextureWrapped on Canvas2D bakes its tint once and keeps it, where it baked the whole image on every draw, and draws smooth or pixelated as its texture says
+- Level editor: a Save whose file was written is not taken for a failed one when what follows throws, which downloaded a copy; layers a game makes in code again and again no longer pile up in it; a map shrunk from the top drops a point or rectangle on its top edge
+- Docs: align2D with any canvas size, an exported prefab names the prefabs inside it, a large time scale costs as many updates, the engineStep example, and Box2D: the EngineObject physics fields a Box2dObject leaves unused, and why a world made again does not step as a fresh one
 
 ### Breaking Changes
 

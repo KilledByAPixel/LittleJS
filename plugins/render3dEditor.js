@@ -3060,7 +3060,8 @@ function editor3DPrefabBoxUpdate(box)
         unpack.title = 'Ctrl+Shift+G: turn this instance into the objects it is made of';
         unpack.onclick = ()=> { editor3DUnpack(); unpack.blur(); };
         const save = editorElement('button', line, press, 'Export');
-        save.title = 'Save the prefab as a file of its own, to load with level3DLoadPrefab';
+        save.title = 'Save the prefab as a file of its own, to load with level3DLoadPrefab; a prefab used inside it ' +
+            'is named by its type, and the game adds that one too';
         save.onclick = ()=>
         {
             saveText(editor3DPrefabJSON(instance.prefabName), instance.prefabName + '.json', 'application/json');

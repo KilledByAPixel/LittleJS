@@ -1954,7 +1954,8 @@ level3DVoxelSetup(tileInfo, (map)=> {})           // The sheet a level's block m
 // Prefabs - a prefab is a small level, objects about its own origin, placed many times under one name. The level
 // editor saves one as it saves a level, so it is the prefab editor too, and there every instance follows its prefab
 level3DAddPrefab(name, prefab)                    // Add {objects: [...]} as a type; its objects may be of other prefabs
-await level3DLoadPrefab(name, url)                // Fetch a prefab file and add it
+await level3DLoadPrefab(name, url)                // Fetch a prefab file and add it; a prefab used inside it is
+                                                  // named by its type, the game adds that one too
 level3DSpawn(type, pos3D, rotation3D, scale3D, properties) // Make one object of any type from code, a prefab's
                                                   // instance or a plain type; rotation in radians
 prefab = new Prefab3D                             // what a prefab's type makes, a handle that draws nothing:
@@ -2053,6 +2054,11 @@ obj.syncMesh()                 // copy the 2D transform to the mesh
   read only, move it with `setPosition`, `setAngle` or `setTransform` and push it with velocities and forces
 - Joints, raycasting, polygon/circle/edge fixtures
 - Angular values are clockwise like `angle`: angular velocity, torque, joint angles and limits, motor speeds
+- The EngineObject's own `velocity`, `angleVelocity`, `mass`, `damping` and `gravityScale` go unused on a
+  Box2dObject: use `getLinearVelocity`, `setLinearVelocity`, `setAngularVelocity`, `setMass`, `setLinearDamping` and
+  `setGravityScale`
+- A world made again after `engineObjectsDestroy` does not step exactly as a fresh one, as Box2D reuses its ids, so
+  a replay or a lockstep game that needs the same steps every time reloads the page
 - See `examples/box2d/` for a full demo
 
 ```javascript

@@ -1572,7 +1572,8 @@ class Camera3D
         this.far = 1e3;
         /** @property {number} - Visible height in world units for an orthographic view, 0 is perspective */
         this.orthographic = 0;
-        /** @property {boolean} - Line the 3D camera up with the 2D camera, so 3D things at z=0 sit on the 2D sprites */
+        /** @property {boolean} - Line the 3D camera up with the 2D camera, so 3D things at z=0 sit on the 2D sprites;
+         *  it lines up with the 2D view of the main canvas, whatever canvas size a screenToRay is given */
         this.align2D = false;
     }
 

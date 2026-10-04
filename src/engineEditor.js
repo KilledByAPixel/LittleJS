@@ -659,6 +659,8 @@ function editorLayerRecord(live)
     const record = {map, synthetic: true, fileName: 'level.json', layers: []};
     const layer = {record, source, live, color: WHITE};
     record.layers.push(layer);
+    // the records of layers made in code that are gone, as a game that makes them again on a restart leaves them
+    editorRetire((other)=> other.synthetic && other.layers.every((l)=> l.live.destroyed));
     editorMapList.push(record);
     return layer;
 }
@@ -784,6 +786,7 @@ async function editorSave(record, pickAgain=false)
 async function editorSaveText(record, text, pickAgain)
 {
     const picker = /** @type {any} */ (globalThis).showSaveFilePicker;
+    let written = false;
     if (picker)
     {
         try
@@ -799,10 +802,7 @@ async function editorSaveText(record, text, pickAgain)
             const writable = await record.fileHandle.createWritable();
             await writable.write(text);
             await writable.close();
-            // the browser gives the picked file's name but not its folder, so the name is what says it is the map's
-            if (record.fileHandle.name === record.fileName)
-                editorSetBaseline(record, JSON.parse(text));
-            return 'written';
+            written = true;
         }
         catch (error)
         {
@@ -811,6 +811,14 @@ async function editorSaveText(record, text, pickAgain)
             editorFileStore.set(editorFileKey(record), undefined);
             console.warn(`LittleJS editor: ${record.fileName} could not be written, downloaded instead`, error);
         }
+    }
+    if (written)
+    {
+        // outside the write's catch, so an error here is its own and not a failed write that downloads a copy;
+        // the browser gives the picked file's name but not its folder, so the name is what says it is the map's
+        if (record.fileHandle.name === record.fileName)
+            editorSetBaseline(record, JSON.parse(text));
+        return 'written';
     }
     saveText(text, record.fileName, 'application/json');
     return 'downloaded';
@@ -1048,7 +1056,9 @@ function editorResizeMap(map, width, height)
     }
     // an object on the map before and off it after is dropped, one that was already off it stays
     const {tilewidth=1, tileheight=1} = map, oldHeight = map.height;
-    const inside = (object, w, h)=> object.x >= 0 && object.x < w * tilewidth && object.y > 0 && object.y <= h * tileheight;
+    // a tile object's y is its bottom, a point's or a rectangle's its top
+    const inside = (object, w, h)=> object.x >= 0 && object.x < w * tilewidth && (object.gid === undefined ?
+        object.y >= 0 && object.y < h * tileheight : object.y > 0 && object.y <= h * tileheight);
     for (const group of editorObjectGroups(map.layers))
     {
         group.objects &&= group.objects.filter((object)=>
