@@ -135,3 +135,15 @@ test('a glTF in a folder of a drop finds its files from that folder, before any 
     // a name in the drop twice, and neither in the model's folder, is not guessed
     await assert.rejects(parseGLTF(splitModel('mesh.bin').model, 'Lone/', files), /more than one/);
 });
+
+test('a file found by its name keeps its capitals, and one whose path lost its top folders in the drop is found by the rest', async ()=>
+{
+    const {model, buffer} = splitModel('Assets/Models/Adam_Mesh.bin');
+    const blob = new Blob([buffer]);
+    // dropped as loose files, the name alone, with capitals
+    assert.equal((await parseGLTF(model, '', new Map([['Adam_Mesh.bin', blob]]))).parts.length, 1, 'by its name');
+    // the contents of the model's folder dropped, so the Assets folder's own name is not in the paths, and a file of
+    // the same name elsewhere, so the name alone can not say which
+    const files = new Map([['Models/Adam_Mesh.bin', blob], ['Other/Adam_Mesh.bin', new Blob([new ArrayBuffer(4)])]]);
+    assert.equal((await parseGLTF(model, '', files)).parts.length, 1, 'by the end of its path');
+});

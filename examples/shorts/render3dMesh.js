@@ -88,8 +88,10 @@ async function droppedFiles(dataTransfer)
     };
     const entries = [...dataTransfer.items]
         .map((item)=> item.webkitGetAsEntry?.()).filter((entry)=> entry);
+    // a folder dropped alone is the top of the paths, one dropped with
+    // other files is a folder in them, its name kept
     for (const entry of entries)
-        await read(entry, '');
+        await read(entry, entry.isFile || entries.length < 2 ? '' : entry.name);
     if (!files.size) // a browser that gives no entries gives the files
         for (const file of loose)
             add(file.name, file);

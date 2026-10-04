@@ -682,11 +682,16 @@ function gltfFetch(uri, baseUrl, files)
         const path = clean(baseUrl + name);
         if (path === undefined)
             return Promise.reject(new Error('glTF needs ' + name + ', which is above the files given'));
-        const lower = path.toLowerCase(), file = path.slice(path.lastIndexOf('/') + 1);
+        const lower = path.toLowerCase(), file = lower.slice(lower.lastIndexOf('/') + 1);
         const byPath = new Map([...files].map(([key, value])=> [clean(key)?.toLowerCase(), value]));
         const found = files.get(path) ?? byPath.get(lower), keys = [...byPath.keys()];
         if (found)
             return Promise.resolve(new Response(found));
+        // what is in a folder dropped, not the folder, leaves the folder's own name out of the paths: the longest key
+        // the path ends with, a folder and more, as a name alone is only taken when one file has it
+        const end = keys.filter((k)=> k?.includes('/') && lower.endsWith('/' + k)).sort((a, b)=> b.length - a.length)[0];
+        if (end)
+            return Promise.resolve(new Response(byPath.get(end)));
         const named = new Set(keys.filter((k)=> k?.slice(k.lastIndexOf('/') + 1) === file).map((k)=> byPath.get(k)));
         if (named.size === 1)
             return Promise.resolve(new Response([...named][0]));
