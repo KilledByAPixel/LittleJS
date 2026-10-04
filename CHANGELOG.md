@@ -8,6 +8,7 @@ What changed in each release, newest first. Releases before 1.20.0 are on the
 ### New Changes
 
 - glTF skinned animation: a rigged character plays its animations, its mesh bent by its joints each frame, four a vertex, on the CPU, so shadows, picking and custom shaders work with it; `object.play(name, loop, speed, blend)` cross-fades from the pose it is in over `blend` seconds, and `object.getJointMatrix(name)` gives a joint's place to hang a sword on a hand
+- The 3D Mesh example steps through a dropped model's animations with two buttons or the arrow keys, each cross-faded from the one before
 
 ### Fixes
 

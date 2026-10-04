@@ -21,8 +21,9 @@ f 5 9 6
 f 7 10 8
 `;
 
-const modelSize = 5;
+const modelSize = 5, blendTime = .3; // seconds to cross-fade animations
 let model, asset, modelName = 'house'; // asset: the Mesh or GLTFModel shown
+let animation = 0, animationButtons; // which animation plays, and buttons
 
 function gameInit()
 {
@@ -36,6 +37,17 @@ function gameInit()
     render3D.shadowRange = modelSize * 2;
     render3D.shadowCenter = vec3(0, modelSize/2, 0);
     new CameraControl3D(vec3(0,1,0), 10, .4);
+
+    // buttons along the bottom step through a glTF's animations
+    new UISystemPlugin;
+    const button = (x, text, step)=>
+    {
+        const b = new UIButton(vec2(x, -50), vec2(80, 60), text);
+        b.anchor = vec2(0, 1); // from the middle of the bottom edge
+        b.onClick = ()=> playAnimation(step);
+        return b;
+    };
+    animationButtons = [button(-60, '<', -1), button(60, '>', 1)];
 
     // checkerboard floor and the model
     const checker = (x, z)=> hsl(0, 0, (x+z)/2&1 ? .6 : .4);
@@ -115,10 +127,27 @@ function setModel(loaded)
     else
         model = new EngineObject3D(pos, loaded, undefined, hsl(.1,.6,.7));
     model.angleVelocity3D = vec3(0, .005);
+
+    // the buttons show for a model with more than one animation
+    animation = 0;
+    for (const b of animationButtons)
+        b.visible = asset.animations?.length > 1;
+}
+
+// play the next or the last animation, cross-faded from the one before
+function playAnimation(step)
+{
+    const count = asset.animations?.length;
+    if (!count) return;
+    animation = mod(animation + step, count);
+    model.play(animation, true, 1, blendTime);
 }
 
 function gameUpdate()
 {
+    // the arrow keys step through the animations too
+    keyWasPressed('ArrowLeft') && playAnimation(-1);
+    keyWasPressed('ArrowRight') && playAnimation(1);
     if (keyWasPressed('Space')) // space toggles shading
     {
         render3D.smoothShading = !render3D.smoothShading;
@@ -132,6 +161,13 @@ function gameRenderPost()
     const text = 'drop an .obj, .glb or .gltf file / space: toggle shading / '
         + modelName;
     drawTextScreen(text, vec2(mainCanvasSize.x/2, 40), 30, BLACK);
+
+    // the animation playing, above the buttons
+    const animations = asset.animations;
+    if (animations?.length > 1)
+        drawTextScreen(`${animations[animation].name}, ${animation + 1} of ` +
+            animations.length, vec2(mainCanvasSize.x/2, mainCanvasSize.y - 140),
+            24, BLACK);
 }
 
 /* info
@@ -139,7 +175,9 @@ A model viewer. It starts with a small house written as OBJ text in the
 code, and shows any `.obj` or `.glb` file dropped on the page, or a
 `.gltf` dropped with its `.bin` and image files, or in its folder.
 Space switches between flat and smooth shading. Drag to turn the camera
-and roll the wheel to zoom.
+and roll the wheel to zoom. A model with several animations, like a
+rigged character's walk and run, gets two buttons at the bottom, or the
+arrow keys, to step through them, each cross-faded from the one before.
 
 ## How it works
 ### The OBJ text
@@ -194,6 +232,18 @@ its longest side is 5 units. Both exist on a `Mesh` and on a
 `model?.destroy(true)` removes the model shown before. Destroying an
 object destroys its children too.
 
+### The animation buttons
+`new UISystemPlugin` turns on the UI, and two `UIButton` objects step
+through the model's animations. A button's `anchor` of `vec2(0, 1)`
+places it from the middle of the bottom edge of the screen, its position
+an offset from there, so the buttons stay put when the window resizes.
+`setModel` shows them only when the model has more than one animation.
+
+`playAnimation` calls `model.play(index, loop, speed, blend)`. The last
+argument is the blend time in seconds: the model fades from the pose it
+is in to the new animation over that time, the old one going on as it
+fades. 0 would switch at once.
+
 ### gameUpdate
 `render3D.smoothShading` is the default the mesh builders and
 `parseOBJ` use. Changing it does nothing to a mesh that is already made, so
@@ -206,6 +256,8 @@ the light across the faces.
 - Raise the roof: change both `2.2` in the OBJ text to `3.5`.
 - Change `shadowMapSize = 2048` to `128` to see a coarse shadow map.
 - Change `vec3(0, .005)` to `vec3(0, .05)` to spin the model faster.
+- Change `blendTime = .3` to `2`, drop a model with several
+  animations, and step through them to watch each fade slowly.
 
 ## See also
 3D Shapes and 3D Mesh Operations make meshes in code. 3D Textures and
