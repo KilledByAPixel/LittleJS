@@ -35,7 +35,7 @@ const engineName = 'LittleJS';
  *  @type {string}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.24.2';
+const engineVersion = '1.24.3';
 
 /** Frames per second to update
  *  @type {number}
@@ -168,7 +168,7 @@ let timeFixedStart = 0, frameFixedStart = 0;
 let windowWidthLast = 0, windowHeightLast = 0, windowPixelRatioLast = 0;
 let engineUpdateInternal; // assigned by engineInit so engineStep can drive it
 let engineFrameScheduled = false; // a frame of the loop is asked for and has not run yet
-let engineFrameErrors = 0; // errors a release build's loop went on past
+let engineFrameErrorLast; // the last error a release build's loop went on past, as text
 
 // the pairs of objects asked about a collision this update, so the other's own physics does not ask again: each
 // asker's others, with true for a pair both said to resolve, and false for one left overlapping, ignored or only
@@ -422,20 +422,30 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
                 frameTimeBufferMS = 0;
             }
 
-            // update multiple frames if necessary in case of slow framerate
-            for (; frameTimeBufferMS >= 0; frameTimeBufferMS -= 1e3 / frameRate)
+            // update multiple frames if necessary in case of slow framerate; a tick that throws still spends its time
+            // and the smoothing still comes back, so a release build going on past an error each tick keeps its rate
+            try
             {
-                // read again each tick, so a pause set by the game stops the rest of this frame's catch-up ticks
-                const frozenTick = paused || !(timeScale * debugScale);
+                while (frameTimeBufferMS >= 0)
+                {
+                    try
+                    {
+                        // read again each tick, so a pause set by the game stops the rest of this frame's catch-up ticks
+                        const frozenTick = paused || !(timeScale * debugScale);
 
-                // increment frame and update time, frozen does not advance time
-                if (!frozenTick)
-                    time = timeFixedStart + (frame++ - frameFixedStart) / frameRate;
-                engineTick(frozenTick);
+                        // increment frame and update time, frozen does not advance time
+                        if (!frozenTick)
+                            time = timeFixedStart + (frame++ - frameFixedStart) / frameRate;
+                        engineTick(frozenTick);
+                    }
+                    finally { frameTimeBufferMS -= 1e3 / frameRate; }
+                }
             }
-
-            // add the time smoothing back in
-            frameTimeBufferMS += deltaSmooth;
+            finally
+            {
+                // add the time smoothing back in
+                frameTimeBufferMS += deltaSmooth;
+            }
         }
 
         // one tick of the loop: update game and objects, when frozen update everything except them
@@ -732,9 +742,13 @@ function engineScheduleFrame()
         try { engineUpdateInternal(frameTimeMS); }
         catch (error)
         {
-            // a release build goes on past an error in a frame, a frozen game is the worst a player can get; only the
-            // first is logged, one every frame would flood the console
-            engineFrameErrors++ || console.error(error);
+            // a release build goes on past an error in a frame, a frozen game is the worst a player can get; an error
+            // is logged when it is not the last one again, one every frame would flood the console
+            const text = String(error);
+            text === engineFrameErrorLast || console.error(error);
+            engineFrameErrorLast = text;
+            // the frame's input is cleared as its tick would have, or a key press that threw would be pressed again
+            inputUpdatePost();
             engineScheduleFrame();
         }
     };
@@ -5187,10 +5201,13 @@ function tile(index=0, size=tileDefaultSize, texture=0, padding=tileDefaultPaddi
     // create tile info object
     const textureInfo = typeof texture === 'number' ?
         textureInfos[texture] : texture;
-    if (headlessMode && !textureInfo?.size.x)
-        return new TileInfo(new Vector2, size.copy(), textureInfo, padding, bleed); // no image loaded, no place in it
-    ASSERT(textureInfo instanceof TextureInfo, 'tile texture is not loaded');
-    ASSERT(textureInfo.size.x > 0, 'tile texture is not loaded');
+    if (!textureInfo?.size.x)
+    {
+        // no image: headless loads none and keeps the size; an image that failed to load, whose warning named it, gives
+        // a tile of no size, which draws nothing; a slot never given an image is a mistake a debug build points out
+        ASSERT(headlessMode || textureInfo instanceof TextureInfo, 'tile texture is not loaded', texture);
+        return new TileInfo(new Vector2, headlessMode ? size.copy() : new Vector2, textureInfo, padding, bleed);
+    }
 
     // get the position of the tile
     const sizePaddedX = size.x + padding*2;
@@ -5658,8 +5675,8 @@ function drawTile(pos, size=vec2(1), tileInfo, color=WHITE,
     if (headlessMode && !context) return; // headless has no canvas, only a context passed in is drawn to
 
     const textureInfo = tileInfo?.textureInfo;
-    if (textureInfo && !(tileInfo.size.x && tileInfo.size.y))
-        return; // a tile with no area draws nothing, like a sprite still loading
+    if (textureInfo && !(tileInfo.size.x && tileInfo.size.y && textureInfo.size.x))
+        return; // a tile with no area draws nothing, like a sprite still loading, and nor does an image that failed
     const bleed = tileInfo?.bleed ?? 0;
     if (useWebGL && glEnable)
     {
@@ -5753,7 +5770,7 @@ function drawRect(pos, size, color, angle, useWebGL, screenSpace, context)
  *  @param {boolean} [screenSpace=drawScreenSpace]
  *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context]
  *  @memberof Draw */
-function drawRectGradient(pos, size, colorTop=WHITE, colorBottom=CLEAR_WHITE, angle=0, useWebGL=glEnable, screenSpace=drawScreenSpace, context)
+function drawRectGradient(pos, size=vec2(1), colorTop=WHITE, colorBottom=CLEAR_WHITE, angle=0, useWebGL=glEnable, screenSpace=drawScreenSpace, context)
 {
     ASSERT(isVector2(pos), 'pos must be a vec2');
     ASSERT(isVector2(size), 'size must be a vec2');
@@ -6748,8 +6765,7 @@ function bakeTintedImage(image, color, additiveColor)
  *  @param {number} dHeight
  *  @param {Color} color
  *  @param {Color} [additiveColor]
- *  @param {number} [bleed] - How many pixels to shrink the source, used to fix bleeding
- *  @memberof Draw */
+ *  @param {number} [bleed] - How many pixels to shrink the source, used to fix bleeding */
 function drawImageColor(context, image, sx, sy, sWidth, sHeight, dx, dy, dWidth, dHeight, color, additiveColor, bleed=0)
 {
     const sx2 = bleed;
@@ -7575,8 +7591,9 @@ function inputInit()
         if (soundEnable && !headlessMode && audioContext && !audioIsRunning())
             audioContext.resume();
 
-        // a press in the bars around a letterboxed canvas is not one on its edge; a drag out of it still moves
-        if (!inCanvas(e.x, e.y))
+        // a press in the bars around a letterboxed canvas is not one on its edge; a drag out of it still moves; under
+        // pointer lock the mouse stays where the lock began, which may be in a bar, and every click is the game's
+        if (!pointerLockIsActive() && !inCanvas(e.x, e.y))
             return;
         inputData[0][e.button] = 3;
 
@@ -7993,9 +8010,11 @@ function inputUpdate()
                     (gamepadIsDown(12,i)&&1) - (gamepadIsDown(13,i)&&1));
             }
 
-            // copy dpad to left analog stick when pressed
+            // copy dpad to left analog stick when pressed; a gamepad with no sticks has that one, at rest when not
             if (gamepadDirectionEmulateStick && (dpad.x || dpad.y))
                 sticks[0] = dpad.clampLength();
+            else if (gamepadDirectionEmulateStick && !sticks.length)
+                sticks[0] = vec2();
         }
 
         // disable touch gamepad if using real gamepad
@@ -8742,7 +8761,7 @@ class Sound
      */
     constructor(asset, randomness, range, taper=soundDefaultTaper, onloadCallback)
     {
-        if (!soundEnable || headlessMode)
+        if (!soundEnable || headlessMode || !audioContext) // a browser with no audio makes none either
         {
             // no sound is made: it counts as loaded, so a game that waits for its sounds goes on
             this.loadedPercent = 1;
@@ -8812,8 +8831,8 @@ class Sound
             // load the audio file, a URL object as bundlers give works like its string;
             // report failures rather than leaving an unhandled rejection, the sound just stays unloaded and silent
             const filename = asset + '';
-            engineAddLoad(this.loadSound(filename).catch(e=>
-                LOG('Sound load failed for', filename, '-', e.message))); // startup waits for it
+            engineAddLoad(this.loadSound(filename).catch(e=> // startup waits for it, and a release build says why too
+                console.warn('Sound load failed for', filename, '-', e?.message ?? e)));
         }
     }
 
@@ -11862,7 +11881,7 @@ function glSetTextureWrap(texture, wrap=true)
 /** Compile WebGL shader of the given type, will throw errors if in debug mode
  *  @param {string} source
  *  @param {number} type
- *  @return {WebGLShader}
+ *  @return {WebGLShader|undefined} - undefined with no WebGL
  *  @memberof WebGL */
 function glCompileShader(source, type)
 {
@@ -11882,7 +11901,7 @@ function glCompileShader(source, type)
 /** Create WebGL program with given shaders
  *  @param {string} vsSource
  *  @param {string} fsSource
- *  @return {WebGLProgram}
+ *  @return {WebGLProgram|undefined} - undefined with no WebGL
  *  @memberof WebGL */
 function glCreateProgram(vsSource, fsSource)
 {
@@ -11930,7 +11949,7 @@ function glShaderProgram(shader)
  *  @param {HTMLImageElement|HTMLCanvasElement|OffscreenCanvas|ImageBitmap} [image]
  *  @param {boolean|Array<number>} [wrap] - true for REPEAT, false for CLAMP_TO_EDGE, or the WebGL modes across and down
  *  @param {boolean} [pixelated] - Hard edged or smooth, undefined follows tilesPixelated
- *  @return {WebGLTexture}
+ *  @return {WebGLTexture|undefined} - undefined with no WebGL
  *  @memberof WebGL */
 function glCreateTexture(image, wrap=false, pixelated=tilesPixelated)
 {
@@ -17790,7 +17809,7 @@ class Box2dObject extends EngineObject
      *  @param {number} angle */
     setTransform(pos, angle)
     {
-        this.pos = pos.copy();
+        this.pos.set(pos.x, pos.y); // its own pos kept, as an EngineObject's is
         this.angle = angle;
         // box2d uses reverse angle
         const x = pos.x, y = pos.y;
@@ -17806,7 +17825,7 @@ class Box2dObject extends EngineObject
      *  @param {Vector2} pos */
     setPosition(pos)
     {
-        this.pos = pos.copy();
+        this.pos.set(pos.x, pos.y); // its own pos kept, as an EngineObject's is
         const x = pos.x, y = pos.y;
         box2dWhenUnlocked(()=>
         {
@@ -19307,7 +19326,8 @@ class Box2dPlugin
         return box2d.raycastAll(start, end, includeSensors)[0];
     }
 
-    /** box aabb cast and return all the objects
+    /** Every object whose shapes' bounding boxes overlap a box, not the shapes themselves, so near the corner of a
+     *  turned box or a circle it finds one the box does not touch; use pointCast or a raycast for exact
      *  @param {Vector2} pos
      *  @param {Vector2} size
      *  @param {boolean} [includeSensors] - Also find sensors, trigger zones are passed through by default
@@ -19337,7 +19357,8 @@ class Box2dPlugin
         return queryObjects;
     }
 
-    /** box aabb cast and return the first object
+    /** The first object whose shapes' bounding boxes overlap a box, not the shapes themselves, so near the corner of
+     *  a turned box or a circle it finds one the box does not touch; use pointCast or a raycast for exact
      *  @param {Vector2} pos
      *  @param {Vector2} size
      *  @param {boolean} [includeSensors] - Also find sensors, trigger zones are passed through by default
@@ -19597,8 +19618,10 @@ async function box2dInit()
         {
             if (o.body)
             {
+                // moved in place, as the engine moves an EngineObject's pos, so what holds it follows the body;
                 // box2d uses reverse angle
-                o.pos = box2d.vec2From(o.body.GetPosition());
+                const p = o.body.GetPosition();
+                o.pos.set(p.get_x(), p.get_y());
                 o.angle = -o.body.GetAngle();
             }
         }
@@ -20094,6 +20117,8 @@ let textureSheetPendingCount = 0;
 const textureSheetLoaded = new Map;
 // a load's key: what it was given, a vector by its numbers
 const textureSheetLoadKey = (...parts)=> parts.map((p)=> isVector2(p) ? p.x + ',' + p.y : String(p)).join('|');
+// a load whose file failed is forgotten, so loading it again tries again, as when the server comes back
+const textureSheetLoadFailed = (key, loaded)=> textureSheetLoaded.get(key) === loaded && textureSheetLoaded.delete(key);
 
 /**
  * Texture Sheet - A texture that images are packed into as they load
@@ -20250,7 +20275,8 @@ class TextureSheet
  *  - Pass frameSize for animations, then step through them with TileInfo.frame
  *  - Grid images keep their layout and frames wrap down to the next row
  *  - Pass sourcePadding if the source image has padding baked in around frames
- *  - The same image loaded again with the same settings gives back what the first load did, packed once
+ *  - The same image loaded again with the same settings gives back what the first load did, packed once, unless
+ *    that load failed
  *  @param {string} src - Image source path
  *  @param {Vector2|number} [frameSize] - Size of each animation frame in pixels, or the whole image less its
  *  source padding if not passed
@@ -20305,7 +20331,7 @@ function loadSprite(src, frameSize, padding=textureSheetPadding, sourcePadding=0
             if (!added)
             {
                 // leave the tile empty, no sheet can hold it
-                LOG('loadSprite image is too large to fit on a texture sheet:', src);
+                console.warn('loadSprite image is too large to fit on a texture sheet:', src);
                 return;
             }
             Object.assign(tileInfo, added.tile);
@@ -20314,7 +20340,8 @@ function loadSprite(src, frameSize, padding=textureSheetPadding, sourcePadding=0
         else
         {
             // leave the tile empty if the image failed to load
-            LOG('loadSprite failed to load image:', src);
+            console.warn('loadSprite failed to load image:', src);
+            textureSheetLoadFailed(key, tileInfo);
         }
     });
 
@@ -20332,7 +20359,8 @@ function loadSprite(src, frameSize, padding=textureSheetPadding, sourcePadding=0
  *    is not read, cut it into its tiles first
  *  - An image that fails to load, or that no sheet can hold, adds no tiles and says so in the console, so the tiles
  *    of the images after it move up
- *  - The same images loaded again with the same settings give back what the first load did, packed once
+ *  - The same images loaded again with the same settings give back what the first load did, packed once, unless
+ *    an image of it failed
  *  @param {Array<string>} sources - Image source paths
  *  @param {Vector2|number} [tileSize] - Size of a tile in pixels
  *  @param {number} [padding] - How many pixels padding around each tile on the sheet
@@ -20374,6 +20402,7 @@ function loadTiles(sources, tileSize=tileDefaultSize, padding=textureSheetPaddin
             // the whole tiles of it, an edge past the last one left out
             const columns = image.width / size.x | 0, rows = image.height / size.y | 0, count = columns * rows;
             const added = count && textureSheetAdd(vec2(columns * size.x, rows * size.y), size, padding, 0);
+            image.width || textureSheetLoadFailed(key, set);
             if (!added)
                 return console.warn('loadTiles: ' + src + (count ? ' does not fit on a texture sheet' :
                     ' failed to load, or is smaller than a tile') + ', its tiles are left out');
@@ -20392,7 +20421,8 @@ function loadTiles(sources, tileSize=tileDefaultSize, padding=textureSheetPaddin
  *  - Aseprite frame tags become animations, so do names like run_0, run_1
  *  - Trimmed frames are restored to their full source size when packed
  *  - Rotated frames are rotated back upright when packed
- *  - The same atlas loaded again by its paths, with the same padding, gives back what the first load did, packed once
+ *  - The same atlas loaded again by its paths, with the same padding, gives back what the first load did, packed
+ *    once, unless that load failed
  *  @param {string} imageSrc - Atlas image path
  *  @param {string|Object} jsonSrc - Atlas json path, or already parsed json data
  *  @param {number} [padding] - How many pixels padding around each frame
@@ -20447,7 +20477,7 @@ function loadAtlas(imageSrc, jsonSrc, padding=textureSheetPadding)
                 const added = textureSheetAdd(blockSize, sourceSize, padding);
                 if (!added)
                 {
-                    LOG('loadAtlas frames are too large to fit on a texture sheet:', group.name);
+                    console.warn('loadAtlas frames are too large to fit on a texture sheet:', group.name);
                     continue;
                 }
                 const {sheet, tile} = added;
@@ -20481,7 +20511,8 @@ function loadAtlas(imageSrc, jsonSrc, padding=textureSheetPadding)
         else
         {
             // leave the atlas empty if either file failed to load
-            LOG('loadAtlas failed to load:', imageSrc, jsonSrc);
+            console.warn('loadAtlas failed to load:', imageSrc, jsonSrc);
+            textureSheetLoadFailed(key, atlas);
         }
     });
 
@@ -28924,9 +28955,9 @@ class HeightMap extends EngineObject3D
     levelSegment3D(from, to)
     {
         const m = this.pos3D, size = this.mapSize;
-        if (abs(to.x - m.x) > size.x / 2 || abs(to.z - m.z) > size.y / 2) return; // off the map
+        if (abs(to.x - m.x) > size.x / 2 || abs(to.z - m.z) > size.y / 2) return undefined; // off the map
         const a = from.y - this.getHeight(from.x, from.z), b = to.y - this.getHeight(to.x, to.z);
-        if (a < 0 || b >= 0) return; // above all the way, or under from the start
+        if (a < 0 || b >= 0) return undefined; // above all the way, or under from the start
         const distance = a / (a - b);
         return {distance, normal: this.getNormal(from.x + (to.x - from.x) * distance, from.z + (to.z - from.z) * distance)};
     }
@@ -29964,9 +29995,11 @@ class LensFlare3D extends EngineObject3D
         return this.made;
     }
 
-    // what the flare is of, seen from the camera: the way to it, how far it is, Infinity for the sun and for a
-    // directional light, which shines from its place toward the origin, and a point to find it on the screen by;
-    // undefined with no direction, or a light that is gone or at the camera
+    /** What the flare is of, seen from the camera: the way to it, how far it is, Infinity for the sun and for a
+     *  directional light, which shines from its place toward the origin, and a point to find it on the screen by;
+     *  undefined with no direction, or a light that is gone or at the camera
+     *  @return {{direction: Vector3, distance: number, pos: Vector3}|undefined}
+     *  @ignore */
     flareSource()
     {
         const camera = render3D.camera.pos, light = this.light;
@@ -29982,9 +30015,11 @@ class LensFlare3D extends EngineObject3D
         return distance ? {direction: offset.scale(1 / distance), distance, pos} : undefined;
     }
 
-    // how the flare would show with nothing in the way: where its source is on the screen, how strong it is there,
-    // fading as it leaves the screen, its tint and the height its sizes are parts of; undefined when it would not
-    // show at all, behind the camera, off the screen, or of a light that is off or seen from outside its cone
+    /** How the flare would show with nothing in the way: where its source is on the screen, how strong it is there,
+     *  fading as it leaves the screen, its tint and the height its sizes are parts of; undefined when it would not
+     *  show at all, behind the camera, off the screen, or of a light that is off or seen from outside its cone
+     *  @return {{sun: Vector2, center: Vector2, strength: number, tint: Color, height: number}|undefined}
+     *  @ignore */
     flareLook()
     {
         const source = this.flareSource(), center = mainCanvasSize.scale(.5);
@@ -33285,11 +33320,16 @@ function gltfFetch(uri, baseUrl, files)
         const path = clean(baseUrl + name);
         if (path === undefined)
             return Promise.reject(new Error('glTF needs ' + name + ', which is above the files given'));
-        const lower = path.toLowerCase(), file = path.slice(path.lastIndexOf('/') + 1);
+        const lower = path.toLowerCase(), file = lower.slice(lower.lastIndexOf('/') + 1);
         const byPath = new Map([...files].map(([key, value])=> [clean(key)?.toLowerCase(), value]));
         const found = files.get(path) ?? byPath.get(lower), keys = [...byPath.keys()];
         if (found)
             return Promise.resolve(new Response(found));
+        // what is in a folder dropped, not the folder, leaves the folder's own name out of the paths: the longest key
+        // the path ends with, a folder and more, as a name alone is only taken when one file has it
+        const end = keys.filter((k)=> k?.includes('/') && lower.endsWith('/' + k)).sort((a, b)=> b.length - a.length)[0];
+        if (end)
+            return Promise.resolve(new Response(byPath.get(end)));
         const named = new Set(keys.filter((k)=> k?.slice(k.lastIndexOf('/') + 1) === file).map((k)=> byPath.get(k)));
         if (named.size === 1)
             return Promise.resolve(new Response([...named][0]));

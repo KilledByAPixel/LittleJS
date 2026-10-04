@@ -5,6 +5,10 @@ What changed in each release, newest first. Releases before 1.20.0 are on the
 
 ## Unreleased
 
+Nothing yet.
+
+## 1.24.3 - 2026-10-03
+
 ### Fixes
 
 - TypeScript: the d.ts keeps `undefined` where a value may be missing, so a game in strict mode can write `render3D.shader = undefined` and is told `light.flare`, `levelEditor.edit3D` or `uiSystem.keyInputObject` may be undefined; a game not in strict mode reads the same types as before
