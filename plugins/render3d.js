@@ -706,7 +706,8 @@ class Render3DPlugin
         this.streamCount = 0;
         /** @type {TextureInfo|undefined} */
         this.streamTileInfo = undefined;
-        this.streamState = undefined; // captured state the pending batch was drawn under
+        /** @type {Object|undefined} */
+        this.streamState = undefined; // captured state the pending batch was drawn under, render3DCaptureBatchState's
         this.streamUnlit = false;     // the pending batch is drawn unlit whatever that state says, billboards are
         /** @type {Mesh|undefined} */
         this.capture = undefined;     // the mesh a bake is filling

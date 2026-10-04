@@ -303,7 +303,8 @@ class Box2dObject extends EngineObject
      *  @param {number}  [density]
      *  @param {number}  [friction]
      *  @param {number}  [restitution]
-     *  @param {boolean} [isSensor] */
+     *  @param {boolean} [isSensor]
+     *  @return {Object} - The fixture made, Box2D's own */
     addShape(shape, density=1, friction=.2, restitution=0, isSensor=false)
     {
         ASSERT(isNumber(density), 'density must be a number');
@@ -332,7 +333,8 @@ class Box2dObject extends EngineObject
      *  @param {number}  [density]
      *  @param {number}  [friction]
      *  @param {number}  [restitution]
-     *  @param {boolean} [isSensor] */
+     *  @param {boolean} [isSensor]
+     *  @return {Object} - The fixture made, Box2D's own */
     addBox(size=vec2(1), offset=vec2(), angle=0, density, friction, restitution, isSensor)
     {
         ASSERT(isVector2(size), 'size must be a Vector2');
@@ -357,7 +359,8 @@ class Box2dObject extends EngineObject
      *  @param {number}  [density]
      *  @param {number}  [friction]
      *  @param {number}  [restitution]
-     *  @param {boolean} [isSensor] */
+     *  @param {boolean} [isSensor]
+     *  @return {Object} - The fixture made, Box2D's own */
     addPoly(points, density, friction, restitution, isSensor)
     {
         ASSERT(isArray(points), 'points must be an array');
@@ -404,7 +407,8 @@ class Box2dObject extends EngineObject
      *  @param {number}  [density]
      *  @param {number}  [friction]
      *  @param {number}  [restitution]
-     *  @param {boolean} [isSensor] */
+     *  @param {boolean} [isSensor]
+     *  @return {Object} - The fixture made, Box2D's own */
     addRegularPoly(diameter=1, sides=8, density, friction, restitution, isSensor)
     {
         ASSERT(isNumber(diameter) && diameter>0, 'diameter must be a positive number');
@@ -424,7 +428,8 @@ class Box2dObject extends EngineObject
      *  @param {number}  [density]
      *  @param {number}  [friction]
      *  @param {number}  [restitution]
-     *  @param {boolean} [isSensor] */
+     *  @param {boolean} [isSensor]
+     *  @return {Object} - The fixture made, Box2D's own */
     addRandomPoly(diameter=1, density, friction, restitution, isSensor)
     {
         ASSERT(isNumber(diameter) && diameter>0, 'diameter must be a positive number');
@@ -443,7 +448,8 @@ class Box2dObject extends EngineObject
      *  @param {number}  [density]
      *  @param {number}  [friction]
      *  @param {number}  [restitution]
-     *  @param {boolean} [isSensor] */
+     *  @param {boolean} [isSensor]
+     *  @return {Object} - The fixture made, Box2D's own */
     addCircle(diameter=1, offset=vec2(), density, friction, restitution, isSensor)
     {
         ASSERT(isNumber(diameter) && diameter>0, 'diameter must be a positive number');
@@ -463,7 +469,8 @@ class Box2dObject extends EngineObject
      *  @param {number}  [density]
      *  @param {number}  [friction]
      *  @param {number}  [restitution]
-     *  @param {boolean} [isSensor] */
+     *  @param {boolean} [isSensor]
+     *  @return {Object} - The fixture made, Box2D's own */
     addEdge(point1, point2, density, friction, restitution, isSensor)
     {
         ASSERT(isVector2(point1), 'point1 must be a Vector2');
@@ -481,7 +488,8 @@ class Box2dObject extends EngineObject
      *  @param {number}  [density]
      *  @param {number}  [friction]
      *  @param {number}  [restitution]
-     *  @param {boolean} [isSensor] */
+     *  @param {boolean} [isSensor]
+     *  @return {Array<Object>} - The fixtures made, Box2D's own */
     addEdgeList(points, density, friction, restitution, isSensor)
     {
         ASSERT(isArray(points), 'points must be an array');
@@ -514,7 +522,8 @@ class Box2dObject extends EngineObject
      *  @param {number}  [density]
      *  @param {number}  [friction]
      *  @param {number}  [restitution]
-     *  @param {boolean} [isSensor] */
+     *  @param {boolean} [isSensor]
+     *  @return {Array<Object>} - The fixtures made, Box2D's own */
     addEdgeLoop(points, density, friction, restitution, isSensor)
     {
         ASSERT(isArray(points), 'points must be an array');
@@ -2324,7 +2333,8 @@ class Box2dPlugin
     // helper functions
 
     /** converts a box2d vec2 to a Vector2
-     *  @param {Object} v */
+     *  @param {Object} v
+     *  @return {Vector2} */
     vec2From(v)
     {
         ASSERT(v instanceof box2d.instance.b2Vec2);
@@ -2332,7 +2342,8 @@ class Box2dPlugin
     }
 
     /** converts a box2d vec2 pointer to a Vector2
-     *  @param {Object} vp */
+     *  @param {Object} vp
+     *  @return {Vector2} */
     vec2FromPointer(vp)
     {
         const v = box2d.instance.wrapPointer(vp, box2d.instance.b2Vec2);
@@ -2341,7 +2352,8 @@ class Box2dPlugin
 
     /** converts a Vector2 to a new box2d vec2, which stays until destroyed with box2d.instance.destroy;
      *  the plugin itself passes Box2D reused ones, since Box2D copies every vector it is given
-     *  @param {Vector2} v */
+     *  @param {Vector2} v
+     *  @return {Object} - A Box2D vector, its b2Vec2 */
     vec2dTo(v)
     {
         ASSERT(isVector2(v));
@@ -2349,11 +2361,13 @@ class Box2dPlugin
     }
 
     /** checks if a box2d object is null
-     *  @param {Object} o */
+     *  @param {Object} o
+     *  @return {boolean} */
     isNull(o) { return !box2d.instance.getPointer(o); }
 
     /** casts a box2d object to a shape type
-     *  @param {Object} o */
+     *  @param {Object} o
+     *  @return {Object} - The shape as its own Box2D type */
     castShapeObject(o)
     {
         switch (o.GetType())
@@ -2372,7 +2386,8 @@ class Box2dPlugin
     }
 
     /** casts a box2d object to a joint type
-     *  @param {Object} o */
+     *  @param {Object} o
+     *  @return {Object} - The joint as its own Box2D type */
     castJointObject(o)
     {
         switch (o.GetType())

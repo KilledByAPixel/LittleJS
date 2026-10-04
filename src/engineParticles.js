@@ -37,13 +37,13 @@
  * let pos = vec2(2,3);
  * let particleEmitter = new ParticleEmitter
  * (
- *     pos, 0, 1, 0, 500, PI,      // pos, angle, emitSize, emitTime, emitRate, emitCone
+ *     pos, 0, 1, 0, 500, PI,      // pos, angle, emitSize, emitTime, emitRate, emitConeAngle
  *     tile(0, 16),                // tileInfo
  *     rgb(1,1,1,1), rgb(0,0,0,1), // colorStartA, colorStartB
  *     rgb(1,1,1,0), rgb(0,0,0,0), // colorEndA, colorEndB
- *     1, .2, .2, .1, .05,  // particleTime, sizeStart, sizeEnd, particleSpeed, particleAngleSpeed
- *     .99, 1, 1, PI, .05,  // damping, angleDamping, gravityScale, particleCone, fadeRate
- *     .5, true             // randomness, collide
+ *     1, .2, .2, .1, .05,  // particleTime, sizeStart, sizeEnd, speed, angleSpeed
+ *     .99, 1, 1, PI, .05,  // damping, angleDamping, gravityScale, particleConeAngle, fadeRate
+ *     .5, true             // randomness, collideLevel
  * );
  */
 class ParticleEmitter extends EngineObject
@@ -336,7 +336,8 @@ class ParticleEmitter extends EngineObject
         this.additive && setAdditiveBlendMode(false);
     }
 
-    /** is emitter actively spawning */
+    /** is emitter actively spawning
+     *  @return {boolean} */
     isActive() { return !this.emitTime || this.getAliveTime() < this.emitTime; }
 
     /** Destroy the particle emitter

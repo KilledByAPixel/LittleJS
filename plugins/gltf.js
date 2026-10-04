@@ -276,13 +276,16 @@ class GLTFObject extends EngineObject3D
         /** @property {boolean} - Whether it is moving through the animation now */
         this.animationPlaying = false;
         // what a cross-fade comes from: an animation going on as it was, or a pose held, and how far it is
+        /** @type {{animation?: GLTFAnimation, time?: number, speed?: number, loop?: boolean, nodes?: Map<number, Object>}|undefined} */
         this.blendFrom = undefined;
         this.blendTime = 0;
         this.blendElapsed = 0;
         // each node's values and place in the model as last posed, for a fade from here and for getJointMatrix, and
         // whether that pose was a mix, as a fade stopped part way holds it
+        /** @type {Map<number, Object>|undefined} */
         this.poseNodes = undefined;
         this.poseMixed = false;
+        /** @type {(function(number): Matrix4)|undefined} */
         this.poseWorldOf = undefined;
         /** @property {Array<EngineObject3D>} - The child that draws each of the model's parts, in the order of
          *  model.parts, which an animation poses; one destroyed or taken off the object is left alone

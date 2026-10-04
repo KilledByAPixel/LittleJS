@@ -248,7 +248,6 @@ function keyDirection(up='ArrowUp', down='ArrowDown', left='ArrowLeft', right='A
 }
 
 /** Returns true if mouse button is down
- *  @function
  *  @param {number} button
  *  @return {boolean}
  *  @memberof Input */
@@ -259,7 +258,6 @@ function mouseIsDown(button)
 }
 
 /** Returns true if mouse button was pressed
- *  @function
  *  @param {number} button
  *  @return {boolean}
  *  @memberof Input */
@@ -270,7 +268,6 @@ function mouseWasPressed(button)
 }
 
 /** Returns true if mouse button was released
- *  @function
  *  @param {number} button
  *  @return {boolean}
  *  @memberof Input */

@@ -7,7 +7,7 @@
  * - TileLayer for rendering, TileCollisionLayer for physics
  * - Collision callbacks for tile interactions with objects
  * - Optimized raycast support for tile-based physics
- * - Integration with Box2D physics via Box2DTileLayer plugin
+ * - Integration with Box2D physics via the Box2dTileLayer plugin
  * @namespace TileLayers
  */
 

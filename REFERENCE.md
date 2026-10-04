@@ -82,6 +82,20 @@ let remaining = 36000;
 })();
 ```
 
+## Units and directions
+- **Space:** world units, y up. Draws and objects take full sizes (a circle's diameter); only the math helpers and
+  lights take a radius, and their parameter says so
+- **2D angles:** radians, clockwise: `EngineObject.angle`, `cameraAngle`, the `angle` of every draw and of a
+  `ParticleEmitter`; `Vector2.angle()` is 0 up
+- **3D angles:** radians, `rotation3D` is pitch, yaw and roll, turning as three.js does, counter clockwise seen
+  down an axis; `Camera3D.fov` is radians; a 3D level file and the 3D editor's `setTransform` take degrees, as
+  does `ThreeJSPlugin.cameraFOV`
+- **Per frame:** speeds and spins, `velocity`, `angleVelocity`, a particle's `speed` and `angleSpeed`, damping and
+  gravity, at the fixed 60 updates a second
+- **Seconds:** `Timer`, `Tween`, `time`, a particle emitter's `emitTime` and `particleTime` and its `emitRate` (per
+  second), `lifeTime` and fades
+- **Milliseconds:** `gamepadVibrate`'s duration, `vibrate` patterns and `saveDataURL`'s `revokeTime`
+
 ## LittleJS Utilities Classes and Functions
 - General purpose math library
 - Vector2 - Fast, simple, easy 2D vector class
@@ -116,7 +130,7 @@ lerpAngle(angleA, angleB, percent)            // Linearly interpolates with wrap
 smoothStep(percent)                           // Applies smoothstep function, percent clamped to 0-1
 isPowerOfTwo(value)                           // Checks if the value is a power of two
 nearestPowerOfTwo(value)                      // Smallest power of two not less than the value
-isOverlapping(pointA, sizeA, pointB, sizeB)   // Checks if bounding boxes overlap
+isOverlapping(posA, sizeA, posB, sizeB)       // Checks if bounding boxes overlap
 isIntersecting(start, end, pos, size)         // Checks if ray intersects box
 // the collide helpers answer how far out, where isOverlapping answers whether; boxes are axis aligned and centered
 // with a full size, and each returns undefined when the shapes are not touching
@@ -169,13 +183,13 @@ Vector2.length()                          // Get length
 Vector2.lengthSquared()                   // Get length squared
 Vector2.distance(v)                       // Get distance to vector
 Vector2.distanceSquared(v)                // Get distance to vector squared
-Vector2.normalize(length=1)               // Normalize this vector to length
-Vector2.clampLength(length=1)             // Clamp this vector to length
+Vector2.normalize(length=1)               // Copy of this vector at a length, its direction kept
+Vector2.clampLength(length=1)             // Copy of this vector no longer than a length
 Vector2.dot(v)                            // Dot product with vector
 Vector2.cross(v)                          // Cross product with vector
 Vector2.reflect(normal, restitution=1)    // Reflect off a surface normal
-Vector2.floor()                           // Floor this vector
-Vector2.round()                           // Round this vector
+Vector2.floor()                           // Copy with each component floored
+Vector2.round()                           // Copy with each component rounded
 Vector2.abs()                             // Get copy with absolute value components
 Vector2.snap(grid)                        // Snap down to the grid, grid is steps per unit
 Vector2.mod(divisor=1)                    // Get modulo of each component
@@ -188,6 +202,8 @@ Vector2.rotate(angle)                     // Rotate by angle
 Vector2.setDirection(direction, length=1) // Set integer direction (0-3) and length
 Vector2.direction()                       // Get integer direction (0-3)
 Vector2.toString(digits=3)                // Get string representation
+// every Vector2 and Color method gives a new one and leaves it as it is, but set, setFrom, setAngle and
+// setDirection, and Color's set, setFrom, setAlpha, setHSLA and setHex, which change it in place
 
 // RGBA color object
 Color(r=1, g=1, b=1, a=1)                 // Create an RGBA color
@@ -199,11 +215,11 @@ Color.subtract(c)                         // Subtract a color
 Color.multiply(c)                         // Multiply by a color
 Color.divide(c)                           // Divide by a color
 Color.scale(scale, alphaScale=scale)      // Scale by a float
-Color.clamp()                             // Clamp this color
+Color.clamp()                             // Copy with each component clamped to 0 to 1
 Color.lerp(c, percent)                    // Interpolate between colors
 Color.setHSLA(h=0, s=0, l=1, a=1)         // Set the color from HSLA values
 Color.HSLA()                              // Get the color in HSLA format
-Color.mutate(amount=.05, alphaAmount=0)   // Randomly diverge from this color
+Color.mutate(amount=.05, alphaAmount=0)   // Copy randomly diverged from this color
 Color.setHex(hex)                         // Set this color from a hex code
 Color.setAlpha(a=1)                       // Set the alpha of this color
 Color.withAlpha(a=1)                      // Get a copy of this color with the alpha set
@@ -487,12 +503,12 @@ AudioFilter.node, AudioReverb.node, ...           // Each effect's wrapped Web A
 
 ```javascript
 // Keyboard, keys are KeyboardEvent.code names like 'KeyW', 'Space' or 'ArrowUp', not characters
-keyIsDown(key)                        // Is key down?
-keyWasPressed(key)                    // Was key pressed this frame?
-keyWasReleased(key)                   // Was key released this frame?
+keyIsDown(key, device=0)              // Is key down? device 0 is the keyboard and mouse, 1 on the gamepads
+keyWasPressed(key, device=0)          // Was key pressed this frame?
+keyWasReleased(key, device=0)         // Was key released this frame?
 keyDirection(up, down, left, right)   // Get input vector from arrow keys or wasd
 inputClear()                          // Clear all input state
-inputClearKey(key)                    // Clear input state for a specific key
+inputClearKey(key, device=0, clearDown=true, clearPressed=true, clearReleased=true) // Clear input state for a key
 
 // Mouse / Touch
 mousePos                              // World space mouse position
@@ -713,9 +729,9 @@ TileCollisionLayer.collisionTest(pos, size=(0,0), object) // Like tileCollisionT
 TileCollisionLayer.collisionRaycast(posStart, posEnd, object, normal) // Like tileCollisionRaycast for this layer only
 TileCollisionLayer.isSolid = true                   // Solid layers block objects and particles, the solidOnly tests
                                                     // skip the others
-tileCollisionGetData(pos)                           // Get tile collision data at pos
+tileCollisionGetData(pos, solidOnly=true)           // Get tile collision data at pos
 tileCollisionTest(pos, size=(0,0), object)          // Check if collision should occur
-tileCollisionRaycast(posStart, posEnd, object, normal, solidOnly=true) // Where the ray meets the first tile hit,
+tileCollisionRaycast(posStart, posEnd, callbackObject, normal, solidOnly=true) // Where the ray meets the first tile hit,
                                                     // or undefined; a normal vec2 passed in is set to the surface's
 tileCollisionLayers                                 // List of all tile collision layers
 tileLayersLoad(tileMapData, tileInfo=tile(), renderOrder=0, collisionLayer, draw=true) // collisionLayer is the index
@@ -806,9 +822,10 @@ particleEffectsBuiltIn                  // the built-in names: fire, torch, smok
 'confetti'   // hue 0 and .6, mixed, one-shot
 'splash'     // hue .58, one-shot
 particleEffectApply(emitter, effect)    // set a live 2D emitter to an effect
-particleEffectApply3D(emitter3D, effect) // the same for a ParticleEmitter3D, its particles, place and scale kept
-particleEffectFromEmitter(emitter)      // a 2D emitter's settings as an effect, to save or build in 3D
-particleEffectsAddBehavior(name, update, update3D) // add a behavior effects can name, with 2D and 3D pushes
+particleEffectApply3D(emitter, effect)  // the same for a ParticleEmitter3D, its particles, place and scale kept
+particleEffectFromEmitter(emitter, name='Effect') // a 2D emitter's settings as an effect, to save or build in 3D
+particleEffectsAddBehavior(name, update, update3D, min=-2, max=2, value=1, description='') // add a behavior effects
+                                        // can name, with 2D and 3D pushes; min, max and value for the designer
 particleEffectsAdd(effects)             // add effects to play by name, one of the same name replaces it
 particleEffectsGet(name)                // an effect's data, any case, to change or build by hand
 await particleEffectsLoad(url)          // load the file the particle designer's Save Library wrote, and add its effects
@@ -973,7 +990,7 @@ uiSystem.drawSlice(slice, pos, size, color=WHITE) // Draw a TileSlice to the UI 
 uiSystem.nativeHeight                  // If set, UI coords are normalized to this height
 uiSystem.destroyObjects()              // Remove all UI elements
 uiSystem.isMouseOverUI()               // True if the mouse is over a visible hoverable UI object, or a confirm dialog is open
-uiSetDebug(enable)                     // Toggle uiDebug rendering of widget bounds
+uiSetDebug(debugMode)                  // Toggle uiDebug rendering of widget bounds
 
 // Confirm dialog
 uiSystem.showConfirmDialog(text='Are you sure?', yes, no, size, exitKey='Escape') // the exit key or gamepad B answers no, the title and buttons scale with size
@@ -1173,7 +1190,7 @@ m.invert() m.transpose()       // in place, return self
 m.copy() m.transformPoint(v) m.transformDirection(v) m.getTranslation() // or v.transform(m), v.transformDirection(m)
 m.getScale() m.getRotation()   // the scale and the vec3(pitch, yaw, roll) back out of a transform, a mirror is a negative x
 m.determinant()                 // of the rotation and scale part: negative when it mirrors, 0 when it flattens
-buildMatrix(pos, rotation, scale, out)         // translate * rotate * scale, any arg optional; out is written into
+buildMatrix(pos, rotation, scale, matrix)      // translate * rotate * scale, any arg optional; matrix is written into
                                                // instead of a new matrix, for a loop that builds many each frame
 
 // Collision - boxes are centered with full size, upright unless given a rotation, an Euler vec3 like rotation3D;
@@ -2316,7 +2333,7 @@ debugPoint(pos, color, time, angle)                         // Draw debug point
 debugLine(posA, posB, color, width=.1, time)                // Draw debug line
 debugPoly(pos, points, color=WHITE, time=0, angle=0, fill)  // Draw debug polygon
 debugText(text, pos, size=1, color=WHITE, time=0, angle=0)  // Draw debug text
-debugOverlap(pA, sA, pB, sB, color) // Draw a debug overlap between two boxes
+debugOverlap(posA, sizeA, posB, sizeB, color) // Draw a debug overlap between two boxes
 // each debug draw also takes screenSpace as its last parameter, defaulting to drawScreenSpace; debugText takes a
 // font before it
 debugClear()                     // Clear all debug primitives

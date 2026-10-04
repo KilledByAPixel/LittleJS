@@ -35,8 +35,14 @@ let uiDebug = 0;
 function uiSetDebug(debugMode)
 { uiDebug = typeof debugMode === 'boolean' ? (debugMode ? 1 : 0) : debugMode; }
 
+/**
+ * @callback DragAndDropCallback - Callback for drag and drop events
+ * @param {DragEvent} event - The drag event
+ * @memberof UISystem
+ */
+
 ///////////////////////////////////////////////////////////////////////////////
-/** 
+/**
  * UI System Global Object
  * @memberof UISystem
  */
@@ -527,12 +533,6 @@ class UISystemPlugin
         drawTextScreen(text, pos, size.y, color, lineWidth, lineColor, align, font, fontStyle, applyMaxWidth ? size.x : undefined, 0, context);
         context.shadowColor = '#0000';
     }
-
-    /**
-     * @callback DragAndDropCallback - Callback for drag and drop events
-     * @param {DragEvent} event - The drag event
-     * @memberof UISystem
-     */
 
     /** Setup drag and drop event handlers
     *  Automatically prevents defaults and calls the given functions

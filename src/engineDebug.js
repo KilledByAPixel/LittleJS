@@ -766,7 +766,8 @@ function debugRenderPost() { debugVideoCaptureIsActive() && debugVideoCaptureUpd
 let debugVideoCapture, debugVideoCaptureIcon;
 
 /** Check if video capture is active
- *  @memberof Debug */
+ *  @memberof Debug
+ *  @return {boolean} */
 function debugVideoCaptureIsActive() { return !!debugVideoCapture; }
 
 /** Start capturing video

@@ -66,7 +66,8 @@ class PathFinderNode
     /** Reset per-search state and walkability (called by buildNodeData). */
     reset() { this.walkable = false; this.cost = 0; this.resetSearch(); }
 
-    /** True if walkable and not blocked by cost. */
+    /** True if walkable and not blocked by cost.
+     *  @return {boolean} */
     isClear()
     {
         return this.walkable && this.cost === 0;

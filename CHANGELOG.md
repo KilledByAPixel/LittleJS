@@ -14,6 +14,7 @@ What changed in each release, newest first. Releases before 1.20.0 are on the
 
 ### Fixes
 
+- REFERENCE has a section on units and directions (angles in radians, clockwise in 2D, what is per frame and what is in seconds), says which vector and color methods give a copy, and names parameters as the code does; the Box2D shape methods, the vector helpers and a few others say what they return
 - In a browser with no audio, a zzfx sound and the page hiding do nothing, where they threw
 - A resume of the audio the browser refuses is caught, where it showed as an uncaught error in the console
 - `debug`, `debugOverlay` and `debugWatermark` are `false` in a release build, as their types say, where they were 0

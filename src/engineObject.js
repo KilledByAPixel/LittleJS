@@ -483,19 +483,23 @@ class EngineObject
     }
 
     /** Convert from local space to world space
-     *  @param {Vector2} pos - local space point */
+     *  @param {Vector2} pos - local space point
+     *  @return {Vector2} */
     localToWorld(pos) { return this.pos.add(pos.rotate(this.angle)); }
 
     /** Convert from world space to local space
-     *  @param {Vector2} pos - world space point */
+     *  @param {Vector2} pos - world space point
+     *  @return {Vector2} */
     worldToLocal(pos) { return pos.subtract(this.pos).rotate(-this.angle); }
 
     /** Convert from local space to world space for a vector (rotation only)
-     *  @param {Vector2} vec - local space vector */
+     *  @param {Vector2} vec - local space vector
+     *  @return {Vector2} */
     localToWorldVector(vec) { return vec.rotate(this.angle); }
 
     /** Convert from world space to local space for a vector (rotation only)
-     *  @param {Vector2} vec - world space vector */
+     *  @param {Vector2} vec - world space vector
+     *  @return {Vector2} */
     worldToLocalVector(vec) { return vec.rotate(-this.angle); }
 
     /** Called to check if a tile collision should be resolved. Return true for physics to resolve the collision or false to ignore and resolve it manually.

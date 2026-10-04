@@ -319,7 +319,8 @@ function engineLoadingScreenDraw(elapsed)
  *    ()=> { drawHUD(); },                 // gameRenderPost
  *    ['tiles.png', 'tilesLevel.png']       // images to load
  *  );
- *  @memberof Engine */
+ *  @memberof Engine
+ *  @return {Promise<void>} - Done when the images have loaded and gameInit has run */
 async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost, imageSources=[], rootElement)
 {
     showEngineVersion && console.log(`${engineName} Engine v${engineVersion}`);
