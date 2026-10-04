@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
-import { box2dInit, Box2dObject, Box2dStaticObject, Box2dMotorJoint, Box2dTargetJoint, Box2dDistanceJoint, Box2dWeldJoint, vec2,
+import { box2dInit, Box2dObject, Box2dStaticObject, Box2dMotorJoint, Box2dTargetJoint, Box2dDistanceJoint, vec2,
     setEngineManualStep, engineInit } from '../dist/littlejs.esm.js';
 
 // review round 15: joint setters that wake a sleeping body, and a joint made to a destroyed object
