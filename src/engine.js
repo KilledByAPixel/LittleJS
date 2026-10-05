@@ -561,8 +561,6 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
             debugUpdate();
             gameUpdatePost();
             inputUpdatePost();
-            if (debugVideoCaptureIsActive())
-                renderFrame();
         }
 
         // manual step turned on by this frame's updates, set the buffer the loop and smoothing just moved again
@@ -584,7 +582,7 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
 
         // render only when something changed, displays that refresh faster
         // than the fixed update rate would otherwise redraw identical frames
-        if (!debugVideoCaptureIsActive() && (wasUpdated || windowChanged))
+        if (wasUpdated || windowChanged)
             renderFrame();
         engineManualStep || engineScheduleFrame();
 
@@ -616,7 +614,6 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
             inputRender();
             debugRender();
             glFlush();
-            debugRenderPost();
             drawCount = 0;
             primitiveCount = 0;
         }

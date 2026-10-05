@@ -1625,7 +1625,7 @@ function setShader(shader)
 
 /** Set an extra canvas to composite behind the engine canvases when combining
  *  Plugins that insert their own canvas below the LittleJS canvases should set
- *  this so it appears in screenshots and video capture
+ *  this so it appears in screenshots
  *  @param {HTMLCanvasElement} [canvas]
  *  @memberof Draw */
 function setBackgroundCanvas(canvas) { backgroundCanvas = canvas; }

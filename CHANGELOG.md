@@ -27,6 +27,7 @@ What changed in each release, newest first. Releases before 1.20.0 are on the
 
 ### Breaking Changes
 
+- The built in video capture is removed: key 8 on the debug overlay, `debugVideoCaptureStart`, `debugVideoCaptureStop` and `debugVideoCaptureIsActive`. A screen recorder does it better, and the FAQ shows how to save a game frame by frame at an exact 60 fps with `setEngineManualStep` and `engineStep`
 - Node 22.12 or later for the package's build and tests, the version CI runs; a game in the browser needs no Node at all
 - The Electron example is removed, with Electron and electron-packager from the dev dependencies: a game for the desktop sets up Electron or another wrapper itself, loading its index.html as any page
 - render3d.js is in three files: `render3d.js`, the renderer, then `render3dMesh.js`, meshes and the basic builders, and `render3dObject.js`, EngineObject3D, instancing and lights; nothing changes for a game on a build in `dist`, one that loads the plugins one by one adds the two after `render3d.js`

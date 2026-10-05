@@ -53,9 +53,6 @@ export
     debugClear,
     debugScreenshot,
     debugShowErrors,
-    debugVideoCaptureStart,
-    debugVideoCaptureStop,
-    debugVideoCaptureIsActive,
 
     // Settings
     cameraPos,

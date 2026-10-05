@@ -2347,7 +2347,7 @@ setLevelEditor(new MyEditor)   // Make it the one in use, before the editor open
 - Press Escape key to toggle debug overlay
 - Number keys toggle debug functions while the overlay is open: 1 physics, 2 tiles (each tile layer's bounds, the
   collision values on screen, and the tiles under the mouse; pressing 2 again steps through the layers one at a time,
-  then off), 3 particles, 4 raycasts, 5 gamepads, 6 sound, 7 screenshot, 8 video capture, 9 tweakables panel,
+  then off), 3 particles, 4 raycasts, 5 gamepads, 6 sound, 7 screenshot, 9 tweakables panel,
   0 level editor
 - C, while the overlay is open, is a free camera for a 3D game: the mouse looks once captured or with the right
   button held, WASD and QE fly, Shift is faster and the wheel sets the speed; the game runs on and reads no keys or
@@ -2372,9 +2372,6 @@ debugOverlap(posA, sizeA, posB, sizeB, color) // Draw a debug overlap between tw
 debugClear()                     // Clear all debug primitives
 debugScreenshot()                // Save a screenshot at the end of this frame
 debugShowErrors()                // Show full page error message when an error occurs
-debugVideoCaptureStart()         // Start capturing a video of the canvas
-debugVideoCaptureStop()          // Stop capturing and save the video to disk
-debugVideoCaptureIsActive()      // Is video currently being captured?
 createCanvasContext(width, height=width, willReadFrequently=false) // Offscreen canvas to draw into, returns its
                                                     // 2D context; the canvas is context.canvas
 saveCanvas(canvas, filename='screenshot', type='image/png') // Save canvas to a file

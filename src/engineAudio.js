@@ -126,7 +126,6 @@ function audioStateChange()
  *  - The output node is disconnected from everything else first, so it only feeds the speakers
  *  - The two ends of a chain must already be connected to each other, like effectA.connect(effectB)
  *  - Call with no arguments to remove the effect, an effect that was the master goes back to feeding the master gain
- *  - Debug video capture records the end of the master chain, but loses its tap if the effect changes mid-capture
  *  @param {AudioNode|AudioEffectNodes} [input] - Node or effect the master gain connects to
  *  @param {AudioNode|AudioEffectNodes} [output] - Node or effect that connects to the audio destination, defaults to the input's output
  *  @memberof Audio */

@@ -29,7 +29,6 @@ function LOG             (){}
 function debugInit       (){}
 function debugUpdate     (){}
 function debugRender     (){}
-function debugRenderPost (){}
 function debugRect       (){}
 function debugPoly       (){}
 function debugCircle     (){}
@@ -41,9 +40,6 @@ function debugClear      (){}
 function debugScreenshot (){}
 function debugShowErrors(){}
 function setDebugOverlay(){}
-function debugVideoCaptureIsActive(){ return false; }
-function debugVideoCaptureStart (){}
-function debugVideoCaptureStop  (){}
 function debugProtectConstant(o){ return o; }
 
 // the tweakables and the level editor are debug only

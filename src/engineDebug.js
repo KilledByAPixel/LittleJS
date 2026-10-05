@@ -6,7 +6,7 @@
  * - setDebugKeysAlways lets those keys work with the overlay closed too
  * - ASSERT and LOG macros for development (removed in release builds)
  * - Debug primitive rendering (rectangles, circles, lines, points, text)
- * - Screenshot and video capture support
+ * - Screenshot support
  * - FPS counter and performance watermark
  * - Debug overlay shows mouse position and picked objects
  * @namespace Debug
@@ -329,19 +329,6 @@ function debugUpdate()
         if (keyWasPressed('Digit0'))
             levelEditor.isOpen ? levelEditor.close() : levelEditor.open();
     }
-    if (debugVideoCaptureIsActive())
-    {
-        // control to stop video capture, a capture the overlay started also stops when the overlay closes,
-        // one the game started from code runs until it calls debugVideoCaptureStop
-        if (debugKeys ? keyWasPressed('Digit8') : debugVideoCapture.fromOverlay)
-            debugVideoCaptureStop();
-    }
-    else if (debugKeys && keyWasPressed('Digit8'))
-    {
-        debugVideoCaptureStart();
-        if (debugVideoCapture)
-            debugVideoCapture.fromOverlay = true;
-    }
 }
 
 // the text beside the mouse, with the same shadow as the overlay
@@ -440,18 +427,11 @@ function debugRender()
 {
     if (debugTakeScreenshot)
     {
-        // combine canvases, remove alpha and save, before the capture check so it is taken during video capture too
+        // combine canvases, remove alpha and save
         glFlush();
         combineCanvases();
         saveCanvas(mainCanvas);
         debugTakeScreenshot = 0;
-    }
-
-    if (debugVideoCaptureIsActive())
-    {
-        // don't show debug info when capturing video, but still drop the expired primitives so they don't pile up
-        debugPrimitives = debugPrimitives.filter(r=>r.timer<0);
-        return;
     }
 
     // flush any gl sprites before drawing debug info
@@ -682,7 +662,6 @@ function debugRender()
             debugContext.fillText('6: Debug Sound', x, y += h);
             debugContext.fillStyle = '#fff';
             debugContext.fillText('7: Save Screenshot', x, y += h);
-            debugContext.fillText('8: Toggle Video Capture', x, y += h);
             debugContext.fillStyle = debugTweakables ? '#f00' : '#fff';
             debugContext.fillText('9: Tweakables', x, y += h);
             debugContext.fillStyle = levelEditor.isOpen ? '#f00' : '#fff';
@@ -755,143 +734,6 @@ function debugRender()
         mainContext.fillText(text, mainCanvasSize.x-2, 2);
         mainContext.restore();
     }
-}
-
-function debugRenderPost() { debugVideoCaptureIsActive() && debugVideoCaptureUpdate(); }
-
-///////////////////////////////////////////////////////////////////////////////
-// video capture - records video and audio at 60 fps using MediaRecorder API
-
-// internal variables used to capture video
-let debugVideoCapture, debugVideoCaptureIcon;
-
-/** Check if video capture is active
- *  @memberof Debug
- *  @return {boolean} */
-function debugVideoCaptureIsActive() { return !!debugVideoCapture; }
-
-/** Start capturing video
- *  @memberof Debug */
-function debugVideoCaptureStart()
-{
-    ASSERT(!debugVideoCaptureIsActive(), 'Already capturing video!');
-
-    // everything that can fail where recording is unsupported is in the try, a missing captureStream
-    // or a MediaRecorder that refuses webm throws here and is cleaned up rather than stopping the game
-    const captureTimer = new Timer(0, true);
-    const chunks = [];
-    let videoTrack, mediaRecorder, audioStreamDestination, silentAudioSource, audioTapNode;
-    try
-    {
-        // setup captureStream to capture manually by passing 0
-        const stream = mainCanvas.captureStream(0);
-        videoTrack = stream.getVideoTracks()[0];
-        videoTrack.applyConstraints({frameRate:frameRate}).catch(()=>{});
-
-        // set up the media recorder
-        mediaRecorder = new MediaRecorder(stream,
-            {mimeType:'video/webm;codecs=vp8'});
-        mediaRecorder.ondataavailable = (e)=> chunks.push(e.data);
-        mediaRecorder.onstop = ()=>
-        {
-            const blob = new Blob(chunks, {type: 'video/webm'});
-            const url = URL.createObjectURL(blob);
-            saveDataURL(url, 'capture.webm', 1e3);
-        };
-
-        if (soundEnable)
-        {
-            // create silent audio source
-            // fixes issue where video can not start recording without audio
-            silentAudioSource = new ConstantSourceNode(audioContext, { offset: 0 });
-            silentAudioSource.connect(audioMasterGain);
-            silentAudioSource.start();
-
-            // tap the end of the master chain so a master effect is in the recording
-            // (a master effect swapped mid-capture drops the tap, the rest records silent)
-            audioTapNode = audioMasterEffectOutput || audioMasterGain;
-            audioStreamDestination = audioContext.createMediaStreamDestination();
-            audioTapNode.connect(audioStreamDestination);
-            for (const track of audioStreamDestination.stream.getAudioTracks())
-                stream.addTrack(track); // add audio tracks to capture stream
-        }
-
-        // start recording
-        mediaRecorder.start();
-    }
-    catch(e)
-    {
-        LOG('Video capture not supported in this browser!');
-        videoTrack?.stop();
-        silentAudioSource?.stop();
-        if (audioStreamDestination)
-        {
-            // the tap may not have been made before the failure
-            try { audioTapNode.disconnect(audioStreamDestination); }
-            catch { }
-        }
-        return;
-    }
-
-    if (!debugVideoCaptureIcon)
-    {
-        // create recording icon to show it is capturing video
-        debugVideoCaptureIcon = document.createElement('div');
-        debugVideoCaptureIcon.style.position = 'absolute';
-        debugVideoCaptureIcon.style.padding = '9px';
-        debugVideoCaptureIcon.style.color = '#f00';
-        debugVideoCaptureIcon.style.font = '50px monospace';
-        document.body.appendChild(debugVideoCaptureIcon);
-    }
-    // show recording icon, only once recording has started
-    debugVideoCaptureIcon.textContent = '';
-    debugVideoCaptureIcon.style.display = '';
-
-    LOG('Video capture started.');
-
-    // save debug video info
-    debugVideoCapture =
-    {
-        mediaRecorder,
-        captureTimer,
-        videoTrack,
-        silentAudioSource,
-        audioStreamDestination,
-        audioTapNode
-    };
-}
-
-/** Stop capturing video and save to disk
- *  @memberof Debug */
-function debugVideoCaptureStop()
-{
-    ASSERT(debugVideoCaptureIsActive(), 'Not capturing video!');
-
-    // stop recording
-    LOG(`Video capture ended. ${debugVideoCapture.captureTimer.get().toFixed(2)} seconds recorded.`);
-    debugVideoCaptureIcon.style.display = 'none';
-    debugVideoCapture.silentAudioSource?.stop();
-    debugVideoCapture.mediaRecorder?.stop();
-    debugVideoCapture.videoTrack?.stop();
-    if (debugVideoCapture.audioStreamDestination)
-    {
-        // the tap is already gone if the master effect changed during the capture
-        try { debugVideoCapture.audioTapNode.disconnect(debugVideoCapture.audioStreamDestination); }
-        catch { }
-    }
-    debugVideoCapture = undefined;
-}
-
-// update video capture, called automatically by engine
-function debugVideoCaptureUpdate()
-{
-    ASSERT(debugVideoCaptureIsActive(), 'Not capturing video!');
-
-    // save the video frame
-    combineCanvases();
-    debugVideoCapture.videoTrack.requestFrame();
-    debugVideoCaptureIcon.textContent = '● REC '
-        + formatTime(debugVideoCapture.captureTimer.get());
 }
 
 ///////////////////////////////////////////////////////////////////////////////

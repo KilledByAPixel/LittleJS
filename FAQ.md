@@ -48,6 +48,7 @@ If you don't find an answer here, feel free to ask the community or check the do
 
 **Debugging and Development**
 - [How do I debug my game in LittleJS?](#how-do-i-debug-my-game-in-littlejs)
+- [How do I record a smooth video of my game, like a trailer?](#how-do-i-record-a-smooth-video-of-my-game-like-a-trailer)
 
 ---
 
@@ -852,6 +853,32 @@ LOG('spawned enemy at', pos);
 ```
 
 ---
+
+### How do I record a smooth video of my game, like a trailer?
+
+A screen recorder such as OBS, the Xbox Game Bar or the macOS screen recorder is the quickest. For every frame at exactly 60 fps, even on a machine that cannot keep up, step the engine yourself and save each frame as an image: with `setEngineManualStep(true)` the game moves only when `engineStep` is called, one update of 1/60 of a second and its render, however long that takes.
+
+```javascript
+// record a number of seconds of the game, one image every 1/60 of a second
+function recordFrames(seconds)
+{
+    setEngineManualStep(true);       // the engine moves only when engineStep is called
+    let frame = 0;
+    const next = ()=>
+    {
+        engineStep(1);               // one update of 1/60 second, and its render
+        combineCanvases();           // the WebGL and 2D canvases as one image
+        saveCanvas(mainCanvas, 'frame' + String(frame).padStart(5, '0'));
+        if (++frame < seconds * 60)
+            setTimeout(next, 100);   // a moment for the browser to save each one
+        else
+            setEngineManualStep(false); // back to real time
+    };
+    next();
+}
+```
+
+The browser asks once to allow many downloads. The game plays slower than real time while it records, so this suits a scripted or replayed scene. Then make the video from the images, with ffmpeg for example: `ffmpeg -framerate 60 -i frame%05d.png -pix_fmt yuv420p trailer.mp4`.
 
 ## Contribute to the FAQ
 If you have additional questions or think something should be added to this FAQ, please open an issue or pull request on the [LittleJS GitHub repository](https://github.com/KilledByAPixel/LittleJS).

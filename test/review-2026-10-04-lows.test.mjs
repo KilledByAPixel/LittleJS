@@ -307,3 +307,13 @@ test('a second medalsInit with another save name does not carry the first one\'s
     run(`var medal = new Medal(0, 'One'); medalsInit('player 1'); medal.unlock(); medalsInit('player 2');`);
     assert.equal(run('medal.unlocked'), false, 'player 2 has not earned it');
 });
+
+test('the video capture functions are gone from the debug and release builds', ()=>
+{
+    for (const file of [undefined, 'littlejs.release.js'])
+    {
+        const { run } = loadEngine({}, '', file);
+        for (const name of ['debugVideoCaptureStart', 'debugVideoCaptureStop', 'debugVideoCaptureIsActive', 'debugRenderPost'])
+            assert.equal(run(`typeof ${name}`), 'undefined', `${name} ${file ?? 'debug'}`);
+    }
+});

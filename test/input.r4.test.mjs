@@ -113,18 +113,10 @@ test('setVolume while paused applies on resume without touching the old gain', (
     instance.stop();
 });
 
-test('debugVideoCaptureStart where capture is unsupported does not throw', () =>
+test('the built in video capture is gone: a game records frames itself, stepping the engine one frame at a time', () =>
 {
-    // there is no canvas to capture here, as where captureStream or webm recording is missing:
-    // the failure is logged and cleaned up instead of escaping into the game loop
-    const log = console.log;
-    console.log = ()=> {};
-    try
-    {
-        assert.doesNotThrow(()=> LJS.debugVideoCaptureStart());
-    }
-    finally { console.log = log; }
-    assert.equal(LJS.debugVideoCaptureIsActive(), false);
+    for (const name of ['debugVideoCaptureStart', 'debugVideoCaptureStop', 'debugVideoCaptureIsActive'])
+        assert.equal(name in LJS, false, name);
 });
 
 test('types: sound play results, SoundInstance fields and lastInputDevice include what they can be', () =>

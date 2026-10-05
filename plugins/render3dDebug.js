@@ -18,15 +18,12 @@ function render3DRenderDebug()
 {
     if (!render3DDebugPrimitives.length) return;
     render3DDebugPrimitives = render3DDebugPrimitives.filter(p=> p.clearCount === debugClearCount);
-    if (!debugVideoCaptureIsActive()) // hidden from a video capture like the 2D ones, but they still expire
+    render3DWithState({lighting: false, depthTest: false, receiveShadow: false, additive: false, shader: undefined,
+        emissiveMap: undefined}, ()=>
     {
-        render3DWithState({lighting: false, depthTest: false, receiveShadow: false, additive: false, shader: undefined,
-            emissiveMap: undefined}, ()=>
-        {
-            for (const p of render3DDebugPrimitives)
-                p.draw();
-        });
-    }
+        for (const p of render3DDebugPrimitives)
+            p.draw();
+    });
     render3DDebugPrimitives = render3DDebugPrimitives.filter(p=> p.timer < 0); // a Timer compares as negative until it elapses
 }
 
