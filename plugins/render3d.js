@@ -1757,8 +1757,8 @@ function render3DFragmentSource(fragmentCode)
         'uniform vec3 cameraPos;' +
         'uniform vec4 materialParams,emissiveTint,skyTop,skyHorizon,skyBottom,gelAxes;' +
         'uniform sampler2D tex,normalTex,emissiveTex,gelTex;' +
-        'uniform samplerCube envMap;' + // the environment, when envParams.x is 1, envParams.y its last mipmap and z the
-        // level a shininess of -1 would read, log2(size * .45)
+        'uniform samplerCube envMap;' + // the environment, when envParams.x is 1, envParams.y its last mipmap, z the
+        // level a shininess of -1 would read, log2(size * .45), and w the level a turn of one radian a pixel reads
         'uniform vec4 envParams;' +
         'uniform bool premultipliedTexture;' + // is the texture a render target, which holds premultiplied color
         'uniform highp sampler2DShadow shadowMap;' +
@@ -1844,8 +1844,10 @@ function render3DFragmentSource(fragmentCode)
         'vec3 w=normalize(P-cameraPos),q=reflect(w,n);' +
         'float f=materialParams.z+(1.-materialParams.z)*pow(clamp(1.-dot(n,-w),0.,1.),5.);' +
         // the environment when there is one, blurred by the spread of the highlight, a mirror at a shininess of
-        // 10000 and toward its last mipmap at 1
-        'c.rgb=mix(c.rgb,envParams.x>0.?textureLod(envMap,q,clamp(envParams.z-.5*log2(materialParams.y+2.),0.,envParams.y)).rgb:' +
+        // 10000 and toward its last mipmap at 1, or by how far the reflection turns from one pixel to the next when
+        // that is more, so a small mirror reads the blur of what its pixels cover instead of sparkling
+        'c.rgb=mix(c.rgb,envParams.x>0.?textureLod(envMap,q,clamp(max(envParams.z-.5*log2(materialParams.y+2.),' +
+        'envParams.w+log2(max(max(length(dFdx(q)),length(dFdy(q))),1e-9))),0.,envParams.y)).rgb:' +
         'q.y>0.?mix(skyHorizon.rgb,skyTop.rgb,q.y):mix(skyHorizon.rgb,skyBottom.rgb,-q.y),f);' +
         '}}else c.rgb*=e;' + // fully emissive: its own color, or brighter, with no lighting to work out
         // the emissive map adds its light on top, lit or not
@@ -2442,7 +2444,8 @@ function render3DSetMaterialUniforms(state)
         // / 2: the same blur for any size of map; it stops at 4 by 4 a face, where sampling across the edges still
         // blends neighboring faces
         const size = environment ? environment.size : 1;
-        render3DUniform4f('envParams', environment ? 1 : 0, max(0, log2(size) - 2), log2(size * .45), 0);
+        // a turn of one radian a pixel covers size / (PI/2) texels of a face, log2 of that the level that blurs it
+        render3DUniform4f('envParams', environment ? 1 : 0, max(0, log2(size) - 2), log2(size * .45), log2(size * 2 / PI));
         const sky = r.sky && render3DSkyColors.get(r.sky), a = r.ambientColor, g = r.ambientGroundColor || a;
         const top = sky ? sky[0] : a, bottom = sky ? sky[2] : g;
         render3DUniform4f('skyTop', top.r, top.g, top.b, 1);

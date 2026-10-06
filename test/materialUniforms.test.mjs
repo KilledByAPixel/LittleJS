@@ -176,3 +176,11 @@ test('an object\'s own environment is reflected in place of the scene\'s, and is
         JSON.stringify({own, changed, cleared: render3D.environmentMap === undefined})`));
     assert.deepEqual(state, {own: true, changed: true, cleared: true});
 });
+
+test('an environment also sends the level a turn of one radian a pixel reads, so a small mirror blurs', ()=>
+{
+    const {sent} = send(`render3D.environment = makeCubeMap(128, ()=> WHITE); render3D.reflectivity = 1`);
+    run('render3D.environment = undefined');
+    assert.ok(Math.abs(sent.envParams[3] - Math.log2(128 * 2 / Math.PI)) < 1e-9);
+    assert.ok(run('render3DFragmentSource()').includes('dFdx(q)'), 'from how fast the reflection turns on screen');
+});
