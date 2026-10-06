@@ -162,12 +162,13 @@ test('glTF maps uvs through KHR_texture_transform: offset + rotation * scale', a
         { pbrMetallicRoughness: { baseColorTexture: { index: 0, extensions: { KHR_texture_transform: transform } } } },
         { pbrMetallicRoughness: { baseColorTexture: { index: 0, extensions: { KHR_texture_transform: { offset: [.5, -1], scale: [2, 4] } } } } },
     ]);
-    // a quarter turn: u' = 3v + .5 and v' = -2u + .25, as three.js and the extension's matrices have it
+    // a quarter turn after the scale: u' = -3v + .5 and v' = 2u + .25, as the extension's GLSL has it, translation *
+    // rotation * scale with its column major rotation turning (u, v) to (cos u - sin v, sin u + cos v)
     uvsOf(model.parts[0]).forEach((uv, k)=>
     {
         const [u, v] = uv0[k];
-        near(uv.x, 3 * v + .5, `turned uv ${k} x`);
-        near(uv.y, -2 * u + .25, `turned uv ${k} y`);
+        near(uv.x, -3 * v + .5, `turned uv ${k} x`);
+        near(uv.y, 2 * u + .25, `turned uv ${k} y`);
     });
     // offset and scale alone, as gltfpack writes to undo its quantizing
     uvsOf(model.parts[1]).forEach((uv, k)=>

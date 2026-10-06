@@ -36,6 +36,9 @@ What changed in each release, newest first. Releases before 1.20.0 are on the
 ### Fixes
 
 - Tile collision stops an object against a wall or a ceiling, as it already did on a floor, where it went back to where it was the frame before and stopped short by up to a frame's move, a gap that never closed for a game setting its velocity every frame; a bounce starts from the tile too
+- glTF: a KHR_texture_transform rotation turns the uvs the way the extension says, where its sines had the wrong signs; a model with no rotation is as before
+- A 3D particle emitter that outlives a scaled or turned parent keeps the parent's scale and turn, where it kept only its place and its particles fell at a quarter of the speed under a parent scaled by four; a particle's create callback reads the emitter's scale when it is emitted by hand before the first update or from inside another callback
+- A UI object moved to another parent or detached in its own update is updated once that update, where it could be updated twice
 
 ## 1.25.0 - 2026-10-04
 

@@ -14,14 +14,14 @@
 // the way the 2D font does, but extruded glyphs seen from an angle then overlap the line below
 const RENDER3D_TEXT_LEADING = 1.3;
 
-// let go of the parent but stay where the object was in the world, which removeChild keeps by itself; a destroyed
-// parent has already let go, so the position remembered by the last update stands in
+// let go of the parent but stay where and as the object was in the world, which removeChild keeps by itself; a
+// destroyed parent has already let go, so the world matrix last built with it in stands in, scale and turn as well
 function render3DDetach(o)
 {
     if (o.parent)
         o.parent.removeChild(o);
-    else if (o.worldPos3D)
-        o.pos3D = o.worldPos3D;
+    else if (o.matrixParent)
+        render3DTakeWorld(o, o.worldMatrix);
 }
 
 // a soft white dot for untextured particles, made once from a canvas, undefined headless or without a canvas
@@ -1233,6 +1233,7 @@ class ParticleEmitter3D extends EngineObject3D
         data[k+18] = this.angleSpeed ? rand(2*PI) : 0;
         data[k+19] = this.angleSpeed ? this.angleSpeed * random() * randSign() : 0;
         data[k+20] = 0; // trail points
+        this.particleView.scale = scale; // the scale it was made at, emitted before the first update too
         this.particleCreateCallback && this.particleCall(this.particleCreateCallback, k);
     }
 
@@ -1246,6 +1247,7 @@ class ParticleEmitter3D extends EngineObject3D
         // emit into a full emitter grows them
         const nested = render3DParticlesCalling.has(this);
         const view = nested ? render3DParticleView(this) : this.particleView, data = this.particleData;
+        view.scale = this.particleView.scale; // a nested view's too
         view.pos.set(data[k], data[k+1], data[k+2]);
         view.velocity.set(data[k+3], data[k+4], data[k+5]);
         view.age = data[k+17], view.lifeTime = data[k+16], view.destroyed = false;

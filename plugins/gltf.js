@@ -1110,14 +1110,15 @@ function gltfPart(json, buffers, textures, primitive, matrix, name)
     };
     const points = read(attributes.POSITION, (d, k)=> vec3(d[k], d[k+1], d[k+2]));
     const normals = attributes.NORMAL !== undefined ? read(attributes.NORMAL, (d, k)=> vec3(d[k], d[k+1], d[k+2])) : undefined;
-    // the uv set the base color texture names, moved by its KHR_texture_transform once here, offset + rotation * scale
+    // the uv set the base color texture names, moved by its KHR_texture_transform once here, offset + rotation * scale,
+    // the extension's rotation turning (u, v) to (cos u - sin v, sin u + cos v), its GLSL matrix being column major
     const material = json.materials?.[primitive.material] || {}, pbr = material.pbrMetallicRoughness || {};
     const textureRef = pbr.baseColorTexture, uvTransform = textureRef?.extensions?.KHR_texture_transform;
     const uvAccessor = attributes['TEXCOORD_' + (uvTransform?.texCoord ?? textureRef?.texCoord ?? 0)];
     const [ox, oy] = uvTransform?.offset || [0, 0], [sx, sy] = uvTransform?.scale || [1, 1], r = uvTransform?.rotation || 0;
     const c = cos(r), s = sin(r);
     const uvs = uvAccessor !== undefined ? read(uvAccessor, (d, k)=>
-        vec2(c*sx*d[k] + s*sy*d[k+1] + ox, c*sy*d[k+1] - s*sx*d[k] + oy)) : undefined;
+        vec2(c*sx*d[k] - s*sy*d[k+1] + ox, s*sx*d[k] + c*sy*d[k+1] + oy)) : undefined;
     const colors = attributes.COLOR_0 !== undefined ? read(attributes.COLOR_0, (d, k, n)=>
         rgb(gltfSRGB(d[k]), gltfSRGB(d[k+1]), gltfSRGB(d[k+2]), n > 3 ? d[k+3] : 1)) : undefined;
     let indices = primitive.indices !== undefined ? Array.from(gltfAccessor(json, buffers, primitive.indices).data) : points.map((_, i)=> i);

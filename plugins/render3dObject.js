@@ -316,14 +316,7 @@ class EngineObject3D extends EngineObject
     removeChild(child)
     {
         if (child instanceof EngineObject3D && !child.destroyed)
-        {
-            const world = render3DObjectMatrix(child);
-            child.pos3D = world.getTranslation();
-            child.rotation3D = world.getRotation();
-            child.scale3D = world.getScale();
-            if (child.localMatrix)
-                child.localMatrix = world.copy(); // a matrix given whole stays whole, shear and all
-        }
+            render3DTakeWorld(child, render3DObjectMatrix(child));
         super.removeChild(child);
     }
 
@@ -366,6 +359,17 @@ class EngineObject3D extends EngineObject
                 this.rotation3D.z, this.upright);
         }
     }
+}
+
+// make an object's own transform a world one, for an object leaving its parent: its position, rotation and scale
+// from the world matrix, and a matrix given whole, shear and all
+function render3DTakeWorld(o, world)
+{
+    o.pos3D = world.getTranslation();
+    o.rotation3D = world.getRotation();
+    o.scale3D = world.getScale();
+    if (o.localMatrix)
+        o.localMatrix = world.copy();
 }
 
 // an object's world matrix, the one it keeps: rebuilt only when its position, rotation or scale changed since the

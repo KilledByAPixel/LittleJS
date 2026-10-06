@@ -199,8 +199,10 @@ class UISystemPlugin
 
         // setup recursive update and render
         // update in reverse order to detect mouse enter/leave
+        let updatePass = 0; // marks the objects each update has reached, see updateObject
         function uiUpdate()
         {
+            ++updatePass;
             // a held or focused object that can no longer be used, itself or through a parent, lets go,
             // and one that was hidden or disabled is still released, a destroyed one stays silent
             const activeObject = uiSystem.activeObject;
@@ -345,7 +347,10 @@ class UISystemPlugin
 
             function updateObject(o)
             {
-                if (o.destroyed || !o.visible) return;
+                // once a pass, though a callback may move it under a parent not yet reached, or detach it to the
+                // top level, where the loop reaches it again
+                if (o.destroyed || !o.visible || o.uiUpdatePass === updatePass) return;
+                o.uiUpdatePass = updatePass;
 
                 // update in reverse order to detect mouse enter/leave, from a copy since a child may destroy
                 // siblings mid-update (e.g. dialog close) and the ones after it would shift under the loop
@@ -961,6 +966,7 @@ class UIObject
         this.textLineWidth = 0;
         /** @property {boolean} - Should this object be drawn */
         this.visible  = true;
+        this.uiUpdatePass = 0; // the UI update that last reached it, so a pass updates it once
         /** @property {Array<UIObject>} - A list of this object's children
          *  @type {Array<UIObject>} */
         this.children = [];
