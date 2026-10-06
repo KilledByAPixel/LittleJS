@@ -106,3 +106,19 @@ test('a load still running does not overwrite a sky box the game set since, or a
     await settle();
     assert.equal(run('render3D.skyBox'), undefined, 'a later level with no sky box came first');
 });
+
+test('the loaded cube maps kept are the four used last, so levels with skies of their own do not pile them up', async ()=>
+{
+    const { run } = await loadGame();
+    for (let i = 0; i < 6; ++i)
+    {
+        run(`level3DLoad({scene: {skyBox: ${JSON.stringify(sky)}.map((url)=> '${i}/' + url)}, objects: []})`);
+        run('loads.at(-1).finish()');
+        await settle();
+    }
+    assert.equal(run('level3DSceneCubeMaps.size'), 4);
+    assert.equal(run(`render3D.skyBox.urls[0]`), '5/px.png', 'the newest is on screen');
+    // one used again is kept as the newest
+    run(`level3DLoad({scene: {skyBox: ${JSON.stringify(sky)}.map((url)=> '2/' + url)}, objects: []})`);
+    assert.equal(run('loads.length'), 6, 'still kept, not loaded again');
+});

@@ -193,7 +193,7 @@ function engineCollideGridBuild(list)
 {
     let extent = 0;
     for (const o of list)
-        extent += min(max(o.size.x, o.size.y), 16) || 0;
+        extent += min(max(abs(o.size.x), abs(o.size.y)), 16) || 0; // a negative size is a mirrored one
     const grid = {size: max(2 * extent / list.length, .5), cells: new Map, at: new Map, index: new Map, big: new Set};
     list.forEach((o, i)=> { grid.index.set(o, i); engineCollideGridPlace(grid, o); });
     return grid;

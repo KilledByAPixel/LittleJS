@@ -77,5 +77,20 @@ smokeRun(async ()=>
         inputs('Sky box')[0].value === second.join(', '));
     await new Promise((resolve)=> setTimeout(resolve, 200));
     check('the sky box loads as a cube map', render3D.skyBox instanceof CubeMap && render3D.environment === render3D.skyBox);
+
+    // data urls have a comma of their own, so a comma and a space between them
+    const dataUrls = [...Array(6)].map((_, i)=> 'data:image/png;base64,' + 'A'.repeat(i + 1));
+    editor3DSceneUpdate(box);
+    edit(inputs('Sky box')[0], dataUrls.join(', '));
+    check('six data urls are the sky box', level.scene.skyBox?.join() === dataUrls.join(), level.scene.skyBox);
+
+    // an environment of its own with no sky box can still be taken out
+    editor3DChangeScene(({skyBox, ...rest}={})=> ({...rest, environment: second}));
+    editor3DStrokeEnd();
+    editor3DSceneUpdate(box);
+    const own = inputs('Environment')[0];
+    own.checked = false;
+    own.dispatchEvent(new Event('change'));
+    check('an environment with no sky box can be taken out', !level.scene.environment && !level.scene.skyBox);
 });
 </script>

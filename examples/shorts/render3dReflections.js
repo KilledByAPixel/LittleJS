@@ -151,7 +151,8 @@ while E is on the scene.
 - `shininess` is how sharp the reflection is, as sharp as the
   highlight it also sets: 10000 is a mirror, 1000 polished, 10 a wide
   blur. The row of balls goes from 10000 down to 1, ten times rougher
-  each.
+  each. `roughness`, 0 a mirror to 1 matte as glTF measures it, is
+  another way to set it.
 - The gold ring keeps its own color and reflects a quarter, with a
   `specular` highlight from the sun on top.
 

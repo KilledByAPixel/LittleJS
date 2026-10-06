@@ -1898,7 +1898,8 @@ function render3DUseProgram(program)
     if (program !== r.program)
     {
         gl.uniform1f(render3DUniform('iTime'), time);
-        gl.uniform3f(render3DUniform('iResolution'), glCanvas.width, glCanvas.height, 1);
+        const face = r.capturingCube?.size; // in a capture the face is the screen
+        gl.uniform3f(render3DUniform('iResolution'), face || glCanvas.width, face || glCanvas.height, 1);
     }
 }
 

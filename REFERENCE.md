@@ -94,6 +94,8 @@ let remaining = 36000;
   gravity, at the fixed 60 updates a second
 - **Seconds:** `Timer`, `Tween`, `time`, a particle emitter's `emitTime` and `particleTime` and its `emitRate` (per
   second) and `lifeTime`; a particle's `fadeRate` is a part of its life, not seconds
+- **Materials:** `roughness`, `reflectivity` and `specular` run 0 to 1, `shininess` 1 to about 10,000 (a mirror), and
+  `emissive` from 0 up
 - **Milliseconds:** `gamepadVibrate`'s duration, `vibrate` patterns and `saveDataURL`'s `revokeTime`
 - **Limits:** the GPU draws with 32-bit floats: keep the world within about ±10,000 units of the origin, and a
   shader's `iTime` gets coarse in a game left running for days; the FAQ says more
@@ -1775,7 +1777,7 @@ model.parts                          // one GLTFPart per primitive of every node
                                      // are the set the texture's texCoord names, moved by KHR_texture_transform;
                                      // normalMap and normalScale from normalTexture, emissiveMap and
                                      // emissiveMapColor from emissiveTexture and emissiveFactor, read at the base
-                                     // color texture's uvs
+                                     // color texture's uvs, and roughness from roughnessFactor, 1 when it has none
 model.mesh, model.textureInfo        // everything as one Mesh tinted by its materials, and its texture when every
                                      // part uses the same one; a model mixing plain and textured parts, or using
                                      // several textures or unlit parts, draws right through createObject
@@ -1898,7 +1900,8 @@ material.side = THREE.DoubleSide          // mesh.doubleSided = true
 material.emissiveIntensity                // obj.emissive
 material.normalMap, normalScale           // obj.normalMap, obj.normalScale (a number, three.js takes a Vector2)
 material.shininess (MeshPhongMaterial)    // obj.shininess, with obj.specular the strength
-material.envMap, reflectivity             // render3D.environment for the whole scene, obj.reflectivity per object
+material.reflectivity                     // obj.reflectivity, with render3D.environment or obj.environment the map
+material.metalness                        // none; a dark color with reflectivity reads as metal
 material.roughness (MeshStandardMaterial)  // obj.roughness, which sets obj.shininess: 0 a mirror, 1 matte
 material.emissiveMap, emissive            // obj.emissiveMap, obj.emissiveMapColor
 material.transparent, blending            // obj.transparent, obj.additive
@@ -1968,7 +1971,8 @@ level3DVoxelSetup(tileInfo, (map)=> {})           // The sheet a level's block m
            "lensFlare": true,                         // the sun's lens flare, a LensFlare3D made for it
            "skyBox": ["px.png", "nx.png", "py.png", "ny.png", "pz.png", "nz.png"], // render3D.skyBox, six images
            "environment": ["px.png", "nx.png", "py.png", "ny.png", "pz.png", "nz.png"]}, // as loadCubeMap takes
-                                                      // them, loaded in the background, the same urls once
+                                                      // them, loaded in the background, the same urls once;
+                                                      // urls are from the page, not from the level's file
  "objects": []}
 
 // A level can hold a map of blocks, made a VoxelMap when it loads: its corner, its size in cells, and its blocks

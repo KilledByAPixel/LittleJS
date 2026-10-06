@@ -334,8 +334,8 @@ function level3DSceneApply(scene)
     level3DSceneCubeMap('environment', scene.environment);
 }
 
-// the cube maps scene blocks loaded, by their six urls, so the same ones load once; a load that failed is not kept,
-// and is tried again by the next scene that names it
+// the cube maps scene blocks loaded, by their six urls, the four used last, so the same ones load once; a load that
+// failed is not kept, and is tried again by the next scene that names it
 const level3DSceneCubeMaps = new Map;
 
 // which load each of render3D.skyBox and environment waits for: every scene applied, or the editor putting the
@@ -348,8 +348,17 @@ function level3DSceneCubeMap(field, urls)
 {
     if (!isArray(urls) || urls.length !== 6 || !urls.every((url)=> typeof url === 'string')) return;
     const key = urls.join('\n'), load = ++level3DSceneCubeLoads[field], before = render3D[field];
+    // kept by the urls, newest last: one used again moves to the end, and past four the oldest goes, its texture
+    // freed unless it is still on screen
     let cube = level3DSceneCubeMaps.get(key);
-    cube || level3DSceneCubeMaps.set(key, cube = loadCubeMap(urls));
+    level3DSceneCubeMaps.delete(key);
+    level3DSceneCubeMaps.set(key, cube ||= loadCubeMap(urls));
+    for (const [oldKey, old] of level3DSceneCubeMaps)
+    {
+        if (level3DSceneCubeMaps.size <= 4) break;
+        level3DSceneCubeMaps.delete(oldKey);
+        old.then((map)=> map !== render3D.skyBox && map !== render3D.environment && map.dispose(), ()=> {});
+    }
     // set when it has loaded, unless a newer scene came, or the game set the field itself meanwhile
     const landed = (map)=> load === level3DSceneCubeLoads[field] && render3D[field] === before && (render3D[field] = map);
     cube.then(landed, (error)=>

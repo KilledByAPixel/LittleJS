@@ -3442,12 +3442,15 @@ function editor3DSceneUpdate(box)
     // a sky box of six images, their urls in one field by commas, and whether shiny things reflect it; the
     // environment follows the sky box while it is the same images
     const urls = (list)=> isArray(list) && list.length === 6 ? list.join(', ') : '';
-    const skyBox = editorElement('input', line('Sky box', 'Six image urls by commas, +x, -x, +y, -y, +z and -z, ' +
-        'loaded as a cube map for the sky; empty for none'), field + ';width:120px');
+    const skyBox = editorElement('input', line('Sky box', 'Six image urls by commas, +x, -x, +y, -y, +z and -z, a ' +
+        'comma and a space between data urls, loaded as a cube map for the sky; empty for none'), field + ';width:120px');
     skyBox.value = urls(scene.skyBox);
     skyBox.onchange = ()=>
     {
-        const list = skyBox.value.split(',').map((url)=> url.trim()).filter((url)=> url);
+        // by a comma and a space, so a data url keeps its own comma, or by commas alone when that is not six
+        const split = (by)=> skyBox.value.split(by).map((url)=> url.trim()).filter((url)=> url);
+        let list = split(/,\s+/);
+        list.length === 6 || (list = split(','));
         if (list.length && list.length !== 6)
             skyBox.value = urls(editor3DScene()?.skyBox); // not six, what it has now shows again
         else editor3DChangeScene((s={})=>
@@ -3466,6 +3469,9 @@ function editor3DSceneUpdate(box)
                 const {environment, ...rest} = s;
                 return on && isArray(s.skyBox) ? {...rest, environment: [...s.skyBox]} : rest;
             }));
+    else if (urls(scene.environment)) // one of its own, with no sky box, can still be taken out
+        toggle('Environment', 'The level\'s own environment, six images that shiny things reflect; off takes it out',
+            true, (on)=> on || editor3DChangeScene((s={})=> { const {environment, ...rest} = s; return rest; }));
 }
 
 // the properties box: the position, rotation and scale of the one selected object and an input for each default

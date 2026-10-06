@@ -577,6 +577,7 @@ class LightSystemPlugin
         }
         function lightSystemContextRestored()
         {
+            lightSystem.shadersFailed = false; // tried again on the new context, as the 3D renderer is
             initLightSystem();
             LOG('LightSystemPlugin: WebGL context restored');
         }

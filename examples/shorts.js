@@ -276,7 +276,7 @@ const exampleList =
     new ExampleInfo('3D Water', 'render3dWater.js', 'Rain on a pool, waves from a cellular automaton', false, 'water, waves, ripple, rain, cellular automaton, dynamicDraw, trails, particles'),
     new ExampleInfo('3D Ambient Occlusion', 'render3dAmbientOcclusion.js', 'Creases darkened from the depth texture', false, 'ambient occlusion, ssao, depth, depthTexture, post process, sceneDepth'),
     new ExampleInfo('3D Materials', 'render3dMaterials.js', 'Normal maps, reflections and glowing windows', false, 'material, normal map, bump, shininess, reflection, fresnel, emissive map, normalMapFromHeight'),
-    new ExampleInfo('3D Reflections', 'render3dReflections.js', 'Chrome and gold reflecting a sky painted in code', false, 'reflection, environment map, cube map, sky box, skybox, chrome, mirror, roughness, makeCubeMap'),
+    new ExampleInfo('3D Reflections', 'render3dReflections.js', 'A chrome ball reflecting the scene, under a sky painted in code', false, 'reflection, environment map, cube map, capture, CubeCamera, sky box, skybox, chrome, mirror, roughness, makeCubeMap'),
     new ExampleInfo('3D Trails', 'render3dTrails.js', 'Trails behind comets and a rippling flag', false, 'trail, ribbon, flag, deform'),
     new ExampleInfo('3D Drawing', 'render3dDraw.js', 'Immediate mode, drawn fresh each frame', false, 'immediate, draw, shadow'),
     new ExampleInfo('3D Text', 'render3dText.js', 'Text and sprites extruded into 3D', false, 'text, font, extrude'),
