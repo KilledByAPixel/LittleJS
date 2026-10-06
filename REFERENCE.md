@@ -1539,6 +1539,8 @@ obj.emissive = 1                        // 0 by default; how much it lights itse
                                         // things, between partly self lit, above 1 brighter for bloom; still casts
 obj.specular = .5                       // highlight strength, 0 is none and 1 is full, as render3D.specular; 0 by default
 obj.shininess = 100                     // 16 by default; the highlight's exponent, higher is smaller and sharper
+obj.roughness = .5                      // the same as a roughness, 0 a mirror to 1 matte as glTF has it: it sets
+                                        // shininess = 2 / roughness^4 - 2, at least 1, and reads it back
 obj.normalMap = textureInfo             // bumps and grooves that catch the light, read at the color texture's uvs;
                                         // green points up the image (OpenGL and glTF), flip the green of a DirectX one;
                                         // no tangents needed, any mesh with uvs works; normalMapFromHeight makes one
@@ -1894,7 +1896,7 @@ material.emissiveIntensity                // obj.emissive
 material.normalMap, normalScale           // obj.normalMap, obj.normalScale (a number, three.js takes a Vector2)
 material.shininess (MeshPhongMaterial)    // obj.shininess, with obj.specular the strength
 material.envMap, reflectivity             // render3D.environment for the whole scene, obj.reflectivity per object
-material.roughness (MeshStandardMaterial)  // obj.shininess, 10000 a mirror, lower blurs the reflection
+material.roughness (MeshStandardMaterial)  // obj.roughness, which sets obj.shininess: 0 a mirror, 1 matte
 material.emissiveMap, emissive            // obj.emissiveMap, obj.emissiveMapColor
 material.transparent, blending            // obj.transparent, obj.additive
 new THREE.ShaderMaterial({fragmentShader}) // obj.shader = new Shader(code), a mainImage snippet the engine wraps;

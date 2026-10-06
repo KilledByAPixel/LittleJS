@@ -264,6 +264,17 @@ class EngineObject3D extends EngineObject
      *  @return {Matrix4} */
     getMatrix() { return render3DObjectMatrix(this).copy(); }
 
+    /** How rough the surface is, 0 a mirror to 1 matte, as glTF and three.js's MeshStandardMaterial have it: another
+     *  way to set shininess, which is what is kept, shininess = 2 / roughness^4 - 2 and at least 1; it sets both the
+     *  highlight and how blurred a reflection is
+     *  @return {number} */
+    get roughness() { return (2 / (this.shininess + 2)) ** .25; }
+    set roughness(roughness)
+    {
+        ASSERT(isNumber(roughness) && roughness >= 0, 'roughness must be a number, 0 or more', roughness);
+        this.shininess = max(1, 2 / max(roughness, 1e-3) ** 4 - 2); // none is a mirror, still a finite number
+    }
+
     /** Turn the object so its -Z axis points at a world space target, sets pitch and yaw and clears roll
      *  @param {Vector3} target */
     lookAt(target)

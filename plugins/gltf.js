@@ -73,6 +73,9 @@ class GLTFPart
         this.emissiveMap = undefined;
         /** @property {Color} - The emissiveFactor, which multiplies the emissive map */
         this.emissiveMapColor = WHITE;
+        /** @property {number} - The material's roughnessFactor, 0 a mirror to 1 matte, 1 when it has none as the
+         *  format says; the object createObject makes takes it as its roughness, which sets its shininess */
+        this.roughness = 1;
         /** @property {GLTFSkin|undefined} - For a skinned mesh, what bends it: mesh is its resting pose, and the
          *  object createObject makes bends a copy of its own to each pose
          *  @type {GLTFSkin|undefined} */
@@ -305,6 +308,7 @@ class GLTFObject extends EngineObject3D
             o.emissive = part.unlit ? 1 : 0;
             o.normalMap = part.normalMap, o.normalScale = part.normalScale;
             o.emissiveMap = part.emissiveMap, o.emissiveMapColor = part.emissiveMapColor.copy(); // its own, as color is
+            o.roughness = part.roughness;
             const rest = !part.skin && model.nodeTree?.restPose?.[part.node];
             if (rest)
             {
@@ -1152,6 +1156,7 @@ function gltfPart(json, buffers, textures, primitive, matrix, name)
     const normalRef = material.normalTexture, emissiveRef = material.emissiveTexture;
     part.normalMap = normalRef && textures[normalRef.index];
     part.normalScale = normalRef?.scale ?? 1;
+    part.roughness = pbr.roughnessFactor ?? 1; // a roughness map is not read
     const [er, eg, eb] = material.emissiveFactor || [0, 0, 0];
     if (er || eg || eb)
     {

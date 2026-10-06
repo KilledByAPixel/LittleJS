@@ -190,3 +190,29 @@ test('glTF KHR_materials_unlit parts come in unlit, and createObject draws them 
     try { assert.deepEqual(object.parts.map(o=> o.emissive), [1, 0]); }
     finally { object.destroy(true); engineObjectsUpdate(); }
 });
+
+test('roughness is another way to set shininess: 2 / roughness^4 - 2, at least 1, and reads back', () =>
+{
+    const o = new EngineObject3D(vec3(), render3D.boxMesh);
+    near(o.roughness, (2 / 18) ** .25, 'the default shininess of 16');
+    o.roughness = .5;
+    near(o.shininess, 30, 'satin');
+    near(o.roughness, .5, 'and back');
+    o.roughness = .1;
+    near(o.shininess, 19998, 'a mirror');
+    o.roughness = 1;
+    assert.equal(o.shininess, 1, 'matte is the broadest the shininess goes');
+    o.roughness = 0;
+    assert.ok(isFinite(o.shininess) && o.shininess > 1e9, 'none is a perfect mirror, still a number');
+    o.destroy();
+});
+
+test('glTF reads a material\'s roughnessFactor, 1 when it has none, and its objects take it', async () =>
+{
+    const model = await uvModel([{ pbrMetallicRoughness: { roughnessFactor: .5 } }, {}]);
+    assert.deepEqual(model.parts.map((part)=> part.roughness), [.5, 1]);
+    const object = model.createObject();
+    near(object.parts[0].shininess, 30);
+    assert.equal(object.parts[1].shininess, 1);
+    object.destroy();
+});
