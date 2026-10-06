@@ -13,7 +13,7 @@ test('a numeric tween runs with no 3D math plugin loaded', () =>
     // the core math and the tween plugin alone, as a source build without math3d.js has them
     const context = vm.createContext({console});
     vm.runInContext('const ASSERT=(ok,msg)=>{if(!ok) throw Error(msg)}; const engineAddPlugin=()=>{};' +
-        'const debugProtectConstant=Object.freeze; let time=0, timeReal=0;', context);
+        'const debugProtectConstant=Object.freeze, debug=false; let time=0, timeReal=0;', context);
     for (const file of ['src/engineMath.js', 'plugins/tweenSystem.js'])
         vm.runInContext(readFileSync(new URL('../' + file, import.meta.url), 'utf8'), context, {filename: file});
     const value = vm.runInContext('let v; new Tween(x=> v = x, 0, 1, 1); tweenUpdate(.5); v', context);

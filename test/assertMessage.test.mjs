@@ -54,3 +54,29 @@ test('no assert in the engine or its plugins is left without a message', async (
     }
     assert.deepEqual(bare, []);
 });
+
+test('common mistakes say what to do', ()=>
+{
+    const said = (code)=> thrown(code) ?? '';
+    assert.match(said('keyIsDown(65)'), /keyIsDown: keyboard keys are codes like 'KeyA'/);
+    assert.match(said(`mouseIsDown('left')`), /mouseIsDown: button is 0 \(left\)/);
+    assert.match(said(`vec2('1', '2')`), /vec2: x and y must be numbers/);
+    assert.match(said('vec2(1).add(1)'), /vec2: x and y must be numbers/);
+    assert.match(said('setGravity(-.01)'), /setGravity: newGravity is a vec2, like vec2\(0, -\.01\)/);
+    assert.match(said('setCanvasFixedSize(1280, 720)'), /setCanvasFixedSize: size is a vec2/);
+    assert.match(said(`new Timer('5')`), /Timer: time must be a number of seconds/);
+    assert.match(said(`new Color().setHex('#12')`), /setHex: use #rgb/);
+    assert.match(said('drawText("hi", vec2(), vec2(1))'), /drawText: size is a number/);
+    assert.match(said('new ParticleEmitter(vec2(), 0, 1, 0, 100, PI, undefined, 5)'),
+        /ParticleEmitter: colorStartA must be a color, the arguments may be out of order/);
+    assert.match(said('RED.a = .5'), /engine constants like RED can not be changed, change a copy/);
+});
+
+test('a color given as 0 to 255 warns once in a debug build', ()=>
+{
+    const warnings = [];
+    const { run: runWarn } = loadEngine({ console: { ...console, warn: (...a)=> warnings.push(a.join(' ')) } });
+    runWarn('rgb(255, 0, 0); hsl(.5, 100, 50); rgb(1.5, 1, 1)');
+    assert.equal(warnings.length, 1, warnings.join(' | '));
+    assert.match(warnings[0], /0 to 1 here, not 0 to 255/);
+});

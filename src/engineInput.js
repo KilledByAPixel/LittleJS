@@ -198,9 +198,11 @@ function inputClear()
  *  @memberof Input */
 function keyIsDown(key, device=0)
 {
-    ASSERT(isStringLike(key), 'key must be a number or string');
-    ASSERT(typeof key !== 'string' || key.length > 1, "keys are codes like 'KeyW' or 'Space', not characters");
-    ASSERT(device > 0 || typeof key !== 'number' || key < 5, 'use code string for keyboard');
+    ASSERT(isStringLike(key), 'keyIsDown: key must be a code like \'KeyA\' or a number', key);
+    ASSERT(typeof key !== 'string' || key.length > 1,
+        "keyIsDown: keys are codes like 'KeyW' or 'Space', not characters", key);
+    ASSERT(device > 0 || typeof key !== 'number' || key < 5,
+        "keyIsDown: keyboard keys are codes like 'KeyA' or 'Space', the numbers 0 to 4 are mouse buttons", key);
     return !!(inputData[device]?.[key] & 1) && !inputCaptureHides(device);
 }
 
@@ -211,9 +213,11 @@ function keyIsDown(key, device=0)
  *  @memberof Input */
 function keyWasPressed(key, device=0)
 {
-    ASSERT(isStringLike(key), 'key must be a number or string');
-    ASSERT(typeof key !== 'string' || key.length > 1, "keys are codes like 'KeyW' or 'Space', not characters");
-    ASSERT(device > 0 || typeof key !== 'number' || key < 5, 'use code string for keyboard');
+    ASSERT(isStringLike(key), 'keyWasPressed: key must be a code like \'KeyA\' or a number', key);
+    ASSERT(typeof key !== 'string' || key.length > 1,
+        "keyWasPressed: keys are codes like 'KeyW' or 'Space', not characters", key);
+    ASSERT(device > 0 || typeof key !== 'number' || key < 5,
+        "keyWasPressed: keyboard keys are codes like 'KeyA' or 'Space', the numbers 0 to 4 are mouse buttons", key);
     return !!(inputData[device]?.[key] & 2) && !inputCaptureHides(device);
 }
 
@@ -224,9 +228,11 @@ function keyWasPressed(key, device=0)
  *  @memberof Input */
 function keyWasReleased(key, device=0)
 {
-    ASSERT(isStringLike(key), 'key must be a number or string');
-    ASSERT(typeof key !== 'string' || key.length > 1, "keys are codes like 'KeyW' or 'Space', not characters");
-    ASSERT(device > 0 || typeof key !== 'number' || key < 5, 'use code string for keyboard');
+    ASSERT(isStringLike(key), 'keyWasReleased: key must be a code like \'KeyA\' or a number', key);
+    ASSERT(typeof key !== 'string' || key.length > 1,
+        "keyWasReleased: keys are codes like 'KeyW' or 'Space', not characters", key);
+    ASSERT(device > 0 || typeof key !== 'number' || key < 5,
+        "keyWasReleased: keyboard keys are codes like 'KeyA' or 'Space', the numbers 0 to 4 are mouse buttons", key);
     return !!(inputData[device]?.[key] & 4) && !inputCaptureHides(device);
 }
 
@@ -253,7 +259,7 @@ function keyDirection(up='ArrowUp', down='ArrowDown', left='ArrowLeft', right='A
  *  @memberof Input */
 function mouseIsDown(button)
 {
-    ASSERT(isNumber(button), 'mouse button must be a number');
+    ASSERT(isNumber(button), 'mouseIsDown: button is 0 (left), 1 (middle) or 2 (right)', button);
     return keyIsDown(button);
 }
 
@@ -263,7 +269,7 @@ function mouseIsDown(button)
  *  @memberof Input */
 function mouseWasPressed(button)
 {
-    ASSERT(isNumber(button), 'mouse button must be a number');
+    ASSERT(isNumber(button), 'mouseWasPressed: button is 0 (left), 1 (middle) or 2 (right)', button);
     return keyWasPressed(button);
 }
 
@@ -273,7 +279,7 @@ function mouseWasPressed(button)
  *  @memberof Input */
 function mouseWasReleased(button)
 {
-    ASSERT(isNumber(button), 'mouse button must be a number');
+    ASSERT(isNumber(button), 'mouseWasReleased: button is 0 (left), 1 (middle) or 2 (right)', button);
     return keyWasReleased(button);
 }
 

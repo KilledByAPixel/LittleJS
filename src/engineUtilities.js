@@ -29,7 +29,7 @@ class Timer
      *  @param {boolean} [useRealTime] - Should the timer keep running even when the game is paused? (useful for UI) */
     constructor(timeLeft, useRealTime=false)
     {
-        ASSERT(timeLeft === undefined || isNumber(timeLeft), 'Constructed Timer is invalid.', timeLeft);
+        ASSERT(timeLeft === undefined || isNumber(timeLeft), 'Timer: time must be a number of seconds', timeLeft);
         this.useRealTime = useRealTime;
         const globalTime = this.getGlobalTime();
         /** @type {number|undefined} */
@@ -42,7 +42,7 @@ class Timer
      *  @param {number} [timeLeft] - How much time left before the timer is elapsed in seconds */
     set(timeLeft=0)
     {
-        ASSERT(isNumber(timeLeft), 'Timer is invalid.', timeLeft);
+        ASSERT(isNumber(timeLeft), 'Timer.set: time must be a number of seconds', timeLeft);
         const globalTime = this.getGlobalTime();
         this.time = globalTime + timeLeft;
         this.setTime = timeLeft;

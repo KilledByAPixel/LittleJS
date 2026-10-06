@@ -138,7 +138,8 @@ function tile(index=0, size=tileDefaultSize, texture=0, padding=tileDefaultPaddi
     {
         // no image: headless loads none and keeps the size; an image that failed to load, whose warning named it, gives
         // a tile of no size, which draws nothing; a slot never given an image is a mistake a debug build points out
-        ASSERT(headlessMode || textureInfo instanceof TextureInfo, 'tile texture is not loaded', texture);
+        ASSERT(headlessMode || textureInfo instanceof TextureInfo,
+            'tile: no texture ' + texture + ', pass its image to engineInit and make tiles in gameInit or later');
         return new TileInfo(new Vector2, headlessMode ? size.copy() : new Vector2, textureInfo, padding, bleed);
     }
 
@@ -1298,6 +1299,10 @@ function drawCanvas2D(pos, size, angle=0, mirror=false, drawFunction, screenSpac
  *  @memberof Draw */
 function drawText(text, pos, size=1, color=WHITE, lineWidth=0, lineColor=BLACK, textAlign='center', font=fontDefault, fontStyle='', maxWidth, angle=0, context=drawContext)
 {
+    // checked before it is scaled, a vec2 size would come out NaN
+    ASSERT(isVector2(pos), 'drawText: pos must be a vec2', pos);
+    ASSERT(isNumber(size), 'drawText: size is a number, the height of the text in world units', size);
+
     // convert to screen space
     pos = worldToScreen(pos);
     size *= cameraScale;
@@ -1326,13 +1331,13 @@ function drawText(text, pos, size=1, color=WHITE, lineWidth=0, lineColor=BLACK, 
  *  @memberof Draw */
 function drawTextScreen(text, pos, size, color=WHITE, lineWidth=0, lineColor=BLACK, textAlign='center', font=fontDefault, fontStyle='', maxWidth, angle=0, context=drawContext)
 {
-    ASSERT(isStringLike(text), 'text must be a string');
-    ASSERT(isVector2(pos), 'pos must be a vec2');
-    ASSERT(isNumber(size), 'size must be a number');
-    ASSERT(isColor(color), 'color must be a color');
-    ASSERT(isNumber(lineWidth), 'lineWidth must be a number');
-    ASSERT(isColor(lineColor), 'lineColor must be a color');
-    ASSERT(['left','center','right'].includes(textAlign), 'align must be left, center, or right');
+    ASSERT(isStringLike(text), 'drawTextScreen: text must be a string', text);
+    ASSERT(isVector2(pos), 'drawTextScreen: pos must be a vec2', pos);
+    ASSERT(isNumber(size), 'drawTextScreen: size is a number, the height of the text in pixels', size);
+    ASSERT(isColor(color), 'drawTextScreen: color must be a color', color);
+    ASSERT(isNumber(lineWidth), 'drawTextScreen: lineWidth must be a number', lineWidth);
+    ASSERT(isColor(lineColor), 'drawTextScreen: lineColor must be a color', lineColor);
+    ASSERT(['left','center','right'].includes(textAlign), 'drawTextScreen: textAlign must be left, center or right', textAlign);
     ASSERT(isStringLike(font), 'font must be a string');
     ASSERT(isStringLike(fontStyle), 'fontStyle must be a string');
     ASSERT(isNumber(angle), 'angle must be a number');

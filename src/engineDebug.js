@@ -766,7 +766,8 @@ function debugProtectConstant(obj)
                 get: ()=> values[prop],
                 set: (value)=> 
                 {
-                    ASSERT(false, `Cannot modify engine constant. Attempted to set constant (${obj}) property '${prop}' to '${value}'.`);
+                    ASSERT(false, `engine constants like RED can not be changed, change a copy made with copy(); ` +
+                        `tried to set ${prop} of ${obj} to ${value}`);
                 },
                 enumerable: true
             });

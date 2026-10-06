@@ -458,7 +458,11 @@ let soundPauseWhenHidden = true;
 /** Set position of camera in world space
  *  @param {Vector2} pos
  *  @memberof Settings */
-function setCameraPos(pos) { cameraPos = pos.copy(); }
+function setCameraPos(pos)
+{
+    ASSERT(isVector2(pos), 'setCameraPos: pos is a vec2, like vec2(5, 2)', pos);
+    cameraPos = pos.copy();
+}
 
 /** Set angle of camera in world space
  *  @param {number} angle
@@ -492,12 +496,20 @@ function setCanvasColorTiles(colorTiles) { canvasColorTiles = colorTiles; }
 /** Set color to clear the canvas to before render, does not clear if alpha is 0
  *  @param {Color} color
  *  @memberof Settings */
-function setCanvasClearColor(color) { canvasClearColor = color.copy(); }
+function setCanvasClearColor(color)
+{
+    ASSERT(isColor(color), 'setCanvasClearColor: color is a Color, like hsl(.6, .5, .2)', color);
+    canvasClearColor = color.copy();
+}
 
 /** Set max size of the canvas
  *  @param {Vector2} size
  *  @memberof Settings */
-function setCanvasMaxSize(size) { canvasMaxSize = size.copy(); }
+function setCanvasMaxSize(size)
+{
+    ASSERT(isVector2(size), 'setCanvasMaxSize: size is a vec2, like vec2(1920, 1080)', size);
+    canvasMaxSize = size.copy();
+}
 
 /** Set minimum aspect ratio of the canvas (width/height), unused if 0
  *  @param {number} aspect
@@ -512,7 +524,11 @@ function setCanvasMaxAspect(aspect) { canvasMaxAspect = aspect; }
 /** Set fixed size of the canvas
  *  @param {Vector2} size
  *  @memberof Settings */
-function setCanvasFixedSize(size) { canvasFixedSize = size.copy(); }
+function setCanvasFixedSize(size)
+{
+    ASSERT(isVector2(size), 'setCanvasFixedSize: size is a vec2, like vec2(1280, 720)', size);
+    canvasFixedSize = size.copy();
+}
 
 /** Use nearest scaling algorithm for canvas for more pixelated look
  *  @param {boolean} pixelated
@@ -642,7 +658,11 @@ function setGLCircleSides(sides)
 /** Set default size of tiles in pixels
  *  @param {Vector2} size
  *  @memberof Settings */
-function setTileDefaultSize(size) { tileDefaultSize = size.copy(); }
+function setTileDefaultSize(size)
+{
+    ASSERT(isVector2(size), 'setTileDefaultSize: size is a vec2, like vec2(16)', size);
+    tileDefaultSize = size.copy();
+}
 
 /** Default padding pixels around tiles
  *  @param {number} padding
@@ -692,7 +712,11 @@ function setObjectMaxSpeed(speed) { objectMaxSpeed = speed; }
 /** Set how much gravity to apply to objects
  *  @param {Vector2} newGravity
  *  @memberof Settings */
-function setGravity(newGravity) { gravity = newGravity.copy(); }
+function setGravity(newGravity)
+{
+    ASSERT(isVector2(newGravity), 'setGravity: newGravity is a vec2, like vec2(0, -.01)', newGravity);
+    gravity = newGravity.copy();
+}
 
 /** Set the scale for the emit rate of particles, 0 disables particle emitters
  *  @param {number} scale

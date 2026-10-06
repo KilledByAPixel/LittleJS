@@ -109,6 +109,23 @@ class ParticleEmitter extends EngineObject
     )
     {
         super(pos, vec2(), tileInfo, angle, undefined, renderOrder);
+        if (debug)
+        {
+            // the arguments come in a long row, so one out of place is named rather than emitting NaN particles
+            ASSERT(typeof emitSize === 'number' || isVector2(emitSize), 'ParticleEmitter: emitSize must be a number or vec2',
+                emitSize);
+            ASSERT(!tileInfo || tileInfo instanceof TileInfo, 'ParticleEmitter: tileInfo must be a TileInfo or undefined',
+                tileInfo);
+            const numbers = {emitTime, emitRate, emitConeAngle, particleTime, sizeStart, sizeEnd, speed, angleSpeed,
+                damping, angleDamping, gravityScale, particleConeAngle, fadeRate, randomness};
+            for (const name in numbers)
+                ASSERT(isNumber(numbers[name]), `ParticleEmitter: ${name} must be a number, the arguments may be out of order`,
+                    numbers[name]);
+            const colors = {colorStartA, colorStartB, colorEndA, colorEndB};
+            for (const name in colors)
+                ASSERT(isColor(colors[name]), `ParticleEmitter: ${name} must be a color, the arguments may be out of order`,
+                    colors[name]);
+        }
 
         // emitter settings
         /** @property {boolean} - Should particles be emitted in a circle */

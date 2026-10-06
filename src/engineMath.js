@@ -687,8 +687,8 @@ function vec2(x=0, y) { return new Vector2(x, y ?? x); }
 function isVector2(v) { return v instanceof Vector2 && v.isValid(); }
 
 // vector2 asserts
-function ASSERT_VECTOR2_VALID(v) { ASSERT(isVector2(v), 'Vector2 is invalid.', v); }
-function ASSERT_NUMBER_VALID(n) { ASSERT(isNumber(n), 'Number is invalid.', n); }
+function ASSERT_VECTOR2_VALID(v) { ASSERT(isVector2(v), 'expected a vec2', v); }
+function ASSERT_NUMBER_VALID(n) { ASSERT(isNumber(n), 'expected a number', n); }
 
 /**
  * 2D Vector object with vector math library
@@ -711,7 +711,8 @@ class Vector2
         this.x = x;
         /** @property {number} - Y axis location */
         this.y = y;
-        ASSERT(this.isValid(), 'Constructed Vector2 is invalid.', this);
+        ASSERT(this.isValid(), 'vec2: x and y must be numbers (add, subtract, multiply and divide take a vec2, scale a ' +
+            'number)', this);
     }
 
     /** Sets values of this vector and returns self
@@ -942,7 +943,21 @@ class Vector2
  * @return {Color}
  * @memberof Math
  */
-function rgb(r, g, b, a) { return new Color(r, g, b, a); }
+function rgb(r, g, b, a)
+{
+    debug && (r > 2 || g > 2 || b > 2) && colorRangeWarn('rgb(255, 0, 0) is rgb(1, 0, 0)');
+    return new Color(r, g, b, a);
+}
+
+// a color given as 0 to 255 or as percents, as other tools take them, said once in a debug build; a value a little
+// past 1 is a bright color, which is why only past 2 counts
+let colorRangeWarned = false;
+function colorRangeWarn(example)
+{
+    if (colorRangeWarned) return;
+    colorRangeWarned = true;
+    console.warn('color values are 0 to 1 here, not 0 to 255 or percents: ' + example);
+}
 
 /**
  * Create a color object with HSLA values, white by default
@@ -952,7 +967,11 @@ function rgb(r, g, b, a) { return new Color(r, g, b, a); }
  * @param {number} [a=1] - alpha
  * @return {Color}
  * @memberof Math */
-function hsl(h, s, l, a) { return new Color().setHSLA(h, s, l, a); }
+function hsl(h, s, l, a)
+{
+    debug && (s > 2 || l > 2) && colorRangeWarn('hsl(.5, 100, 50) is hsl(.5, 1, .5)');
+    return new Color().setHSLA(h, s, l, a);
+}
 
 /**
  * Check if object is a valid Color
@@ -962,7 +981,7 @@ function hsl(h, s, l, a) { return new Color().setHSLA(h, s, l, a); }
 function isColor(c) { return c instanceof Color && c.isValid(); }
 
 // color asserts
-function ASSERT_COLOR_VALID(c) { ASSERT(isColor(c), 'Color is invalid.', c); }
+function ASSERT_COLOR_VALID(c) { ASSERT(isColor(c), 'expected a color', c); }
 
 /**
  * Color object (red, green, blue, alpha) with some helpful functions
@@ -991,7 +1010,7 @@ class Color
         this.b = b;
         /** @property {number} - Alpha */
         this.a = a;
-        ASSERT(this.isValid(), 'Constructed Color is invalid.', this);
+        ASSERT(this.isValid(), 'Color: r, g, b and a must be numbers', this);
     }
 
     /** Sets values of this color and returns self
@@ -1166,7 +1185,7 @@ class Color
     {
         ASSERT(isStringLike(hex), 'Color hex code must be a string');
         ASSERT(hex[0] === '#', 'Color hex code must start with #');
-        ASSERT([4,5,7,9].includes(hex.length), 'Invalid hex');
+        ASSERT([4,5,7,9].includes(hex.length), 'setHex: use #rgb, #rgba, #rrggbb or #rrggbbaa', hex);
 
         if (hex.length < 6)
         {
