@@ -122,7 +122,9 @@ npm install
 npm run dev
 ```
 
-Here is a minimal Hello World example game, with the script path pointing at the engine file from the download or npm package.
+The examples are only in the repository: clone it, or use Download ZIP on its GitHub page; the npm package and the release zip hold the engine alone. A page that loads images or modules needs a local web server, as browsers block them from a file on disk: serve the repository's root, for example with `npx http-server`, then open `http://localhost:8080/examples/starter/`, the place to start. The [FAQ](FAQ.md#do-i-need-a-local-server-to-run-littlejs-games-and-how-do-i-set-one-up) has more.
+
+Here is a minimal Hello World example game, with the script path pointing at the engine file from the download or npm package; it loads nothing, so it runs straight from the file.
 
 ```html
 <!DOCTYPE html>

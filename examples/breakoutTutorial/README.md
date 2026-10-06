@@ -5,7 +5,7 @@ For this tutorial we will start with the empty project in the LittleJS examples 
 The empty project has only 3 files: one for html, one for js, and one image. The index.html and image files will not need to be changed for this example. The 
 [game.js](https://github.com/KilledByAPixel/LittleJS/blob/main/examples/empty/game.js) file contains a stubbed out project with all the JavaScript code and is the only file we will be working with today.
 
-You can get the [LittleJS code using GitHub](https://github.com/KilledByAPixel/LittleJS) or call ```npm install littlejsengine```
+Get the [LittleJS repository from GitHub](https://github.com/KilledByAPixel/LittleJS), by cloning it or with Download ZIP; the examples are not in the npm package. The page needs a local web server: serve the repository's root, for example with `npx http-server`, and open `http://localhost:8080/examples/empty/`. A copy of the empty folder somewhere else changes its `import '../../dist/littlejs.esm.js'` to where the engine is.
 
 In this tutorial we will make a breakout style game with a player controllable paddle, a ball that bounces, and bricks that break when hit. This is a great introduction to LittleJS and takes only around 30 minutes to complete.
 
@@ -408,13 +408,13 @@ if (!ball && LJS.mouseWasPressed(0)) // if there is no ball and left mouse is pr
 
 ## Add Particle Effects
 
-Let's add some effects when the bricks break. You can use the LittleJS particle system designer to create an explosion effect.
+Let's add some effects when the bricks break. You can use the [LittleJS particle system designer](https://killedbyapixel.github.io/LittleJS/examples/particles/) to create an explosion effect.
 
 This will be a one shot type of effect, not a continuous emitter so change emitTime to something small like .1 for this example. Now before you play with it too much, let's test it by pasting in the code it generated into the Brick's collideWithObject function.
 
 Make sure you replace the first parameter, vec2(), with this.pos so the effect appears wherever the brick is, otherwise it will spawn at the world origin.
 
-The designer writes code for a plain script where every engine name is global, so in this module project put `LJS.` in front of `ParticleEmitter` and `tile`; `vec2` and `hsl` are already taken from `LJS` at the top of the file. Here the tile is left `undefined` for plain untextured particles.
+The designer writes code for a plain script where every engine name is global, so in this module project put `LJS.` in front of each engine name it uses that the file does not take from `LJS` at the top, like `ParticleEmitter`, `tile`, `PI` or `particleEffectShapeTile`; `vec2` and `hsl` are already taken. Here the tile is left `undefined` for plain untextured particles.
 
 ```javascript
 // create explosion effect
@@ -486,7 +486,7 @@ And assign that paddle object when it is created in gameInit.
 paddle = new Paddle; // create player's paddle
 ```
 
-While we are working in the ball's collideWithObject function, let's also make it speed up a little bit each time it bounces.
+While we are working in the ball's collideWithObject function, let's also make it speed up a little bit each time it bounces. Put this right after the check that stops it colliding with the paddle while it moves up, before the bounce sound, since the next step plays that sound with this speed.
 
 ```javascript
 // speed up the ball
@@ -506,6 +506,39 @@ For the ball bounce sound, let's also tweak the pitch by how fast the ball is mo
 
 ```javascript
 sound_bounce.play(this.pos, 1, speed*2); // play bounce sound with pitch scaled by speed
+```
+
+With every step in, the ball's collideWithObject looks like this, as in [the tutorial's finished game.js](https://github.com/KilledByAPixel/LittleJS/blob/main/examples/breakoutTutorial/game.js):
+
+```javascript
+collideWithObject(o)
+{
+    // prevent colliding with paddle if moving upwards
+    if (o == paddle && this.velocity.y > 0)
+        return false;
+
+    // speed up
+    const speed = LJS.min(1.04*this.velocity.length(), .5);
+    this.velocity = this.velocity.normalize(speed);
+
+    // play bounce sound with pitch scaled by speed
+    sound_bounce.play(this.pos, 1, speed*2);
+
+    if (o == paddle)
+    {
+        // control bounce angle when ball collides with paddle
+        const deltaX = o.pos.x - this.pos.x;
+        this.velocity = this.velocity.rotate(.3 * deltaX);
+
+        // make sure ball is moving upwards with a minimum speed
+        this.velocity.y = LJS.max(-this.velocity.y, .2);
+
+        // prevent default collision code
+        return false;
+    }
+
+    return true; // allow object to collide
+}
 ```
 
 ## Congratulations on Completing the Breakout Tutorial

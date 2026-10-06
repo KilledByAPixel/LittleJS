@@ -10,7 +10,10 @@ If you don't find an answer here, feel free to ask the community or check the do
 - [How do I use LittleJS as an ES module?](#how-do-i-use-littlejs-as-an-es-module)
 - [How do I use LittleJS with TypeScript?](#how-do-i-use-littlejs-with-typescript)
 - [Why do I see a blank screen when I run my game?](#why-do-i-see-a-blank-screen-when-i-run-my-game)
+- [Why does my game say a name "has already been declared"?](#why-does-my-game-say-a-name-has-already-been-declared)
 - [Do I need a local server to run LittleJS games, and how do I set one up?](#do-i-need-a-local-server-to-run-littlejs-games-and-how-do-i-set-one-up)
+- [Which browsers does LittleJS run in?](#which-browsers-does-littlejs-run-in)
+- [How far can my world go, and how long can my game run?](#how-far-can-my-world-go-and-how-long-can-my-game-run)
 - [How does the camera and world coordinate systems work?](#how-does-the-camera-and-world-coordinate-systems-work)
 - [How do I configure engine settings?](#how-do-i-configure-engine-settings)
 - [What plugins ship with LittleJS?](#what-plugins-ship-with-littlejs)
@@ -56,16 +59,16 @@ If you don't find an answer here, feel free to ask the community or check the do
 ### What is LittleJS, and how is it different from other JavaScript game engines?
 
 LittleJS is a lightweight, high-performance JavaScript game engine designed for simplicity and speed.
-It offers a hybrid rendering system that combines the advantages of WebGL and 2D Canvas, and in our sprite-rendering benchmarks it outperforms larger engines like Phaser, Pixi, and Kaboom.
-Unlike those feature-heavy engines, LittleJS focuses on 2D games and providing a comprehensive set of simple, easy to use features.
+It offers a hybrid rendering system that combines the advantages of WebGL and 2D Canvas, and [bench/](bench/) runs the same scenes in it and in three.js, PixiJS and Phaser.
+Unlike those feature-heavy engines, LittleJS keeps to a comprehensive set of simple, easy to use features, for 2D games first, with a 3D renderer of its own as well.
 LittleJS is perfect for developers who want a minimal yet powerful engine to bring their 2D game ideas to life without the complexity of larger frameworks, and it's especially well suited for size-constrained competitions like js13kGames.
 
 ### How do I set up a basic LittleJS project?
 
-Download the LittleJS repository via GitHub or npm.
+Clone the LittleJS repository, or use Download ZIP on its GitHub page: the examples are only there, the npm package and the release zip hold the engine alone.
 Include one of the LittleJS builds from the dist folder.
-Several examples are included for you to build on.
-The most basic example is just an empty project.
+Several examples are included for you to build on, and they need a local web server: serve the repository's root, for example with `npx http-server`, and open `http://localhost:8080/examples/empty/` (see [Do I need a local server](#do-i-need-a-local-server-to-run-littlejs-games-and-how-do-i-set-one-up)).
+The most basic example is just an empty project. Its `import '../../dist/littlejs.esm.js'` finds the engine from inside the repository, so a copy of the folder somewhere else changes that path to where the engine is.
 
 [Empty Example HTML file:](https://github.com/KilledByAPixel/LittleJS/blob/main/examples/empty/index.html)
 ```html
@@ -133,7 +136,7 @@ LJS.engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost,
 
 The empty example is an ES module, so engine names come from the `LJS` namespace. For a classic setup where the engine is a plain `<script src=../../dist/littlejs.js>` tag and every engine name is a global, start from [examples/starter](https://github.com/KilledByAPixel/LittleJS/tree/main/examples/starter) instead.
 
-This is the simplest setup — two files served by a local web server. If you'd rather start from a bundler-based project with hot reload, see [How do I use Vite with LittleJS?](#how-do-i-use-vite-with-littlejs) for the official Vite starter template.
+This is the simplest setup — three files served by a local web server. If you'd rather start from a bundler-based project with hot reload, see [How do I use Vite with LittleJS?](#how-do-i-use-vite-with-littlejs) for the official Vite starter template.
 
 ### How do I use LittleJS as an ES module?
 
@@ -194,8 +197,8 @@ See [examples/typescript/](examples/typescript/) for a complete TypeScript proje
 
 If you are seeing a blank screen, first try opening the dev tools console (F12 in most browsers).
 This will show you any errors that occur and allows stepping through code to help debug.
-A common issue is the image data failing to load with a message like "The image element contains cross-origin data, and may not be loaded."
-This is probably because the game was loaded directly without using a web server!
+A common issue is the game opened from a file on disk with no web server: the console then says an image was "blocked by CORS policy" from origin 'null' and `failed to load image: tiles.png`, or that a module script was blocked, and the game runs with no sprites or not at all.
+Serve it from a local web server, see [Do I need a local server](#do-i-need-a-local-server-to-run-littlejs-games-and-how-do-i-set-one-up).
 
 ### Why does my game say a name "has already been declared"?
 
@@ -393,7 +396,7 @@ LittleJS has a dedicated [js13k branch](https://github.com/KilledByAPixel/Little
 - **Lean on built-ins to avoid asset files**: `Sound` with ZzFX parameters generates sound effects from a tiny array, and built-in shape drawing avoids shipping image assets.
 - **Use a packer**: the js13k branch is set up to compress the final bundle with Roadroller or a similar packer. Check the branch's build script for the current toolchain.
 
-For normal production (non-13KB) builds, the engine ships `dist/littlejs.release.js` (asserts stripped, about 1.5 MB with every plugin and its comments) and `dist/littlejs.min.js` (minified, about 420 KB, about 125 KB gzipped). A bundler like Vite leaves out the plugins a game does not use, which makes a small game far smaller.
+For normal production (non-13KB) builds, the engine ships `dist/littlejs.release.js` (asserts stripped, about 1.6 MB with every plugin and its comments) and `dist/littlejs.min.js` (minified, about 450 KB, about 135 KB gzipped). A bundler like Vite leaves out the plugins a game does not use, which makes a small game far smaller.
 
 ---
 
