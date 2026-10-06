@@ -51,5 +51,31 @@ smokeRun(async ()=>
     const angles = editor3DSunAngles(level.scene.sunDirection);
     check('the sun\'s height right after its turn keeps the turn', angles.join() === '90,30', angles);
     check('each edit is one undo', editor3DUndoList.length === 6, editor3DUndoList.length);
+
+    // the sky box field takes six urls by commas, blob urls of a small image since a data url has commas of its own;
+    // Reflect it makes them the environment too, which then follows the sky box; a count other than six is refused
+    const blob = await new Promise((resolve)=>
+    {
+        const canvas = document.createElement('canvas');
+        canvas.width = canvas.height = 4;
+        canvas.toBlob(resolve);
+    });
+    const six = (n)=> [...Array(n)].map(()=> URL.createObjectURL(blob));
+    const first = six(6), second = six(6);
+    edit(inputs('Sky box')[0], first.join(', '));
+    check('six urls are the sky box', level.scene.skyBox?.join() === first.join(), level.scene.skyBox);
+    editor3DSceneUpdate(box); // a frame goes by, the box made again with the toggle a sky box brings
+    const reflect = inputs('Reflect it')[0];
+    reflect.checked = true;
+    reflect.dispatchEvent(new Event('change'));
+    editor3DSceneUpdate(box);
+    check('reflect it makes them the environment', level.scene.environment?.join() === first.join());
+    edit(inputs('Sky box')[0], second.join(', '));
+    check('the environment follows the sky box it reflects', level.scene.environment?.join() === second.join());
+    edit(inputs('Sky box')[0], six(5).join(', '));
+    check('five urls are refused', level.scene.skyBox.join() === second.join() &&
+        inputs('Sky box')[0].value === second.join(', '));
+    await new Promise((resolve)=> setTimeout(resolve, 200));
+    check('the sky box loads as a cube map', render3D.skyBox instanceof CubeMap && render3D.environment === render3D.skyBox);
 });
 </script>

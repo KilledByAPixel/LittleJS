@@ -19,7 +19,8 @@ const LEVEL3D_VERSION = 1; // the format a level's littlejs3D names
  *  @typedef {Object} Level3D
  *  @property {number} [littlejs3D] - The format's version, 1
  *  @property {Array<Object>} objects - Each {id, type, pos, rotation, scale, properties}, all but type optional
- *  @property {Object} [scene] - The scene block: sky, ambient, sunDirection, sunColor, fog, fogColor, shadows, lensFlare
+ *  @property {Object} [scene] - The scene block: sky, ambient, sunDirection, sunColor, fog, fogColor, shadows, lensFlare,
+ *    skyBox, environment
  *  @property {Object} [voxels] - A block map: {pos, size, blocks}
  *  @property {Object} [terrain] - A height map: {pos, size, height, color, heights, paint}
  *  @property {Object} [prefabs] - The level's own prefabs by name, each {objects, attached}
@@ -94,9 +95,10 @@ function level3DAddMesh(name, mesh, tileInfo, color=WHITE)
  *    are added before its objects are made, one the game added itself keeps its place
  *  - A level may set the scene too, in a scene block beside its objects: sky, three colors for straight up, the
  *    horizon and straight down, ambient, how much of them lights the scene, .5 when not given, sunDirection and
- *    sunColor, fog, its start and end, fogColor, the horizon color when not given, shadows, and lensFlare, the
- *    sun's lens flare; what the block leaves out stays as the game set it, and a level with no block changes
- *    nothing
+ *    sunColor, fog, its start and end, fogColor, the horizon color when not given, shadows, lensFlare, the
+ *    sun's lens flare, and skyBox and environment, each six image urls as loadCubeMap takes them, which load in
+ *    the background and are set when they have; what the block leaves out stays as the game set it, and a level
+ *    with no block changes nothing
  *  @param {Level3D} level - The level, the level editor edits this same object
  *  @return {Array<any>} - What each object's type made, a function that made nothing is left out
  *  @memberof Level3D */
@@ -326,6 +328,31 @@ function level3DSceneApply(scene)
         r.shadows = scene.shadows;
     if (typeof scene.lensFlare === 'boolean')
         level3DSceneFlare(scene.lensFlare);
+    level3DSceneCubeMap('skyBox', scene.skyBox);
+    level3DSceneCubeMap('environment', scene.environment);
+}
+
+// the cube maps scene blocks loaded, by their six urls, so the same ones load once; a load that failed is not kept,
+// and is tried again by the next scene that names it
+const level3DSceneCubeMaps = new Map;
+
+// which load each of render3D.skyBox and environment waits for: a newer scene, or the editor putting the game's
+// back, moves it on, and a load that finishes after is dropped
+const level3DSceneCubeLoads = {skyBox: 0, environment: 0};
+
+// load the six urls a scene block gives for render3D.skyBox or environment and set it when they have loaded; a value
+// that is not six strings leaves it as it is, and a failed load says so and leaves it too
+function level3DSceneCubeMap(field, urls)
+{
+    if (!isArray(urls) || urls.length !== 6 || !urls.every((url)=> typeof url === 'string')) return;
+    const key = urls.join('\n'), load = ++level3DSceneCubeLoads[field];
+    let cube = level3DSceneCubeMaps.get(key);
+    cube || level3DSceneCubeMaps.set(key, cube = loadCubeMap(urls));
+    cube.then((map)=> load === level3DSceneCubeLoads[field] && (render3D[field] = map), (error)=>
+    {
+        level3DSceneCubeMaps.get(key) === cube && level3DSceneCubeMaps.delete(key);
+        console.warn(error.message);
+    });
 }
 
 // the sun's lens flare as a scene sets it: on makes one unless the sun has a flare already, the game's own or an

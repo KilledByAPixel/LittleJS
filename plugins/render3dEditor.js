@@ -354,7 +354,8 @@ function editor3DSceneState()
     const r = render3D;
     return {sky: r.sky, ambientColor: r.ambientColor.copy(), ambientGroundColor: r.ambientGroundColor?.copy(),
         fogStart: r.fogStart, fogEnd: r.fogEnd, fogColor: r.fogColor?.copy(), sunDirection: r.sunDirection.copy(),
-        sunColor: r.sunColor.copy(), shadows: r.shadows, sunFlare: !!level3DSunFlare && !level3DSunFlare.destroyed};
+        sunColor: r.sunColor.copy(), shadows: r.shadows, sunFlare: !!level3DSunFlare && !level3DSunFlare.destroyed,
+        skyBox: r.skyBox, environment: r.environment};
 }
 function editor3DSceneRestore(state)
 {
@@ -370,6 +371,9 @@ function editor3DSceneRestore(state)
     r.sunColor = state.sunColor.copy();
     r.shadows = state.shadows;
     level3DSceneFlare(state.sunFlare); // a flare an earlier level's scene gave the sun, never the game's own
+    // the cube maps, and a scene's load still running for them lands no more
+    r.skyBox = state.skyBox, r.environment = state.environment;
+    ++level3DSceneCubeLoads.skyBox, ++level3DSceneCubeLoads.environment;
 }
 
 // the scene on screen as a block, to start a level's scene from: a sky only when the dome's colors are known
@@ -3399,6 +3403,34 @@ function editor3DSceneUpdate(box)
     toggle('Shadows', 'The sun casts shadows', !!value('shadows'), (on)=> change('shadows', on));
     toggle('Lens flare', 'The sun flares in the lens when it is in view', !!value('lensFlare'), (on)=>
         change('lensFlare', on));
+
+    // a sky box of six images, their urls in one field by commas, and whether shiny things reflect it; the
+    // environment follows the sky box while it is the same images
+    const urls = (list)=> isArray(list) && list.length === 6 ? list.join(', ') : '';
+    const skyBox = editorElement('input', line('Sky box', 'Six image urls by commas, +x, -x, +y, -y, +z and -z, ' +
+        'loaded as a cube map for the sky; empty for none'), field + ';width:120px');
+    skyBox.value = urls(scene.skyBox);
+    skyBox.onchange = ()=>
+    {
+        const list = skyBox.value.split(',').map((url)=> url.trim()).filter((url)=> url);
+        if (list.length && list.length !== 6)
+            skyBox.value = urls(editor3DScene()?.skyBox); // not six, what it has now shows again
+        else editor3DChangeScene((s={})=>
+        {
+            const {skyBox, environment, ...rest} = s, reflected = !!urls(skyBox) && urls(environment) === urls(skyBox);
+            return {...rest, ...list.length && {skyBox: list},
+                ...(reflected ? list.length && {environment: [...list]} : environment && {environment})};
+        });
+        editor3DStrokeEnd();
+        skyBox.blur();
+    };
+    if (urls(scene.skyBox))
+        toggle('Reflect it', 'Shiny things reflect the sky box, as render3D.environment',
+            urls(scene.environment) === urls(scene.skyBox), (on)=> editor3DChangeScene((s={})=>
+            {
+                const {environment, ...rest} = s;
+                return on && isArray(s.skyBox) ? {...rest, environment: [...s.skyBox]} : rest;
+            }));
 }
 
 // the properties box: the position, rotation and scale of the one selected object and an input for each default

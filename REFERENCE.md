@@ -1959,7 +1959,10 @@ level3DVoxelSetup(tileInfo, (map)=> {})           // The sheet a level's block m
            "fog": [25, 70], "fogColor": "#d6ecff",    // start and end, an end of 0 for none; the horizon color
                                                       // when the level has a sky and no fogColor
            "shadows": true,
-           "lensFlare": true},                        // the sun's lens flare, a LensFlare3D made for it
+           "lensFlare": true,                         // the sun's lens flare, a LensFlare3D made for it
+           "skyBox": ["px.png", "nx.png", "py.png", "ny.png", "pz.png", "nz.png"], // render3D.skyBox, six images
+           "environment": ["px.png", "nx.png", "py.png", "ny.png", "pz.png", "nz.png"]}, // as loadCubeMap takes
+                                                      // them, loaded in the background, the same urls once
  "objects": []}
 
 // A level can hold a map of blocks, made a VoxelMap when it loads: its corner, its size in cells, and its blocks
