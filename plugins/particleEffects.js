@@ -478,17 +478,43 @@ function particleEffectSet(emitter, effect)
     emitter.particleUpdateCallback = particleEffectUpdateCallback(effect.behaviors);
 }
 
+// the options a play takes besides the settings
+const PARTICLE_EFFECT_OPTIONS = ['hue', 'saturation', 'scale', 'angle', 'tileInfo', 'flatten'];
+
+// whether an option is a value its setting takes, as particleEffectSanitize keeps one
+function particleEffectOptionValid(setting, value)
+{
+    return setting.kind === 'checkbox' ? typeof value === 'boolean' || value === 0 || value === 1 :
+        setting.kind === 'color' ? !!particleEffectColor(value) :
+        setting.kind === 'shape' ? value === '' || particleEffectShapes.includes(value) : isNumber(value);
+}
+
 // an effect from a name or an effect, recolored by the options
 function particleEffectResolve(nameOrEffect, options)
 {
     const found = typeof nameOrEffect == 'string' ? particleEffectsGet(nameOrEffect) : nameOrEffect;
     ASSERT(!!found, 'no particle effect named ' + nameOrEffect);
     if (!found) return;
-    // any setting in the options replaces the effect's own for this play, emitTime for a burst or a loop
+    // a vec2 emitSize is a rectangle, as ParticleEmitter takes one
+    if (isVector2(options.emitSize))
+        options = {...options, emitSize: options.emitSize.x, emitHeight: options.emitSize.y, emitRect: true};
+    if (debug)
+        for (const key in options)
+            ASSERT(PARTICLE_EFFECT_OPTIONS.includes(key) || particleEffectSettings.some((setting)=> setting.name === key),
+                'particleEffect: no option named ' + key);
+    // any setting in the options replaces the effect's own for this play, emitTime for a burst or a loop; one that is
+    // not a value of its kind keeps the effect's own, where the sanitizing would put the library's default
     const settings = {...found.settings};
     for (const setting of particleEffectSettings)
-        if (options[setting.name] !== undefined)
-            settings[setting.name] = options[setting.name];
+    {
+        const value = options[setting.name];
+        if (value === undefined) continue;
+        const valid = particleEffectOptionValid(setting, value);
+        ASSERT(valid, `particleEffect: ${setting.name} must be a ${setting.kind === 'checkbox' ? 'boolean' : setting.kind}`,
+            value);
+        if (valid)
+            settings[setting.name] = value;
+    }
     // sanitized each time, an effect may be written by hand or changed after it was added
     const effect = particleEffectSanitize({...found, settings}), {hue=0, saturation=1} = options;
     return hue || saturation != 1 ? particleEffectRecolor(effect, hue, saturation) : effect;
