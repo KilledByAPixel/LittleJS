@@ -1400,7 +1400,8 @@ render3D.skyBox = cubeMap             // a CubeMap drawn behind everything in pl
 render3D.environment = cubeMap        // what reflective surfaces reflect, undefined reflects the sky's colors
 makeCubeMap(size, colorOf)            // a CubeMap of six size by size faces, colorOf(direction) the Color each way,
                                       // a unit Vector3; paint a sky in code, 64 or so is plenty for a blurry one
-await loadCubeMap([px, nx, py, ny, pz, nz]) // a CubeMap from six square image urls, +x, -x, +y, -y, +z and -z
+await loadCubeMap([px, nx, py, ny, pz, nz]) // a CubeMap from six square image urls, +x, -x, +y, -y, +z and -z,
+                                      // a sky box set shown as three.js shows it, each face as its image is drawn
 cubeMap.size cubeMap.faces cubeMap.dispose() // its face size, its six faces, and freeing its GPU texture
 const mirror = new CubeMap(128)       // no faces: a cube map to draw the scene into
 mirror.capture(pos3D)                 // draw the scene around pos3D into it in the next frame's pass, six views of

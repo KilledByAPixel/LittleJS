@@ -1966,7 +1966,8 @@ function render3DInitGL()
  * - Made with no faces it is drawn from the scene: capture(pos3D) draws everything around that point into it in the
  *   next frame's 3D pass, six views of the whole scene, so capture once for a still scene or now and then for one
  *   that moves
- * - Its faces are in WebGL's order and lay out, +x, -x, +y, -y, +z, -z, each as seen from the middle looking out
+ * - Its faces are in WebGL's order and lay out, +x, -x, +y, -y, +z, -z: WebGL's cube is left handed, so in this right
+ *   handed world a face seen from the middle is mirrored; loadCubeMap turns a sky box set's images to it
  * @memberof Render3D
  * @example
  * render3D.environment = render3D.skyBox = makeCubeMap(64, (d)=> hsl(.6, .8, .4 + d.y * .4));
@@ -2064,6 +2065,8 @@ function makeCubeMap(size, colorOf)
 }
 
 /** Load a cube map from six square images of one size
+ *  - The images are a sky box set as three.js's CubeTextureLoader takes them, and show the same: each face seen from
+ *    inside as its image is drawn
  *  @param {Array<string>} sources - The images of +x, -x, +y, -y, +z and -z, as a sky box set names them right,
  *  left, top, bottom, front and back
  *  @return {Promise<CubeMap>}
@@ -2082,7 +2085,17 @@ async function loadCubeMap(sources)
     const size = images[0].width;
     if (!images.every((image)=> image.width === size && image.height === size))
         throw new Error('loadCubeMap needs six square images of one size');
-    return new CubeMap(size, images);
+    // a sky box set is drawn for WebGL's cube, which is left handed: in this right handed world each face would show
+    // mirrored, so as three.js does each is drawn mirrored, and +x and -x trade places, and every face is then seen
+    // from inside as its image shows
+    const faces = [1, 0, 2, 3, 4, 5].map((i)=>
+    {
+        const context = createCanvasContext(size);
+        context.scale(-1, 1);
+        context.drawImage(images[i], -size, 0);
+        return context.canvas;
+    });
+    return new CubeMap(size, faces);
 }
 
 // the direction of a point on a cube map's face, s and t from -1 to 1 across and down the face as WebGL lays it out
