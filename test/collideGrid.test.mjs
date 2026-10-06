@@ -116,3 +116,11 @@ test('a negative size, a solid too big for cells and objects far out collide as 
     }
     assert.ok(grid.run('bodies.at(-8).groundObject === bodies.at(-9)'), 'the box stands on the negative width solid');
 });
+
+test('a collision callback that throws leaves no grid behind', () =>
+{
+    const { run } = loadEngine();
+    run(scene(100, true) + `bodies.forEach((o)=> o.collideWithObject = ()=> { throw 'thrown'; });`);
+    assert.throws(()=> run('engineObjectsUpdate()'));
+    assert.equal(run('engineCollideGrid'), undefined);
+});

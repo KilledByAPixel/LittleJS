@@ -454,7 +454,6 @@ function editorSetOpen(open)
 {
     if (!debug || editorIsOpen === !!open) return;
     editorIsOpen = !!open;
-    editorIsOpen || editorAutosaveFlush(); // the game plays on with what the editor has kept
     if (editorIsOpen)
     {
         editorGameState = {paused, cameraPos: cameraPos.copy(), cameraScale, cameraAngle};
@@ -474,6 +473,7 @@ function editorSetOpen(open)
     else
     {
         editorStrokeEnd();
+        editorAutosaveFlush(); // the game plays on with what the editor has kept, the stroke just ended too
         editorToolHeld = false;
         editorSelection = editorSelectionDrag = editorRightPress = editorObjectDrag = editorObjectBox = undefined;
         editorObjectSelection.clear();

@@ -597,7 +597,8 @@ class Render3DPlugin
         /** @property {Mesh|undefined} - Sky dome from buildSky or setSky, drawn around the camera behind everything
          *  @type {Mesh|undefined} */
         this.sky = undefined;
-        /** @property {CubeMap|undefined} - A cube map drawn as the sky, behind everything, in place of the sky dome
+        /** @property {CubeMap|undefined} - A cube map drawn as the sky, behind everything, in place of the sky dome;
+         *  an orthographic camera looks the same way through every pixel, so it sees one color of it
          *  @type {CubeMap|undefined} */
         this.skyBox = undefined;
         /** @property {CubeMap|undefined} - The world around, what reflective surfaces reflect: an object's
@@ -1839,7 +1840,8 @@ function render3DFragmentSource(fragmentCode)
         'if(materialParams.z>0.){' +
         'vec3 w=normalize(P-cameraPos),q=reflect(w,n);' +
         'float f=materialParams.z+(1.-materialParams.z)*pow(clamp(1.-dot(n,-w),0.,1.),5.);' +
-        // the environment when there is one, sharp at a shininess of 256 and blurred toward its last mipmap at 1
+        // the environment when there is one, blurred by the spread of the highlight, a mirror at a shininess of
+        // 10000 and toward its last mipmap at 1
         'c.rgb=mix(c.rgb,envParams.x>0.?textureLod(envMap,q,clamp(envParams.z-.5*log2(materialParams.y+2.),0.,envParams.y)).rgb:' +
         'q.y>0.?mix(skyHorizon.rgb,skyTop.rgb,q.y):mix(skyHorizon.rgb,skyBottom.rgb,-q.y),f);' +
         '}}else c.rgb*=e;' + // fully emissive: its own color, or brighter, with no lighting to work out
@@ -2003,6 +2005,8 @@ class CubeMap
     {
         ASSERT(isNumber(size) && size >= 1 && size % 1 === 0, 'a cube map\'s size must be a whole positive number', size);
         ASSERT(faces === undefined || isArray(faces) && faces.length === 6, 'a cube map has six faces');
+        ASSERT(!faces || faces.every((face)=> face instanceof Uint8Array ? face.length === size * size * 4 :
+            face.width === size && face.height === size), 'each face of a cube map is size by size, RGBA or an image');
         /** @property {number} - Pixels a side of each face */
         this.size = size;
         /** @property {Array<Uint8Array|HTMLImageElement|HTMLCanvasElement|ImageBitmap|OffscreenCanvas>|undefined} -
@@ -2053,7 +2057,7 @@ class CubeMap
  *  @example
  *  // a sky, blue above and pale at the horizon, with a sun
  *  const sun = vec3(1, 1, -1).normalize();
- *  render3D.environment = makeCubeMap(64, (d)=> hsl(.6, .7, .9 - max(d.y, 0) * .5).lerp(WHITE, d.dot(sun) ** 64));
+ *  render3D.environment = makeCubeMap(64, (d)=> hsl(.6, .7, .9 - max(d.y, 0) * .5).lerp(WHITE, max(0, d.dot(sun)) ** 64));
  *  @memberof Render3D */
 function makeCubeMap(size, colorOf)
 {

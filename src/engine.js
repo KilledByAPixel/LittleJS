@@ -908,14 +908,18 @@ function engineObjectsUpdate()
     engineCollideGrid = engineObjectsCollideStaticLast.length >= engineCollideGridMin ?
         engineCollideGridBuild(engineObjectsCollideStaticLast) : undefined;
 
-    // update physics before object update, each solid put where it moved to in the grid, for the movers after it
-    for (const o of engineObjects)
-        if (!o.parent && !o.destroyed)
-        {
-            o.updatePhysics();
-            engineCollideGrid && engineCollideGridPlace(engineCollideGrid, o);
-        }
-    engineCollideGrid = undefined;
+    // update physics before object update, each solid put where it moved to in the grid, for the movers after it;
+    // the grid is let go even when a callback throws, so an updatePhysics called before the next update checks all
+    try
+    {
+        for (const o of engineObjects)
+            if (!o.parent && !o.destroyed)
+            {
+                o.updatePhysics();
+                engineCollideGrid && engineCollideGridPlace(engineCollideGrid, o);
+            }
+    }
+    finally { engineCollideGrid = undefined; }
 
     // recursive object update: the children are walked from a copy on a shared stack, since a child that
     // destroys itself leaves its parent's list on the spot and the next child would slide past the loop

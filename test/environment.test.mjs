@@ -89,3 +89,12 @@ test('a cube map made with no faces is captured: capture asks the next pass to d
     assert.throws(()=> run('new CubeMap(32, [1, 2])'), 'a list of faces is six');
     assert.throws(()=> run('makeCubeMap(8, ()=> WHITE).capture(vec3())'), 'a painted cube map can not capture');
 });
+
+test('a cube map\'s faces are size by size', ()=>
+{
+    const { run } = loadEngine();
+    run('setHeadlessMode(true); new Render3DPlugin');
+    assert.throws(()=> run('new CubeMap(4, [...Array(6)].map(()=> new Uint8Array(4 * 4 * 3)))'), 'RGB, not RGBA');
+    assert.throws(()=> run('new CubeMap(4, [...Array(6)].map(()=> ({width: 4, height: 8})))'), 'not square');
+    assert.doesNotThrow(()=> run('new CubeMap(4, [...Array(6)].map(()=> ({width: 4, height: 4})))'));
+});

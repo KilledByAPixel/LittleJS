@@ -63,3 +63,15 @@ test('a waiting autosave is written when the editor closes, the map is saved or 
     run('paint(3); editorAutosaveFlush()');
     assert.ok(writes.count >= 4, 'and the page hiding, which calls the flush');
 });
+
+test('a stroke still held when the editor closes is ended and written then, not left for the timer', async ()=>
+{
+    const { run, writes, timers } = await editorGame(320);
+    run('paint(0); levelEditor.open(); editorPaint(front, vec2(5, 0), editorTileToGid(4))'); // no stroke end yet
+    assert.equal(writes.count, 1);
+    run('levelEditor.close()');
+    assert.equal(writes.count, 2, 'closing ended the stroke and wrote it');
+    assert.ok(timers.every((f)=> !f), 'nothing left waiting');
+    const saved = JSON.parse(run(`localStorage.getItem(editorSaveName())`));
+    assert.equal(Object.values(saved)[0].layers[0].filter((gid)=> gid).length, 2, 'with the held stroke in it');
+});
