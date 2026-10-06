@@ -1257,7 +1257,10 @@ class Render3DPlugin
     {
         this.flush();
         if (this.skyBox && this.skyBox !== this.capturingCube)
-            return void render3DDrawSkyBox(this.skyBox);
+        {
+            render3DDrawSkyBox(this.skyBox);
+            return; // a plain return, so the method is typed void and a subclass may override it so
+        }
         // the dome only has to sit between the clip planes, the pass draws it first with no depth test;
         // a far plane at Infinity has no midpoint, so put it a long way out instead
         const {near, far} = this.camera;
@@ -1899,7 +1902,9 @@ function render3DInitGL()
     if (headlessMode) return;
     if (!glEnable || !glContext)
     {
-        console.warn('Render3DPlugin: WebGL not enabled, construct the plugin in gameInit with glEnable set');
+        // a device whose WebGL could not draw, which fell back to Canvas2D, is not helped by setting glEnable
+        console.warn(glCanBeEnabled ? 'Render3DPlugin: WebGL not enabled, construct the plugin in gameInit with glEnable set'
+            : 'Render3DPlugin: this device can not draw WebGL, so nothing 3D is drawn');
         return;
     }
     const gl = glContext, r = render3D;
@@ -1930,6 +1935,15 @@ function render3DInitGL()
         'in vec2 T;in float A;' +
         'void main(){if(texture(tex,T).a*mix(1.,A,cut)<.5)discard;}'
     );
+
+    // a program that did not build in a release build would fail every draw: 3D stays off, said once, since the pass
+    // returns when there is no program, and a lost context that comes back tries again
+    if (glFailedPrograms.has(r.program) || glFailedPrograms.has(r.shadowShader))
+    {
+        console.error('Render3DPlugin: its shaders did not build on this device, so nothing 3D is drawn');
+        r.program = r.shadowShader = undefined;
+        return;
+    }
 
     // the vertex array object with the attributes enabled once, pointers are set per buffer by render3DBindVertexBuffer
     // the per instance attributes get their divisor only while a batch has them on, see render3DDrawInstanced
@@ -2255,8 +2269,12 @@ function render3DDrawSkyBox(cube)
     gl.bindTexture(gl.TEXTURE_CUBE_MAP, render3DCubeTexture(cube));
     gl.bindSampler(6, null);
     gl.uniform1i(glUniformLocation(r.skyBoxProgram, 'sky'), 6);
+    // the view turned but not moved: the way through a pixel does not depend on where the camera is, and two points
+    // near the origin keep their difference, where points a long way out lose it to float precision
+    const turn = r.viewMatrix.copy();
+    turn.m[12] = turn.m[13] = turn.m[14] = 0;
     gl.uniformMatrix4fv(glUniformLocation(r.skyBoxProgram, 'inverseViewProj'), false,
-        r.viewProjection.copy().invert().m);
+        r.projectionMatrix.copy().multiply(turn).invert().m);
     gl.disable(gl.DEPTH_TEST);
     gl.disable(gl.BLEND);
     gl.disable(gl.CULL_FACE);

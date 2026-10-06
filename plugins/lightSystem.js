@@ -64,6 +64,7 @@ class LightSystemPlugin
 
         /** @property {boolean} - When false, the render pass is skipped entirely */
         this.enabled = true;
+        this.shadersFailed = false; // a shader did not build on this device, so the system draws nothing
         /** @property {Color} - Baseline color applied to unlit areas of the scene. Defaults to BLACK (pitch dark). Set to a small RGB for a faint ambient. The lightmap is cleared to this color each frame, then lights add on top, then the result multiplies the scene. */
         this.ambientColor = (ambientColor || BLACK).copy();
         /** @property {Vector2} - Size of the lightmap texture, follows mainCanvasSize (css pixels, so it is not scaled by canvasPixelRatio) unless a size was passed */
@@ -206,6 +207,7 @@ class LightSystemPlugin
                 'if(useShadow)c.rgb*=texture(shadowTexture,vUV).rgb;'+
                 '}'
             );
+            if (lightSystemShadersFailed(lightSystem.lightShader)) return;
             // the shadow texture is on unit 1, the engine's tracked texture stays on unit 0
             glContext.useProgram(lightSystem.lightShader);
             glContext.uniform1i(glUniformLocation(lightSystem.lightShader, 'shadowTexture'), 1);
@@ -230,9 +232,22 @@ class LightSystemPlugin
                 '}'
             );
 
+            if (lightSystemShadersFailed(lightSystem.compositeShader)) return;
+
             // one quad VAO per program, the engine's unit triangle strip through the named attribute
             lightSystem.lightVAO = createQuadVAO(lightSystem.lightShader, 'g');
             lightSystem.compositeVAO = createQuadVAO(lightSystem.compositeShader, 'p');
+        }
+        // a program that did not build in a release build draws nothing, so the light system turns itself off, said
+        // once, and the scene draws as it would without it; true when it is off
+        function lightSystemShadersFailed(...programs)
+        {
+            if (!lightSystem.shadersFailed && programs.some((program)=> glFailedPrograms.has(program)))
+            {
+                console.error('LightSystemPlugin: its shaders did not build on this device, the scene draws without it');
+                lightSystem.shadersFailed = true;
+            }
+            return lightSystem.shadersFailed;
         }
         function createQuadVAO(program, attribute)
         {
@@ -317,6 +332,7 @@ class LightSystemPlugin
                 'c=vec4(min(texture(s,uv).rgb+brightness*mask*b,b),1);'+
                 '}');
 
+            if (lightSystemShadersFailed(ls.shadowCopyShader, ls.shadowStretchShader)) return;
             ls.shadowCopyVAO = createQuadVAO(ls.shadowCopyShader, 'p');
             ls.shadowStretchVAO = createQuadVAO(ls.shadowStretchShader, 'p');
 
@@ -356,6 +372,7 @@ class LightSystemPlugin
             {
                 ls.shadowMap && freeShadows();
                 initShadows();
+                if (ls.shadersFailed) return;
             }
 
             // a square of world space around the camera, rounded to its own texels so the
@@ -404,7 +421,7 @@ class LightSystemPlugin
         }
         function lightSystemRender()
         {
-            if (headlessMode || !glEnable) return;
+            if (headlessMode || !glEnable || lightSystem.shadersFailed) return;
             if (!lightSystem.enabled) return;
             if (!lightSystem.texture)
             {
@@ -421,6 +438,7 @@ class LightSystemPlugin
             // 1b. the shadow pass draws every caster black into the shadow map
             if (lightSystem.shadows)
                 lightSystemShadowPass();
+            if (lightSystem.shadersFailed) return;
 
             // an automatic size follows the canvas, so reallocate the lightmap when
             // the canvas changed size, after the flush so the batch keeps its texture

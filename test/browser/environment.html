@@ -45,6 +45,11 @@ smokeRun(async ()=>
     look('up, +y', vec3(Math.PI / 2, 0, 0), 'py');
     look('right, +x', vec3(0, -Math.PI / 2, 0), 'px');
     look('back, +z', vec3(0, Math.PI, 0), 'pz');
+    // the sky box goes by the camera's turn alone, so far out it is as sharp as at the origin
+    render3D.camera.pos = vec3(1e6, 0, 1e6);
+    look('ahead from a million units out', vec3(), 'nz');
+    look('up from a million units out', vec3(Math.PI / 2, 0, 0), 'py');
+    render3D.camera.pos = vec3();
     render3D.skyBox = undefined;
     render3D.camera.rotation = vec3();
 

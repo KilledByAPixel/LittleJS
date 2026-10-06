@@ -1,0 +1,41 @@
+<!DOCTYPE html><meta charset=utf-8>
+<title>LittleJS smoke: plugins whose shaders do not build</title>
+<script src=../../dist/littlejs.release.js></script>
+<script src=smoke.js></script>
+<pre id=result>PENDING</pre>
+<script>
+'use strict';
+
+// a release build on a device whose driver refuses a plugin's shaders: the 3D renderer and the light system each say
+// so once and draw nothing, where they drew with programs that failed every call, and the game goes on; a debug
+// build throws the compiler's log instead
+smokeRun(async ()=>
+{
+    setShowSplashScreen(false);
+    setEngineManualStep(true);
+    setCanvasFixedSize(vec2(64));
+    await engineInit(()=> {}, ()=> {}, ()=> {}, ()=> {}, ()=> {});
+
+    // the engine's own shaders built, then the plugins' fail to compile
+    const errors = [], error = console.error, build = glCreateProgram;
+    console.error = (...args)=> errors.push(args.join(' '));
+    glCreateProgram = (vs, fs)=> build(vs, fs + '\nnot glsl');
+    try
+    {
+        new LightSystemPlugin;
+        new Render3DPlugin;
+    }
+    finally { glCreateProgram = build; }
+    new EngineObject3D(vec3(0, 0, -5), render3D.boxMesh);
+    new Light(vec2(), 5);
+    engineStep(3);
+    console.error = error;
+
+    const said = (name)=> errors.filter((e)=> e.includes(name + ': its shaders did not build')).length;
+    check('3D says once that its shaders did not build', said('Render3DPlugin') === 1, errors);
+    check('and keeps no program, so its pass draws nothing', !render3D.program);
+    check('the light system says so once', said('LightSystemPlugin') === 1, errors);
+    check('the game goes on drawing', glEnable && frame >= 3);
+    checkGLError();
+});
+</script>

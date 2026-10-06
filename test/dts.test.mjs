@@ -62,3 +62,8 @@ test('dist/littlejs.d.ts keeps Map types, built with a library that has them', (
     assert.match(dts, /edgeListFixtures: Map<any, any>;/);
     assert.match(dts, /files\?: Map<string, Blob>\): Promise<GLTFModel>/);
 });
+
+test('render3D.drawSky is typed void, so a subclass may override it as void', () =>
+{
+    assert.match(readFileSync('dist/littlejs.d.ts', 'utf8'), /drawSky\(\): void;/);
+});
