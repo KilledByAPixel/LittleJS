@@ -37,6 +37,7 @@ What changed in each release, newest first. Releases before 1.20.0 are on the
 
 ### Fixes
 
+- Level editor: a reload of the file a Save wrote drops the autosave the file now has, and does not add an empty Objects layer, where an Objects layer the editor made for an object taken back again kept its empty list in the autosave; an Objects layer a Save wrote stays when its objects go after
 - In a release build, the 3D renderer or the light system whose shaders do not build on a device says so once and draws nothing, where it drew every frame with programs that failed, and a device that fell back to Canvas2D is told 3D can not be drawn
 - Tile collision stops an object against a wall or a ceiling, as it already did on a floor, so a game sees objects stop up to a frame's move further on at walls and ceilings, where it went back to where it was the frame before and stopped short by up to a frame's move, a gap that never closed for a game setting its velocity every frame; a bounce starts from the tile too, and a box landing with its top on a grid line no longer snaps into the tile above it
 - A 3D particle emitter that outlives a scaled or turned parent keeps the parent's scale and turn, where it kept only its place and its particles fell at a quarter of the speed under a parent scaled by four; a particle's create callback reads the emitter's scale when it is emitted by hand before the first update or from inside another callback

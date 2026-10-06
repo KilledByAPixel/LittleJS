@@ -581,7 +581,8 @@ function editorMapRestore(map)
     const sameFile = saved.hash === record.hash || saved.savedHash === record.hash || !saved.width &&
         (saved.hash === editorMapHash(data, objects) || !saved.objects && saved.hash === editorMapHash(data));
     if ((saved.width ?? map.width) === map.width && (saved.height ?? map.height) === map.height &&
-        editorSameData(saved.layers, data) && editorSameData(saved.objects ?? [], objects))
+        editorSameData(saved.layers, data) && editorSameData(editorObjectsKept(saved.objects ?? [], objects.length), objects)
+        && !(saved.nextobjectid > (map.nextobjectid ?? 1)))
         editorDiscardPending(record);
     else if (!sameFile || !editorSavedFits(saved, data.length, saved.width ?? map.width, saved.height ?? map.height) ||
         !editorResizeMap(map, saved.width ?? map.width, saved.height ?? map.height) || !editorCopyData(data, saved.layers))
@@ -592,7 +593,7 @@ function editorMapRestore(map)
     }
     else
     {
-        editorRestoreObjects(map, saved);
+        editorRestoreObjects(map, saved, true);
         console.warn(`LittleJS editor: brought back unsaved edits to ${record.fileName}, ` +
             'Save in the editor (Esc then 0) writes them to the file');
         saved.stale && console.warn(`LittleJS editor: they are older than the last edits to ${record.fileName}, ` +
@@ -757,6 +758,10 @@ function editorSetBaseline(record, written)
     const objects = editorObjectGroups(written.layers).map((group)=> group.objects ?? []);
     Object.assign(record, {original: data, originalObjects: objects, savedHash: editorMapHash(data, objects,
         editorMapLayout(written)), originalSize: {width: written.width, height: written.height}});
+    // an Objects layer the editor made is the file's own once a Save wrote it, so it stays when emptied after
+    const writtenIds = new Set(editorObjectGroups(written.layers).map((group)=> group.id));
+    for (const group of editorObjectGroups(record.map.layers))
+        writtenIds.has(group.id) && editorMadeGroups.delete(group);
     record.pending || editorAutosave(record); // edits waiting to be applied keep their autosave
 }
 
@@ -916,17 +921,25 @@ function editorAutosave(record)
     if (record.synthetic) return; // a layer made in code has no load to bring it back in, save it to a file
     const saves = editorSaves(), map = record.map, data = editorTileLayerData(map.layers);
     const objects = editorObjectGroups(map.layers).map((group)=> group.objects ?? []);
-    const original = record.originalObjects ?? [], kept = objects.slice();
-    while (kept.length > original.length && !kept[kept.length - 1].length)
-        kept.pop(); // an Objects layer the editor made, empty again, is not an edit
+    const original = record.originalObjects ?? [], kept = editorObjectsKept(objects, original.length);
     const size = record.originalSize, sameSize = map.width === size.width && map.height === size.height;
     // the map as it was loaded has nothing to keep; one a Save wrote is kept until a reload shows the file has it
     if (sameSize && editorSameData(data, record.original) && editorSameData(kept, original) && !record.savedHash)
         delete saves[record.key];
     else
         saves[record.key] = {hash: record.hash, savedHash: record.savedHash, width: map.width, height: map.height,
-            layers: data, objects, nextobjectid: map.nextobjectid};
+            layers: data, objects: kept, nextobjectid: map.nextobjectid};
     editorWriteSaves(saves, record.key);
+}
+
+// a map's lists of objects with the empty ones past count left off: an Objects layer the editor made, empty again,
+// is not an edit, and a Save leaves it out of the file too
+function editorObjectsKept(objects, count)
+{
+    const kept = objects.slice();
+    while (kept.length > count && !kept[kept.length - 1]?.length)
+        kept.pop();
+    return kept;
 }
 
 // an autosave writing more than this many characters, a big map's, waits until the edits stop for a moment, since
@@ -1427,13 +1440,17 @@ function editorObjectSetProperty(object, name, value, defaultValue)
         delete object.properties;
 }
 
-// copy saved objects into a map's object layers, making an Objects layer for any it saved that the map lacks
-function editorRestoreObjects(map, saved)
+// copy saved objects into a map's object layers, making an Objects layer for any it saved that the map lacks; from
+// an autosave, which keeps no empty list of a layer the editor made and no Save wrote, an empty one is of a layer a
+// Save wrote, the file's own, which stays when empty; an undo's snapshot keeps every list, so it does not say that
+function editorRestoreObjects(map, saved, fromAutosave=false)
 {
     const groups = editorObjectGroups(map.layers);
     (saved.objects ?? []).forEach((objects, i)=>
     {
-        (groups[i] ?? editorNewObjectGroup(map)).objects = editorObjectsCopy(objects);
+        const group = groups[i] ?? editorNewObjectGroup(map);
+        group.objects = editorObjectsCopy(objects);
+        fromAutosave && !objects.length && editorMadeGroups.delete(group);
     });
     if (saved.nextobjectid > (map.nextobjectid ?? 1))
         map.nextobjectid = saved.nextobjectid;
