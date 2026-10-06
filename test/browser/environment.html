@@ -191,6 +191,18 @@ smokeRun(async ()=>
     render3D.camera.orthographic = 0;
     render3D.camera.near = .1;
 
+    // a capture asked for bigger than the device makes is drawn at the largest it can, as the shadow map falls back;
+    // the device says 64 here, so the test does not ask for gigabytes
+    const huge = new CubeMap(1e5), getParameter = glContext.getParameter;
+    glContext.getParameter = function(name)
+    { return name === this.MAX_CUBE_MAP_TEXTURE_SIZE ? 64 : getParameter.call(this, name); };
+    huge.capture(vec3());
+    try { engineStep(1); }
+    finally { glContext.getParameter = getParameter; }
+    check('a capture too big falls back to the largest size there is', huge.size === 64 && !!huge.glTexture, huge.size);
+    checkGLError();
+    huge.dispose();
+
     // two mirror spheres, the left one with an environment of its own, a plain red one; the right one reflects the
     // scene's as before
     render3D.environment = cube;

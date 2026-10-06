@@ -1551,8 +1551,8 @@ obj.normalMap = textureInfo             // bumps and grooves that catch the ligh
                                         // no tangents needed, any mesh with uvs works; normalMapFromHeight makes one
 obj.normalScale = 1                     // how strongly it bends the surface, 0 turns it off
 obj.reflectivity = .5                   // 0 by default, 1 a mirror; more at a glancing angle (Fresnel); shows
-                                        // render3D.environment, as sharp as the highlight: shininess 10000 a
-                                        // mirror, 1000 polished, 10 a wide blur;
+                                        // render3D.environment, sharper the higher shininess, as the highlight
+                                        // is: 10000 a mirror, 1000 polished, 10 a wide blur;
                                         // with none, the colors of render3D.sky from setSky or buildSky, or the
                                         // ambient ones with no sky
 obj.environment = mirror                // a CubeMap it reflects in place of render3D.environment, as one captured

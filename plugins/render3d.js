@@ -603,8 +603,8 @@ class Render3DPlugin
          *  @type {CubeMap|undefined} */
         this.skyBox = undefined;
         /** @property {CubeMap|undefined} - The world around, what reflective surfaces reflect: an object's
-         *  reflectivity says how much and its shininess how sharp, as sharp as its highlight: 10000 a mirror, 1000
-         *  polished, 10 a wide blur; undefined reflects the sky's colors as setSky gave them; a cube map holds GPU
+         *  reflectivity says how much and its shininess how sharp, the same shininess that tightens its highlight:
+         *  10000 a mirror, 1000 polished, 10 a wide blur; undefined reflects the sky's colors as setSky gave them; a cube map holds GPU
          *  memory until its dispose(), so one made again and again, as for a sky that changes, disposes the one it
          *  replaces, or a captured one is captured into again
          *  @type {CubeMap|undefined} */
@@ -1841,7 +1841,7 @@ function render3DFragmentSource(fragmentCode)
         'if(materialParams.z>0.){' +
         'vec3 w=normalize(P-cameraPos),q=reflect(w,n);' +
         'float f=materialParams.z+(1.-materialParams.z)*pow(clamp(1.-dot(n,-w),0.,1.),5.);' +
-        // the environment when there is one, blurred by the spread of the highlight, a mirror at a shininess of
+        // the environment when there is one, blurred more the lower the shininess, a mirror at a shininess of
         // 10000 and toward its last mipmap at 1, or by how far the reflection turns from one pixel to the next when
         // that is more, so a small mirror reads the blur of what its pixels cover instead of sparkling
         'c.rgb=mix(c.rgb,envParams.x>0.?textureLod(envMap,q,clamp(max(envParams.z-.5*log2(materialParams.y+2.),' +
@@ -2142,7 +2142,10 @@ function render3DCubeTexture(cube)
     gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false); // a face's first row is its top, as the cube's faces are laid out
     if (!cube.faces)
     {
-        // drawn by a capture: empty faces, black until the capture, which happens again when the context was lost
+        // drawn by a capture: empty faces, black until the capture, which happens again when the context was lost;
+        // a size the device can not make falls back to the largest it can, as the shadow map's does
+        cube.size = min(cube.size, gl.getParameter(gl.MAX_CUBE_MAP_TEXTURE_SIZE),
+            gl.getParameter(gl.MAX_RENDERBUFFER_SIZE));
         for (let i = 0; i < 6; ++i)
             gl.texImage2D(gl.TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, gl.RGBA, cube.size, cube.size, 0, gl.RGBA,
                 gl.UNSIGNED_BYTE, null);
@@ -2449,8 +2452,9 @@ function render3DSetMaterialUniforms(state)
         let environment = state.environmentMap || r.environment;
         environment === r.capturingCube && (environment = undefined);
         render3DBindEnvironment(environment);
-        // a rough reflection is blurred over half the spread of its highlight, sqrt(2 / (shininess + 2)) / 2, and a
-        // texel of mipmap L spans (PI/2) / size * 2^L, so the shader reads level log2(size * .45) - log2(shininess + 2)
+        // a rough reflection is blurred over half of sqrt(2 / (shininess + 2)), the spread Blinn-Phong and Beckmann
+        // give a shininess, about a third of the width of the Phong highlight the shader draws, and a texel of mipmap
+        // L spans (PI/2) / size * 2^L, so the shader reads level log2(size * .45) - log2(shininess + 2)
         // / 2: the same blur for any size of map; it stops at 4 by 4 a face, where sampling across the edges still
         // blends neighboring faces
         const size = environment ? environment.size : 1;

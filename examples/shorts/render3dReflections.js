@@ -148,11 +148,11 @@ while E is on the scene.
 - `reflectivity` is how much of the surface is reflection, more at a
   glancing angle. The chrome ball is `BLACK` with `reflectivity = 1`,
   all mirror.
-- `shininess` is how sharp the reflection is, as sharp as the
-  highlight it also sets: 10000 is a mirror, 1000 polished, 10 a wide
-  blur. The row of balls goes from 10000 down to 1, ten times rougher
-  each. `roughness`, 0 a mirror to 1 matte as glTF measures it, is
-  another way to set it.
+- `shininess` is how sharp the reflection is, and it tightens the
+  highlight too: 10000 is a mirror, 1000 polished, 10 a wide blur. The
+  row of balls goes from 10000 down to 1, ten times rougher each.
+  `roughness`, 0 a mirror to 1 matte as glTF measures it, is another
+  way to set it.
 - The gold ring keeps its own color and reflects a quarter, with a
   `specular` highlight from the sun on top.
 
