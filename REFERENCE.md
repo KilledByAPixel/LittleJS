@@ -1396,8 +1396,10 @@ render3D.setSky(topColor, horizonColor, bottomColor, ambient=.5) // dome colors 
                                                      // color from below, both times ambient; 0 leaves ambient dark
 render3D.setFog(fogStart, fogEnd, fogColor) // the fog distances and color at once, no color keeps the current one
 render3D.sky = buildSky(topColor, horizonColor, bottomColor, sides, rings) // or set a dome yourself
-render3D.skyBox = cubeMap             // a CubeMap drawn behind everything in place of the dome, undefined by default
-render3D.environment = cubeMap        // what reflective surfaces reflect, undefined reflects the sky's colors
+render3D.skyBox = cubeMap             // a CubeMap drawn behind everything in place of the dome, undefined by default;
+                                      // fog fades to fogColor, so set it to the sky box's horizon color
+render3D.environment = cubeMap        // what reflective surfaces reflect, undefined reflects the sky's colors; one
+                                      // made again and again disposes the one it replaces, its GPU memory
 makeCubeMap(size, colorOf)            // a CubeMap of six size by size faces, colorOf(direction) the Color each way,
                                       // a unit Vector3; paint a sky in code, 64 or so is plenty for a blurry one
 await loadCubeMap([px, nx, py, ny, pz, nz]) // a CubeMap from six square image urls, +x, -x, +y, -y, +z and -z,

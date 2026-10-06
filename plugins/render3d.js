@@ -598,12 +598,15 @@ class Render3DPlugin
          *  @type {Mesh|undefined} */
         this.sky = undefined;
         /** @property {CubeMap|undefined} - A cube map drawn as the sky, behind everything, in place of the sky dome;
-         *  an orthographic camera looks the same way through every pixel, so it sees one color of it
+         *  an orthographic camera looks the same way through every pixel, so it sees one color of it; fog fades to
+         *  fogColor, not to the sky box, so with fog set fogColor to its horizon's color
          *  @type {CubeMap|undefined} */
         this.skyBox = undefined;
         /** @property {CubeMap|undefined} - The world around, what reflective surfaces reflect: an object's
          *  reflectivity says how much and its shininess how sharp, as sharp as its highlight: 10000 a mirror, 1000
-         *  polished, 10 a wide blur; undefined reflects the sky's colors as setSky gave them
+         *  polished, 10 a wide blur; undefined reflects the sky's colors as setSky gave them; a cube map holds GPU
+         *  memory until its dispose(), so one made again and again, as for a sky that changes, disposes the one it
+         *  replaces, or a captured one is captured into again
          *  @type {CubeMap|undefined} */
         this.environment = undefined;
         /** @property {boolean} - Draw the 3D scene on top of the 2D scene instead of under it */

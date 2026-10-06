@@ -246,6 +246,12 @@ test('a tinted texture drawn wrapped on Canvas2D is baked once while its tint st
     run('drawTextureWrapped(vec2(), vec2(4), vec2(2), 0, BLUE, 0, undefined, false, false, context)');
     assert.equal(reads, 2, 'a new tint bakes again');
     assert.deepEqual(smooth, [true, true, true, true], 'drawn smooth as the texture says');
+
+    // a canvas the game draws into may have changed since, so its tint is made again at every draw
+    run(`textureInfos[1] = new TextureInfo(new OffscreenCanvas(8, 8)); textureInfos[1].setWrap(true);
+        const drawCanvas = ()=> drawTextureWrapped(vec2(), vec2(4), vec2(2), 1, RED, 0, undefined, false, false, context);
+        drawCanvas(); drawCanvas();`);
+    assert.equal(reads, 4, 'a canvas bakes at every draw');
 });
 
 // a headless engine with the 2D editor, a storage and a page path

@@ -831,13 +831,16 @@ function drawTextureWrapped(pos, size, wrapCount, texture=0, color=WHITE,
     let source = textureInfo.image;
     if (!noTint)
     {
-        // a bake is a pass over every pixel, so it is kept for the image until its tint changes
+        // a bake is a pass over every pixel, so it is kept for the image until its tint changes; a canvas, which has
+        // getContext, may have been drawn into since, so it is baked again at every draw, its copy kept at its size
         const key = color.r + ',' + color.g + ',' + color.b + ',' + color.a +
             (additiveColor ? ',' + additiveColor.r + ',' + additiveColor.g + ',' + additiveColor.b + ',' + additiveColor.a : '');
         let baked = drawTextureWrappedBakes.get(source);
-        if (baked?.key !== key)
+        if (baked?.key !== key || 'getContext' in source)
         {
-            const bakeContext = baked?.context || createCanvasContext(source.width|0, source.height|0, true);
+            const kept = baked?.context, fits = kept?.canvas.width === (source.width|0) &&
+                kept?.canvas.height === (source.height|0);
+            const bakeContext = fits ? kept : createCanvasContext(source.width|0, source.height|0, true);
             bakeTintedImage(source, color, additiveColor, bakeContext);
             drawTextureWrappedBakes.set(source, baked = {key, context: bakeContext});
         }
