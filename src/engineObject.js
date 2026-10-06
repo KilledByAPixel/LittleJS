@@ -415,9 +415,14 @@ class EngineObject
                         // move against the wall and bounce, its side on the tile edge it moved toward, rounded in the
                         // layer's space as its collision test is; back to its previous X when that spot is not clear
                         const snapEpsilon = .0001, layerX = hitLayer.pos.x, offsetX = this.size.x/2 + snapEpsilon;
-                        const x = layerX + (this.pos.x < oldPos.x ?
+                        // never back past where it was: a leading edge already on a grid line would step back by
+                        // the epsilon and take its trailing edge into the tile behind, which nothing tests, since
+                        // only X is blocked; between there and the wall it covers no column it did not cover before
+                        const movingLeft = this.pos.x < oldPos.x;
+                        const snap = layerX + (movingLeft ?
                             floor(oldPos.x - layerX - this.size.x/2) + offsetX :
                             ceil( oldPos.x - layerX + this.size.x/2) - offsetX);
+                        const x = movingLeft ? min(snap, oldPos.x) : max(snap, oldPos.x);
                         this.pos.x = tileCollisionTest(vec2(x, oldPos.y), this.size, this) ? oldPos.x : x;
                         this.velocity.x *= -restitution;
                     }
