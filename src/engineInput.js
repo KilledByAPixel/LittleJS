@@ -500,8 +500,9 @@ function inputInit()
         // keys typed into an html text field are the player's typing, not game input;
         // a key already down still releases on keyup, which only lets go of keys that are down
         const typing = isTextInput(e.target) || isTextInput(document.activeElement);
-        // a key already held, a keydown the browser did not mark as a repeat, is not pressed again
-        if (!e.repeat && !typing && !inputKeysHeld.has(e.code))
+        // a key already held, a keydown the browser did not mark as a repeat, is not pressed again, but with Cmd down
+        // it is: a Mac sends no keyup for a key let go while Cmd is held, so each tap of Cmd+Z comes as a keydown alone
+        if (!e.repeat && !typing && (!inputKeysHeld.has(e.code) || e.metaKey))
         {
             inputKeysHeld.add(e.code);
             // an arrow its alias already holds down is not pressed again, like its release waits for both; a release

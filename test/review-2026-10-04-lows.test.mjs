@@ -35,6 +35,20 @@ test('a second keydown of a key already held, not a repeat, does not press it ag
     assert.equal(run(`keyIsDown('KeyZ')`), true);
 });
 
+test('with Cmd held each tap of a key is a press, since a Mac sends no keyup for it while Cmd is down', ()=>
+{
+    const { run, handlers, step } = inputEngine();
+    const cmd = (code)=> ({...keyEvent(code), metaKey: true});
+    handlers.keydown({...keyEvent('MetaLeft'), key: 'Meta', metaKey: true});
+    handlers.keydown(cmd('KeyZ'));
+    step();
+    handlers.keydown(cmd('KeyZ')); // the second Cmd+Z, its keyup never came
+    assert.equal(run(`keyWasPressed('KeyZ')`), true);
+    step();
+    handlers.keydown({...cmd('KeyZ'), repeat: true}); // held down, the browser's repeat is still not a press
+    assert.equal(run(`keyWasPressed('KeyZ')`), false);
+});
+
 test('toggleFullscreen refused by the browser leaves no unhandled promise', async ()=>
 {
     const { run } = loadEngine();
