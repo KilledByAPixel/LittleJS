@@ -175,13 +175,16 @@ class EngineObject3D extends EngineObject
         this.sync2D || (this.groundObject = undefined);
         if (this.clampSpeed && !this.sync2D && (this.collideSolidObjects || this.collideLevel && this.mass))
         {
-            // each axis within objectMaxSpeed, as in 2D, so a fast object does not pass through a thin wall; only
-            // for what collides, anything else moves as fast as it is told
+            // each axis within objectMaxSpeed, as in 2D, which with the push back to the side it came from keeps a fast
+            // object out of a solid thinner than its move, as long as it is not turned; only for what collides,
+            // anything else moves as fast as it is told
             const v = this.velocity3D, s = objectMaxSpeed;
             v.x = clamp(v.x, -s, s), v.y = clamp(v.y, -s, s), v.z = clamp(v.z, -s, s);
         }
-        // a moving object keeps out of the level, the height maps and voxel maps, from where it was before it moved
-        const oldPos = this.collideLevel && this.mass && !this.sync2D ? this.pos3D.copy() : undefined;
+        // a moving object keeps out of the level, the height maps and voxel maps, from where it was before it moved,
+        // and a solid it hits sends it back to the side it came from
+        const oldPos = (this.collideLevel || this.collideSolidObjects) && this.mass && !this.sync2D ?
+            this.pos3D.copy() : undefined;
         render3DMove(this);
         if (ground && this.mass && !this.sync2D)
         {
@@ -192,10 +195,10 @@ class EngineObject3D extends EngineObject
             const gx = moving?.x ?? 0, gz = moving?.z ?? 0;
             v.x = gx + (v.x - gx) * friction, v.z = gz + (v.z - gz) * friction;
         }
-        oldPos && render3DCollideLevel(this, oldPos, ground);
+        oldPos && this.collideLevel && render3DCollideLevel(this, oldPos, ground);
         // the engine only runs this for objects that own where they are, a child rides along with its parent
         if (this.collideSolidObjects && !this.sync2D)
-            render3DCollideSolid(this);
+            render3DCollideSolid(this, oldPos);
     }
 
     /** Move a child by its own velocities, bring a sync2D object's pos3D up to its 2D pos, then update the children,
@@ -516,6 +519,31 @@ function render3DSolidPush(a, b)
         b.axes ?? BOX_WORLD_AXES) : collideBoxBox3D(a.pos, a.size, b.pos, b.size);
 }
 
+// what moves shape a back clear of shape b to the side it came from: along an axis it was clear of b on before it
+// moved, the least of those, as 2D resolves it from where the object was; undefined when it overlapped on every axis
+// before too, or a box is turned, which keeps the least push
+function render3DSolidPushBack(a, b, from)
+{
+    if (a.axes || b.axes) return;
+    const half = (shape)=> shape.size ? shape.size.scale(.5) : vec3(shape.radius);
+    const halfA = half(a), halfB = half(b);
+    let axis, amount = Infinity, side = 0;
+    for (const k of ['x', 'y', 'z'])
+    {
+        const reach = halfA[k] + halfB[k], was = from[k] - b.pos[k];
+        // it overlapped on this axis before it moved as well; one resting against it touches, which is clear, give or
+        // take the rounding of the push that put it there
+        if (abs(was) < reach - 1e-6) continue;
+        const s = sign(was), need = reach - s * (a.pos[k] - b.pos[k]);
+        if (need > 0 && need < amount)
+            axis = k, amount = need, side = s;
+    }
+    if (!axis) return;
+    const push = vec3();
+    push[axis] = side * amount;
+    return push;
+}
+
 // a sprite, a tile with no mesh, which faces the camera however it is turned
 const render3DIsSprite = (o)=> !o.mesh && !!o.tileInfo;
 
@@ -533,7 +561,7 @@ function render3DOnFace(push, shape)
 // turned collision on this frame, tests them all itself and is not tested back
 // one pair per test is half the work of the 2D solver, which tests both directions; the difference only shows
 // when a collideWithObject destroys some third object, whose own turn then finds the pair already gone
-function render3DCollideSolid(a)
+function render3DCollideSolid(a, from)
 {
     let shapeA = render3DSolidShape(a);
     const reachA = render3DSolidReach(a);
@@ -554,6 +582,10 @@ function render3DCollideSolid(a)
         const shapeB = render3DSolidShape(b);
         let push = render3DSolidPush(shapeA, shapeB);
         if (!push) continue;
+        // a push the way it was moving sends it on out the far side, past the middle of what it hit, as a fast
+        // object would go through a thin wall; it goes back to the side it came from, as in 2D
+        if (from && push.dot(shapeA.pos.subtract(from)) > 0)
+            push = render3DSolidPushBack(shapeA, shapeB, from) ?? push;
 
         // both objects hear about it, and either one can take the touch over
         const resolveA = a.collideWithObject(b, push);

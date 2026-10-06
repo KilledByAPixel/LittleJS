@@ -38,6 +38,7 @@ What changed in each release, newest first. Releases before 1.20.0 are on the
 
 ### Fixes
 
+- A fast 3D object hitting a thin solid is stopped on the side it came from, as in 2D, where it was pushed out by least overlap and went on out the far side once past the solid's middle, through anything thinner than about its own size at half the speed 2D allows; turned boxes still push by least overlap
 - A 3D particle crossing a ridge of a height map, both ends of its move above the ground, hits it, where only the ends were checked and it passed through; a move over several slopes hits the first it meets, and one leaving the map hits before it leaves
 - A voxel map's transparent blocks draw with the map's material (emissive, reflectivity, receiveShadow and the rest) and in its stage with renderAfter2D, as its opaque ones do, where they kept the defaults
 - Level editor: a reload of the file a Save wrote drops the autosave the file now has, and does not add an empty Objects layer, where an Objects layer the editor made for an object taken back again kept its empty list in the autosave; an Objects layer a Save wrote stays when its objects go after
