@@ -100,6 +100,11 @@ class VoxelMap extends EngineObject3D
         glass.size3D = vec3(); // not a thing to collect either
         glass.transparent = true;
         glass.render3D = ()=> this.renderChunks(true);
+        // it draws as the map does: the map's material and stage, read from the map each time, so a change made after
+        // is seen, before the stage is chosen too
+        for (const name of ['emissive', 'additive', 'specular', 'shininess', 'reflectivity', 'normalMap', 'normalScale',
+            'emissiveMap', 'emissiveMapColor', 'receiveShadow', 'pixelated', 'shader', 'environment', 'renderAfter2D'])
+            Object.defineProperty(glass, name, {get: ()=> this[name], set: ()=> {}, configurable: true});
         this.addChild(glass);
         render3DLevel.push(this);
     }

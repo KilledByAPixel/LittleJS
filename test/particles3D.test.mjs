@@ -267,3 +267,45 @@ test('gravityScale adds a share of render3D.gravity to the emitter\'s own fall, 
     }
     finally { render3D.gravity = saved; }
 });
+
+test('a particle crossing a ridge, both ends of its move above the ground, hits it', ()=>
+{
+    // the review's ridge: the ground is .5 under each end and 1 in the middle, the move enters its slope a tenth in
+    const ridge = new HeightMap([[0, 1, 0], [0, 1, 0]], vec2(2), 1);
+    const hit = ridge.levelSegment3D(vec3(-.5, .6, 0), vec3(.5, .6, 0));
+    assert.ok(hit, 'it hits');
+    near(hit.distance, .1, 'where the raycast says');
+    const raycast = ridge.raycast({origin: vec3(-.5, .6, 0), direction: vec3(1, 0, 0)});
+    near(hit.distance, raycast);
+    assert.ok(hit.normal.x < 0, 'on the slope facing it');
+
+    // a real particle moving across it collides, where it passed through
+    const e = makeEmitter(vec3(-.5, .6, 0)), hits = [];
+    e.collideLevel = true;
+    e.particleCreateCallback = (p)=> { p.velocity.set(1, 0, 0); };
+    e.particleCollideCallback = (p, level, pos)=> { hits.push(pos.x); return true; };
+    e.emitParticle();
+    e.update();
+    assert.equal(hits.length, 1);
+    near(hits[0], -.4);
+    ridge.destroy();
+    e.destroy(true);
+});
+
+test('a move across several slopes hits the first one it meets, and one leaving the map still hits before', ()=>
+{
+    // a valley then a wall: the move goes down across the valley, above it, and meets the wall
+    const ground = new HeightMap([[.5, 0, 0, 1, 1], [.5, 0, 0, 1, 1]], vec2(4), 2); // samples 0 to 1, 2 tall
+    const from = vec3(-1.5, 1.2, 0), to = vec3(1.8, 1.2, 0);
+    const hit = ground.levelSegment3D(from, to), at = from.lerp(to, hit.distance);
+    near(at.y, ground.getHeight(at.x, at.z), 'on the surface');
+    assert.ok(at.x > 0 && at.x < 1, 'on the rising wall, not on the valley it passed over: ' + at.x);
+
+    // the end of the move off the map, the hit before it leaves
+    const leaving = ground.levelSegment3D(vec3(0, 1.2, 0), vec3(3, 1.2, 0));
+    assert.ok(leaving && leaving.distance < 1 / 3, 'it hits the wall before it leaves');
+    // a move above everything, and one starting under the ground, do not hit
+    assert.equal(ground.levelSegment3D(vec3(-1.5, 3, 0), vec3(1.5, 3, 0)), undefined);
+    assert.equal(ground.levelSegment3D(vec3(1.5, 1, 0), vec3(1.6, 1, 0)), undefined);
+    ground.destroy();
+});

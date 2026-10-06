@@ -75,7 +75,9 @@ smokeRun(async ()=>
     edit(inputs('Sky box')[0], six(5).join(', '));
     check('five urls are refused', level.scene.skyBox.join() === second.join() &&
         inputs('Sky box')[0].value === second.join(', '));
-    await new Promise((resolve)=> setTimeout(resolve, 200));
+    // the images load in the background, however long a busy machine takes, up to a few seconds
+    for (let wait = 0; wait < 100 && !(render3D.skyBox instanceof CubeMap); ++wait)
+        await new Promise((resolve)=> setTimeout(resolve, 50));
     check('the sky box loads as a cube map', render3D.skyBox instanceof CubeMap && render3D.environment === render3D.skyBox);
 
     // data urls have a comma of their own, so a comma and a space between them

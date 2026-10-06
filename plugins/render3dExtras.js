@@ -630,11 +630,15 @@ class HeightMap extends EngineObject3D
      *  @ignore */
     levelSegment3D(from, to)
     {
-        const m = this.pos3D, size = this.mapSize;
-        if (abs(to.x - m.x) > size.x / 2 || abs(to.z - m.z) > size.y / 2) return undefined; // off the map
-        const a = from.y - this.getHeight(from.x, from.z), b = to.y - this.getHeight(to.x, to.z);
-        if (a < 0 || b >= 0) return undefined; // above all the way, or under from the start
-        const distance = a / (a - b);
+        // a move above the highest the ground goes misses it, which is most particles most of the time
+        const top = this.pos3D.y + max(this.height, 0);
+        if (from.y > top && to.y > top) return undefined;
+        if (from.y < this.getHeight(from.x, from.z)) return undefined; // under from the start, let go
+        // the ground is flat in each triangle, not between the ends, so a ridge both ends are above is still met:
+        // the exact raycast along the move, which walks every triangle it crosses, the first one it goes under
+        const distance = this.raycast(new Ray3D(from, to.subtract(from)));
+        // over the move, and not a touch where it starts on the surface and leaves it
+        if (distance === undefined || distance > 1 || !distance && to.y >= this.getHeight(to.x, to.z)) return undefined;
         return {distance, normal: this.getNormal(from.x + (to.x - from.x) * distance, from.z + (to.z - from.z) * distance)};
     }
 

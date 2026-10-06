@@ -459,3 +459,27 @@ test('a body stuck in a block moves out of it but not into new ones, through no 
     render3D.gravity = vec3();
     body.destroy(); climber.destroy(); map.destroy();
 });
+
+test('a voxel map\'s transparent blocks draw with the map\'s material and in its stage, set before or after', async ()=>
+{
+    const { run } = loadEngine();
+    const seen = JSON.parse(run(`setHeadlessMode(true); new Render3DPlugin;
+        const map = new VoxelMap(vec3(), vec3(2));
+        map.setBlockType(2, 0, {transparent: true});
+        map.setVoxel(vec3(0), 1); map.setVoxel(vec3(1, 0, 0), 2);
+        map.emissive = 1; map.reflectivity = .8; map.receiveShadow = false; map.renderAfter2D = true;
+        map.environment = makeCubeMap(1, ()=> WHITE);
+        const glass = map.children[0], states = [];
+        for (const o of [map, glass])
+        {
+            render3DSetObjectState(o);
+            states.push([render3D.emissive, render3D.reflectivity, render3D.receiveShadow,
+                render3D.environmentMap === map.environment, render3DIsAfter2D(o)]);
+        }
+        render3DSetObjectState();
+        JSON.stringify({states, inStage: render3DLayerObjects(true).includes(glass), transparent: glass.transparent})`));
+    assert.deepEqual(seen.states[1], seen.states[0], 'the transparent blocks draw as the opaque ones');
+    assert.deepEqual(seen.states[0], [1, .8, false, true, true]);
+    assert.equal(seen.inStage, true, 'in the stage after the 2D scene with the map');
+    assert.equal(seen.transparent, true, 'and still blended');
+});
