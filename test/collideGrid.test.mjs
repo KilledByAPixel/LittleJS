@@ -86,3 +86,33 @@ test('the grid follows a collision callback that moves the other object far away
             assert.fail('frame ' + frame + ' differs');
     }
 });
+
+test('a negative size, a solid too big for cells and objects far out collide as checking every pair does', () =>
+{
+    // a negative size is a mirrored sprite of that size; a box past 2^31 cells out would loop for ever, as ++ stops
+    // changing a number past 2^53, so it counts as too big for cells, as one with no finite box does
+    const extras = `
+        for (const [x, y, w, h, mass] of [
+            [0, 50, -1, 1, 0], [0, 52, 2, 2, 1],        // a box lands on a solid of negative width
+            [8, 50, 4, 1, 0], [8, 52, -1, -2, 1],       // a mover of negative size lands
+            [200, -75, 150, 150, 0], [200, 2, 1, 1, 1], [205, 4, 2, 1, 1], // landing on one too big for cells
+            [1e17, 0, 4, 1, 0], [1e17, 2, 1, 1, 1]])    // far out
+        {
+            const o = new EngineObject(vec2(x, y), vec2(w, h));
+            o.setCollision();
+            o.mass = mass;
+            bodies.push(o);
+        }`;
+    const grid = loadEngine(), all = loadEngine();
+    grid.run(scene(400, true) + extras);
+    all.run(scene(400, false) + extras);
+    for (let frame = 0; frame < 60; ++frame)
+    {
+        grid.run('engineObjectsUpdate()');
+        all.run('engineObjectsUpdate()');
+        const a = JSON.stringify(grid.run('state()')), b = JSON.stringify(all.run('state()'));
+        if (a !== b)
+            assert.fail('frame ' + frame + ' differs');
+    }
+    assert.ok(grid.run('bodies.at(-8).groundObject === bodies.at(-9)'), 'the box stands on the negative width solid');
+});

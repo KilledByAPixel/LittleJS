@@ -179,7 +179,10 @@ class EngineObject
                 child.updateTransforms();
     }
 
-    /** Update the object physics, called automatically by engine once each frame. Can be overridden to stop or change how physics works for an object */
+    /** Update the object physics, called automatically by engine once each frame. Can be overridden to stop or change how physics works for an object
+     *  - With many solids each mover finds those near it through a grid, which follows a solid after its own physics
+     *    update: a solid an override moves for another object, a lift carrying a crate, is found there from the next
+     *    update on */
     updatePhysics()
     {
         // child objects do not have physics
@@ -518,6 +521,8 @@ class EngineObject
      *  - Both objects of a touching pair are asked once a frame, whichever order they update in; an object that
      *    destroys itself here is gone at the end of the frame and is still asked about the pairs left this frame, so a
      *    bullet that should hit one thing checks its own destroyed flag first
+     *  - With many solids each mover finds those near it through a grid, which follows the other object after this
+     *    returns; a third object moved here is found where it is now from the next update on
      *  @param {EngineObject} object - the object to test against
      *  @param {Vector3} [push] - what it would take to move this object clear, a Vector3 from the 3D plugin, undefined in 2D
      *  @return {boolean} - true if the collision should be resolved by modifying it's position and velocity

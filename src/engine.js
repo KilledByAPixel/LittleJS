@@ -199,15 +199,26 @@ function engineCollideGridBuild(list)
     return grid;
 }
 
+// the cells an object's box covers, first and last along x and y; a negative size is a mirrored sprite of that size
+function engineCollideGridCells(grid, o)
+{
+    const s = grid.size, w = abs(o.size.x) / 2, h = abs(o.size.y) / 2;
+    return [floor((o.pos.x - w) / s), floor((o.pos.y - h) / s), floor((o.pos.x + w) / s), floor((o.pos.y + h) / s)];
+}
+
+// whether a box is kept in its cells: not over 1024 of them, and within 2^31 cells of the origin, past which a cell
+// loop would not end, as ++ stops changing a number past 2^53, and the keys would not be exact; one with no finite
+// box does not fit either, and is near every mover
+const engineCollideGridFits = (x0, y0, x1, y1)=> (x1 - x0 + 1) * (y1 - y0 + 1) <= 1024 &&
+    abs(x0) < 2**31 && abs(y0) < 2**31 && abs(x1) < 2**31 && abs(y1) < 2**31;
+
 // put a solid in the cells its box covers now, out of those it was in; a box on a cell's edge is in both cells, so
 // solids that touch share one
 function engineCollideGridPlace(grid, o)
 {
     if (!grid.index.has(o)) return;
-    const s = grid.size, w = o.size.x / 2, h = o.size.y / 2;
-    const x0 = floor((o.pos.x - w) / s), x1 = floor((o.pos.x + w) / s);
-    const y0 = floor((o.pos.y - h) / s), y1 = floor((o.pos.y + h) / s);
-    const big = !((x1 - x0 + 1) * (y1 - y0 + 1) <= 1024); // and one with no finite box
+    const [x0, y0, x1, y1] = engineCollideGridCells(grid, o);
+    const big = !engineCollideGridFits(x0, y0, x1, y1);
     const was = grid.at.get(o);
     if (was && was[0] === x0 && was[1] === y0 && was[2] === x1 && was[3] === y1 && was[4] === big) return;
     if (was && !was[4])
@@ -234,11 +245,9 @@ function engineCollideGridPlace(grid, o)
 // the solids a mover is near, after a place in the list, in list order
 function engineCollideGridNear(grid, o, after)
 {
-    const s = grid.size, w = o.size.x / 2, h = o.size.y / 2;
-    const x0 = floor((o.pos.x - w) / s), x1 = floor((o.pos.x + w) / s);
-    const y0 = floor((o.pos.y - h) / s), y1 = floor((o.pos.y + h) / s);
+    const [x0, y0, x1, y1] = engineCollideGridCells(grid, o);
     const near = new Set(grid.big);
-    if ((x1 - x0 + 1) * (y1 - y0 + 1) <= 1024)
+    if (engineCollideGridFits(x0, y0, x1, y1))
         for (let x = x0; x <= x1; ++x)
         for (let y = y0; y <= y1; ++y)
             for (const other of grid.cells.get(x * 1048576 + y) || [])
