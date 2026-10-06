@@ -1,31 +1,6 @@
 const names = ['Grass','Dirt','Stone','Wood','Leaves','Water','Glass'];
 let map, player, hit, selected = 1;
 
-// draw block textures into a small tile sheet, 16 pixels each, with a
-// 2 pixel border of each tile's edge so the mipmaps do not blend tiles
-function makeTiles()
-{
-    const context = createCanvasContext(8*20, 20);
-    const colors = [hsl(.3,.6,.45), hsl(.1,.4,.35), hsl(.1,.4,.35),
-        hsl(0,0,.5), hsl(.1,.5,.3), hsl(.3,.6,.35), hsl(.6,.8,.5,.6),
-        hsl(.55,.3,.9,.3)];
-    for (let i = 8; i--;)
-    for (let y = 16; y--;)
-    for (let x = 16; x--;)
-    {
-        let color = colors[i].scale(rand(.85, 1.1), 1);
-        if (i == 1 && y < 4 + rand(2)) color = colors[0]; // grass edge
-        if (i == 5 && rand() < .3) color = CLEAR_BLACK;   // leaf holes
-        if (i == 7 && !(x%15 && y%15)) color = WHITE;     // glass rim
-        // an edge pixel also fills the border beside it
-        const left = x ? 0 : 2, top = y ? 0 : 2;
-        const w = 1 + left + (x < 15 ? 0 : 2), h = 1 + top + (y < 15 ? 0 : 2);
-        context.fillStyle = color.toString();
-        context.fillRect(i*20 + 2 + x - left, 2 + y - top, w, h);
-    }
-    return new TextureInfo(context.canvas);
-}
-
 // a trunk with a ball of leaves on top
 function tree(x, y, z)
 {
@@ -46,7 +21,9 @@ function gameInit()
     render3D.setSky();
     render3D.gravity = vec3(0, -.01, 0);
     setDrawScreenSpace(true); // the only 2D drawing is the hud
-    const sheet = tile(0, 16, makeTiles(), 2); // 2 pixel borders
+    // the block tiles, eight in a row on tiles.png from tile 20, each
+    // with a 2 pixel border; columns counts the blocks' tiles from it
+    const sheet = tile(20, 16, 0, 2).setColumns(8);
     map = new VoxelMap(vec3(), vec3(50), sheet);
     map.setBlockType(1, {top:0, side:1, bottom:2});
     for (let i = 5; i < 8; ++i)
@@ -126,18 +103,20 @@ draws itself, leaving out the faces between blocks, and objects collide
 with it.
 
 ### The tile sheet
-`makeTiles` paints the block textures on a canvas, eight tiles of 16
-pixels in a row. Each pixel is the tile's color with its brightness
-varied at random by `color.scale(rand(.85, 1.1), 1)`, where the second
-argument keeps the alpha as it is. Three tiles get more: a grass edge
-along the top of tile 1, holes in the leaves, and a white rim on the
-glass.
+The block textures are eight tiles of 16 pixels in a row on the shorts'
+`tiles.png`: grass on top, grass on the side, dirt, stone, wood,
+leaves, water and glass.
 
 Each tile sits in a cell of 20 pixels, with a 2 pixel border that
 repeats its edge pixels. Far away the texture is drawn from smaller,
 blurred copies, and without the border each tile would blend with the
-ones beside it. `tile(0, 16, makeTiles(), 2)` is the sheet's first tile,
-with that 2 pixel padding as the fourth argument.
+ones beside it. `tile(20, 16, 0, 2)` is the first of them: tile 20 of
+texture 0 in cells of 16 pixels with that 2 pixel padding, which puts
+it on the second row, 14 cells to a row.
+
+`setColumns(8)` makes the map count its tiles from that one, 8 to a
+row, so tile 0 below is the grass top and 7 the glass. Without it a
+number counts from the image's top left corner, as `tile` does.
 
 ### The map
 `new VoxelMap(pos3D, mapSize, tileInfo)` has its corner at `pos3D`, the
