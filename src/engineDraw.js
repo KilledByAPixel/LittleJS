@@ -1329,6 +1329,24 @@ function drawFontCheck(context, fontText, font)
             `a family name with spaces or digits goes in quotes, as "'Press Start 2P'"`);
 }
 
+// the characters of a line of text as a reader counts them, each as its first code point: an emoji with its joiners
+// is one, and a letter with combining accents its letter; plain text takes the quick way, it is most of what is drawn
+const textIntl = /** @type {any} */ (globalThis.Intl); // Segmenter is newer than the library the source is checked with
+const textSegmenter = textIntl?.Segmenter && new textIntl.Segmenter;
+function textCharacters(line)
+{
+    if (/^[\x20-\x7e]*$/.test(line))
+    {
+        const codes = new Array(line.length);
+        for (let i = line.length; i--;)
+            codes[i] = line.charCodeAt(i);
+        return codes;
+    }
+    // where graphemes can not be split, code points with the joiners, variation selectors and accents left out
+    return textSegmenter ? Array.from(textSegmenter.segment(line), (s)=> s.segment.codePointAt(0)) :
+        Array.from(line, (c)=> c.codePointAt(0)).filter((c)=> c !== 0x200d && c !== 0xfe0f && !(c >= 0x300 && c < 0x370));
+}
+
 /** Draw text in screen space
  *  Automatically splits new lines into rows
  *  @param {string|number}  text
@@ -1359,7 +1377,7 @@ function drawTextScreen(text, pos, size, color=WHITE, lineWidth=0, lineColor=BLA
 
     if (headlessMode && !context) return; // headless has no canvas, only a context passed in is drawn to
     
-    const lines = (text+'').split('\n');
+    const lines = (text+'').split(/\r?\n/); // a Windows line ending too
     // save before style mutations so caller's context state is preserved
     context.save();
     context.fillStyle = color.toString();
@@ -1899,15 +1917,16 @@ class ImageFont
         const tileInfo = this.tileInfo.frame(0);
 
         // draw each line of text, centered vertically like drawTextScreen when center is set
-        const lines = (text+'').split('\n');
+        const lines = (text+'').split(/\r?\n/); // a Windows line ending too
         const centerOffsetY = center ? (lines.length-1) * glyphSize.y / 2 : 0;
         lines.forEach((line, j)=>
         {
-            const centerOffset = center ? (line.length-1) * glyphSize.x / 2 : 0;
-            for (let i=line.length; i--;)
+            const characters = textCharacters(line);
+            const centerOffset = center ? (characters.length-1) * glyphSize.x / 2 : 0;
+            for (let i=characters.length; i--;)
             {
                 // get the glyph, out of range characters use the last one
-                const charCode = line.charCodeAt(i);
+                const charCode = characters[i];
                 this.getGlyphPos(charCode < 32 || charCode > 127 ? 95 : charCode - 32, tileInfo.pos);
 
                 // snap the glyph edges to whole pixels

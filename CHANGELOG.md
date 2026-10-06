@@ -38,6 +38,8 @@ What changed in each release, newest first. Releases before 1.20.0 are on the
 
 ### Fixes
 
+- Image fonts and 3D text read text as a reader counts characters: an emoji, joiners and all, is one box where it was two to eight, and a letter with a combining accent draws as its letter; text with Windows line endings breaks lines as 
+ does in image fonts, canvas text, 3D text and the UI, where the  drew a box or a space and shifted the line
 - A font the canvas does not take, as a family name with spaces and digits like Press Start 2P left unquoted, warns once in a debug build, where the text drew as 10px sans-serif with no word; setFontDefault says to quote such names
 - setSoundVolume asserts its volume is a number, and a NaN one is not handed to the audio, where it threw every frame; setSoundEnable says it is a setting for before sounds are made, setSoundVolume(0) the way to mute while playing
 - A fast 3D object hitting a thin solid is stopped on the side it came from, as in 2D, where it was pushed out by least overlap and went on out the far side once past the solid's middle, through anything thinner than about its own size at half the speed 2D allows; turned boxes still push by least overlap. A 3D object shoved into a wall by another is settled against it the same frame, through the wall's collideWithObject, so solid objects pushing each other no longer force one through

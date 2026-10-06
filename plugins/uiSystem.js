@@ -1201,7 +1201,7 @@ class UIObject
     getTextSize()
     {
         // text fitted to the size shares its height between its lines, a set textHeight is the height of each line
-        const lines = this.textHeight ? 1 : (this.text + '').split('\n').length;
+        const lines = this.textHeight ? 1 : (this.text + '').split(/\r?\n/).length;
         return vec2(
             this.textWidth  || this.textFitScale * this.size.x,
             this.textHeight || this.textFitScale * this.size.y / lines);

@@ -404,13 +404,14 @@ function buildText3D(text, size=1, depth=.2, font=engineImageFont)
     let glyphs = render3DGlyphCache.get(font); // unit sized, scaled when combined
     glyphs || render3DGlyphCache.set(font, glyphs = new Map);
     const charSize = vec2(size * tileInfo.size.x / tileInfo.size.y, size);
-    const mesh = new Mesh, lines = (text + '').split('\n');
+    const mesh = new Mesh, lines = (text + '').split(/\r?\n/); // a Windows line ending too
     lines.forEach((line, j)=>
     {
         const y = ((lines.length - 1) / 2 - j) * charSize.y * RENDER3D_TEXT_LEADING;
-        for (let i = 0; i < line.length; ++i)
+        const characters = textCharacters(line); // as ImageFont reads them, an emoji one box
+        for (let i = 0; i < characters.length; ++i)
         {
-            const charCode = line.charCodeAt(i);
+            const charCode = characters[i];
             const index = charCode < 32 || charCode > 127 ? 95 : charCode - 32; // like ImageFont
             if (!index) continue; // space
             let glyph = glyphs.get(index);
@@ -419,7 +420,7 @@ function buildText3D(text, size=1, depth=.2, font=engineImageFont)
                 const pos = font.getGlyphPos(index); // where ImageFont finds it
                 glyphs.set(index, glyph = buildExtrude(new TileInfo(pos, tileInfo.size, tileInfo.textureInfo)));
             }
-            const x = (i - (line.length - 1) / 2) * charSize.x;
+            const x = (i - (characters.length - 1) / 2) * charSize.x;
             mesh.combine(glyph, buildMatrix(vec3(x, y, 0), undefined, vec3(charSize.x, charSize.y, depth)));
         }
     });
