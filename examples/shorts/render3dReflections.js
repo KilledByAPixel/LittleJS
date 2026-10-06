@@ -1,5 +1,6 @@
-let sky, ring;
-const sunWay = vec3(-.5,.4,-.75).normalize();
+let sky, scene, chrome, ring, mode = 0;
+const modes = ['the scene', 'the sky', 'nothing'];
+const sunWay = vec3(-.4,.45,.8).normalize();
 
 // the color of the world each way, d a unit vector: the sky with a
 // glow toward the sun, the sun, clouds, mountains around the horizon
@@ -25,16 +26,19 @@ function gameInit()
     render3D.sunDirection = sunWay;
     new CameraControl3D(vec3(0,1.5,0), 12, .3, .003);
 
-    // one cube map, drawn as the sky and reflected by shiny things
+    // a cube map painted in code, drawn as the sky
     sky = makeCubeMap(256, skyColor);
-    render3D.skyBox = render3D.environment = sky;
+    render3D.skyBox = sky;
+
+    // and one with no faces, drawn from the scene for the chrome ball
+    scene = new CubeMap(128);
 
     const base = new EngineObject3D(vec3(0,-.25,0),
         buildCylinder(12, .5, 48), undefined, hsl(.6,.1,.2));
     base.reflectivity = .2;
 
     // chrome: a black surface that is all reflection
-    const chrome = new EngineObject3D(vec3(0,1.5,0),
+    chrome = new EngineObject3D(vec3(0,1.5,0),
         buildSphere(3, 48, 24, true), undefined, BLACK);
     chrome.reflectivity = 1;
     chrome.shininess = 1e4;
@@ -62,22 +66,32 @@ function gameUpdate()
 {
     ring.rotation3D = vec3(time*.5, time*.3, 0);
     if (keyWasPressed('KeyE'))
-        render3D.environment = render3D.environment ? undefined : sky;
+        mode = (mode + 1) % 3;
+    // everything reflects the sky, and the chrome ball the scene
+    render3D.environment = mode < 2 ? sky : undefined;
+    chrome.environment = mode == 0 ? scene : undefined;
+
+    // the scene seen from the chrome ball's middle, every frame since
+    // the ring moves; the ball is not seen from inside, so it hides
+    // nothing
+    if (mode == 0)
+        scene.capture(chrome.pos3D);
     if (keyWasPressed('KeyB'))
         render3D.skyBox = render3D.skyBox ? undefined : sky;
 }
 
 function gameRenderPost()
 {
-    const text = 'E: environment   B: sky box';
+    const text = 'E: reflect ' + modes[mode] + '   B: sky box';
     drawTextScreen(text, vec2(mainCanvasSize.x/2, 40), 30);
 }
 
 /* info
 Reflections: a chrome ball, a gold ring and a row of balls from polished
-to rough, all reflecting a sky painted in code. E turns the environment
-off and on, B the sky box. Drag to turn the camera and roll the wheel
-to zoom.
+to rough, reflecting a sky painted in code, and the chrome ball the
+scene around it. E goes between reflecting the scene, the sky alone and
+nothing, B turns the sky box off and on. Drag to turn the camera and roll the
+wheel to zoom.
 
 ## How it works
 ### The cube map
@@ -111,8 +125,24 @@ on, since a hard edge shows the map's pixels as steps.
   they reflect the three colors `setSky` was given.
 
 The short sets both to the same map, so the reflections match what is
-around them. `setSky` is still called, for the ambient light and as the
-reflection with the environment off.
+around them. `setSky` is still called, for the ambient light and as
+the reflection with nothing set.
+
+### Reflecting the scene
+`new CubeMap(128)` with no faces makes a cube map to draw the scene
+into. `scene.capture(chrome.pos3D)` asks the next frame to draw it: six
+views of everything, one each way from the middle of the chrome ball,
+with the sky box behind them. The ball itself hides nothing, since a
+mesh is not drawn from inside.
+
+A captured map is right for the point it was seen from, so it is the
+chrome ball's own: `chrome.environment = scene` reflects it in place of
+`render3D.environment`, which the ring and the balls in the row go on
+reflecting.
+
+Capturing is six more draws of the whole scene, so a still scene does
+it once. Here the ring turns, so `gameUpdate` captures every frame
+while E is on the scene.
 
 ### The materials
 - `reflectivity` is how much of the surface is reflection, more at a
@@ -122,15 +152,19 @@ reflection with the environment off.
   highlight it also sets: 10000 is a mirror, 1000 polished, 10 a wide
   blur. The row of balls goes from 10000 down to 1, ten times rougher
   each.
-- The gold ring keeps its own color and reflects half, with a
+- The gold ring keeps its own color and reflects a quarter, with a
   `specular` highlight from the sun on top.
 
 ## Try it
 - Set `chrome.shininess` to `8` for brushed metal.
 - Change the ring's `reflectivity` to `1` to see its color go.
-- Change `hsl(.12, 1, .95)` for the sun to `hsl(0, 1, .5)`.
-- Make the cube map `16` pixels a face and the sky goes soft, while the
-  rough balls hardly change.
+- Change `hsl(.12, 1, .95)` for the sun to `hsl(0, 1, .5)`, then turn
+  the camera to face it.
+- Make the sky `16` pixels a face and it goes soft, while the rough
+  balls hardly change.
+- Capture once: change `if (mode == 0)` to `if (!scene.capturePos)`,
+  which is set by the first capture, and the ring's reflection stops
+  turning.
 
 ## See also
 3D Materials has normal maps, highlights and glowing windows, and 3D

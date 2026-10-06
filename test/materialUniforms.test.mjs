@@ -160,3 +160,19 @@ test('an environment blurs a reflection by the angle of the highlight\'s spread,
     assert.ok(Math.abs(level(64, 100) + 2 - level(256, 100)) < 1e-9, 'a map a quarter the size reads two levels lower');
     assert.equal(send('render3D.reflectivity = 1').sent.envParams[0], 0, 'no environment, the sky colors');
 });
+
+test('an object\'s own environment is reflected in place of the scene\'s, and is part of the batch key', ()=>
+{
+    run(`var envSmall = makeCubeMap(16, ()=> WHITE), envLarge = makeCubeMap(256, ()=> WHITE)`);
+    const base = (setup)=> send(`render3D.environment = envLarge; ${setup}; render3D.reflectivity = 1`).sent.envParams[2];
+    assert.ok(Math.abs(base('') - Math.log2(256 * .45)) < 1e-9, 'the scene\'s');
+    assert.ok(Math.abs(base('render3D.environmentMap = envSmall') - Math.log2(16 * .45)) < 1e-9, 'its own');
+    const state = JSON.parse(run(`render3D.environment = undefined;
+        const o = new EngineObject3D(vec3(), render3D.boxMesh); o.environment = envSmall;
+        render3DSetObjectState(o); const own = render3D.environmentMap === envSmall;
+        const captured = render3DCaptureBatchState(); render3D.environmentMap = envLarge;
+        const changed = render3DStateChanged(captured);
+        render3DSetObjectState(); o.destroy();
+        JSON.stringify({own, changed, cleared: render3D.environmentMap === undefined})`));
+    assert.deepEqual(state, {own: true, changed: true, cleared: true});
+});

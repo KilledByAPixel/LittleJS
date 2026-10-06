@@ -100,13 +100,14 @@ function render3DCanDraw()
  *  @property {number} reflectivity
  *  @property {TextureInfo|undefined} emissiveMap
  *  @property {Color} emissiveMapColor
+ *  @property {CubeMap|undefined} environmentMap
  *  @property {number} emissiveR
  *  @property {number} emissiveG
  *  @property {number} emissiveB
  *  @memberof Render3D */
 const RENDER3D_STATE_FIELDS = ['blend', 'additive', 'depthTest', 'depthWrite', 'cullBackFaces', 'mirrored', 'lighting',
     'emissive', 'receiveShadow', 'specular', 'pixelated', 'shader', 'normalMap', 'normalScale', 'shininess',
-    'reflectivity', 'emissiveMap', 'emissiveMapColor'];
+    'reflectivity', 'emissiveMap', 'emissiveMapColor', 'environmentMap'];
 
 // a copy of the draw state in one fixed shape, the fields of RENDER3D_STATE_FIELDS written out, and the version
 // it was taken at
@@ -118,7 +119,7 @@ function render3DCaptureBatchState()
         receiveShadow: d.receiveShadow, specular: d.specular, pixelated: d.pixelated, shader: d.shader,
         normalMap: d.normalMap, normalScale: d.normalScale, shininess: d.shininess, reflectivity: d.reflectivity,
         emissiveMap: d.emissiveMap, emissiveMapColor: (d.emissiveMapColor || WHITE).copy(), // the caller may change it
-        version: r.stateVersion};
+        environmentMap: d.environmentMap, version: r.stateVersion};
 }
 
 // put a captured draw state back, written out the same way; the transparent stage does this for every queued draw
@@ -129,7 +130,8 @@ function render3DApplyBatchState(s)
     r.cullBackFaces = s.cullBackFaces, r.mirrored = s.mirrored, r.lighting = s.lighting, r.emissive = s.emissive,
     r.receiveShadow = s.receiveShadow, r.specular = s.specular, r.pixelated = s.pixelated, r.shader = s.shader,
     r.normalMap = s.normalMap, r.normalScale = s.normalScale, r.shininess = s.shininess,
-    r.reflectivity = s.reflectivity, r.emissiveMap = s.emissiveMap, r.emissiveMapColor = s.emissiveMapColor;
+    r.reflectivity = s.reflectivity, r.emissiveMap = s.emissiveMap, r.emissiveMapColor = s.emissiveMapColor,
+    r.environmentMap = s.environmentMap;
 }
 
 // true when the current draw state differs from a captured one, so a pending batch must flush first; it runs for
@@ -145,7 +147,7 @@ function render3DStateChanged(s)
         || d.specular !== s.specular || d.pixelated !== s.pixelated || d.shader !== s.shader
         || d.normalMap !== s.normalMap || d.normalScale !== s.normalScale || d.shininess !== s.shininess
         || d.reflectivity !== s.reflectivity || d.emissiveMap !== s.emissiveMap
-        || d.emissiveR !== c.r || d.emissiveG !== c.g || d.emissiveB !== c.b)
+        || d.environmentMap !== s.environmentMap || d.emissiveR !== c.r || d.emissiveG !== c.g || d.emissiveB !== c.b)
         return true;
     s.version = r.stateVersion; // set and set back to what it was: the batch goes on, checking the version again
     return false;
@@ -266,6 +268,8 @@ function render3DSetObjectState(o)
     r.normalScale = o?.normalScale ?? 1;
     r.emissiveMap = o?.emissiveMap || undefined;
     r.emissiveMapColor = o?.emissiveMapColor || WHITE;
+    ASSERT(!o?.environment || o.environment instanceof CubeMap, 'environment must be a CubeMap');
+    r.environmentMap = o?.environment || undefined;
     r.receiveShadow = !o || o.receiveShadow;
     r.cullBackFaces = r.mirrored = false; // each mesh sets these as it draws
     r.pixelated = !!o?.pixelated;
@@ -511,7 +515,8 @@ class Render3DPlugin
         this.drawState = {blend: false, additive: false, depthTest: true, depthWrite: true, cullBackFaces: false,
             mirrored: false, lighting: true, emissive: 0, receiveShadow: true, specular: 0, pixelated: false,
             shader: undefined, normalMap: undefined, normalScale: 1, shininess: 16, reflectivity: 0,
-            emissiveMap: undefined, emissiveMapColor: WHITE, emissiveR: 1, emissiveG: 1, emissiveB: 1};
+            emissiveMap: undefined, emissiveMapColor: WHITE, environmentMap: undefined, emissiveR: 1, emissiveG: 1,
+            emissiveB: 1};
         /** @property {number} - Goes up when a draw state field changes, so a batch sees at a glance that none did */
         this.stateVersion = 0;
         ASSERT(Object.keys(render3DCaptureBatchState()).join() === [...RENDER3D_STATE_FIELDS, 'version'].join(),
@@ -669,6 +674,15 @@ class Render3DPlugin
         this.shadowShader = undefined;
         /** @type {WebGLVertexArrayObject|undefined} */
         this.vao = undefined;
+        /** @type {Set<CubeMap>} */
+        this.cubeCaptures = new Set;  // the cube maps capture asked to draw in the next pass
+        /** @type {CubeMap|undefined} */
+        this.capturingCube = undefined; // the cube map being drawn, which nothing may read meanwhile
+        /** @type {WebGLFramebuffer|undefined} */
+        this.captureFramebuffer = undefined;
+        /** @type {WebGLRenderbuffer|undefined} */
+        this.captureDepth = undefined;
+        this.captureDepthSize = 0;
         /** @type {WebGLProgram|undefined} */
         this.skyBoxProgram = undefined; // draws the sky box, made on its first draw
         /** @type {WebGLVertexArrayObject|undefined} */
@@ -806,6 +820,12 @@ class Render3DPlugin
      *  @return {TextureInfo|undefined} */
     get emissiveMap() { return this.drawState.emissiveMap; }
     set emissiveMap(v) { const d = this.drawState; d.emissiveMap === v || (d.emissiveMap = v, ++this.stateVersion); }
+
+    /** The cube map the next draws reflect in place of render3D.environment, set from each object's environment
+     *  @return {CubeMap|undefined} */
+    get environmentMap() { return this.drawState.environmentMap; }
+    set environmentMap(v)
+    { const d = this.drawState; d.environmentMap === v || (d.environmentMap = v, ++this.stateVersion); }
 
     /** Multiplies the emissive map, set from each object's emissiveMapColor; compared by its rgb, so a Color
      *  changed in place is seen when it is set again, and undefined is white
@@ -1154,7 +1174,7 @@ class Render3DPlugin
         for (const o of objects)
             (o.transparent || o.additive ? transparent : opaque).push(o);
 
-        isDefault && (this.skyBox || this.sky) && this.drawSky();
+        isDefault && (this.skyBox && this.skyBox !== this.capturingCube || this.sky) && this.drawSky();
 
         // opaque: no blending, depth writes on, by render order
         this.blend = false;
@@ -1185,7 +1205,7 @@ class Render3DPlugin
             isDefault && this.onRenderTransparent?.();
         }
         finally { this.flushTransparentQueue(); }
-        isDefault && render3DRenderDebug();
+        isDefault && !this.capturingCube && render3DRenderDebug();
         this.flush();
 
         // leave the fields at the opaque defaults for anything reading them outside the pass
@@ -1236,7 +1256,7 @@ class Render3DPlugin
     drawSky()
     {
         this.flush();
-        if (this.skyBox)
+        if (this.skyBox && this.skyBox !== this.capturingCube)
             return void render3DDrawSkyBox(this.skyBox);
         // the dome only has to sit between the clip planes, the pass draws it first with no depth test;
         // a far plane at Infinity has no midpoint, so put it a long way out instead
@@ -1943,30 +1963,61 @@ function render3DInitGL()
  * CubeMap - Six square images all around a point, the world far away: what reflective surfaces reflect as
  * render3D.environment, and the sky as render3D.skyBox
  * - makeCubeMap paints one from a function of direction, loadCubeMap loads six images
+ * - Made with no faces it is drawn from the scene: capture(pos3D) draws everything around that point into it in the
+ *   next frame's 3D pass, six views of the whole scene, so capture once for a still scene or now and then for one
+ *   that moves
  * - Its faces are in WebGL's order and lay out, +x, -x, +y, -y, +z, -z, each as seen from the middle looking out
  * @memberof Render3D
  * @example
  * render3D.environment = render3D.skyBox = makeCubeMap(64, (d)=> hsl(.6, .8, .4 + d.y * .4));
+ * @example
+ * // a chrome ball that reflects the scene around it, captured once
+ * const ball = new EngineObject3D(vec3(0, 1, 0), render3D.sphereMesh, undefined, BLACK);
+ * ball.reflectivity = 1;
+ * ball.shininess = 1e4;
+ * render3D.environment = new CubeMap(128);
+ * render3D.environment.capture(ball.pos3D);
  */
 class CubeMap
 {
-    /** Make a cube map from its six faces, as makeCubeMap and loadCubeMap do
+    /** Make a cube map from its six faces, as makeCubeMap and loadCubeMap do, or with none to capture the scene into
      *  @param {number} size - Pixels a side of each face
-     *  @param {Array<Uint8Array|HTMLImageElement|HTMLCanvasElement|ImageBitmap|OffscreenCanvas>} faces - +x, -x, +y,
-     *  -y, +z and -z, RGBA pixels row by row or images */
+     *  @param {Array<Uint8Array|HTMLImageElement|HTMLCanvasElement|ImageBitmap|OffscreenCanvas>} [faces] - +x, -x,
+     *  +y, -y, +z and -z, RGBA pixels row by row or images; none for a cube map drawn by capture */
     constructor(size, faces)
     {
-        ASSERT(isNumber(size) && size >= 1, 'a cube map\'s size must be a positive number', size);
-        ASSERT(isArray(faces) && faces.length === 6, 'a cube map has six faces');
+        ASSERT(isNumber(size) && size >= 1 && size % 1 === 0, 'a cube map\'s size must be a whole positive number', size);
+        ASSERT(faces === undefined || isArray(faces) && faces.length === 6, 'a cube map has six faces');
         /** @property {number} - Pixels a side of each face */
         this.size = size;
-        /** @property {Array<Uint8Array|HTMLImageElement|HTMLCanvasElement|ImageBitmap|OffscreenCanvas>} - Its faces,
-         *  kept to upload again after a lost context
-         *  @type {Array<Uint8Array|HTMLImageElement|HTMLCanvasElement|ImageBitmap|OffscreenCanvas>} */
+        /** @property {Array<Uint8Array|HTMLImageElement|HTMLCanvasElement|ImageBitmap|OffscreenCanvas>|undefined} -
+         *  Its faces, kept to upload again after a lost context, undefined for one drawn by capture
+         *  @type {Array<Uint8Array|HTMLImageElement|HTMLCanvasElement|ImageBitmap|OffscreenCanvas>|undefined} */
         this.faces = faces;
+        /** @property {Vector3|undefined} - Where it was last captured from, and is captured from again after a lost
+         *  context
+         *  @type {Vector3|undefined} */
+        this.capturePos = undefined;
         /** @type {WebGLTexture|undefined} */
         this.glTexture = undefined; // made by the first pass that uses it
         this.contextGeneration = -1;
+    }
+
+    /** Draw the scene around a point into a cube map made with no faces, in the next frame's 3D pass
+     *  - Every object of the layer render3D.renderAfter2D picks is drawn, with the sky and the render callbacks; the
+     *    camera's near and far planes, the lights and the fog are the scene's
+     *  - It is six more draws of the scene, so capture once for a still scene, or every few frames for a moving one
+     *  - A closed mesh around the point, like the ball that reflects it, is not seen from inside, so it hides nothing
+     *  - While it is drawn, what would reflect it reflects the sky's colors in its place
+     *  - It is seen from one point, so it suits what is near that point best, give each mirror its own with
+     *    obj.environment
+     *  @param {Vector3} pos3D - The point it is seen from */
+    capture(pos3D)
+    {
+        ASSERT(!this.faces, 'only a cube map made with no faces can capture the scene');
+        ASSERT(isVector3(pos3D), 'capture needs a Vector3');
+        this.capturePos = pos3D.copy();
+        render3D.cubeCaptures.add(this);
     }
 
     /** Free its texture, which is made again if it is used after */
@@ -1974,6 +2025,7 @@ class CubeMap
     {
         this.glTexture && glContext?.deleteTexture(this.glTexture);
         this.glTexture = undefined;
+        render3D?.cubeCaptures.delete(this);
     }
 }
 
@@ -2053,7 +2105,15 @@ function render3DCubeTexture(cube)
     cube.contextGeneration = render3D.contextGeneration;
     gl.bindTexture(gl.TEXTURE_CUBE_MAP, texture);
     gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false); // a face's first row is its top, as the cube's faces are laid out
-    cube.faces.forEach((face, i)=> face instanceof Uint8Array ?
+    if (!cube.faces)
+    {
+        // drawn by a capture: empty faces, black until the capture, which happens again when the context was lost
+        for (let i = 0; i < 6; ++i)
+            gl.texImage2D(gl.TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, gl.RGBA, cube.size, cube.size, 0, gl.RGBA,
+                gl.UNSIGNED_BYTE, null);
+        cube.capturePos && render3D.cubeCaptures.add(cube);
+    }
+    else cube.faces.forEach((face, i)=> face instanceof Uint8Array ?
         gl.texImage2D(gl.TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, gl.RGBA, cube.size, cube.size, 0, gl.RGBA,
             gl.UNSIGNED_BYTE, face) :
         gl.texImage2D(gl.TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, face));
@@ -2063,6 +2123,103 @@ function render3DCubeTexture(cube)
     gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
     gl.generateMipmap(gl.TEXTURE_CUBE_MAP); // the blur of a rough surface's reflection
     return texture;
+}
+
+// the transform of a camera at pos looking out through a cube map face, 90 degrees across: right, up and forward are
+// the face's directions toward its right edge, toward its last row and through its middle, from the same table
+// render3DCubeDirection reads, so a captured face lays out as an uploaded one; up is down the face, as a
+// framebuffer's rows go up
+function render3DCubeFaceMatrix(face, pos)
+{
+    const [right, up, forward] = [
+        [vec3(0, 0, -1), vec3(0, -1, 0), vec3(1, 0, 0)],
+        [vec3(0, 0, 1), vec3(0, -1, 0), vec3(-1, 0, 0)],
+        [vec3(1, 0, 0), vec3(0, 0, 1), vec3(0, 1, 0)],
+        [vec3(1, 0, 0), vec3(0, 0, -1), vec3(0, -1, 0)],
+        [vec3(1, 0, 0), vec3(0, -1, 0), vec3(0, 0, 1)],
+        [vec3(-1, 0, 0), vec3(0, -1, 0), vec3(0, 0, -1)]][face];
+    return new Matrix4([right.x, right.y, right.z, 0, up.x, up.y, up.z, 0,
+        -forward.x, -forward.y, -forward.z, 0, pos.x, pos.y, pos.z, 1]);
+}
+
+// draw the cube maps asked for by capture, each face a view of the layer's objects from its point, with the sky and
+// the render callbacks, into a framebuffer of its own; the camera, the matrices and the frame's viewport are put
+// back after, and the environment unit is bound again, since a texture can not be read while it is drawn
+function render3DCaptureCubes(objects)
+{
+    const gl = glContext, r = render3D, camera = r.camera;
+    const captures = [...r.cubeCaptures];
+    r.cubeCaptures.clear();
+    if (!r.captureFramebuffer)
+    {
+        r.captureFramebuffer = gl.createFramebuffer();
+        r.captureDepth = gl.createRenderbuffer();
+        r.captureDepthSize = 0;
+    }
+    // a camera looking out through each face in turn, its matrix the face's
+    const view = new Camera3D;
+    view.fov = PI / 2;
+    view.near = camera.near;
+    view.far = camera.far;
+    let faceMatrix = new Matrix4;
+    view.getMatrix = ()=> faceMatrix.copy();
+    gl.bindFramebuffer(gl.FRAMEBUFFER, r.captureFramebuffer);
+    try
+    {
+        for (const cube of captures)
+        {
+            const texture = render3DCubeTexture(cube), size = cube.size;
+            r.cubeCaptures.delete(cube); // a texture made just now asks again, it is drawn here
+            if (r.captureDepthSize !== size)
+            {
+                gl.bindRenderbuffer(gl.RENDERBUFFER, r.captureDepth);
+                gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH_COMPONENT24, size, size);
+                gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, r.captureDepth);
+                r.captureDepthSize = size;
+            }
+            // nothing reads the texture while it is drawn: the environment unit lets it go and the shader reflects
+            // the sky's colors in its place, and it is not drawn as the sky box
+            r.capturingCube = cube;
+            gl.activeTexture(gl.TEXTURE0 + 5);
+            gl.bindTexture(gl.TEXTURE_CUBE_MAP, null);
+            gl.activeTexture(gl.TEXTURE0);
+            render3DBoundEnvironment = null;
+            gl.viewport(0, 0, size, size);
+            view.pos = cube.capturePos;
+            r.camera = view;
+            for (let face = 0; face < 6; ++face)
+            {
+                gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_CUBE_MAP_POSITIVE_X + face,
+                    texture, 0);
+                ASSERT(gl.checkFramebufferStatus(gl.FRAMEBUFFER) == gl.FRAMEBUFFER_COMPLETE,
+                    'cube map capture framebuffer is incomplete');
+                faceMatrix = render3DCubeFaceMatrix(face, cube.capturePos);
+                r.updateMatrices(1);
+                const c = canvasClearColor;
+                gl.clearColor(c.r, c.g, c.b, 1);
+                gl.depthMask(true);
+                gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+                render3DUseProgram(r.program);
+                r.renderStages(objects, true);
+            }
+            gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, null, 0);
+            gl.bindTexture(gl.TEXTURE_CUBE_MAP, texture);
+            gl.generateMipmap(gl.TEXTURE_CUBE_MAP); // the blur of a rough surface's reflection
+            gl.bindTexture(gl.TEXTURE_CUBE_MAP, null);
+        }
+    }
+    finally
+    {
+        r.capturingCube = undefined;
+        r.camera = camera;
+        r.updateMatrices();
+        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+        gl.viewport(0, 0, glCanvas.width, glCanvas.height);
+        gl.activeTexture(gl.TEXTURE0 + 5);
+        gl.bindTexture(gl.TEXTURE_CUBE_MAP, render3DCubeTexture(r.environment) || null);
+        gl.activeTexture(gl.TEXTURE0);
+        render3DBoundEnvironment = r.environment || null;
+    }
 }
 
 // draw a cube map as the sky: one triangle over the whole screen, each pixel the cube's color the way it looks,
@@ -2106,7 +2263,8 @@ function render3DContextLost()
 {
     const r = render3D;
     r.program = r.currentProgram = r.shadowShader = r.vao = r.streamBuffer = r.whiteTexture = undefined;
-    r.skyBoxProgram = r.skyBoxVao = undefined;
+    r.skyBoxProgram = r.skyBoxVao = r.captureFramebuffer = r.captureDepth = undefined;
+    r.captureDepthSize = 0;
     for (const shader of glShaderObjects)
         shader.program3D = undefined; // compiled again by the next draw
     r.lightCount = 0;
@@ -2237,7 +2395,10 @@ function render3DSetMaterialUniforms(state)
     render3DBindMap(3, emissiveMap, state);
     if (state.reflectivity > 0)
     {
-        const environment = r.environment;
+        // the draw's own environment or the scene's, never the cube map a capture is drawing
+        let environment = state.environmentMap || r.environment;
+        environment === r.capturingCube && (environment = undefined);
+        render3DBindEnvironment(environment);
         // a rough reflection is blurred over half the spread of its highlight, sqrt(2 / (shininess + 2)) / 2, and a
         // texel of mipmap L spans (PI/2) / size * 2^L, so the shader reads level log2(size * .45) - log2(shininess + 2)
         // / 2: the same blur for any size of map; it stops at 4 by 4 a face, where sampling across the edges still
@@ -2251,6 +2412,22 @@ function render3DSetMaterialUniforms(state)
         sky ? render3DUniform4f('skyHorizon', sky[1].r, sky[1].g, sky[1].b, 1) :
             render3DUniform4f('skyHorizon', (a.r + g.r) / 2, (a.g + g.g) / 2, (a.b + g.b) / 2, 1);
     }
+}
+
+// the cube map bound to the environment unit, 5, so a draw binds only when it changes; null for none, undefined when
+// not known, forgotten at the start and end of each pass and around a capture
+let render3DBoundEnvironment;
+
+// bind a draw's environment to unit 5 when it is not bound already; none leaves the unit as it is, its reflection
+// reads the sky's colors
+function render3DBindEnvironment(cube)
+{
+    const gl = glContext;
+    if (!cube || cube === render3DBoundEnvironment || !gl) return;
+    gl.activeTexture(gl.TEXTURE0 + 5);
+    gl.bindTexture(gl.TEXTURE_CUBE_MAP, render3DCubeTexture(cube) || null);
+    gl.activeTexture(gl.TEXTURE0);
+    render3DBoundEnvironment = cube;
 }
 
 // what each material map unit has bound, index 2 and 3 the maps and 4 and 5 whether each is pixelated, forgotten at
@@ -2514,6 +2691,8 @@ function render3DRenderPass(after2D)
         }
         // the camera's depth for post processing, from the default layer
         r.depthTexture && isDefault && render3DRenderDepth();
+        // the cube maps asked for by capture, drawn with this frame's shadow map
+        isDefault && r.cubeCaptures.size && render3DCaptureCubes(objects);
         render3DUseProgram(r.program); // after the shadow map, so the light matrix it sends is this frame's
         r.renderStages(objects, isDefault);
     }
@@ -2553,6 +2732,7 @@ function render3DSetMapUnits(texture)
     gl.activeTexture(gl.TEXTURE0 + 5);
     gl.bindTexture(gl.TEXTURE_CUBE_MAP, texture && render3DCubeTexture(render3D.environment) || null);
     gl.bindSampler(5, null);
+    render3DBoundEnvironment = texture && render3D.environment || null;
     gl.activeTexture(gl.TEXTURE0);
     render3DBoundMaps = [];
 }

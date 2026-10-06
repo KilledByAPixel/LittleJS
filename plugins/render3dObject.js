@@ -123,6 +123,10 @@ class EngineObject3D extends EngineObject
         this.emissiveMap = undefined;
         /** @property {Color} - Multiplies the emissive map, as glTF's emissiveFactor */
         this.emissiveMapColor = WHITE;
+        /** @property {CubeMap|undefined} - What it reflects in place of render3D.environment, as a mirror captures
+         *  the scene from its own middle
+         *  @type {CubeMap|undefined} */
+        this.environment = undefined;
         /** @property {boolean} - Draw into the shadow map when render3D.shadows is on; sprites and cut out textures
          *  cast their outline, an object faded below half its alpha casts nothing, a see through one casts only when
          *  textured, and additive objects never cast */

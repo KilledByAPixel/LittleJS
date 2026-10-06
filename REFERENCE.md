@@ -1402,6 +1402,10 @@ makeCubeMap(size, colorOf)            // a CubeMap of six size by size faces, co
                                       // a unit Vector3; paint a sky in code, 64 or so is plenty for a blurry one
 await loadCubeMap([px, nx, py, ny, pz, nz]) // a CubeMap from six square image urls, +x, -x, +y, -y, +z and -z
 cubeMap.size cubeMap.faces cubeMap.dispose() // its face size, its six faces, and freeing its GPU texture
+const mirror = new CubeMap(128)       // no faces: a cube map to draw the scene into
+mirror.capture(pos3D)                 // draw the scene around pos3D into it in the next frame's pass, six views of
+                                      // the whole scene: once for a still scene, every few frames for a moving one
+mirror.capturePos                     // where it was last captured from, captured again from there after a lost context
 
 // Draw state, read at each draw; the pass sets it from each object's flags before render3D() and resets it before each
 // callback, so set it inside those, or use the object flags below
@@ -1413,6 +1417,7 @@ render3D.specular = 0                 // Phong highlight strength, the shiny spo
                                       // out; shininess sets the size of the spot
 render3D.shininess = 16               // the highlight's exponent, 4 broad like rubber, 100 sharp like polished metal
 render3D.normalMap render3D.normalScale render3D.reflectivity render3D.emissiveMap render3D.emissiveMapColor
+render3D.environmentMap               // the cube map reflected in place of render3D.environment, from obj.environment
                                       // the material, set from each object's fields of the same names
 render3D.receiveShadow = true         // false keeps the next draws out of the shadow map's darkening
 render3D.shader = undefined           // a Shader for the next draws, set from each object's shader; with emissive 1
@@ -1541,7 +1546,9 @@ obj.reflectivity = .5                   // 0 by default, 1 a mirror; more at a g
                                         // render3D.environment, as sharp as the highlight: shininess 10000 a
                                         // mirror, 1000 polished, 10 a wide blur;
                                         // with none, the colors of render3D.sky from setSky or buildSky, or the
-                                        // ambient ones with no sky; not the scene itself
+                                        // ambient ones with no sky
+obj.environment = mirror                // a CubeMap it reflects in place of render3D.environment, as one captured
+                                        // from its own middle; undefined by default
 obj.emissiveMap = textureInfo           // where it glows, added on top of the lit surface so it shows in the dark
 obj.emissiveMapColor = WHITE            // multiplies the emissive map
 obj.castShadow = false                  // true by default, false keeps it out of the shadow map; sprites and cut out
@@ -1904,6 +1911,8 @@ scene.fog = new THREE.Fog(c, near, far)   // render3D.setFog(near, far, c)
 scene.background                          // render3D.setSky(topColor, horizonColor, bottomColor), or
                                           // render3D.skyBox for a cube map
 scene.environment                         // render3D.environment
+material.envMap on one mesh               // obj.environment
+new THREE.CubeCamera(near, far, target)   // new CubeMap(size), then cubeMap.capture(pos3D) in place of update
 new THREE.CubeTextureLoader().load(urls)  // await loadCubeMap(urls), the same order
 OrbitControls                             // new CameraControl3D(target, distance)
 PointerLockControls                       // new FirstPersonCamera3D

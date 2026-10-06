@@ -15,7 +15,7 @@ test('a draw state change bumps the version, the same value set again does not',
         const r = render3D, changes = {blend: true, additive: true, depthTest: false, depthWrite: false,
             cullBackFaces: true, mirrored: true, lighting: false, emissive: 1, receiveShadow: false, specular: .5,
             pixelated: true, shader: new Shader('void mainImage(out vec4 c, vec2 p) { c = vec4(1); }'), normalMap: {}, normalScale: 2, shininess: 64, reflectivity: .5,
-            emissiveMap: {}};
+            emissiveMap: {}, environmentMap: {}};
         const out = [];
         for (const name of RENDER3D_STATE_FIELDS)
         {

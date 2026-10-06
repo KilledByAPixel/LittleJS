@@ -101,6 +101,65 @@ smokeRun(async ()=>
     const missing = await loadCubeMap([...urls.slice(0, 5), 'missing.png']).then(()=> 'loaded', (e)=> e.message);
     check('an image that does not load says which', /missing\.png/.test(missing), missing);
     render3D.skyBox = undefined;
+
+    // a capture: six glowing walls in the face colors around the origin and two markers, one on the right of the
+    // wall ahead and one on the ceiling toward +z, with a mirror sphere at the origin reflecting the cube map being
+    // drawn; the capture is then the sky box with the walls gone, and must show the same walls the same way up
+    const walls = [], wall = (pos, scale, color)=>
+    {
+        const o = new EngineObject3D(pos, render3D.boxMesh, undefined, rgb(...color.map((c)=> c / 255)));
+        o.scale3D = scale;
+        o.emissive = 1;
+        walls.push(o);
+    };
+    const marker = [255, 128, 0];
+    wall(vec3(5, 0, 0), vec3(.2, 10, 10), faces.px);
+    wall(vec3(-5, 0, 0), vec3(.2, 10, 10), faces.nx);
+    wall(vec3(0, 5, 0), vec3(10, .2, 10), faces.py);
+    wall(vec3(0, -5, 0), vec3(10, .2, 10), faces.ny);
+    wall(vec3(0, 0, 5), vec3(10, 10, .2), faces.pz);
+    wall(vec3(0, 0, -5), vec3(10, 10, .2), faces.nz);
+    wall(vec3(1.5, 0, -4.75), vec3(1, 1, .2), marker);
+    wall(vec3(0, 4.75, 1.5), vec3(1, .2, 1), marker);
+    const mirror = new EngineObject3D(vec3(), buildSphere(1, 24, 12, true), undefined, BLACK);
+    mirror.reflectivity = 1;
+    const captured = new CubeMap(64);
+    render3D.environment = captured;
+    captured.capture(vec3());
+    engineStep(1);
+    walls.forEach((o)=> o.destroy());
+    mirror.destroy();
+    render3D.environment = undefined;
+    render3D.skyBox = captured;
+    look('ahead, -z, captured,', vec3(), 'nz');
+    look('up, +y, captured,', vec3(Math.PI / 2, 0, 0), 'py');
+    look('right, +x, captured,', vec3(0, -Math.PI / 2, 0), 'px');
+    look('down, -y, captured,', vec3(-Math.PI / 2, 0, 0), 'ny');
+    render3D.camera.rotation = vec3();
+    engineStep(1);
+    checkPixel('a capture keeps right on the right', .76, .5, [...marker, 255], 12);
+    render3D.camera.rotation = vec3(Math.PI / 2, 0, 0);
+    engineStep(1);
+    checkPixel('a capture keeps its ceiling the right way round', .5, .77, [...marker, 255], 12);
+    render3D.skyBox = undefined;
+    render3D.camera.rotation = vec3();
+
+    // two mirror spheres, the left one with an environment of its own, a plain red one; the right one reflects the
+    // scene's as before
+    render3D.environment = cube;
+    const pair = [-1.2, 1.2].map((x)=>
+    {
+        const o = new EngineObject3D(vec3(x, 0, -5), buildSphere(2, 32, 16, true), undefined, BLACK);
+        o.reflectivity = 1;
+        o.shininess = 1e4;
+        return o;
+    });
+    pair[0].environment = makeCubeMap(4, ()=> rgb(1, 0, 0));
+    engineStep(1);
+    checkPixel('an object reflects its own environment', .29, .5, [255, 0, 0, 255], 12);
+    checkPixel('and one with none the scene\'s', .71, .5, [...faces.pz, 255], 12);
+    pair.forEach((o)=> o.destroy());
+    render3D.environment = undefined;
     checkGLError();
 });
 </script>
