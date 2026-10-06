@@ -40,7 +40,7 @@ function debugClear      (){}
 function debugScreenshot (){}
 function debugShowErrors(){}
 function setDebugOverlay(){}
-function debugProtectConstant(o){ return o; }
+function debugProtectConstant(o){ return Object.freeze(o); } // a color constant stays as it is, in release too
 
 // the tweakables and the level editor are debug only
 function tweak(){}

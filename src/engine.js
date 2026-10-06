@@ -429,6 +429,8 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
     if (engineInitialized) return;
     engineInitialized = true;
     engineLoads = [], engineLoadsDone = 0;
+    if (typeof imageSources === 'string')
+        imageSources = [imageSources]; // one image given alone
     ASSERT(isArray(imageSources), 'pass in images as array');
 
     // allow passing in empty functions

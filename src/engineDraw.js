@@ -600,6 +600,8 @@ function drawTile(pos, size=vec2(1), tileInfo, color=WHITE,
 {
     ASSERT(isVector2(pos), 'pos must be a vec2');
     ASSERT(isVector2(size), 'size must be a vec2');
+    ASSERT(!tileInfo || tileInfo instanceof TileInfo, 'drawTile: tileInfo must be a TileInfo, color comes after it',
+        tileInfo);
     ASSERT(isColor(color), 'color is invalid');
     ASSERT(isNumber(angle), 'angle must be a number');
     ASSERT(!additiveColor || isColor(additiveColor), 'additiveColor must be a color');

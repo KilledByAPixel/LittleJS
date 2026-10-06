@@ -249,7 +249,7 @@ function readSaveData(saveName, defaultSaveData)
         if (data)
         {
             try { loadedData = JSON.parse(data); }
-            catch { LOG('readSaveData: corrupt JSON for', saveName, '— using defaults'); }
+            catch { console.warn('readSaveData: the save ' + saveName + ' can not be read, using the defaults'); }
             if (!loadedData || typeof loadedData !== 'object' || isArray(loadedData))
                 loadedData = {}; // only an object of saved values, never a string spread into its letters
         }
@@ -270,7 +270,11 @@ function writeSaveData(saveName, saveData)
         'writeSaveData: save data must be an object, readSaveData reads it back into one');
     // tolerate localStorage being unavailable or quota exceeded
     try { localStorage.setItem(saveName, JSON.stringify(saveData)); return true; }
-    catch { LOG('writeSaveData: failed to write', saveName); return false; }
+    catch // in release too, a player's save going nowhere is not silent
+    {
+        console.warn('writeSaveData: the save ' + saveName + ' could not be written, storage is full or off');
+        return false;
+    }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
