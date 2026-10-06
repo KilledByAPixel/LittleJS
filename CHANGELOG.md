@@ -38,6 +38,7 @@ What changed in each release, newest first. Releases before 1.20.0 are on the
 
 ### Fixes
 
+- A one shot particle effect gives the same count whichever frame it is made on, 1 at once and its rate for its emit time, where the rounding of time decided its last frame (an explosion gave 61 or 71); a burst shorter than a frame gives its rate for that time, and 2D and 3D emitters agree
 - Image fonts and 3D text read text as a reader counts characters: an emoji, joiners and all, is one box where it was two to eight, and a letter with a combining accent draws as its letter; text with Windows line endings breaks lines as 
  does in image fonts, canvas text, 3D text and the UI, where the  drew a box or a space and shifted the line
 - A font the canvas does not take, as a family name with spaces and digits like Press Start 2P left unquoted, warns once in a debug build, where the text drew as 10px sans-serif with no word; setFontDefault says to quote such names

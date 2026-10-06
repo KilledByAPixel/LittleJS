@@ -205,6 +205,9 @@ class ParticleEmitter extends EngineObject
         this.velocityInheritance = 0;
         /** @property {number} - Particles owed to the emit rate, starts at one so the first comes out at once */
         this.emitTimeBuffer = 1;
+        /** @property {number} - Seconds of its emit time it has emitted for, counted by its updates
+         *  @type {number} */
+        this.emitElapsed = 0;
         /** @property {Array<Particle>} - Array of particles for this emitter
          *  @type {Array<Particle>} */
         this.particles = [];
@@ -244,12 +247,15 @@ class ParticleEmitter extends EngineObject
         // update emitter
         if (this.isActive())
         {
-            // emit particles
+            // emit particles for the part of this update inside the emit time, counted by its own updates rather than
+            // the clock, so a one shot gives the same count whichever frame it is made on
             const rate = this.emitRate * particleEmitRateScale;
+            const step = this.emitTime ? min(timeDelta, this.emitTime - this.emitElapsed) : timeDelta;
+            this.emitElapsed += timeDelta;
             if (rate > 0 && rate < Infinity)
             {
                 // counted in particles, so a new rate applies at once
-                this.emitTimeBuffer += rate * timeDelta;
+                this.emitTimeBuffer += rate * step;
                 for (; this.emitTimeBuffer >= 1; --this.emitTimeBuffer)
                     this.emitParticle();
             }
@@ -355,7 +361,7 @@ class ParticleEmitter extends EngineObject
 
     /** is emitter actively spawning
      *  @return {boolean} */
-    isActive() { return !this.emitTime || this.getAliveTime() < this.emitTime; }
+    isActive() { return !this.emitTime || this.emitElapsed < this.emitTime; }
 
     /** Destroy the particle emitter
      *  @param {boolean} [immediate] - true removes attached effects like particle emitters at once, false lets them finish first */

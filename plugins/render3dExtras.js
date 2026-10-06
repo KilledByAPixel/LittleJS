@@ -1086,6 +1086,7 @@ class ParticleEmitter3D extends EngineObject3D
          *  @type {Vector3|undefined} */
         this.worldPos3D = undefined;
         this.emitTimeBuffer = 1; // the first particle comes at once, as the 2D emitter's does
+        this.emitElapsed = 0; // seconds of its emit time it has emitted for, counted by its updates
     }
 
     /** Spawn new particles, move the live ones, and go away when done */
@@ -1098,14 +1099,17 @@ class ParticleEmitter3D extends EngineObject3D
         this.particleView.scale = scale; // the callbacks read it from the view instead of working it out each time
 
         // emit until the emit time is up, then wait for the last particle and go away
-        if (!this.emitTime || this.getAliveTime() <= this.emitTime)
+        if (!this.emitTime || this.emitElapsed < this.emitTime)
         {
             // a rate of zero is an emitter fed by hand, and the global scale only quiets it,
-            // neither is a reason to stop counting down the emit time
+            // neither is a reason to stop counting down the emit time; the part of this update inside the emit time,
+            // counted by its own updates, as the 2D emitter does, so a one shot gives the same count on any frame
             const rate = this.emitRate * particleEmitRateScale;
+            const step = this.emitTime ? min(timeDelta, this.emitTime - this.emitElapsed) : timeDelta;
+            this.emitElapsed += timeDelta;
             if (rate > 0 && rate < Infinity)
             {
-                this.emitTimeBuffer += rate * timeDelta;
+                this.emitTimeBuffer += rate * step;
                 for (; this.emitTimeBuffer >= 1; --this.emitTimeBuffer)
                     this.emitParticle();
             }
