@@ -319,6 +319,7 @@ class GLTFObject extends EngineObject3D
                 o.rotation3D = m.getRotation();
                 o.scale3D = m.getScale();
             }
+            render3DShareSettings(o, this); // what is set on the model, the part's own material otherwise
             this.addChild(o);
             this.parts.push(o);
         }

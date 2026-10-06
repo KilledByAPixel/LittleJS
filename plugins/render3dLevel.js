@@ -688,6 +688,7 @@ class Prefab3D extends EngineObject3D
             for (const part of children)
             {
                 part.pos3D = part.pos3D.subtract(this.originOffset);
+                render3DShareSettings(part, this); // drawn with what is set on the handle, its own otherwise
                 this.addChild(part);
             }
         }

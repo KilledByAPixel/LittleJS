@@ -376,6 +376,27 @@ class EngineObject3D extends EngineObject
     }
 }
 
+// the draw settings an object hands to the parts it draws through, each with its default: a glTF model's parts, an
+// attached prefab's, a voxel map's see through blocks
+const RENDER3D_PART_SETTINGS = {emissive: 0, additive: false, specular: 0, shininess: 16, reflectivity: 0,
+    normalMap: undefined, normalScale: 1, emissiveMap: undefined, emissiveMapColor: WHITE, receiveShadow: true,
+    castShadow: true, pixelated: false, shader: undefined, environment: undefined, renderAfter2D: undefined,
+    renderOrder: 0};
+
+// make a part draw with its owner's settings: each reads the owner's where the owner set it away from the default, and
+// the part's own otherwise, so a model's unlit or rough part keeps what its file gave it; read each time, so a setting
+// changed later is seen, before the stage is chosen too
+function render3DShareSettings(part, owner)
+{
+    for (const name in RENDER3D_PART_SETTINGS)
+    {
+        let own = part[name];
+        const unset = RENDER3D_PART_SETTINGS[name];
+        Object.defineProperty(part, name, {get: ()=> owner[name] !== unset ? owner[name] : own,
+            set: (value)=> { own = value; }, configurable: true, enumerable: true});
+    }
+}
+
 // make an object's own transform a world one, for an object leaving its parent: its position, rotation and scale
 // from the world matrix, and a matrix given whole, shear and all
 function render3DTakeWorld(o, world)
