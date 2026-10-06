@@ -127,7 +127,7 @@ function tile(index=0, size=tileDefaultSize, texture=0, padding=tileDefaultPaddi
     if (typeof size === 'number')
     {
         // if size is a number, make it a vector
-        ASSERT(size > 0);
+        ASSERT(size > 0, 'tile: size must be above 0', size);
         size = new Vector2(size, size);
     }
 
@@ -209,7 +209,7 @@ class TileInfo
     */
     frame(frame)
     {
-        ASSERT(typeof frame === 'number');
+        ASSERT(typeof frame === 'number', 'TileInfo.frame: frame must be a number', frame);
         const w = this.size.x + this.padding*2;
         const h = this.size.y + this.padding*2;
         const x = (this.columns ? frame % this.columns : frame) * w;
@@ -1839,7 +1839,7 @@ class ImageFont
         if (typeof size === 'number')
         {
             // if size is a number, make it a vector
-            ASSERT(size > 0);
+            ASSERT(size > 0, 'ImageFont.drawText: size must be above 0', size);
             size *= cameraScale;
             size = new Vector2(size, size);
         }

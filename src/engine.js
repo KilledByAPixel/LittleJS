@@ -322,7 +322,7 @@ function engineAddPlugin(update, render, glContextLost, glContextRestored, preRe
         p.update === update && p.render === render &&
         p.glContextLost === glContextLost &&
         p.glContextRestored === glContextRestored &&
-        p.preRender === preRender));
+        p.preRender === preRender), 'engineAddPlugin: this plugin was already added');
 
     const plugin = new EnginePlugin(update, render, glContextLost, glContextRestored, preRender);
     pluginList.push(plugin);
@@ -765,7 +765,8 @@ function engineUpdateCanvas()
 
         // responsive aspect ratio, of the size after canvasMaxSize, which can change its shape
         const innerAspect = mainCanvasSize.x / mainCanvasSize.y;
-        ASSERT(!canvasMaxAspect || canvasMinAspect <= canvasMaxAspect);
+        ASSERT(!canvasMaxAspect || canvasMinAspect <= canvasMaxAspect,
+            'canvasMinAspect must not be above canvasMaxAspect', canvasMinAspect, canvasMaxAspect);
         if (canvasMaxAspect && innerAspect > canvasMaxAspect)
         {
             // full height

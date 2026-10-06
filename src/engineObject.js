@@ -186,7 +186,7 @@ class EngineObject
     updatePhysics()
     {
         // child objects do not have physics
-        ASSERT(!this.parent);
+        ASSERT(!this.parent, 'updatePhysics: a child has no physics of its own, its parent moves it');
 
         // bail if a collision callback destroyed us mid-frame
         if (this.destroyed) return;
@@ -615,7 +615,8 @@ class EngineObject
      *  @param {EngineObject} child */
     removeChild(child)
     {
-        ASSERT(child.parent === this && this.children.includes(child));
+        ASSERT(child.parent === this && this.children.includes(child), 'removeChild: that object is not a child of this one',
+            child);
         const i = this.children.indexOf(child);
         if (i < 0) return; // not a child of this one, release has no assert
         this.children.splice(i, 1);

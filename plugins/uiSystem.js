@@ -826,7 +826,7 @@ class UISystemPlugin
         // close menu and clear the input that closed it
         function closeMenu()
         {
-            ASSERT(uiSystem.confirmDialog === confirmMenu);
+            ASSERT(uiSystem.confirmDialog === confirmMenu, 'the confirm dialog closing is not the one open');
             confirmMenu.destroy();
             inputClear();
         }
@@ -1029,7 +1029,8 @@ class UIObject
      *  @param {UIObject} child */
     removeChild(child)
     {
-        ASSERT(child.parent === this && this.children.includes(child));
+        ASSERT(child.parent === this && this.children.includes(child), 'removeChild: that object is not a child of this one',
+            child);
         this.children.splice(this.children.indexOf(child), 1);
         child.parent = undefined;
     }

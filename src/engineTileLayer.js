@@ -844,7 +844,7 @@ class TileLayer extends CanvasLayer
     redrawStart(clear=false)
     {
         if (!this.context) return;
-        ASSERT(drawContext !== this.context);
+        ASSERT(drawContext !== this.context, 'redrawStart: already started, call redrawEnd() first');
         clear || this.redrawIfSwitched(); // a partial redraw goes on top of the whole layer on the side in use
         
         // save current render settings
@@ -889,7 +889,7 @@ class TileLayer extends CanvasLayer
     redrawEnd()
     {
         if (!this.context) return;
-        ASSERT(drawContext === this.context);
+        ASSERT(drawContext === this.context, 'redrawEnd: call redrawStart() first');
 
         // set stuff back to normal, the camera first, so a target that was drawing before gets its own transform back
         [drawContext, mainCanvasSize, cameraPos, cameraScale, cameraAngle, canvasClearColor, glCustomShader] = this.savedRenderSettings;

@@ -35,7 +35,7 @@ let box2dDebug = false;
 let box2dTempVectors;
 function box2dTemp(v, slot=0)
 {
-    ASSERT(isVector2(v));
+    ASSERT(isVector2(v), 'Box2D: expected a vec2', v);
     const temp = (box2dTempVectors ||= [new box2d.instance.b2Vec2(), new box2d.instance.b2Vec2()])[slot];
     temp.Set(v.x, v.y);
     return temp;
@@ -2329,7 +2329,7 @@ class Box2dPlugin
      *  @return {Vector2} */
     vec2From(v)
     {
-        ASSERT(v instanceof box2d.instance.b2Vec2);
+        ASSERT(v instanceof box2d.instance.b2Vec2, 'vec2From: expected a b2Vec2', v);
         return new Vector2(v.get_x(), v.get_y()); 
     }
 
@@ -2348,7 +2348,7 @@ class Box2dPlugin
      *  @return {Object} - A Box2D vector, its b2Vec2 */
     vec2dTo(v)
     {
-        ASSERT(isVector2(v));
+        ASSERT(isVector2(v), 'vec2dTo: expected a vec2', v);
         return new box2d.instance.b2Vec2(v.x, v.y);
     }
 

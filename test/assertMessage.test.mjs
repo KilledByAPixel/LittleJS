@@ -27,3 +27,30 @@ test('a real mistake shows its message where the error is caught', ()=>
 {
     assert.match(thrown('vec2(0).add(1)'), /^Assert failed: .+/);
 });
+
+test('no assert in the engine or its plugins is left without a message', async ()=>
+{
+    const { readFileSync, readdirSync } = await import('node:fs');
+    const files = [...readdirSync('src').map((f)=> 'src/' + f), ...readdirSync('plugins').map((f)=> 'plugins/' + f)]
+        .filter((f)=> f.endsWith('.js'));
+    const bare = [];
+    for (const file of files)
+    {
+        // an ASSERT( whose whole call has no comma outside its brackets is one argument, the condition alone
+        const text = readFileSync(file, 'utf8');
+        for (let at = text.indexOf('ASSERT('); at >= 0; at = text.indexOf('ASSERT(', at + 1))
+        {
+            if (/function\s+$/.test(text.slice(Math.max(0, at - 9), at))) continue; // the definition
+            let depth = 0, comma = false, i = at + 6;
+            for (; i < text.length; ++i)
+            {
+                const c = text[i];
+                if (c === '(' || c === '[' || c === '{') ++depth;
+                else if (c === ')' || c === ']' || c === '}') { if (!--depth) break; }
+                else if (c === ',' && depth === 1) { comma = true; break; }
+            }
+            comma || bare.push(file + ':' + text.slice(0, at).split('\n').length);
+        }
+    }
+    assert.deepEqual(bare, []);
+});
