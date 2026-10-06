@@ -570,6 +570,7 @@ function setCanvasPixelRatio(pixelRatio) { canvasPixelRatio = pixelRatio; }
 function getCanvasPixelRatio() { return canvasPixelRatio ?? (devicePixelRatio || 1); }
 
 /** Set default font used for text rendering
+ *  - A family name with spaces or digits goes in quotes, as "'Press Start 2P'", or the canvas does not take it
  *  @param {string} font
  *  @memberof Settings */
 function setFontDefault(font) { fontDefault = font; }
@@ -846,7 +847,8 @@ function setTouchGamepadVibration(ms) { touchGamepadVibration = ms; }
  *  @memberof Settings */
 function setVibrateEnable(enable) { vibrateEnable = enable; }
 
-/** Set if audio is enabled, false turns all sound off
+/** Set if audio is enabled, false turns all sound off; a setting for before sounds are made, since a sound made
+ *  while it is off has nothing to play and one already playing goes on; to mute while the game runs, setSoundVolume(0)
  *  @param {boolean} enable
  *  @memberof Settings */
 function setSoundEnable(enable) { soundEnable = enable; }
@@ -865,6 +867,7 @@ function setSoundIgnoreSilentSwitch(ignore)
  *  @memberof Settings */
 function setSoundVolume(volume)
 {
+    ASSERT(isNumber(volume), 'setSoundVolume: volume must be a number, 1 is full', volume);
     soundVolume = volume;
     audioUpdateVolume(); // update gain immediately, sound off or not
 }

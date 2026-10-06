@@ -38,7 +38,8 @@ if (audioMasterGain)
 // soundVolume can be set directly, so the master gain follows it each frame
 function audioUpdateVolume()
 {
-    if (audioMasterGain && soundVolume !== audioMasterVolume)
+    // a volume that is not a number, from a slider's text say, is not handed on, where every frame it would throw
+    if (audioMasterGain && soundVolume !== audioMasterVolume && isFinite(soundVolume))
         audioMasterGain.gain.value = audioMasterVolume = soundVolume;
 }
 

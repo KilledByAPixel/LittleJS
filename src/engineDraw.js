@@ -1314,6 +1314,21 @@ function drawText(text, pos, size=1, color=WHITE, lineWidth=0, lineColor=BLACK, 
     drawTextScreen(text, pos, size, color, lineWidth, lineColor, textAlign, font, fontStyle, maxWidth, angle, context);
 }
 
+// the font strings a debug build has checked the canvas takes, and a font it does not, which would draw as 10px
+// sans-serif with no word, warned of once; a family name with spaces and digits, as Press Start 2P, needs quotes
+const drawFontsChecked = new Set;
+function drawFontCheck(context, fontText, font)
+{
+    if (drawFontsChecked.has(fontText)) return;
+    drawFontsChecked.add(fontText);
+    const sentinel = '7px serif';
+    context.font = sentinel;
+    context.font = fontText;
+    if (context.font === sentinel)
+        console.warn(`the canvas does not take the font ${font}, so text draws as 10px sans-serif; ` +
+            `a family name with spaces or digits goes in quotes, as "'Press Start 2P'"`);
+}
+
 /** Draw text in screen space
  *  Automatically splits new lines into rows
  *  @param {string|number}  text
@@ -1351,7 +1366,9 @@ function drawTextScreen(text, pos, size, color=WHITE, lineWidth=0, lineColor=BLA
     context.strokeStyle = lineColor.toString();
     context.lineWidth = lineWidth;
     context.textAlign = textAlign;
-    context.font = fontStyle + ' ' + size + 'px '+ font;
+    const fontText = fontStyle + ' ' + size + 'px '+ font;
+    debug && drawFontCheck(context, fontText, font);
+    context.font = fontText;
     context.textBaseline = 'middle';
     context.translate(pos.x + .5, pos.y + .5); // a screen position is the center of a pixel, as for every other draw
     context.rotate(angle);

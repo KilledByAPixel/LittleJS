@@ -38,6 +38,8 @@ What changed in each release, newest first. Releases before 1.20.0 are on the
 
 ### Fixes
 
+- A font the canvas does not take, as a family name with spaces and digits like Press Start 2P left unquoted, warns once in a debug build, where the text drew as 10px sans-serif with no word; setFontDefault says to quote such names
+- setSoundVolume asserts its volume is a number, and a NaN one is not handed to the audio, where it threw every frame; setSoundEnable says it is a setting for before sounds are made, setSoundVolume(0) the way to mute while playing
 - A fast 3D object hitting a thin solid is stopped on the side it came from, as in 2D, where it was pushed out by least overlap and went on out the far side once past the solid's middle, through anything thinner than about its own size at half the speed 2D allows; turned boxes still push by least overlap. A 3D object shoved into a wall by another is settled against it the same frame, through the wall's collideWithObject, so solid objects pushing each other no longer force one through
 - A 3D particle crossing a ridge of a height map, both ends of its move above the ground, hits it, where only the ends were checked and it passed through; a move over several slopes hits the first it meets, and one leaving the map hits before it leaves
 - A glTF model's parts, an attached prefab's parts and a voxel map's transparent blocks draw with the settings set on the model, handle or map (emissive, reflectivity, shader, shadows, renderAfter2D, renderOrder and the rest), each part keeping its own where the owner's is left at the default, so an unlit or rough glTF part keeps its file's material; they kept the defaults
