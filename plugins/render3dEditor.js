@@ -3448,7 +3448,8 @@ function editor3DSceneUpdate(box)
     skyBox.onchange = ()=>
     {
         // by a comma and a space, so a data url keeps its own comma, or by commas alone when that is not six
-        const split = (by)=> skyBox.value.split(by).map((url)=> url.trim()).filter((url)=> url);
+        const value = skyBox.value.replace(/[,\s]+$/, ''); // a comma left at the end is not part of the last url
+        const split = (by)=> value.split(by).map((url)=> url.trim()).filter((url)=> url);
         let list = split(/,\s+/);
         list.length === 6 || (list = split(','));
         if (list.length && list.length !== 6)

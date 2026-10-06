@@ -121,7 +121,7 @@ function formatTime(t)
  *  @memberof Utilities */
 async function fetchJSON(url)
 {
-    const response = await fetch(url);
+    const response = await loadFetch(url, 'fetchJSON');
     if (!response.ok)
         throw new Error(`Failed to fetch JSON from ${url}: ${response.status} ${response.statusText}`);
     const text = await response.text();
@@ -139,6 +139,19 @@ async function fetchJSON(url)
 
 // is a file's text a web page, as a dev server sends for a path it does not have
 const loadIsWebPage = (text)=> /^\s*</.test(text);
+
+// fetch a file for a loader, a failure to reach it named with the file and who asked, and with the usual cause when
+// the page was opened from a file on disk, where the browser lets it load nothing
+async function loadFetch(url, who)
+{
+    try { return await fetch(url); }
+    catch (error)
+    {
+        const fromDisk = globalThis.location?.protocol === 'file:';
+        throw new Error(`${who}: could not load ${url}, ${error.message}` + (fromDisk ?
+            ', the page was opened from a file, serve it from a local web server' : ''));
+    }
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 

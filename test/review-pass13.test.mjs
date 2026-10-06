@@ -43,3 +43,13 @@ test('a save that can not be read or written warns, in a release build too', () 
     assert.match(warnings[0], /game/);
     assert.match(warnings[1], /game/);
 });
+
+test('a load that can not reach its file names it, and says why when the page was opened from a file', async () =>
+{
+    const fetch = async ()=> { throw new TypeError('Failed to fetch'); };
+    const { run } = loadEngine({ fetch, location: { protocol: 'file:', pathname: '/game/index.html' } },
+        'setHeadlessMode(true)');
+    const message = await run(`fetchJSON('levels/one.json').then(()=> 'loaded', (e)=> e.message)`);
+    assert.match(message, /levels\/one\.json/);
+    assert.match(message, /local web server/);
+});

@@ -83,6 +83,9 @@ smokeRun(async ()=>
     editor3DSceneUpdate(box);
     edit(inputs('Sky box')[0], dataUrls.join(', '));
     check('six data urls are the sky box', level.scene.skyBox?.join() === dataUrls.join(), level.scene.skyBox);
+    editor3DSceneUpdate(box);
+    edit(inputs('Sky box')[0], first.join(', ') + ',');
+    check('a trailing comma is left off the last url', level.scene.skyBox?.join() === first.join(), level.scene.skyBox);
 
     // an environment of its own with no sky box can still be taken out
     editor3DChangeScene(({skyBox, ...rest}={})=> ({...rest, environment: second}));

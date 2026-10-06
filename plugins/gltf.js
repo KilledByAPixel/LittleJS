@@ -456,9 +456,9 @@ class GLTFObject extends EngineObject3D
  *  @memberof GLTF */
 async function loadGLTF(url)
 {
-    const response = await fetch(url);
+    const response = await loadFetch(url, 'loadGLTF');
     if (!response.ok)
-        throw new Error('loadGLTF failed: ' + url);
+        throw new Error(`loadGLTF: could not load ${url}, ${response.status} ${response.statusText}`);
     // the files beside it are beside where it came from, after any redirect; a blob or data url has nothing
     // beside it, and a model in one is whole, or parsed with parseGLTF and a base of its own
     const from = response.url || url;
