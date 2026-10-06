@@ -1396,6 +1396,12 @@ render3D.setSky(topColor, horizonColor, bottomColor, ambient=.5) // dome colors 
                                                      // color from below, both times ambient; 0 leaves ambient dark
 render3D.setFog(fogStart, fogEnd, fogColor) // the fog distances and color at once, no color keeps the current one
 render3D.sky = buildSky(topColor, horizonColor, bottomColor, sides, rings) // or set a dome yourself
+render3D.skyBox = cubeMap             // a CubeMap drawn behind everything in place of the dome, undefined by default
+render3D.environment = cubeMap        // what reflective surfaces reflect, undefined reflects the sky's colors
+makeCubeMap(size, colorOf)            // a CubeMap of six size by size faces, colorOf(direction) the Color each way,
+                                      // a unit Vector3; paint a sky in code, 64 or so is plenty for a blurry one
+await loadCubeMap([px, nx, py, ny, pz, nz]) // a CubeMap from six square image urls, +x, -x, +y, -y, +z and -z
+cubeMap.size cubeMap.faces cubeMap.dispose() // its face size, its six faces, and freeing its GPU texture
 
 // Draw state, read at each draw; the pass sets it from each object's flags before render3D() and resets it before each
 // callback, so set it inside those, or use the object flags below
@@ -1531,9 +1537,10 @@ obj.normalMap = textureInfo             // bumps and grooves that catch the ligh
                                         // green points up the image (OpenGL and glTF), flip the green of a DirectX one;
                                         // no tangents needed, any mesh with uvs works; normalMapFromHeight makes one
 obj.normalScale = 1                     // how strongly it bends the surface, 0 turns it off
-obj.reflectivity = .5                   // 0 by default, 1 a mirror of the sky; more at a glancing angle (Fresnel);
-                                        // shows the colors of render3D.sky from setSky or buildSky, or the ambient
-                                        // ones with no sky; not the scene
+obj.reflectivity = .5                   // 0 by default, 1 a mirror; more at a glancing angle (Fresnel); shows
+                                        // render3D.environment, sharp at shininess 256 and up, blurrier lower;
+                                        // with none, the colors of render3D.sky from setSky or buildSky, or the
+                                        // ambient ones with no sky; not the scene itself
 obj.emissiveMap = textureInfo           // where it glows, added on top of the lit surface so it shows in the dark
 obj.emissiveMapColor = WHITE            // multiplies the emissive map
 obj.castShadow = false                  // true by default, false keeps it out of the shadow map; sprites and cut out
@@ -1877,7 +1884,8 @@ material.side = THREE.DoubleSide          // mesh.doubleSided = true
 material.emissiveIntensity                // obj.emissive
 material.normalMap, normalScale           // obj.normalMap, obj.normalScale (a number, three.js takes a Vector2)
 material.shininess (MeshPhongMaterial)    // obj.shininess, with obj.specular the strength
-material.envMap, reflectivity             // obj.reflectivity, which reflects the sky's colors, not an environment map
+material.envMap, reflectivity             // render3D.environment for the whole scene, obj.reflectivity per object
+material.roughness (MeshStandardMaterial)  // a low obj.shininess blurs the reflection, 256 and up is a mirror
 material.emissiveMap, emissive            // obj.emissiveMap, obj.emissiveMapColor
 material.transparent, blending            // obj.transparent, obj.additive
 new THREE.ShaderMaterial({fragmentShader}) // obj.shader = new Shader(code), a mainImage snippet the engine wraps;
@@ -1892,7 +1900,10 @@ new THREE.SpotLight(color, i, d, angle, penumbra) // a Light3D with coneAngle = 
                                           // for its castShadow
 light.castShadow, light.shadow.camera     // render3D.shadows, shadowRange and shadowCenter
 scene.fog = new THREE.Fog(c, near, far)   // render3D.setFog(near, far, c)
-scene.background                          // render3D.setSky(topColor, horizonColor, bottomColor)
+scene.background                          // render3D.setSky(topColor, horizonColor, bottomColor), or
+                                          // render3D.skyBox for a cube map
+scene.environment                         // render3D.environment
+new THREE.CubeTextureLoader().load(urls)  // await loadCubeMap(urls), the same order
 OrbitControls                             // new CameraControl3D(target, distance)
 PointerLockControls                       // new FirstPersonCamera3D
 new THREE.Raycaster()                     // render3D.screenToRay, pick and engineObjectsRaycast3D

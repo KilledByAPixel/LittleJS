@@ -1,0 +1,81 @@
+<!DOCTYPE html><meta charset=utf-8>
+<title>LittleJS smoke: environment cube maps</title>
+<script src=../../dist/littlejs.js></script>
+<script src=smoke.js></script>
+<pre id=result>PENDING</pre>
+<script>
+'use strict';
+
+// a cube map of six plain faces: the sky box shows the face of each way the camera looks, and a mirror sphere shows
+// the face of each way it reflects, which pins down which pixel of which face is which direction; a rough sphere
+// blurs them together, and with no environment a reflection is the sky's gradient as before
+smokeRun(async ()=>
+{
+    setShowSplashScreen(false);
+    setDebugWatermark(false);
+    setEngineManualStep(true);
+    setCanvasFixedSize(vec2(128));
+    setCanvasClearColor(rgb(0, 0, 0));
+    const faces = {px: [255, 0, 0], nx: [0, 255, 0], py: [0, 0, 255], ny: [255, 255, 0], pz: [255, 0, 255], nz: [0, 255, 255]};
+    let cube, sphere;
+    await engineInit(()=>
+    {
+        new Render3DPlugin;
+        render3D.camera.pos = vec3();
+        render3D.camera.rotation = vec3();
+        // each direction the color of the face it points at most
+        cube = makeCubeMap(16, (d)=>
+        {
+            const ax = Math.abs(d.x), ay = Math.abs(d.y), az = Math.abs(d.z);
+            const c = ax >= ay && ax >= az ? (d.x > 0 ? faces.px : faces.nx) :
+                ay >= az ? (d.y > 0 ? faces.py : faces.ny) : (d.z > 0 ? faces.pz : faces.nz);
+            return rgb(c[0] / 255, c[1] / 255, c[2] / 255);
+        });
+    }, ()=> {}, ()=> {}, ()=> {}, ()=> {});
+
+    // the sky box, looking ahead, up, to the right and back
+    render3D.skyBox = cube;
+    const look = (name, rotation, face)=>
+    {
+        render3D.camera.rotation = rotation;
+        engineStep(1);
+        checkPixel('the sky box looking ' + name + ' shows that face', .5, .5, [...faces[face], 255], 8);
+    };
+    look('ahead, -z', vec3(), 'nz');
+    look('up, +y', vec3(Math.PI / 2, 0, 0), 'py');
+    look('right, +x', vec3(0, -Math.PI / 2, 0), 'px');
+    look('back, +z', vec3(0, Math.PI, 0), 'pz');
+    render3D.skyBox = undefined;
+    render3D.camera.rotation = vec3();
+
+    // a mirror sphere five ahead: its middle reflects straight back, toward +z; a point whose normal is (0, .8, .6)
+    // reflects the view mostly up, (0, .96, -.28)
+    render3D.environment = cube;
+    sphere = new EngineObject3D(vec3(0, 0, -5), buildSphere(2, 48, 24, true), undefined, BLACK);
+    sphere.reflectivity = 1;
+    sphere.shininess = 1e4;
+    engineStep(1);
+    checkPixel('a mirror sphere\'s middle reflects the face behind the camera', .5, .5, [...faces.pz, 255], 12);
+    const upper = render3D.worldToScreen(vec3(0, .8, -4.4));
+    const at = [upper.x / mainCanvasSize.x, 1 - upper.y / mainCanvasSize.y];
+    checkPixel('higher up it reflects the face above', at[0], at[1], [...faces.py, 255], 12);
+
+    // a cube whose face behind the camera is black and white stripes: sharp, the middle is one stripe; rough, the
+    // mipmaps blur the stripes to gray
+    render3D.environment = makeCubeMap(16, (d)=> d.z > Math.abs(d.x) && d.z > Math.abs(d.y) ?
+        ((d.x / d.z + 1) * 4 + .5 & 1 ? WHITE : BLACK) : GRAY);
+    engineStep(1);
+    const sharp = smokePixel(.5, .5);
+    sphere.shininess = 1;
+    engineStep(1);
+    const rough = smokePixel(.5, .5);
+    check('a rough sphere blurs what a sharp one reflects', (sharp[0] < 20 || sharp[0] > 235) && rough[0] > 60 &&
+        rough[0] < 200, {sharp, rough});
+    sphere.shininess = 1e4;
+    render3D.environment = undefined;
+    engineStep(1);
+    const plain = smokePixel(.5, .5);
+    check('with no environment it reflects the sky\'s colors as before', !smokeNear(plain, [...faces.pz, 255], 40), plain);
+    checkGLError();
+});
+</script>

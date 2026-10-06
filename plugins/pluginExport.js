@@ -151,6 +151,9 @@ export
     // Render3D
     render3D,
     Render3DPlugin,
+    CubeMap,
+    makeCubeMap,
+    loadCubeMap,
     Camera3D,
     EngineObject3D,
     Mesh,

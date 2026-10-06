@@ -592,6 +592,14 @@ class Render3DPlugin
         /** @property {Mesh|undefined} - Sky dome from buildSky or setSky, drawn around the camera behind everything
          *  @type {Mesh|undefined} */
         this.sky = undefined;
+        /** @property {CubeMap|undefined} - A cube map drawn as the sky, behind everything, in place of the sky dome
+         *  @type {CubeMap|undefined} */
+        this.skyBox = undefined;
+        /** @property {CubeMap|undefined} - The world around, what reflective surfaces reflect: an object's
+         *  reflectivity says how much and its shininess how sharp, 256 and up a mirror and low a blur; undefined
+         *  reflects the sky's colors as setSky gave them
+         *  @type {CubeMap|undefined} */
+        this.environment = undefined;
         /** @property {boolean} - Draw the 3D scene on top of the 2D scene instead of under it */
         this.renderAfter2D = false;
         /** @property {boolean} - Draw see through things far to near so they blend correctly */
@@ -661,6 +669,10 @@ class Render3DPlugin
         this.shadowShader = undefined;
         /** @type {WebGLVertexArrayObject|undefined} */
         this.vao = undefined;
+        /** @type {WebGLProgram|undefined} */
+        this.skyBoxProgram = undefined; // draws the sky box, made on its first draw
+        /** @type {WebGLVertexArrayObject|undefined} */
+        this.skyBoxVao = undefined;  // an empty one, its triangle comes from gl_VertexID
         /** @type {WebGLTexture|undefined} */
         this.whiteTexture = undefined; // 1x1 white for untextured draws
         /** @type {Map<number, WebGLSampler>} */
@@ -1142,7 +1154,7 @@ class Render3DPlugin
         for (const o of objects)
             (o.transparent || o.additive ? transparent : opaque).push(o);
 
-        isDefault && this.sky && this.drawSky();
+        isDefault && (this.skyBox || this.sky) && this.drawSky();
 
         // opaque: no blending, depth writes on, by render order
         this.blend = false;
@@ -1219,10 +1231,13 @@ class Render3DPlugin
         finally { render3DApplyBatchState(state); }
     }
 
-    /** Draw render3D.sky around the camera, unlit, unfogged and behind everything, called automatically by the pass */
+    /** Draw render3D.skyBox, or render3D.sky around the camera, unlit, unfogged and behind everything, called
+     *  automatically by the pass */
     drawSky()
     {
         this.flush();
+        if (this.skyBox)
+            return void render3DDrawSkyBox(this.skyBox);
         // the dome only has to sit between the clip planes, the pass draws it first with no depth test;
         // a far plane at Infinity has no midpoint, so put it a long way out instead
         const {near, far} = this.camera;
@@ -1715,6 +1730,8 @@ function render3DFragmentSource(fragmentCode)
         'uniform vec3 cameraPos;' +
         'uniform vec4 materialParams,emissiveTint,skyTop,skyHorizon,skyBottom,gelAxes;' +
         'uniform sampler2D tex,normalTex,emissiveTex,gelTex;' +
+        'uniform samplerCube envMap;' + // the environment, when envParams.x is 1, envParams.y its last mipmap
+        'uniform vec4 envParams;' +
         'uniform bool premultipliedTexture;' + // is the texture a render target, which holds premultiplied color
         'uniform highp sampler2DShadow shadowMap;' +
         'in vec3 P,N;in vec2 T,L;in vec4 C,S;' +
@@ -1798,7 +1815,9 @@ function render3DFragmentSource(fragmentCode)
         'if(materialParams.z>0.){' +
         'vec3 w=normalize(P-cameraPos),q=reflect(w,n);' +
         'float f=materialParams.z+(1.-materialParams.z)*pow(clamp(1.-dot(n,-w),0.,1.),5.);' +
-        'c.rgb=mix(c.rgb,q.y>0.?mix(skyHorizon.rgb,skyTop.rgb,q.y):mix(skyHorizon.rgb,skyBottom.rgb,-q.y),f);' +
+        // the environment when there is one, sharp at a shininess of 256 and blurred toward its last mipmap at 1
+        'c.rgb=mix(c.rgb,envParams.x>0.?textureLod(envMap,q,envParams.y*clamp(1.-log2(materialParams.y)/8.,0.,1.)).rgb:' +
+        'q.y>0.?mix(skyHorizon.rgb,skyTop.rgb,q.y):mix(skyHorizon.rgb,skyBottom.rgb,-q.y),f);' +
         '}}else c.rgb*=e;' + // fully emissive: its own color, or brighter, with no lighting to work out
         // the emissive map adds its light on top, lit or not
         'if(emissiveTint.a>0.)c.rgb+=texture(emissiveTex,T).rgb*emissiveTint.rgb;' +
@@ -1836,6 +1855,7 @@ function render3DUseProgram(program)
     gl.uniform1i(render3DUniform('normalTex'), 2);
     gl.uniform1i(render3DUniform('emissiveTex'), 3);
     gl.uniform1i(render3DUniform('gelTex'), 4);
+    gl.uniform1i(render3DUniform('envMap'), 5);
     gl.uniform4fv(render3DUniform('gelAxes'), r.gelAxes);
     const c = r.camera.pos;
     gl.uniform3f(render3DUniform('cameraPos'), c.x, c.y, c.z);
@@ -1917,10 +1937,175 @@ function render3DInitGL()
     glSetInstancedMode(true);
 }
 
+///////////////////////////////////////////////////////////////////////////////
+/**
+ * CubeMap - Six square images all around a point, the world far away: what reflective surfaces reflect as
+ * render3D.environment, and the sky as render3D.skyBox
+ * - makeCubeMap paints one from a function of direction, loadCubeMap loads six images
+ * - Its faces are in WebGL's order and lay out, +x, -x, +y, -y, +z, -z, each as seen from the middle looking out
+ * @memberof Render3D
+ * @example
+ * render3D.environment = render3D.skyBox = makeCubeMap(64, (d)=> hsl(.6, .8, .4 + d.y * .4));
+ */
+class CubeMap
+{
+    /** Make a cube map from its six faces, as makeCubeMap and loadCubeMap do
+     *  @param {number} size - Pixels a side of each face
+     *  @param {Array<Uint8Array|HTMLImageElement|HTMLCanvasElement|ImageBitmap|OffscreenCanvas>} faces - +x, -x, +y,
+     *  -y, +z and -z, RGBA pixels row by row or images */
+    constructor(size, faces)
+    {
+        ASSERT(isNumber(size) && size >= 1, 'a cube map\'s size must be a positive number', size);
+        ASSERT(isArray(faces) && faces.length === 6, 'a cube map has six faces');
+        /** @property {number} - Pixels a side of each face */
+        this.size = size;
+        /** @property {Array<Uint8Array|HTMLImageElement|HTMLCanvasElement|ImageBitmap|OffscreenCanvas>} - Its faces,
+         *  kept to upload again after a lost context
+         *  @type {Array<Uint8Array|HTMLImageElement|HTMLCanvasElement|ImageBitmap|OffscreenCanvas>} */
+        this.faces = faces;
+        /** @type {WebGLTexture|undefined} */
+        this.glTexture = undefined; // made by the first pass that uses it
+        this.contextGeneration = -1;
+    }
+
+    /** Free its texture, which is made again if it is used after */
+    dispose()
+    {
+        this.glTexture && glContext?.deleteTexture(this.glTexture);
+        this.glTexture = undefined;
+    }
+}
+
+/** Make a cube map by asking a function the color of each direction
+ *  - The function gets a unit Vector3 for each pixel of each face and gives a Color
+ *  - It runs size * size * 6 times, so a size of 64 or 128 makes one at once, larger takes a moment
+ *  @param {number} size - Pixels a side of each face
+ *  @param {function(Vector3): Color} colorOf - The color seen looking that way
+ *  @return {CubeMap}
+ *  @example
+ *  // a sky, blue above and pale at the horizon, with a sun
+ *  const sun = vec3(1, 1, -1).normalize();
+ *  render3D.environment = makeCubeMap(64, (d)=> hsl(.6, .7, .9 - max(d.y, 0) * .5).lerp(WHITE, d.dot(sun) ** 64));
+ *  @memberof Render3D */
+function makeCubeMap(size, colorOf)
+{
+    ASSERT(isNumber(size) && size >= 1 && size % 1 === 0, 'makeCubeMap needs a whole size', size);
+    ASSERT(typeof colorOf === 'function', 'makeCubeMap needs a function of direction');
+    const faces = [];
+    for (let face = 0; face < 6; ++face)
+    {
+        const data = new Uint8Array(size * size * 4);
+        for (let y = 0; y < size; ++y)
+        for (let x = 0; x < size; ++x)
+        {
+            const color = colorOf(render3DCubeDirection(face, (x + .5) / size * 2 - 1, (y + .5) / size * 2 - 1));
+            const i = (x + y * size) * 4;
+            data[i]   = clamp(color.r) * 255 + .5 | 0;
+            data[i+1] = clamp(color.g) * 255 + .5 | 0;
+            data[i+2] = clamp(color.b) * 255 + .5 | 0;
+            data[i+3] = clamp(color.a) * 255 + .5 | 0;
+        }
+        faces.push(data);
+    }
+    return new CubeMap(size, faces);
+}
+
+/** Load a cube map from six square images of one size
+ *  @param {Array<string>} sources - The images of +x, -x, +y, -y, +z and -z, as a sky box set names them right,
+ *  left, top, bottom, front and back
+ *  @return {Promise<CubeMap>}
+ *  @memberof Render3D */
+async function loadCubeMap(sources)
+{
+    ASSERT(isArray(sources) && sources.length === 6, 'loadCubeMap takes six images, +x, -x, +y, -y, +z and -z');
+    const images = await Promise.all(sources.map((src)=> new Promise((resolve, reject)=>
+    {
+        const image = new Image;
+        image.crossOrigin = 'anonymous';
+        image.onload = ()=> resolve(image);
+        image.onerror = ()=> reject(new Error('loadCubeMap could not load ' + src));
+        image.src = src;
+    })));
+    const size = images[0].width;
+    if (!images.every((image)=> image.width === size && image.height === size))
+        throw new Error('loadCubeMap needs six square images of one size');
+    return new CubeMap(size, images);
+}
+
+// the direction of a point on a cube map's face, s and t from -1 to 1 across and down the face as WebGL lays it out
+function render3DCubeDirection(face, s, t)
+{
+    const d = face === 0 ? vec3(1, -t, -s) : face === 1 ? vec3(-1, -t, s) : face === 2 ? vec3(s, 1, t) :
+        face === 3 ? vec3(s, -1, -t) : face === 4 ? vec3(s, -t, 1) : vec3(-s, -t, -1);
+    return d.normalize();
+}
+
+// a cube map's texture, uploaded with its mipmaps the first time and again after a lost context, bound to the
+// cube map target of the active unit; undefined with no cube map or no WebGL
+function render3DCubeTexture(cube)
+{
+    const gl = glContext;
+    if (!cube || !gl) return;
+    if (cube.glTexture && cube.contextGeneration === render3D.contextGeneration)
+        return cube.glTexture;
+    const texture = cube.glTexture = gl.createTexture();
+    cube.contextGeneration = render3D.contextGeneration;
+    gl.bindTexture(gl.TEXTURE_CUBE_MAP, texture);
+    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false); // a face's first row is its top, as the cube's faces are laid out
+    cube.faces.forEach((face, i)=> face instanceof Uint8Array ?
+        gl.texImage2D(gl.TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, gl.RGBA, cube.size, cube.size, 0, gl.RGBA,
+            gl.UNSIGNED_BYTE, face) :
+        gl.texImage2D(gl.TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, face));
+    gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+    gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_CUBE_MAP, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.generateMipmap(gl.TEXTURE_CUBE_MAP); // the blur of a rough surface's reflection
+    return texture;
+}
+
+// draw a cube map as the sky: one triangle over the whole screen, each pixel the cube's color the way it looks,
+// with its own program and an empty vertex array, the pass's state put back after
+function render3DDrawSkyBox(cube)
+{
+    const gl = glContext, r = render3D;
+    r.skyBoxProgram ||= glCreateProgram(
+        '#version 300 es\nprecision highp float;out vec2 v;' +
+        'void main(){v=vec2(gl_VertexID&1,gl_VertexID>>1)*4.-1.;gl_Position=vec4(v,0,1);}',
+        '#version 300 es\nprecision highp float;uniform mat4 inverseViewProj;uniform samplerCube sky;in vec2 v;' +
+        'out vec4 o;void main(){vec4 a=inverseViewProj*vec4(v,-1,1),b=inverseViewProj*vec4(v,0,1);' +
+        'o=vec4(texture(sky,b.xyz/b.w-a.xyz/a.w).rgb,1);}'); // the way through this pixel, near plane to beyond
+    r.skyBoxVao ||= gl.createVertexArray();
+    const depthTest = gl.isEnabled(gl.DEPTH_TEST), blend = gl.isEnabled(gl.BLEND), cull = gl.isEnabled(gl.CULL_FACE);
+    const depthWrite = gl.getParameter(gl.DEPTH_WRITEMASK);
+    gl.useProgram(r.skyBoxProgram);
+    r.currentProgram = undefined; // the next draw picks its program again
+    gl.activeTexture(gl.TEXTURE6);
+    gl.bindTexture(gl.TEXTURE_CUBE_MAP, render3DCubeTexture(cube));
+    gl.bindSampler(6, null);
+    gl.uniform1i(glUniformLocation(r.skyBoxProgram, 'sky'), 6);
+    gl.uniformMatrix4fv(glUniformLocation(r.skyBoxProgram, 'inverseViewProj'), false,
+        r.viewProjection.copy().invert().m);
+    gl.disable(gl.DEPTH_TEST);
+    gl.disable(gl.BLEND);
+    gl.disable(gl.CULL_FACE);
+    gl.depthMask(false);
+    gl.bindVertexArray(r.skyBoxVao);
+    gl.drawArrays(gl.TRIANGLES, 0, 3);
+    gl.bindVertexArray(r.vao);
+    gl.bindTexture(gl.TEXTURE_CUBE_MAP, null);
+    gl.activeTexture(gl.TEXTURE0);
+    depthTest && gl.enable(gl.DEPTH_TEST);
+    blend && gl.enable(gl.BLEND);
+    cull && gl.enable(gl.CULL_FACE);
+    gl.depthMask(depthWrite);
+}
+
 function render3DContextLost()
 {
     const r = render3D;
     r.program = r.currentProgram = r.shadowShader = r.vao = r.streamBuffer = r.whiteTexture = undefined;
+    r.skyBoxProgram = r.skyBoxVao = undefined;
     for (const shader of glShaderObjects)
         shader.program3D = undefined; // compiled again by the next draw
     r.lightCount = 0;
@@ -2051,6 +2236,9 @@ function render3DSetMaterialUniforms(state)
     render3DBindMap(3, emissiveMap, state);
     if (state.reflectivity > 0)
     {
+        const environment = r.environment;
+        // the blur stops at a mipmap of 4 by 4 a face, where sampling across the edges still blends neighboring faces
+        render3DUniform4f('envParams', environment ? 1 : 0, environment ? max(0, log2(environment.size) - 2) : 0, 0, 0);
         const sky = r.sky && render3DSkyColors.get(r.sky), a = r.ambientColor, g = r.ambientGroundColor || a;
         const top = sky ? sky[0] : a, bottom = sky ? sky[2] : g;
         render3DUniform4f('skyTop', top.r, top.g, top.b, 1);
@@ -2356,6 +2544,10 @@ function render3DSetMapUnits(texture)
         gl.bindTexture(gl.TEXTURE_2D, texture);
         gl.bindSampler(unit, null);
     }
+    // the environment cube on unit 5 for the pass, emptied at its end with the others
+    gl.activeTexture(gl.TEXTURE0 + 5);
+    gl.bindTexture(gl.TEXTURE_CUBE_MAP, texture && render3DCubeTexture(render3D.environment) || null);
+    gl.bindSampler(5, null);
     gl.activeTexture(gl.TEXTURE0);
     render3DBoundMaps = [];
 }

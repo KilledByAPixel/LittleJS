@@ -110,14 +110,17 @@ test('an instanced batch splits when a material field changes, and not when it s
 test('the pass binds white to the map units and the gel unit at its start and nothing at its end, unit 0 active after', ()=>
 {
     const calls = JSON.parse(run(`const calls = [], saved = glContext;
-        glContext = {TEXTURE0: 33984, TEXTURE_2D: 3553, activeTexture: (u)=> calls.push(['unit', u - 33984]),
-            bindTexture: (t, x)=> calls.push(['texture', x]), bindSampler: (u, s)=> calls.push(['sampler', u, s])};
+        glContext = {TEXTURE0: 33984, TEXTURE_2D: 3553, TEXTURE_CUBE_MAP: 34067,
+            activeTexture: (u)=> calls.push(['unit', u - 33984]),
+            bindTexture: (t, x)=> calls.push(['texture', t, x]), bindSampler: (u, s)=> calls.push(['sampler', u, s])};
         render3DBoundMaps = [1, 2, 3];
         try { render3DSetMapUnits('white'); render3DSetMapUnits(null); } finally { glContext = saved; }
         JSON.stringify({calls, cache: render3DBoundMaps.length})`));
-    const unitCalls = (texture)=> [['unit', 2], ['texture', texture], ['sampler', 2, null],
-        ['unit', 3], ['texture', texture], ['sampler', 3, null],
-        ['unit', 4], ['texture', texture], ['sampler', 4, null], ['unit', 0]];
+    // with no environment its cube unit is emptied at both ends
+    const unitCalls = (texture)=> [['unit', 2], ['texture', 3553, texture], ['sampler', 2, null],
+        ['unit', 3], ['texture', 3553, texture], ['sampler', 3, null],
+        ['unit', 4], ['texture', 3553, texture], ['sampler', 4, null],
+        ['unit', 5], ['texture', 34067, null], ['sampler', 5, null], ['unit', 0]];
     assert.deepEqual(calls.calls, [...unitCalls('white'), ...unitCalls(null)]);
     assert.equal(calls.cache, 0, 'the map cache is forgotten');
     const pass = run('render3DRenderPass.toString()');
