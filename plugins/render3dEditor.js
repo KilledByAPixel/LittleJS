@@ -490,6 +490,7 @@ function editor3DHash(text)
 // puts in the edits it autosaved for the file, or keeps them waiting when the file changed since
 function editor3DLevelLoaded(level)
 {
+    editor3DAutosaveFlush(); // what the last level has waiting is written before this one reads the autosaves
     if (editor3DLevel !== level)
     {
         // another level, the selection and the edit being made were the last one's
@@ -1151,7 +1152,7 @@ function editor3DStrokeEnd()
         partsBefore: stroke.parts, partsAfter: parts});
     editor3DUndoList.length > 100 && editor3DUndoList.shift();
     editor3DRedoList.length = 0;
-    editor3DAutosave();
+    editor3DAutosaveSoon();
 }
 
 // take the edit being made back, with nothing to undo
@@ -1175,7 +1176,7 @@ function editor3DUndo(redo=false)
     (redo ? editor3DUndoList : editor3DRedoList).push(entry);
     editor3DSetObjects(redo ? entry.after : entry.before);
     editor3DSetParts(redo ? entry.partsAfter : entry.partsBefore);
-    editor3DAutosave();
+    editor3DAutosaveSoon();
     return true;
 }
 
@@ -1469,6 +1470,7 @@ function editor3DPrefabClear()
 // origin, with an undo of its own, and the level it is in put away; false when it is not a prefab's instance
 function editor3DPrefabEnter(id)
 {
+    editor3DAutosaveFlush(); // the level's waiting autosave, before another level is the one edited
     const selected = editor3DSelected();
     id ??= selected.length === 1 ? selected[0].id : undefined;
     const made = editor3DInstances.get(id), from = editor3DLevel;
@@ -1651,6 +1653,7 @@ function editor3DSetOpen(open)
         editor3DMouseOnPanel = false; // the panel hides, with no mouseleave
         editor3DStrokeEnd();
         while (editor3DPrefabBack()); // the game plays the level, not a prefab that was open
+        editor3DAutosaveFlush(); // the game plays on with what the editor has kept
         editor3DToolHeld = false;
         editor3DIsOpen = false;
         setPaused(editor3DGamePaused);
@@ -1846,6 +1849,7 @@ function editor3DAutosave(level=editor3DLevel, known)
         root && editor3DAutosave(Object.keys(prefabs).length ? {...root, prefabs} : root, editor3DRecords.get(root));
         return;
     }
+    editor3DAutosaveWaiting.delete(level); // written now
     const record = known ?? editor3DRecords.get(level);
     if (!record || record.pending) return; // edits waiting to be applied keep their autosave
     const saves = editor3DSaves(), objects = isArray(level.objects) ? level.objects : [];
@@ -1857,9 +1861,35 @@ function editor3DAutosave(level=editor3DLevel, known)
     else
         saves[record.key] = {hash: record.hash, savedHash: record.savedHash, objects: editor3DCopy(objects),
             ...parts};
-    const failed = editorSaveFailed; // the 2D editor's own flag is its own
+    const failed = editorSaveFailed, size = editorAutosaveSize; // the 2D editor's flag and size are its own
     editor3DSaveFailed = editorWriteSaves(saves, record.key, editor3DSaveName());
-    editorSaveFailed = failed;
+    editor3DAutosaveSize = editorAutosaveSize;
+    editorSaveFailed = failed, editorAutosaveSize = size;
+}
+
+// a level whose autosave writes more than EDITOR_AUTOSAVE_WAIT_SIZE characters, a big terrain's or block map's,
+// waits until the edits stop for a moment, as the 2D editor's map does, since writing it after every stroke would
+// cost more than the stroke; a small one is written at once
+let editor3DAutosaveSize = 0, editor3DAutosaveTimer;
+const editor3DAutosaveWaiting = new Set;
+
+// autosave a level after an edit: at once when its autosave is small, or a second after the last of a run of edits;
+// inside a prefab at once, since its autosave is the level it is in, found through the prefabs open, which Back
+// changes
+function editor3DAutosaveSoon(level=editor3DLevel)
+{
+    if (editor3DAutosaveSize < EDITOR_AUTOSAVE_WAIT_SIZE || editor3DPrefabLevels.has(level))
+        return editor3DAutosave(level);
+    editor3DAutosaveWaiting.add(level);
+    clearTimeout(editor3DAutosaveTimer);
+    editor3DAutosaveTimer = setTimeout(editor3DAutosaveFlush, 1e3);
+}
+
+// write every autosave that is waiting, as the editor closes, the page hides or another level loads
+function editor3DAutosaveFlush()
+{
+    clearTimeout(editor3DAutosaveTimer);
+    [...editor3DAutosaveWaiting].forEach((level)=> editor3DAutosave(level));
 }
 
 // put the autosaved edits of a file that changed into the level, as one undo
@@ -2553,11 +2583,16 @@ function editor3DEditorUpdate(seconds)
 
 // Ctrl with a letter the editor uses is not the browser's while the editor is open, Ctrl+D would bookmark the page
 if (debug && globalThis.document?.addEventListener)
+{
     document.addEventListener('keydown', (e)=>
     {
         if (editor3DIsOpen && (e.ctrlKey || e.metaKey) && /^Key[ZYCXVDG]$/.test(e.code) && !editorIsTextField(e.target))
             e.preventDefault();
     });
+    // a page going away writes what is waiting, the last event it is sure to get
+    document.addEventListener('visibilitychange', ()=> document.hidden && editor3DAutosaveFlush());
+    globalThis.addEventListener?.('pagehide', editor3DAutosaveFlush);
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 // what the panel does to the level, and what it says
