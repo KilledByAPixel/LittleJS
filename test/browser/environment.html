@@ -143,6 +143,17 @@ smokeRun(async ()=>
     wall(vec3(0, 0, -5), vec3(10, 10, .2), faces.nz);
     wall(vec3(1.5, 0, -4.75), vec3(1, 1, .2), marker);
     wall(vec3(0, 4.75, 1.5), vec3(1, .2, 1), marker);
+    // a sprite ahead, white over orange, which faces the capture as it would a camera, and must stay upright
+    const spriteCanvas = document.createElement('canvas');
+    spriteCanvas.width = spriteCanvas.height = 8;
+    const spriteContext = spriteCanvas.getContext('2d');
+    spriteContext.fillStyle = '#fff';
+    spriteContext.fillRect(0, 0, 8, 4);
+    spriteContext.fillStyle = 'rgb(255,128,0)';
+    spriteContext.fillRect(0, 4, 8, 4);
+    const sprite = new EngineObject3D(vec3(-2, 0, -4), undefined, new TextureInfo(spriteCanvas));
+    sprite.size3D = vec3(2);
+    walls.push(sprite);
     const mirror = new EngineObject3D(vec3(), buildSphere(1, 24, 12, true), undefined, BLACK);
     mirror.reflectivity = 1;
     const captured = new CubeMap(64);
@@ -160,11 +171,25 @@ smokeRun(async ()=>
     render3D.camera.rotation = vec3();
     engineStep(1);
     checkPixel('a capture keeps right on the right', .76, .5, [...marker, 255], 12);
+    const spriteAt = (y)=> { const p = render3D.worldToScreen(vec3(-2, y, -4));
+        return [p.x / mainCanvasSize.x, 1 - p.y / mainCanvasSize.y]; };
+    checkPixel('a sprite in a capture keeps its top up', ...spriteAt(.5), [255, 255, 255, 255], 12);
+    checkPixel('and its bottom down', ...spriteAt(-.5), [255, 128, 0, 255], 12);
     render3D.camera.rotation = vec3(Math.PI / 2, 0, 0);
     engineStep(1);
     checkPixel('a capture keeps its ceiling the right way round', .5, .77, [...marker, 255], 12);
     render3D.skyBox = undefined;
     render3D.camera.rotation = vec3();
+
+    // an orthographic camera may have its near plane behind it; a capture keeps its own in front
+    render3D.camera.orthographic = 10;
+    render3D.camera.near = -20;
+    const orthographic = new CubeMap(8);
+    orthographic.capture(vec3());
+    engineStep(1);
+    check('an orthographic camera can capture', !render3D.cubeCaptures.size && !!orthographic.glTexture);
+    render3D.camera.orthographic = 0;
+    render3D.camera.near = .1;
 
     // two mirror spheres, the left one with an environment of its own, a plain red one; the right one reflects the
     // scene's as before

@@ -1542,7 +1542,8 @@ obj.emissive = 1                        // 0 by default; how much it lights itse
 obj.specular = .5                       // highlight strength, 0 is none and 1 is full, as render3D.specular; 0 by default
 obj.shininess = 100                     // 16 by default; the highlight's exponent, higher is smaller and sharper
 obj.roughness = .5                      // the same as a roughness, 0 a mirror to 1 matte as glTF has it: it sets
-                                        // shininess = 2 / roughness^4 - 2, at least 1, and reads it back
+                                        // shininess = 2 / roughness^4 - 2, at least 1, and reads it back, as
+                                        // .9 from about .9 up, where shininess is 1
 obj.normalMap = textureInfo             // bumps and grooves that catch the light, read at the color texture's uvs;
                                         // green points up the image (OpenGL and glTF), flip the green of a DirectX one;
                                         // no tangents needed, any mesh with uvs works; normalMapFromHeight makes one

@@ -1260,11 +1260,9 @@ class Render3DPlugin
     drawSky()
     {
         this.flush();
-        if (this.skyBox && this.skyBox !== this.capturingCube)
-        {
-            render3DDrawSkyBox(this.skyBox);
+        if (this.skyBox && this.skyBox !== this.capturingCube && render3DDrawSkyBox(this.skyBox))
             return; // a plain return, so the method is typed void and a subclass may override it so
-        }
+        if (!this.sky) return; // a sky box that could not draw, with no dome to draw instead
         // the dome only has to sit between the clip planes, the pass draws it first with no depth test;
         // a far plane at Infinity has no midpoint, so put it a long way out instead
         const {near, far} = this.camera;
@@ -1910,7 +1908,7 @@ function render3DInitGL()
     if (!glEnable || !glContext)
     {
         // a device whose WebGL could not draw, which fell back to Canvas2D, is not helped by setting glEnable
-        console.warn(glCanBeEnabled ? 'Render3DPlugin: WebGL not enabled, construct the plugin in gameInit with glEnable set'
+        console.warn(!glDeviceFailed ? 'Render3DPlugin: WebGL not enabled, construct the plugin in gameInit with glEnable set'
             : 'Render3DPlugin: this device can not draw WebGL, so nothing 3D is drawn');
         return;
     }
@@ -2195,7 +2193,7 @@ function render3DCaptureCubes(objects)
     // a camera looking out through each face in turn, its matrix the face's
     const view = new Camera3D;
     view.fov = PI / 2;
-    view.near = camera.near;
+    view.near = camera.orthographic || !(camera.near > 0) ? .1 : camera.near; // an orthographic camera's may be behind it
     view.far = camera.far;
     let faceMatrix = new Matrix4;
     view.getMatrix = ()=> faceMatrix.copy();
@@ -2231,6 +2229,14 @@ function render3DCaptureCubes(objects)
                     'cube map capture framebuffer is incomplete');
                 faceMatrix = render3DCubeFaceMatrix(face, cube.capturePos);
                 r.updateMatrices(1);
+                if (face < 2 || face > 3)
+                {
+                    // a side face's up is world down, as the cube lays its rows out, so sprites and particles, built
+                    // on the camera's right and up, would stand on their heads: half a turn about forward puts them
+                    // on world up, and leaves forward and the sort the same
+                    r.cameraRight = r.cameraRight.scale(-1);
+                    r.cameraUp = r.cameraUp.scale(-1);
+                }
                 const c = canvasClearColor;
                 gl.clearColor(c.r, c.g, c.b, 1);
                 gl.depthMask(true);
@@ -2259,7 +2265,8 @@ function render3DCaptureCubes(objects)
 }
 
 // draw a cube map as the sky: one triangle over the whole screen, each pixel the cube's color the way it looks,
-// with its own program and an empty vertex array, the pass's state put back after
+// with its own program and an empty vertex array, the pass's state put back after; false when the program did not
+// build, in a release build, so the dome draws in its place
 function render3DDrawSkyBox(cube)
 {
     const gl = glContext, r = render3D;
@@ -2269,6 +2276,7 @@ function render3DDrawSkyBox(cube)
         '#version 300 es\nprecision highp float;uniform mat4 inverseViewProj;uniform samplerCube sky;in vec2 v;' +
         'out vec4 o;void main(){vec4 a=inverseViewProj*vec4(v,-1,1),b=inverseViewProj*vec4(v,0,1);' +
         'o=vec4(texture(sky,b.xyz/b.w-a.xyz/a.w).rgb,1);}'); // the way through this pixel, near plane to beyond
+    if (glFailedPrograms.has(r.skyBoxProgram)) return false;
     r.skyBoxVao ||= gl.createVertexArray();
     const depthTest = gl.isEnabled(gl.DEPTH_TEST), blend = gl.isEnabled(gl.BLEND), cull = gl.isEnabled(gl.CULL_FACE);
     const depthWrite = gl.getParameter(gl.DEPTH_WRITEMASK);
@@ -2297,6 +2305,7 @@ function render3DDrawSkyBox(cube)
     blend && gl.enable(gl.BLEND);
     cull && gl.enable(gl.CULL_FACE);
     gl.depthMask(depthWrite);
+    return true;
 }
 
 function render3DContextLost()

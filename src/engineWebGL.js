@@ -45,7 +45,7 @@ function glClampTextureSize(size) { return glMaxTextureSize ? min(size, glMaxTex
 let glAntialias = true;
 
 // WebGL internal variables not exposed to documentation
-let glMipmappedTextures = new WeakSet, glMipmapsUntilTarget = new WeakSet, glMipmapsStale = new Set, glPremultipliedTextures = new WeakSet, glShaderPremultiplied, glEnableBeforeLoss = true, glShader, glPolyShader, glPolyMode, glAdditive, glBatchAdditive, glActiveTexture, glArrayBuffer, glGeometryBuffer, glPositionData, glColorData, glBatchCount, glTextureInfos = new Set, glInstancedVAO, glPolyVAO, glFramebuffer, glRenderTarget, glShaderObjects = [], glCustomShader, glBatchShader, glProgramCustom, glTransform, glRenderTargetSaved, glUniformLocations = new WeakMap, glCanBeEnabled = true;
+let glMipmappedTextures = new WeakSet, glMipmapsUntilTarget = new WeakSet, glMipmapsStale = new Set, glPremultipliedTextures = new WeakSet, glShaderPremultiplied, glEnableBeforeLoss = true, glShader, glPolyShader, glPolyMode, glAdditive, glBatchAdditive, glActiveTexture, glArrayBuffer, glGeometryBuffer, glPositionData, glColorData, glBatchCount, glTextureInfos = new Set, glInstancedVAO, glPolyVAO, glFramebuffer, glRenderTarget, glShaderObjects = [], glCustomShader, glBatchShader, glProgramCustom, glTransform, glRenderTargetSaved, glUniformLocations = new WeakMap, glCanBeEnabled = true, glDeviceFailed = false;
 let glFailedPrograms = new WeakSet; // programs that did not build in a release build, which nothing draws with
 // ANDed onto every packed color as a draw is queued; the light system's shadow pass sets 0xff000000
 // to draw everything black with its alpha kept (rgbaInt packs alpha in the top byte)
@@ -120,6 +120,7 @@ function glInit(rootElement)
         glCanvas = glContext = undefined;
         glEnable = false;
         glCanBeEnabled = false;
+        glDeviceFailed = true; // the device, not the game, turned it off
         return;
     }
 
@@ -224,6 +225,7 @@ function glInit(rootElement)
         {
             console.error('LittleJS: WebGL can not draw on this device, using Canvas2D');
             glEnable = glCanBeEnabled = false;
+            glDeviceFailed = true;
             glCanvas.style.display = 'none';
         }
 

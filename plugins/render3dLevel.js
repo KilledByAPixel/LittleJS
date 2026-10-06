@@ -302,6 +302,8 @@ const level3DSkies = new WeakSet;
 // and shadows; a setting the block does not have, or has wrong, stays as it is
 function level3DSceneApply(scene)
 {
+    // a sky box or environment an earlier scene is still loading does not land on this one's
+    ++level3DSceneCubeLoads.skyBox, ++level3DSceneCubeLoads.environment;
     const r = render3D;
     if (!r || !scene || typeof scene !== 'object') return;
     const color = level3DHexColor;
@@ -336,8 +338,8 @@ function level3DSceneApply(scene)
 // and is tried again by the next scene that names it
 const level3DSceneCubeMaps = new Map;
 
-// which load each of render3D.skyBox and environment waits for: a newer scene, or the editor putting the game's
-// back, moves it on, and a load that finishes after is dropped
+// which load each of render3D.skyBox and environment waits for: every scene applied, or the editor putting the
+// game's back, moves it on, and a load that finishes after is dropped
 const level3DSceneCubeLoads = {skyBox: 0, environment: 0};
 
 // load the six urls a scene block gives for render3D.skyBox or environment and set it when they have loaded; a value
@@ -345,10 +347,12 @@ const level3DSceneCubeLoads = {skyBox: 0, environment: 0};
 function level3DSceneCubeMap(field, urls)
 {
     if (!isArray(urls) || urls.length !== 6 || !urls.every((url)=> typeof url === 'string')) return;
-    const key = urls.join('\n'), load = ++level3DSceneCubeLoads[field];
+    const key = urls.join('\n'), load = ++level3DSceneCubeLoads[field], before = render3D[field];
     let cube = level3DSceneCubeMaps.get(key);
     cube || level3DSceneCubeMaps.set(key, cube = loadCubeMap(urls));
-    cube.then((map)=> load === level3DSceneCubeLoads[field] && (render3D[field] = map), (error)=>
+    // set when it has loaded, unless a newer scene came, or the game set the field itself meanwhile
+    const landed = (map)=> load === level3DSceneCubeLoads[field] && render3D[field] === before && (render3D[field] = map);
+    cube.then(landed, (error)=>
     {
         level3DSceneCubeMaps.get(key) === cube && level3DSceneCubeMaps.delete(key);
         console.warn(error.message);

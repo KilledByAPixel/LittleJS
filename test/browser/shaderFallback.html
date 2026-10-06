@@ -37,5 +37,16 @@ smokeRun(async ()=>
     check('the light system says so once', said('LightSystemPlugin') === 1, errors);
     check('the game goes on drawing', glEnable && frame >= 3);
     checkGLError();
+
+    // 3D made again with shaders that build, then only the sky box's fails: the dome draws in its place
+    render3DInitGL();
+    render3D.setSky(rgb(1, 0, 0), rgb(1, 0, 0), rgb(1, 0, 0));
+    render3D.skyBox = makeCubeMap(4, ()=> rgb(0, 0, 1));
+    glCreateProgram = (vs, fs)=> build(vs, fs.includes('samplerCube sky') ? fs + '\nnot glsl' : fs);
+    console.error = ()=> {};
+    try { engineStep(1); }
+    finally { glCreateProgram = build, console.error = error; }
+    checkPixel('a sky box that can not draw leaves the dome', .1, .9, [255, 0, 0, 255], 12);
+    checkGLError();
 });
 </script>

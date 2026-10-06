@@ -266,7 +266,8 @@ class EngineObject3D extends EngineObject
 
     /** How rough the surface is, 0 a mirror to 1 matte, as glTF and three.js's MeshStandardMaterial have it: another
      *  way to set shininess, which is what is kept, shininess = 2 / roughness^4 - 2 and at least 1; it sets both the
-     *  highlight and how blurred a reflection is
+     *  highlight and how blurred a reflection is; read back it is the same up to about .9, above which shininess is 1
+     *  and it reads .9
      *  @return {number} */
     get roughness() { return (2 / (this.shininess + 2)) ** .25; }
     set roughness(roughness)

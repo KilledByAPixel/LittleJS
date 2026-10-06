@@ -89,3 +89,20 @@ test('the editor puts the game\'s sky box back when the block loses it, and a lo
     assert.deepEqual(JSON.parse(run('JSON.stringify(editor3DSceneFromView().skyBox ?? null)')), null,
         'the view of a game\'s own cube map has no urls to give a block');
 });
+
+test('a load still running does not overwrite a sky box the game set since, or a later level with none', async ()=>
+{
+    const { run } = await loadGame();
+    run(`level3DLoad({scene: {skyBox: ${JSON.stringify(sky)}}, objects: []});
+        var own = makeCubeMap(1, ()=> WHITE); render3D.skyBox = own;`);
+    run('loads[0].finish()');
+    await settle();
+    assert.equal(run('render3D.skyBox === own'), true, 'the game set its own while it loaded');
+
+    run(`render3D.skyBox = undefined;
+        level3DLoad({scene: {skyBox: ${JSON.stringify(other)}}, objects: []});
+        level3DLoad({objects: []});`);
+    run('loads[1].finish()');
+    await settle();
+    assert.equal(run('render3D.skyBox'), undefined, 'a later level with no sky box came first');
+});
