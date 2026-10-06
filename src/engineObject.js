@@ -409,34 +409,33 @@ class EngineObject
                             return;
                         }
 
-                        // move to previous X position and bounce
-                        this.pos.x = oldPos.x;
+                        // move against the wall and bounce, its side on the tile edge it moved toward, rounded in the
+                        // layer's space as its collision test is; back to its previous X when that spot is not clear
+                        const snapEpsilon = .0001, layerX = hitLayer.pos.x, offsetX = this.size.x/2 + snapEpsilon;
+                        const x = layerX + (this.pos.x < oldPos.x ?
+                            floor(oldPos.x - layerX - this.size.x/2) + offsetX :
+                            ceil( oldPos.x - layerX + this.size.x/2) - offsetX);
+                        this.pos.x = tileCollisionTest(vec2(x, oldPos.y), this.size, this) ? oldPos.x : x;
                         this.velocity.x *= -restitution;
                     }
                     if (isBlockedY || !isBlockedX)
                     {
-                        if (wasFalling)
-                        {
-                            // adjust position to slightly away from nearest tile
-                            // this prevents gap between object and ground
-                            const epsilon = .0001;
-                            const offset = this.size.y/2 + epsilon;
-                            // rounded in the layer's space as its collision test is, or a bottom a hair below a
-                            // grid line would round to the row under it, inside the floor, and fall through
-                            const layerY = hitLayer.pos.y;
-                            this.pos.y = layerY + (gravityY < 0 ?
-                                floor(oldPos.y - layerY - this.size.y/2) + offset :
-                                ceil( oldPos.y - layerY + this.size.y/2) - offset);
+                        // adjust position to slightly away from the nearest tile, the floor or the ceiling it moved
+                        // toward, which prevents a gap between them; rounded in the layer's space as its collision
+                        // test is, or a bottom a hair below a grid line would round to the row under it, inside the
+                        // floor, and fall through; back to its previous Y when that spot is not clear
+                        const epsilon = .0001;
+                        const offset = this.size.y/2 + epsilon;
+                        const layerY = hitLayer.pos.y;
+                        const y = layerY + (this.pos.y < oldPos.y ?
+                            floor(oldPos.y - layerY - this.size.y/2) + offset :
+                            ceil( oldPos.y - layerY + this.size.y/2) - offset);
+                        const isClear = this.pos.y !== oldPos.y && !tileCollisionTest(vec2(this.pos.x, y), this.size, this);
+                        this.pos.y = isClear ? y : oldPos.y;
 
-                            // set ground object for tile collision
-                            this.groundObject = hitLayer;
-                        }
-                        else
-                        {
-                            // move to previous Y position
-                            this.pos.y = oldPos.y;
-                            this.groundObject = undefined;
-                        }
+                        // set ground object for tile collision
+                        this.groundObject = wasFalling ? hitLayer : undefined;
+
                         // bounce velocity
                         this.velocity.y *= -restitution;
                     }

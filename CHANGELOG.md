@@ -33,6 +33,10 @@ What changed in each release, newest first. Releases before 1.20.0 are on the
 - The Electron example is removed, with Electron and electron-packager from the dev dependencies: a game for the desktop sets up Electron or another wrapper itself, loading its index.html as any page
 - render3d.js is in three files: `render3d.js`, the renderer, then `render3dMesh.js`, meshes and the basic builders, and `render3dObject.js`, EngineObject3D, instancing and lights; nothing changes for a game on a build in `dist`, one that loads the plugins one by one adds the two after `render3d.js`
 
+### Fixes
+
+- Tile collision stops an object against a wall or a ceiling, as it already did on a floor, where it went back to where it was the frame before and stopped short by up to a frame's move, a gap that never closed for a game setting its velocity every frame; a bounce starts from the tile too
+
 ## 1.25.0 - 2026-10-04
 
 ### New Changes

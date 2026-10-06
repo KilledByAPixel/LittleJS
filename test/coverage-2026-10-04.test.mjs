@@ -35,7 +35,7 @@ function tileScene(cells, gravityY, f)
     }
 }
 
-test('an object moving into a wall tile goes back to its old x and bounces by the larger restitution', () =>
+test('an object moving into a wall tile stops against it and bounces by the larger restitution', () =>
 {
     tileScene([[5, 2]], 0, (o, layer)=>
     {
@@ -44,7 +44,7 @@ test('an object moving into a wall tile goes back to its old x and bounces by th
         o.restitution = .25;
         layer.restitution = .5; // the layer's, the larger, is used
         o.updatePhysics();
-        assert.equal(o.pos.x, 4.4);
+        assert.equal(o.pos.x, 5 - (.5 + 1e-4), 'its side on the wall\'s');
         assert.equal(o.pos.y, 2.5);
         assert.equal(o.velocity.x, -(.2 * .5));
         assert.equal(o.velocity.y, 0);
@@ -69,12 +69,12 @@ test('an object walking into a tile whose top is less than .1 above its bottom i
         o.pos = vec2(4.4, 2.3); // bottom at 1.8
         o.velocity = vec2(.2, 0);
         o.updatePhysics();
-        assert.equal(o.pos.x, 4.4);
+        assert.equal(o.pos.x, 5 - (.5 + 1e-4));
         assert.equal(o.velocity.x, -0);
     });
 });
 
-test('an object moving up into a ceiling goes back to its old y, is not on the ground, and bounces down', () =>
+test('an object moving up into a ceiling stops against it, is not on the ground, and bounces down', () =>
 {
     tileScene([[2, 3]], -.01, (o)=>
     {
@@ -82,7 +82,7 @@ test('an object moving up into a ceiling goes back to its old y, is not on the g
         o.velocity = vec2(0, .3);
         o.restitution = .5;
         o.updatePhysics();
-        assert.equal(o.pos.y, 2.4);
+        assert.equal(o.pos.y, 3 - (.5 + 1e-4), 'its top on the ceiling\'s bottom');
         assert.equal(o.pos.x, 2.5);
         assert.equal(o.groundObject, undefined);
         assert.equal(o.velocity.y, (.3 - .01) * -.5);
