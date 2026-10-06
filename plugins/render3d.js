@@ -596,8 +596,8 @@ class Render3DPlugin
          *  @type {CubeMap|undefined} */
         this.skyBox = undefined;
         /** @property {CubeMap|undefined} - The world around, what reflective surfaces reflect: an object's
-         *  reflectivity says how much and its shininess how sharp, 256 and up a mirror and low a blur; undefined
-         *  reflects the sky's colors as setSky gave them
+         *  reflectivity says how much and its shininess how sharp, as sharp as its highlight: 10000 a mirror, 1000
+         *  polished, 10 a wide blur; undefined reflects the sky's colors as setSky gave them
          *  @type {CubeMap|undefined} */
         this.environment = undefined;
         /** @property {boolean} - Draw the 3D scene on top of the 2D scene instead of under it */
@@ -1730,7 +1730,8 @@ function render3DFragmentSource(fragmentCode)
         'uniform vec3 cameraPos;' +
         'uniform vec4 materialParams,emissiveTint,skyTop,skyHorizon,skyBottom,gelAxes;' +
         'uniform sampler2D tex,normalTex,emissiveTex,gelTex;' +
-        'uniform samplerCube envMap;' + // the environment, when envParams.x is 1, envParams.y its last mipmap
+        'uniform samplerCube envMap;' + // the environment, when envParams.x is 1, envParams.y its last mipmap and z the
+        // level a shininess of -1 would read, log2(size * .45)
         'uniform vec4 envParams;' +
         'uniform bool premultipliedTexture;' + // is the texture a render target, which holds premultiplied color
         'uniform highp sampler2DShadow shadowMap;' +
@@ -1816,7 +1817,7 @@ function render3DFragmentSource(fragmentCode)
         'vec3 w=normalize(P-cameraPos),q=reflect(w,n);' +
         'float f=materialParams.z+(1.-materialParams.z)*pow(clamp(1.-dot(n,-w),0.,1.),5.);' +
         // the environment when there is one, sharp at a shininess of 256 and blurred toward its last mipmap at 1
-        'c.rgb=mix(c.rgb,envParams.x>0.?textureLod(envMap,q,envParams.y*clamp(1.-log2(materialParams.y)/8.,0.,1.)).rgb:' +
+        'c.rgb=mix(c.rgb,envParams.x>0.?textureLod(envMap,q,clamp(envParams.z-.5*log2(materialParams.y+2.),0.,envParams.y)).rgb:' +
         'q.y>0.?mix(skyHorizon.rgb,skyTop.rgb,q.y):mix(skyHorizon.rgb,skyBottom.rgb,-q.y),f);' +
         '}}else c.rgb*=e;' + // fully emissive: its own color, or brighter, with no lighting to work out
         // the emissive map adds its light on top, lit or not
@@ -2237,8 +2238,12 @@ function render3DSetMaterialUniforms(state)
     if (state.reflectivity > 0)
     {
         const environment = r.environment;
-        // the blur stops at a mipmap of 4 by 4 a face, where sampling across the edges still blends neighboring faces
-        render3DUniform4f('envParams', environment ? 1 : 0, environment ? max(0, log2(environment.size) - 2) : 0, 0, 0);
+        // a rough reflection is blurred over half the spread of its highlight, sqrt(2 / (shininess + 2)) / 2, and a
+        // texel of mipmap L spans (PI/2) / size * 2^L, so the shader reads level log2(size * .45) - log2(shininess + 2)
+        // / 2: the same blur for any size of map; it stops at 4 by 4 a face, where sampling across the edges still
+        // blends neighboring faces
+        const size = environment ? environment.size : 1;
+        render3DUniform4f('envParams', environment ? 1 : 0, max(0, log2(size) - 2), log2(size * .45), 0);
         const sky = r.sky && render3DSkyColors.get(r.sky), a = r.ambientColor, g = r.ambientGroundColor || a;
         const top = sky ? sky[0] : a, bottom = sky ? sky[2] : g;
         render3DUniform4f('skyTop', top.r, top.g, top.b, 1);

@@ -37,7 +37,7 @@ function gameInit()
     const chrome = new EngineObject3D(vec3(0,1.5,0),
         buildSphere(3, 48, 24, true), undefined, BLACK);
     chrome.reflectivity = 1;
-    chrome.shininess = 1e3;
+    chrome.shininess = 1e4;
 
     // gold: its own color, reflecting more at the edges
     ring = new EngineObject3D(vec3(0,1.5,0),
@@ -47,7 +47,7 @@ function gameInit()
     ring.specular = 1;
 
     // a row from sharp to rough: shininess blurs the reflection
-    const shininess = [1e3, 64, 16, 4, 1];
+    const shininess = [1e4, 1e3, 100, 10, 1];
     shininess.forEach((s, i)=>
     {
         const ball = new EngineObject3D(vec3(i*2 - 4, .6, 4),
@@ -118,8 +118,10 @@ reflection with the environment off.
 - `reflectivity` is how much of the surface is reflection, more at a
   glancing angle. The chrome ball is `BLACK` with `reflectivity = 1`,
   all mirror.
-- `shininess` is how sharp the reflection is: 256 and up is a mirror,
-  lower blurs it, 1 the most. The row of balls goes 1000, 64, 16, 4, 1.
+- `shininess` is how sharp the reflection is, as sharp as the
+  highlight it also sets: 10000 is a mirror, 1000 polished, 10 a wide
+  blur. The row of balls goes from 10000 down to 1, ten times rougher
+  each.
 - The gold ring keeps its own color and reflects half, with a
   `specular` highlight from the sun on top.
 

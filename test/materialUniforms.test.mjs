@@ -139,3 +139,24 @@ test('a reflection shows the sky colors, or the ambient ones with no sky', ()=>
     assert.deepEqual(sent.skyBottom.slice(0, 3), [0, 0, .2]);
     [.2, .2, .3].forEach((v, i)=> assert.ok(Math.abs(sent.skyHorizon[i] - v) < 1e-6, 'the horizon between them'));
 });
+
+test('an environment blurs a reflection by the angle of the highlight\'s spread, whatever the map\'s size', ()=>
+{
+    // the mip level a shininess reads: a texel of level L spans (pi/2) / size * 2^L, and the blur is half the
+    // spread of the highlight, sqrt(2 / (n + 2)) / 2, so the level is log2(size * .45) - log2(n + 2) / 2
+    const level = (size, shininess)=>
+    {
+        const {sent} = send(`render3D.environment = makeCubeMap(${size}, ()=> WHITE); render3D.reflectivity = 1;
+            render3D.shininess = ${shininess}`);
+        run('render3D.environment = undefined');
+        const [on, last, base] = sent.envParams;
+        assert.equal(on, 1);
+        return Math.min(Math.max(base - Math.log2(shininess + 2) / 2, 0), last);
+    };
+    assert.ok(level(256, 1e4) < .5, 'very high shininess is a mirror');
+    assert.ok(Math.abs(level(256, 1e3) - 1.9) < .1, 'polished is a little soft');
+    assert.ok(Math.abs(level(256, 8) - 5.2) < .1, 'rough is a wide blur');
+    assert.equal(level(256, 1), 6, 'the roughest stops at a 4 by 4 face');
+    assert.ok(Math.abs(level(64, 100) + 2 - level(256, 100)) < 1e-9, 'a map a quarter the size reads two levels lower');
+    assert.equal(send('render3D.reflectivity = 1').sent.envParams[0], 0, 'no environment, the sky colors');
+});

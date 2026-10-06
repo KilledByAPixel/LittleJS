@@ -76,6 +76,31 @@ smokeRun(async ()=>
     engineStep(1);
     const plain = smokePixel(.5, .5);
     check('with no environment it reflects the sky\'s colors as before', !smokeNear(plain, [...faces.pz, 255], 40), plain);
+    sphere.destroy();
+
+    // six images loaded by url, each a face's color with a white top half: looking ahead the -z image stands upright,
+    // its top above; images of other sizes are refused
+    const image = (color, size=16)=>
+    {
+        const canvas = document.createElement('canvas');
+        canvas.width = canvas.height = size;
+        const c = canvas.getContext('2d');
+        c.fillStyle = `rgb(${color})`;
+        c.fillRect(0, 0, size, size);
+        c.fillStyle = '#fff';
+        c.fillRect(0, 0, size, size / 2);
+        return canvas.toDataURL();
+    };
+    const urls = ['px', 'nx', 'py', 'ny', 'pz', 'nz'].map((face)=> image(faces[face]));
+    render3D.skyBox = await loadCubeMap(urls);
+    engineStep(1);
+    checkPixel('a loaded -z face shows ahead', .5, .3, [...faces.nz, 255], 8);
+    checkPixel('its top half is above', .5, .7, [255, 255, 255, 255], 8);
+    const wrong = await loadCubeMap([...urls.slice(0, 5), image(faces.nz, 8)]).then(()=> 'loaded', (e)=> e.message);
+    check('six images not all one size are refused', /square images of one size/.test(wrong), wrong);
+    const missing = await loadCubeMap([...urls.slice(0, 5), 'missing.png']).then(()=> 'loaded', (e)=> e.message);
+    check('an image that does not load says which', /missing\.png/.test(missing), missing);
+    render3D.skyBox = undefined;
     checkGLError();
 });
 </script>

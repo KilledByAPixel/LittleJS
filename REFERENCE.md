@@ -1538,7 +1538,8 @@ obj.normalMap = textureInfo             // bumps and grooves that catch the ligh
                                         // no tangents needed, any mesh with uvs works; normalMapFromHeight makes one
 obj.normalScale = 1                     // how strongly it bends the surface, 0 turns it off
 obj.reflectivity = .5                   // 0 by default, 1 a mirror; more at a glancing angle (Fresnel); shows
-                                        // render3D.environment, sharp at shininess 256 and up, blurrier lower;
+                                        // render3D.environment, as sharp as the highlight: shininess 10000 a
+                                        // mirror, 1000 polished, 10 a wide blur;
                                         // with none, the colors of render3D.sky from setSky or buildSky, or the
                                         // ambient ones with no sky; not the scene itself
 obj.emissiveMap = textureInfo           // where it glows, added on top of the lit surface so it shows in the dark
@@ -1885,7 +1886,7 @@ material.emissiveIntensity                // obj.emissive
 material.normalMap, normalScale           // obj.normalMap, obj.normalScale (a number, three.js takes a Vector2)
 material.shininess (MeshPhongMaterial)    // obj.shininess, with obj.specular the strength
 material.envMap, reflectivity             // render3D.environment for the whole scene, obj.reflectivity per object
-material.roughness (MeshStandardMaterial)  // a low obj.shininess blurs the reflection, 256 and up is a mirror
+material.roughness (MeshStandardMaterial)  // obj.shininess, 10000 a mirror, lower blurs the reflection
 material.emissiveMap, emissive            // obj.emissiveMap, obj.emissiveMapColor
 material.transparent, blending            // obj.transparent, obj.additive
 new THREE.ShaderMaterial({fragmentShader}) // obj.shader = new Shader(code), a mainImage snippet the engine wraps;
