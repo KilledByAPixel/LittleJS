@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, writeFileSync, rmSync } from 'node:fs';
+import { mkdtempSync, writeFileSync, rmSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 
@@ -53,4 +53,12 @@ test('what a TypeScript user writes type checks strict against dist/littlejs.d.t
     catch (e) { output = (e.stdout || '') + (e.stderr || ''); }
     finally { rmSync(dir, { recursive: true, force: true }); }
     assert.equal(output.trim(), '', output);
+});
+
+test('dist/littlejs.d.ts keeps Map types, built with a library that has them', () =>
+{
+    // without a target tsc types with ES5's library, where a Map is any, which a dependency declaring Map hid
+    const dts = readFileSync('dist/littlejs.d.ts', 'utf8');
+    assert.match(dts, /edgeListFixtures: Map<any, any>;/);
+    assert.match(dts, /files\?: Map<string, Blob>\): Promise<GLTFModel>/);
 });

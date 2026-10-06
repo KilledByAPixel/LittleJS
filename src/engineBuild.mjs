@@ -294,7 +294,9 @@ function typeScriptBuildStep(filename)
         // strictNullChecks keeps undefined in the types, where tsc would drop it from accessors and object types
         // whatever the JSDoc says, so a game in strict mode can set render3D.shader = undefined and is told a
         // flare may be missing; a game not in strict mode reads the same types as before
-        execSync(`npx -p typescript tsc "${filename}" --declaration --allowJs --emitDeclarationOnly --strictNullChecks --outFile "${tsFilename}"`);
+        // the target names the library tsc types with: without it tsc takes ES5's, where Map and Set do not resolve
+        // and come out as any, which went unseen while a dependency brought @types/node, which declares them
+        execSync(`npx -p typescript tsc "${filename}" --declaration --allowJs --emitDeclarationOnly --strictNullChecks --target es2022 --outFile "${tsFilename}"`);
 
         // Make declare module part use the package name littlejsengine
         let fileContent = fs.readFileSync(tsFilename, 'utf8');
