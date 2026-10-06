@@ -31,7 +31,7 @@ const earlyErrors = [];
 test('LightSystemPlugin and PostProcessPlugin made before engineInit assert with the reason', () =>
 {
     const reason = 'create the plugin after engineInit, e.g. in gameInit';
-    assert.deepEqual(earlyErrors, [reason, 'Assert failed!', reason, 'Assert failed!']);
+    assert.deepEqual(earlyErrors, [reason, 'Assert failed: ' + reason, reason, 'Assert failed: ' + reason]);
 });
 
 ///////////////////////////////////////////////////////////////////////////////

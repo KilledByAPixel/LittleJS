@@ -146,8 +146,9 @@ test('a confirm dialog destroyed another way still gives navigation back', () =>
 
 test('loadSprite and loadAtlas before engineInit fail with an assert saying what to do', () =>
 {
-    assert.equal(earlyErrors.sprite?.message, 'Assert failed!');
-    assert.equal(earlyErrors.atlas?.message, 'Assert failed!');
+    // the thrown error says what to do, as the console does
+    assert.match(earlyErrors.sprite?.message, /^Assert failed: .+/);
+    assert.match(earlyErrors.atlas?.message, /^Assert failed: .+/);
 });
 
 test('UITile calls onRender', () =>

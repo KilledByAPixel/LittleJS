@@ -51,8 +51,8 @@ const withVideoElement = (f)=>
 
 test('a UI object made before the plugin, or the plugin before engineInit, fails with an assert', () =>
 {
-    assert.equal(earlyErrors.object?.message, 'Assert failed!', 'not a TypeError on uiSystem');
-    assert.equal(earlyErrors.plugin?.message, 'Assert failed!', 'not a plugin with no context');
+    assert.match(earlyErrors.object?.message, /^Assert failed: .+/, 'not a TypeError on uiSystem');
+    assert.match(earlyErrors.plugin?.message, /^Assert failed: .+/, 'not a plugin with no context');
 });
 
 test('any UI object can be the keyInputObject without the keys throwing', () =>

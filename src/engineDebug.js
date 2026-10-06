@@ -84,7 +84,18 @@ function ASSERT(assert, ...output)
 {
     if (assert) return;
     console.assert(assert, ...output)
-    throw new Error('Assert failed!'); // halt execution
+    // the error says what went wrong, so an error box or overlay that shows only the error shows the message too: a
+    // value with a toString of its own as that, a vec2 or a color, a plain object as JSON
+    const text = output.map((value)=>
+    {
+        try
+        {
+            return value && typeof value === 'object' && value.toString === Object.prototype.toString ?
+                JSON.stringify(value) : String(value);
+        }
+        catch { return String(value); }
+    }).join(' ');
+    throw new Error(text ? 'Assert failed: ' + text : 'Assert failed!'); // halt execution
 }
 
 /** Log to console if debug is enabled, does nothing in release builds

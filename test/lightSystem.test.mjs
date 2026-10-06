@@ -79,7 +79,7 @@ test('LightSystemPlugin exposes enabled=true by default', async () =>
 test('Second LightSystemPlugin construction asserts', async () =>
 {
     const { LightSystemPlugin } = await import('../dist/littlejs.esm.js');
-    // LittleJS ASSERT throws Error('Assert failed!') and writes the 'already initialized' message to console.assert
+    // LittleJS ASSERT throws Error('Assert failed: ' and its message) and writes the 'already initialized' message to console.assert
     assert.throws(() => new LightSystemPlugin(), /Assert failed/);
 });
 

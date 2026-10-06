@@ -10,7 +10,7 @@ function clearStorage()
         delete globalThis.localStorage[k];
 }
 
-// ASSERT throws Error('Assert failed!') in the debug bundle. Release builds
+// ASSERT throws Error('Assert failed: ' and its message) in the debug bundle. Release builds
 // strip it entirely, which is intended — this is a development-time guard.
 
 test('readSaveData throws on a scalar default', () =>
