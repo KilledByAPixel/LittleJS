@@ -63,7 +63,7 @@ test(`objects knocked around a room of solid walls never leave it, seed ${seed}`
             const o = new EngineObject3D(vec3(random.float(-3, 3), random.float(-3, 3), random.float(-3, 3)));
             o.size3D = random.float() < .5 ? vec3(random.float(.2, 1)) : vec3(random.float(.2, 1), random.float(.2, 1), random.float(.2, 1));
             o.collideAsSphere3D = random.float() < .3;
-            o.setCollision(true, false); o.mass = random.float(.5, 2);
+            o.setCollision(true, random.float() < .7); o.mass = random.float(.5, 2);
             o.restitution = random.float(0, .9); o.damping = 1;
             bodies.push(o);
         }
@@ -81,4 +81,30 @@ test(`objects knocked around a room of solid walls never leave it, seed ${seed}`
         }
         found || 'clean'`);
     assert.equal(result, 'clean');
+});
+
+test('a mover shoved into a wall by another is settled against it at once, a pair asked once a frame', ()=>
+{
+    // b rests by the wall, a heavy a runs into it from behind and shoves it in; b is put back against the wall the
+    // same frame, the wall heard about b once, and a wall that lets b through, as a one way one does, keeps it
+    for (const letThrough of [false, true])
+    {
+        const { run } = loadEngine();
+        const result = JSON.parse(run(`setHeadlessMode(true); new Render3DPlugin;
+            const wall = new EngineObject3D(vec3(1, 0, 0)); wall.size3D = vec3(1, 4, 4); wall.setCollision(); wall.mass = 0;
+            let asked = 0;
+            wall.collideWithObject = (o)=> (o === b && ++asked, !${letThrough});
+            const b = new EngineObject3D(vec3(.25, 0, 0)); b.size3D = vec3(.5); b.setCollision(); b.mass = 1; b.damping = 1;
+            const a = new EngineObject3D(vec3(-.5, 0, 0)); a.size3D = vec3(.5); a.setCollision(); a.mass = 20; a.damping = 1;
+            a.velocity3D = vec3(.4, 0, 0);
+            engineObjectsUpdate();
+            JSON.stringify({b: b.pos3D.x, asked})`));
+        if (letThrough)
+            assert.ok(result.b > .25, 'a wall that lets it through keeps it: ' + result.b);
+        else
+        {
+            assert.ok(Math.abs(result.b - .25) < 1e-6, 'back against the wall: ' + result.b);
+            assert.equal(result.asked, 1, 'the wall heard about it once');
+        }
+    }
 });

@@ -519,6 +519,46 @@ function render3DSolidPush(a, b)
         b.axes ?? BOX_WORLD_AXES) : collideBoxBox3D(a.pos, a.size, b.pos, b.size);
 }
 
+// whether a touching pair resolves: both hear about it, and the answer is kept for the frame, so a pair met again as
+// one object is settled after being pushed is not asked twice; each object's own turn asks again, as it always has
+function render3DCollideAsk(a, b, push, useKept=true)
+{
+    const kept = useKept ? engineObjectsCollidePairAnswer(a, b) : undefined;
+    if (kept !== undefined) return kept;
+    const resolveA = a.collideWithObject(b, push), resolveB = b.collideWithObject(a, push.scale(-1));
+    const resolve = !!(resolveA && resolveB);
+    engineObjectsCollidePairAdd(a, b, resolve);
+    engineObjectsCollidePairAdd(b, a, resolve);
+    return resolve;
+}
+
+// push an object pushed by another out of the solids that do not move, mass 0, back to the side it was pushed from;
+// they take the touch as any pair does, so a one way platform still lets it through
+function render3DSettleFixed(o, from)
+{
+    if (o.destroyed || !o.collideSolidObjects) return;
+    let shape = render3DSolidShape(o);
+    const reachO = render3DSolidReach(o);
+    for (const b of engineObjectsCollide)
+    {
+        if (b === o || b.mass || !b.isSolid || b.destroyed || !(b instanceof EngineObject3D) || b.parent || b.sync2D)
+            continue;
+        const p = shape.pos, q = b.pos3D, reach = reachO + render3DSolidReach(b);
+        const dx = p.x - q.x, dy = p.y - q.y, dz = p.z - q.z;
+        if (dx*dx + dy*dy + dz*dz > reach*reach) continue;
+        const shapeB = render3DSolidShape(b);
+        let push = render3DSolidPush(shape, shapeB);
+        if (!push || !render3DCollideAsk(o, b, push)) continue;
+        if (push.dot(shape.pos.subtract(from)) > 0)
+            push = render3DSolidPushBack(shape, shapeB, from) ?? push;
+        o.pos3D = o.pos3D.add(push);
+        shape = render3DSolidShape(o);
+        const normal = push.normalize();
+        if (o.velocity3D.dot(normal) < 0)
+            o.velocity3D = o.velocity3D.reflect(normal, o.restitution);
+    }
+}
+
 // what moves shape a back clear of shape b to the side it came from: along an axis it was clear of b on before it
 // moved, the least of those, as 2D resolves it from where the object was; undefined when it overlapped on every axis
 // before too, or a box is turned, which keeps the least push
@@ -588,9 +628,7 @@ function render3DCollideSolid(a, from)
             push = render3DSolidPushBack(shapeA, shapeB, from) ?? push;
 
         // both objects hear about it, and either one can take the touch over
-        const resolveA = a.collideWithObject(b, push);
-        const resolveB = b.collideWithObject(a, push.scale(-1));
-        if (!resolveA || !resolveB) continue;
+        if (!render3DCollideAsk(a, b, push, false)) continue;
 
         // standing: resting on a box's face within the upper one's groundAngle of level holds it there, the push
         // turned straight up, as far as it takes to leave the surface, so it does not creep down a ramp; only what
@@ -609,10 +647,14 @@ function render3DCollideSolid(a, from)
         const total = a.mass + b.mass;
         const weightA = !a.mass ? 0 : !b.mass ? 1 : b.mass / total;
         const weightB = !b.mass ? 0 : !a.mass ? 1 : a.mass / total;
+        const bFrom = weightB ? b.pos3D.copy() : undefined;
         a.pos3D = a.pos3D.add(push.scale(weightA));
         b.pos3D = b.pos3D.subtract(push.scale(weightB));
         if (weightA)
             shapeA = render3DSolidShape(a); // it moved, so the next solid must be tested against where it is now
+        // b had its turn already, so a push into a wall is settled against the fixed solids now, or it would end the
+        // frame in the wall, and a hard enough shove would carry it through
+        bFrom && render3DSettleFixed(b, bFrom);
         // mass 0 keeps its velocity too, so a moving platform keeps moving, and what hits it bounces by its own
         // restitution as it would off a static wall
         const normal = push.normalize();
