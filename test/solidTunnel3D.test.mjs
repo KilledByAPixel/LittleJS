@@ -284,3 +284,23 @@ test('a wall that blocks solids but is not solid itself holds a shoved crate too
         assert.ok(result.a < result.bEnd - .5 + 1e-6, order + ': the pusher stays behind the crate: ' + JSON.stringify(result));
     }
 });
+
+test('a crate shoved into a voxel wall by a pusher is settled against the wall, not left inside the block', ()=>
+{
+    // the settle after a push saw the solid objects only, and the level's blocks were left to the crate's next turn
+    for (const pusherFirst of [true, false])
+    {
+        const { run } = loadEngine();
+        const worst = run(`setHeadlessMode(true); new Render3DPlugin;
+            const map = new VoxelMap(vec3(0, -4, -4), vec3(16, 8, 8));
+            for (let y = 0; y < 8; ++y) for (let z = 0; z < 8; ++z) map.setVoxel(vec3(10, y, z), 1); // a wall at x 10 to 11
+            const make = (x, size, mass)=> { const o = new EngineObject3D(vec3(x, 0, 0)); o.size3D = vec3(size, 2, 2);
+                o.setCollision(); o.mass = mass; o.damping = 1; o.restitution = 0; return o; };
+            const a = ${pusherFirst} ? make(5, .5, 20) : undefined, b = make(8, .5, 1), pusher = a || make(5, .5, 20);
+            let worst = 0;
+            for (let i = 40; i--;) { pusher.velocity3D = vec3(.4, 0, 0); engineObjectsUpdate(); worst = Math.max(worst, b.pos3D.x); }
+            map.destroy();
+            worst`);
+        assert.ok(worst < 9.75 + 1e-6, (pusherFirst ? 'pusher first' : 'crate first') + ': the crate stays out of the wall: ' + worst);
+    }
+});

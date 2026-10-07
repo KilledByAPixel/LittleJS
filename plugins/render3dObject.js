@@ -680,6 +680,9 @@ function render3DSettleFixed(o, pusher)
         if (o.velocity3D.dot(normal) < 0)
             o.velocity3D = o.velocity3D.reflect(normal, o.restitution);
     }
+    // and out of the level, the voxel and height maps, from where it was when the pass began, as its own turn does
+    if (o.collideLevel && o.mass)
+        render3DCollideLevel(o, render3DCollideFrom(o), undefined);
 }
 
 // what moves shape a back clear of shape b to the side it came from: along an axis the two were clear on where they
