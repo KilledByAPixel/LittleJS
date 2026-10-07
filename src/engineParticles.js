@@ -267,14 +267,19 @@ class ParticleEmitter extends EngineObject
                 // counted in particles, so a new rate applies at once; the update that ends the emit time adds a
                 // hair, as the steps' sum comes out a rounding under it and lost the last particle
                 this.emitTimeBuffer += rate * step + (this.emitTime && this.emitElapsed >= this.emitTime ? 1e-6 : 0);
-                // spread along the move since the last update, the last one where it is now
+                // spread along the move since the last update, the last one where it is now; a jump further than
+                // anything travels in an update, twice objectMaxSpeed, a teleport or a respawn, spreads nothing
+                const travelled = this.emitFrom && this.pos.distance(this.emitFrom) <= 2 * objectMaxSpeed;
                 const count = floor(this.emitTimeBuffer);
-                for (let i = count; i--; --this.emitTimeBuffer)
+                try
                 {
-                    this.emitBehind = i / count;
-                    this.emitParticle();
+                    for (let i = count; i--; --this.emitTimeBuffer)
+                    {
+                        this.emitBehind = travelled ? i / count : 0;
+                        this.emitParticle();
+                    }
                 }
-                this.emitBehind = 0;
+                finally { this.emitBehind = 0; } // a create callback that throws leaves no offset for the next
             }
         }
         else if (this.particles.length === 0)

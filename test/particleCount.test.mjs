@@ -88,3 +88,20 @@ test('a moving emitter spreads a frame\'s particles along its move, 2D and 3D, n
     for (const gaps of spread)
         assert.deepEqual(gaps, [.1, .1, .1, .1, .1, .1, .1, .1, .1, .1], 'from a tenth past where it was, a tenth apart');
 });
+
+test('an emitter that jumps, teleported or respawned, starts its particles where it is, not along the jump', async ()=>
+{
+    // a move larger than anything can travel in one update is no travel, 2D and 3D
+    const { run } = await engine();
+    const xs = JSON.parse(run(`(()=> {
+        const xs2 = [], xs3 = [];
+        const e2 = new ParticleEmitter(vec2(), 0, 0, 0, 600, 0, undefined, WHITE, WHITE, WHITE, WHITE, 1, .1, .1, 0);
+        const e3 = new ParticleEmitter3D(vec3(), 0, 0, 600); e3.speed = 0;
+        engineStep(2);
+        e2.particleCreateCallback = (p)=> xs2.push(p.pos.x);
+        e3.particleCreateCallback = (p)=> xs3.push(p.pos.x);
+        e2.pos.x += 1000; e3.pos3D.x += 1000;
+        engineStep(1);
+        return JSON.stringify([Math.min(...xs2), Math.min(...xs3)]); })()`));
+    assert.ok(xs[0] > 999 && xs[1] > 999, 'all at the new place: ' + xs);
+});
