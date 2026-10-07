@@ -54,3 +54,10 @@ test('a line that needs nothing joined is read without the segmenter and handed 
         run(`textCharacters(${JSON.stringify(line)})`);
     assert.equal(calls, 4, 'a mark, a joiner, an emoji and a variation selector');
 });
+
+test('an image font draws a letter with an accent of its own as its letter, as it does one with a combining accent', ()=>
+{
+    const precomposed = String.fromCharCode(0xe9, 0xf1, 0xc5); // e acute, n tilde, A ring
+    assert.deepEqual(glyphsOf(precomposed), [code('e'), code('n'), code('A')]);
+    assert.deepEqual(glyphsOf(String.fromCharCode(0xdf)), [box], 'one with no letter in it stays a box');
+});

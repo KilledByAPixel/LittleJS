@@ -47,3 +47,19 @@ test('particleEffect takes null for no options, and keeps emitRect false with a 
         return JSON.stringify({circle: e.emitCircle, x: e.emitSize.x}); })()`));
     assert.deepEqual(circle, {circle: true, x: 2}, 'a circle as wide as the vec2\'s x');
 });
+
+test('a text field deletes a whole character with Backspace, an emoji family too, and counts maxLength in them', () =>
+{
+    const { run } = loadEngine({ Intl });
+    run('setHeadlessMode(true); new UISystemPlugin');
+    const family = String.fromCodePoint(0x1f468, 0x200d, 0x1f469, 0x200d, 0x1f467);
+    const key = (k)=> run(`field.onKeyDown({key: ${JSON.stringify(k)}, code: '', repeat: false})`);
+    run(`var field = new UITextInput(vec2(), vec2(200, 50), ${JSON.stringify('hi' + family)})`);
+    key('Backspace');
+    assert.equal(run('field.text'), 'hi', 'the family as one');
+    run(`field.text = ${JSON.stringify('a' + String.fromCodePoint(0x1f44d))}; field.maxLength = 3;`);
+    key('b');
+    assert.equal(run('field.text'), 'a' + String.fromCodePoint(0x1f44d) + 'b', 'two characters, room for a third');
+    key('c');
+    assert.equal(run('field.text.length'), 4, 'and no more');
+});

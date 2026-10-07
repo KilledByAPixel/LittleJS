@@ -1361,8 +1361,22 @@ function textCharacters(line)
         Array.from(line, (c)=> c.codePointAt(0)).filter((c)=> c !== 0x200d && c !== 0xfe0f && !(c >= 0x300 && c < 0x370));
 }
 
-// character i of what textCharacters gave, its code
-const textCharacterCode = (characters, i)=> typeof characters == 'string' ? characters.charCodeAt(i) : characters[i];
+// the characters of a text as a reader counts them, each a string, an emoji with its joiners one; code points where
+// graphemes can not be split
+const textGraphemes = (text)=> textSegmenter ? Array.from(textSegmenter.segment(text), (s)=> s.segment) : [...text];
+
+// character i of what textCharacters gave, its code; a Latin letter with an accent of its own, as é, is its letter, as
+// an e with a combining accent is, for the fonts that draw only the plain letters
+const textCharacterCode = (characters, i)=>
+    textBaseLetter(typeof characters == 'string' ? characters.charCodeAt(i) : characters[i]);
+const textBaseLetters = new Map;
+function textBaseLetter(code)
+{
+    if (code < 0xc0 || code >= 0x250) return code;
+    let base = textBaseLetters.get(code);
+    base === undefined && textBaseLetters.set(code, base = String.fromCharCode(code).normalize('NFD').charCodeAt(0));
+    return base;
+}
 
 /** Draw text in screen space
  *  Automatically splits new lines into rows

@@ -1383,7 +1383,7 @@ class UITextInput extends UIObject
 
         ASSERT(isStringLike(text), 'ui text must be a string');
 
-        /** @property {number} - Max length of input (0 = no limit) */
+        /** @property {number} - Max length of input in characters as a reader counts them (0 = no limit) */
         this.maxLength = 0;
 
         // set properties, as a string, which typing adds to
@@ -1431,7 +1431,7 @@ class UITextInput extends UIObject
             return; // a key held when editing began repeats, it should not type or stop editing
         this.text += ''; // a game may have set a number
         if (key === 'Backspace')
-            this.text = [...this.text].slice(0, -1).join(''); // a whole character, an emoji is two code units
+            this.text = textGraphemes(this.text).slice(0, -1).join(''); // a whole character, an emoji family too
         else if (key === 'Enter' || key === 'Escape')
             this.stopEditing();
         else if (key.length === 1) // printable characters
@@ -1439,7 +1439,7 @@ class UITextInput extends UIObject
             // ctrl and cmd shortcuts do not type, but AltGr reports ctrl and alt and types characters like @
             if ((e.ctrlKey || e.metaKey) && !e.getModifierState?.('AltGraph'))
                 return;
-            if (!this.maxLength || this.text.length < this.maxLength)
+            if (!this.maxLength || textGraphemes(this.text).length < this.maxLength)
                 this.text += key;
         }
     }
