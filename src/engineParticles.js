@@ -220,6 +220,10 @@ class ParticleEmitter extends EngineObject
         /** @type {Vector2|undefined} */
         this.previousPos = undefined;
         this.previousAngle = this.angle;
+        // where it was last update, and how far back toward it the particle being made starts, 0 to 1: a moving
+        // emitter spreads an update's particles along its move, where they came out in a clump where it is
+        this.emitFrom = vec2();
+        this.emitBehind = 0;
     }
 
     /** Update the emitter to spawn particles, called automatically by engine once each frame */
@@ -245,6 +249,8 @@ class ParticleEmitter extends EngineObject
         }
         // tracked even while velocityInheritance is off, so turning it on does not jump
         this.previousAngle = this.angle;
+        this.emitFrom.x = this.previousPos.x;
+        this.emitFrom.y = this.previousPos.y;
         this.previousPos.x = this.pos.x;
         this.previousPos.y = this.pos.y;
 
@@ -261,8 +267,14 @@ class ParticleEmitter extends EngineObject
                 // counted in particles, so a new rate applies at once; the update that ends the emit time adds a
                 // hair, as the steps' sum comes out a rounding under it and lost the last particle
                 this.emitTimeBuffer += rate * step + (this.emitTime && this.emitElapsed >= this.emitTime ? 1e-6 : 0);
-                for (; this.emitTimeBuffer >= 1; --this.emitTimeBuffer)
+                // spread along the move since the last update, the last one where it is now
+                const count = floor(this.emitTimeBuffer);
+                for (let i = count; i--; --this.emitTimeBuffer)
+                {
+                    this.emitBehind = i / count;
                     this.emitParticle();
+                }
+                this.emitBehind = 0;
             }
         }
         else if (this.particles.length === 0)
@@ -307,8 +319,9 @@ class ParticleEmitter extends EngineObject
         {
             // into the world: a local space particle is turned with the emitter when it draws instead
             this.emitCircle || (pos = pos.rotate(this.angle));
-            pos.x += this.pos.x;
-            pos.y += this.pos.y;
+            const behind = this.emitBehind; // back along its move, as the update spreads them
+            pos.x += this.pos.x + (this.emitFrom.x - this.pos.x) * behind;
+            pos.y += this.pos.y + (this.emitFrom.y - this.pos.y) * behind;
             angle += this.angle;
         }
 

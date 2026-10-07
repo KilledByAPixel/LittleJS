@@ -1103,6 +1103,11 @@ class ParticleEmitter3D extends EngineObject3D
         this.worldPos3D = undefined;
         this.emitTimeBuffer = 1; // the first particle comes at once, as the 2D emitter's does
         this.emitElapsed = 0; // seconds of its emit time it has emitted for, counted by its updates
+        // where it was last update, and how far back toward it the particle being made starts, 0 to 1: a moving
+        // emitter spreads an update's particles along its move, as the 2D emitter does
+        /** @type {Vector3|undefined} */
+        this.emitFrom = undefined;
+        this.emitBehind = 0;
     }
 
     /** Spawn new particles, move the live ones, and go away when done */
@@ -1110,6 +1115,7 @@ class ParticleEmitter3D extends EngineObject3D
     {
         // one transform for the frame: where the emitter is, and how big the effect it makes is
         const matrix = render3DObjectMatrix(this); // the object's own, read only
+        this.emitFrom = this.worldPos3D;
         this.worldPos3D = matrix.getTranslation(); // remembered for when the parent is destroyed
         const scale = render3DMaxScale(matrix.m);
         this.particleView.scale = scale; // the callbacks read it from the view instead of working it out each time
@@ -1127,8 +1133,14 @@ class ParticleEmitter3D extends EngineObject3D
             {
                 // the update that ends the emit time adds a hair, as the steps' sum comes out a rounding under it
                 this.emitTimeBuffer += rate * step + (this.emitTime && this.emitElapsed >= this.emitTime ? 1e-6 : 0);
-                for (; this.emitTimeBuffer >= 1; --this.emitTimeBuffer)
+                // spread along the move since the last update, the last one where it is now
+                const count = floor(this.emitTimeBuffer);
+                for (let i = count; i--; --this.emitTimeBuffer)
+                {
+                    this.emitBehind = i / count;
                     this.emitParticle();
+                }
+                this.emitBehind = 0;
             }
         }
         else if (!this.particleCount)
@@ -1230,6 +1242,12 @@ class ParticleEmitter3D extends EngineObject3D
         const direction = matrix.transformDirection(randVector3(1, this.emitConeAngle)).normalize();
 
         const pos = matrix.transformPoint(offset), speed = this.speed * random() * scale;
+        const from = this.emitFrom, behind = this.emitBehind; // back along its move, as the update spreads them
+        if (from && behind)
+        {
+            const here = this.worldPos3D;
+            pos.x += (from.x - here.x) * behind, pos.y += (from.y - here.y) * behind, pos.z += (from.z - here.z) * behind;
+        }
         const colorStart = randColor(this.colorStartA, this.colorStartB, true), colorEnd = randColor(this.colorEndA, this.colorEndB, true);
 
         // room for one more, doubling as the set grows, the trails along with it
