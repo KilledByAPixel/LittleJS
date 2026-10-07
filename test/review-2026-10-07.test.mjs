@@ -47,3 +47,18 @@ test('a Shader can be let go of: dispose takes it off the engine\'s list, more t
     assert.equal(run('glShaderObjects.length'), before, 'let go of, twice for one');
     assert.equal(run('shaders[0].program'), undefined);
 });
+
+test('a release build goes on past an error in its first frame, as it does in any later one', async ()=>
+{
+    const errors = [];
+    const { run } = loadEngine({ console: { ...console, error: (...a)=> errors.push(a.join(' ')) } },
+        'setHeadlessMode(true)', 'littlejs.release.js');
+    run('var updates = 0');
+    const started = await run(`engineInit(()=> {}, ()=> { if (!updates++) throw new Error('first'); }).then(()=> 'started', (e)=> 'rejected ' + e)`);
+    await new Promise((resolve)=> setTimeout(resolve, 200));
+    const frames = run('frame');
+    run('setEngineManualStep(true)'); // stops the timer loop, so the test can end
+    assert.equal(started, 'started');
+    assert.ok(frames > 3, 'it runs on: ' + frames);
+    assert.ok(errors.some((e)=> e.includes('first')), 'and says what went wrong: ' + errors);
+});

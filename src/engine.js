@@ -750,7 +750,10 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
         engineLoads = undefined;
         await init;
         engineUpdateInternal = engineUpdate; // engineStep only runs once the game is set up
-        engineManualStep || engineUpdate();
+        if (engineManualStep) return;
+        if (debug) return engineUpdate(); // a debug build stops at an error, the first frame's as any
+        try { engineUpdate(); }
+        catch (error) { engineFrameFailed(error); } // a release build goes on past it, as on any later frame
     }
 }
 
@@ -857,6 +860,18 @@ function engineUpdateCanvas()
 
 // ask for the next frame of the loop, once however often it is called before that frame, and skip it if manual
 // step was turned on since, so turning it off and on again within a frame can not start a second loop
+// a release build goes on past an error in a frame, a frozen game is the worst a player can get; an error is logged
+// when it is not the last one again, one every frame would flood the console
+function engineFrameFailed(error)
+{
+    const text = String(error);
+    text === engineFrameErrorLast || console.error(error);
+    engineFrameErrorLast = text;
+    // the frame's input is cleared as its tick would have, or a key press that threw would be pressed again
+    inputUpdatePost();
+    engineScheduleFrame();
+}
+
 function engineScheduleFrame()
 {
     if (engineFrameScheduled) return;
@@ -867,17 +882,7 @@ function engineScheduleFrame()
         if (engineManualStep) return;
         if (debug) return engineUpdateInternal(frameTimeMS); // a debug build stops at an error, where it shows it
         try { engineUpdateInternal(frameTimeMS); }
-        catch (error)
-        {
-            // a release build goes on past an error in a frame, a frozen game is the worst a player can get; an error
-            // is logged when it is not the last one again, one every frame would flood the console
-            const text = String(error);
-            text === engineFrameErrorLast || console.error(error);
-            engineFrameErrorLast = text;
-            // the frame's input is cleared as its tick would have, or a key press that threw would be pressed again
-            inputUpdatePost();
-            engineScheduleFrame();
-        }
+        catch (error) { engineFrameFailed(error); }
     };
     if (typeof requestAnimationFrame === 'function')
         requestAnimationFrame(next);
