@@ -2375,7 +2375,8 @@ function editorPaletteDrawObjects(canvas)
         else
         {
             context.fillStyle = '#ccc';
-            context.fillText(name.slice(0, 4), x + cell / 2, y + cell / 2);
+            const label = textGraphemes(name).slice(0, 4).join(''); // whole characters, never half an emoji
+            context.fillText(label, x + cell / 2, y + cell / 2);
         }
         if (editorObjectBrush?.length !== 1 || editorObjectBrush[0].type !== name) return;
         context.strokeStyle = '#4af';

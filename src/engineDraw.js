@@ -1362,8 +1362,9 @@ function textCharacters(line)
 }
 
 // the characters of a text as a reader counts them, each a string, an emoji with its joiners one; code points where
-// graphemes can not be split
-const textGraphemes = (text)=> textSegmenter ? Array.from(textSegmenter.segment(text), (s)=> s.segment) : [...text];
+// graphemes can not be split, and code units for a text that needs nothing joined, the quick way
+const textGraphemes = (text)=> !textJoins.test(text) ? text.split('') :
+    textSegmenter ? Array.from(textSegmenter.segment(text), (s)=> s.segment) : [...text];
 
 // character i of what textCharacters gave, its code; a Latin letter with an accent of its own, as é, is its letter, as
 // an e with a combining accent is, for the fonts that draw only the plain letters

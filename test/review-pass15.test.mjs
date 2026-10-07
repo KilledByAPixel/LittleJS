@@ -63,3 +63,12 @@ test('a text field deletes a whole character with Backspace, an emoji family too
     key('c');
     assert.equal(run('field.text.length'), 4, 'and no more');
 });
+
+test('an effect name cut at 60 characters is cut between characters, never inside an emoji', () =>
+{
+    const { run } = loadEngine({ Intl });
+    run('setHeadlessMode(true)');
+    const name = 'a'.repeat(59) + String.fromCodePoint(0x1f600) + 'b';
+    const kept = run(`particleEffectSanitize({name: ${JSON.stringify(name)}}).name`);
+    assert.equal(kept, 'a'.repeat(59) + String.fromCodePoint(0x1f600), 'the emoji whole, as the 60th character');
+});
