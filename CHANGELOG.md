@@ -40,6 +40,9 @@ What changed in each release, newest first. Releases before 1.20.0 are on the
 
 ### Fixes
 
+- setEnablePhysicsSolver(false) stops 3D collision too, solids, the level, the speed cap and 3D particles hitting the level, as it does in 2D, where 3D objects still collided
+- Shader.dispose() frees a shader's programs and takes it off the engine's list, which kept every Shader made for the life of the page; a scene that makes its shaders each time it starts can let them go
+- Wavedash: a board or achievement named like a built-in property, as constructor or toString, is one like any other
 - A Box2dObject's EngineObject physics fields, which Box2D does not read (velocity, angleVelocity, damping, angleDamping, mass, friction, restitution, gravityScale), are documented as unused with the Box2D call to use, and a debug build warns once when one is set; damping out of 0 to 1 asserts in setObjectDefaultDamping and setObjectDefaultAngleDamping, and on a 3D object as on a 2D one
 - A lens flare whose sun or light is hidden when it is made starts hidden, where it showed at full and faded out over its fade time
 - A moving particle emitter, 2D or 3D, spreads each update's particles along its move since the last one, where they came out in a clump at where it is, so a fast emitter leaves an even trail instead of beads

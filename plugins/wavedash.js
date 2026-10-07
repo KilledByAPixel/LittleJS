@@ -106,10 +106,10 @@ class WavedashPlugin
         /** @property {Object<string, Promise<string|undefined>>} - Each leaderboard's id by its name, once Wavedash
          *  has made or found it, undefined when it could not
          *  @type {Object<string, Promise<string|undefined>>} */
-        this.leaderboards = {};
-        this.leaderboardSettings = leaderboards; // how each one sorts and shows its scores
+        this.leaderboards = Object.create(null); // no inherited names, a board may be called constructor
+        this.leaderboardSettings = leaderboards; // how each one sorts and shows its scores, read as its own entries
         this.achievementsSent = new Set; // the achievements Wavedash took this visit, or refused for good
-        this.achievementTries = {}; // how many times each one not taken yet was sent
+        this.achievementTries = Object.create(null); // how many times each one not taken yet was sent
         this.achievementRetry = undefined; // the timer that sends refused ones again
 
         // Wavedash keeps its loading screen until init, which is called once
@@ -145,7 +145,9 @@ class WavedashPlugin
     {
         ASSERT(typeof name === 'string' && name !== '', 'Wavedash: a leaderboard name must be a string', name);
         if (this.leaderboards[name]) return this.leaderboards[name];
-        const {lowerWins=false, display='number'} = this.leaderboardSettings[name] || {};
+        const settings = Object.prototype.hasOwnProperty.call(this.leaderboardSettings, name) ?
+            this.leaderboardSettings[name] : undefined; // its own entry, not an inherited one
+        const {lowerWins=false, display='number'} = settings || {};
         const known = wavedashDisplayTypes.hasOwnProperty(display);
         ASSERT(known, 'Wavedash: a leaderboard display is number, seconds, milliseconds or ticks', display);
         const made = this.call('getOrCreateLeaderboard', name, lowerWins ? 0 : 1, known ? wavedashDisplayTypes[display] : 0);

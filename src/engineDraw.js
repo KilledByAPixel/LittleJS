@@ -579,6 +579,12 @@ class Shader
         this.program3D = undefined;
         glShaderObjects.push(this); // a lost context drops the programs of every one
     }
+
+    /** Let go of this shader: its compiled programs are freed and it leaves the engine's list of shaders, which
+     *  keeps every one made for a lost context, so a scene made again and again, or an editor trying snippets, does
+     *  not keep them all; calling it again does nothing, and a draw with it afterwards compiles it again and takes it
+     *  back, so only let go of one no object still draws with when it should stay freed */
+    dispose() { glShaderDispose(this); }
 }
 
 ///////////////////////////////////////////////////////////////////////////////

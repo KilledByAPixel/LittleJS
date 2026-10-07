@@ -713,8 +713,8 @@ class Render3DPlugin
         this.cameraDepthHeight = 0;
         this.depthPass = false; // drawing the camera's depth, a shadow pass seen from the camera
         this.contextGeneration = 0;  // counts context losses, a mesh uploaded under an older one uploads again
-        /** @type {Map<WebGLProgram, Object<string, WebGLUniformLocation|null>>} */
-        this.uniforms = new Map;     // uniform locations by program
+        /** @type {WeakMap<WebGLProgram, Object<string, WebGLUniformLocation|null>>} */
+        this.uniforms = new WeakMap; // uniform locations by program, weak so a freed one goes with it
         /** @type {Object<string, Array<number>>} */
         this.uniformValues = {};     // last values sent for the cached vec4 uniforms
         this.shadowMapDrawn = false; // the shadow map is drawn by the first pass of the frame
@@ -1870,6 +1870,7 @@ function render3DFragmentSource(fragmentCode)
 function render3DShaderProgram(shader)
 {
     ASSERT(shader instanceof Shader, 'render3D.shader must be a Shader, not the snippet itself');
+    shader.program3D || glShaderTrack(shader); // one let go of and drawn again is kept for a lost context again
     const program = shader.program3D ||= glCreateProgram(RENDER3D_VERTEX_SOURCE, render3DFragmentSource(shader.fragmentCode));
     return glFailedPrograms.has(program) ? render3D.program : program; // one that did not build draws as with none
 }
@@ -1919,7 +1920,7 @@ function render3DInitGL()
     }
     const gl = glContext, r = render3D;
     glFlush(); // a pending 2D batch draws now, while the engine's own buffer, vertex array and program are bound
-    r.uniforms = new Map;
+    r.uniforms = new WeakMap;
     r.uniformValues = {};
     render3DShadowCut = undefined; // the shadow shader is new too
     r.attribValues = []; // a fresh context has its own attribute defaults, so nothing sent before it counts

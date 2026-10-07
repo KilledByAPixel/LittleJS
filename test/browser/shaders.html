@@ -15,6 +15,7 @@ smokeRun(async ()=>
     setEngineManualStep(true);
     setCanvasFixedSize(vec2(64));
     setCanvasClearColor(rgb(0, 0, 0));
+    let object;
     await engineInit(()=>
     {
         setCameraScale(1);
@@ -24,7 +25,7 @@ smokeRun(async ()=>
         const white = new TileInfo(vec2(), vec2(8), new TextureInfo(canvas));
 
         // the right half is an object with a Shader that makes it cyan
-        const object = new EngineObject(vec2(16, 0), vec2(32, 64), white);
+        object = new EngineObject(vec2(16, 0), vec2(32, 64), white);
         // a define of a name the engine's own code uses, its vertex color d, which must not reach that code
         object.shader = new Shader('#define d vec4(0)\nvoid mainImage(out vec4 c, vec2 uv) { c = vec4(0., 1., 1., 1.); }');
 
@@ -49,6 +50,15 @@ smokeRun(async ()=>
     const shaded = smokePixel(.75, .5), plain = smokePixel(.25, .5);
     check('a Shader on a 2D object gives its color', shaded[1] > 230 && shaded[2] > 230, shaded);
     check('the rest of the scene passes through', plain[1] < 25 && plain[2] < 25, plain);
+
+    // a Shader let go of frees its program and leaves the list, and drawn again it compiles again and is kept again
+    const shader = object.shader, first = shader.program;
+    shader.dispose();
+    check('a disposed Shader lets go of its program', !shader.program && !glShaderObjects.includes(shader));
+    engineStep();
+    const again = smokePixel(.75, .5);
+    check('drawn again it compiles again and gives its color', again[1] > 230 && again[2] > 230 && !!shader.program &&
+        shader.program !== first && glShaderObjects.includes(shader), again);
     checkGLError();
 });
 </script>

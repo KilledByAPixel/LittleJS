@@ -185,7 +185,9 @@ class EngineObject3D extends EngineObject
         // side it came from, a move that overlaps a solid at all is stopped on its side, so a fast object goes through
         // only one thinner than its move less its own size, as in 2D, while neither is turned; only for what collides,
         // anything else moves as fast as it is told
-        const cap = this.clampSpeed && !this.sync2D && (this.collideSolidObjects || this.collideLevel && this.mass) ?
+        // nothing of collision while setEnablePhysicsSolver is off, as in 2D, the game moves them its own way
+        const solve = enablePhysicsSolver && !this.sync2D;
+        const cap = this.clampSpeed && solve && (this.collideSolidObjects || this.collideLevel && this.mass) ?
             objectMaxSpeed : 0;
         // a moving object keeps out of the level, the height maps and voxel maps, from where it was before it moved,
         // and a solid it hits sends it back to the side it came from
@@ -202,9 +204,9 @@ class EngineObject3D extends EngineObject
             const gx = moving?.x ?? 0, gz = moving?.z ?? 0;
             v.x = gx + (v.x - gx) * friction, v.z = gz + (v.z - gz) * friction;
         }
-        oldPos && this.collideLevel && render3DCollideLevel(this, oldPos, ground);
+        oldPos && this.collideLevel && solve && render3DCollideLevel(this, oldPos, ground);
         // the engine only runs this for objects that own where they are, a child rides along with its parent
-        if (this.collideSolidObjects && !this.sync2D)
+        if (this.collideSolidObjects && solve)
             render3DCollideSolid(this);
     }
 

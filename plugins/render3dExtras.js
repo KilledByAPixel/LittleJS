@@ -1167,7 +1167,7 @@ class ParticleEmitter3D extends EngineObject3D
         const damping = this.damping, angleDamping = this.angleDamping, g = render3D.gravity, share = this.gravityScale;
         const gravityX = g.x * share * scale, gravityY = (this.gravity + g.y * share) * scale;
         const gravityZ = g.z * share * scale;
-        const collideLevel = this.collideLevel && render3DLevel.length;
+        const collideLevel = this.collideLevel && enablePhysicsSolver && render3DLevel.length; // as 2D particles
         const updateCallback = this.particleUpdateCallback, destroyCallback = this.particleDestroyCallback;
         for (let i = this.particleCount; i--;)
         {

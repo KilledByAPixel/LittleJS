@@ -327,6 +327,9 @@ new Shader(fragmentCode)          // fragmentCode defines void mainImage(out vec
                                   // style; it gives the surface color, then the object's color and additive color
                                   // apply in 2D, and the lighting, shadows and fog in 3D
 obj.shader = shader               // any EngineObject or EngineObject3D; draws that share a Shader share a batch
+shader.dispose()                  // frees its programs and takes it off the engine's list, which keeps every Shader
+                                  // for a lost context; for one made each time a scene starts; drawn again it
+                                  // compiles again, so let go of only one nothing draws with
 // names in the snippet: iChannel0 the texture, iTime, iResolution, localUV 0 to 1 across the sprite or the mesh uv,
 // premultipliedTexture true for a render target or a smooth image (tilesPixelated false), whose rgb and alpha
 // change together;
@@ -684,7 +687,7 @@ EngineObject.clampSpeed    // Hold each axis of velocity to objectMaxSpeed while
 EngineObject.parent / children // Set by addChild, a child is placed by its parent and sits out solid collision
 
 // Engine Object settings
-enablePhysicsSolver = true    // Enable collisions, between objects and with tiles?
+enablePhysicsSolver = true    // Enable collisions, between objects and with tiles, and in 3D with solids and the level?
 objectDefaultMass = 1         // Default object mass for collisions
 objectDefaultDamping = 1      // Fraction of velocity kept each frame (1 keeps all)
 objectDefaultAngleDamping = 1 // Fraction of angular velocity kept each frame (1 keeps all)

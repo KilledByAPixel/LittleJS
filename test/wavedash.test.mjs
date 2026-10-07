@@ -233,3 +233,16 @@ test('with debugMedals set nothing is sent to Wavedash, and the engine shows the
     assert.equal(run('medalsDisplayQueue.length'), 1);
     assert.deepEqual(log.filter((l)=> l[0] === 'achievement'), []);
 });
+
+test('a board or an achievement named like an object\'s own built-in, as constructor or toString, is one like any', async ()=>
+{
+    const log = [];
+    const { run, runTimers } = game(mockSDK(log, 1)); // refuses the first achievement once
+    run(`var medal = new WavedashMedal(0, 'toString', 'Odd'); medalsInit('test medals');
+        new WavedashPlugin({}); medal.unlock();`);
+    assert.equal(await run(`wavedash.postScore('constructor', 5)`), true);
+    assert.deepEqual(log.filter((l)=> l[0] !== 'init' && l[0] !== 'achievement'),
+        [['board', 'constructor', 1, 0], ['upload', 'id-constructor', 5, true]], 'made and posted to, higher wins');
+    runTimers();
+    assert.deepEqual(log.filter((l)=> l[0] === 'achievement'), [['achievement', 'toString']], 'sent again, not given up');
+});
