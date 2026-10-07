@@ -483,3 +483,24 @@ test('a voxel map\'s transparent blocks draw with the map\'s material and in its
     assert.equal(seen.inStage, true, 'in the stage after the 2D scene with the map');
     assert.equal(seen.transparent, true, 'and still blended');
 });
+
+test('a short move that starts on a block\'s face, coming in, hits it there; one inside a block hits nothing', () =>
+{
+    // a particle at rest on a block, or one stopped on its side last frame, starts its next move on the face; the
+    // raycast meets the block at 0, which was taken for a start inside it
+    const map = new VoxelMap(vec3(), vec3(4));
+    map.setVoxel(vec3(1, 1, 1), 1); // the block from 1 to 2 on each axis
+    const faces = [[vec3(1.5, 2, 1.5), vec3(1.5, 1.5, 1.5), 'top'], [vec3(1.5, 1, 1.5), vec3(1.5, 1.5, 1.5), 'bottom'],
+        [vec3(1, 1.5, 1.5), vec3(1.5, 1.5, 1.5), 'low x'], [vec3(2, 1.5, 1.5), vec3(1.5, 1.5, 1.5), 'high x'],
+        [vec3(1.5, 1.5, 1), vec3(1.5, 1.5, 1.5), 'low z'], [vec3(1.5, 1.5, 2), vec3(1.5, 1.5, 1.5), 'high z']];
+    for (const [from, to, face] of faces)
+    {
+        const hit = map.levelSegment3D(from, to);
+        assert.ok(hit, face + ' face');
+        assert.equal(hit.distance, 0, face);
+        assert.ok(hit.normal.dot(from.subtract(to)) > 0, face + ': the normal faces back out');
+    }
+    assert.equal(map.levelSegment3D(vec3(1.5, 1.4, 1.5), vec3(1.5, 1.2, 1.5)), undefined, 'inside');
+    assert.equal(map.levelSegment3D(vec3(1.5, 2, 1.5), vec3(1.5, 2.5, 1.5)), undefined, 'on the face going away');
+    map.destroy();
+});

@@ -179,9 +179,10 @@ class EngineObject3D extends EngineObject
         this.sync2D || (this.groundObject = undefined);
         if (this.clampSpeed && !this.sync2D && (this.collideSolidObjects || this.collideLevel && this.mass))
         {
-            // each axis within objectMaxSpeed, as in 2D, which with the push back to the side it came from keeps a fast
-            // object out of a solid thinner than its move, as long as it is not turned; only for what collides,
-            // anything else moves as fast as it is told
+            // each axis within objectMaxSpeed, as in 2D; with the push back to the side it came from, a move that overlaps
+            // a solid at all is stopped on its side, so a fast object goes through only one thinner than its move less
+            // its own size, as in 2D, while neither is turned; the clamp comes before gravity, as in 2D, so
+            // a move can be gravity more; only for what collides, anything else moves as fast as it is told
             const v = this.velocity3D, s = objectMaxSpeed;
             v.x = clamp(v.x, -s, s), v.y = clamp(v.y, -s, s), v.z = clamp(v.z, -s, s);
         }
