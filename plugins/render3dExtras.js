@@ -404,14 +404,14 @@ function buildText3D(text, size=1, depth=.2, font=engineImageFont)
     let glyphs = render3DGlyphCache.get(font); // unit sized, scaled when combined
     glyphs || render3DGlyphCache.set(font, glyphs = new Map);
     const charSize = vec2(size * tileInfo.size.x / tileInfo.size.y, size);
-    const mesh = new Mesh, lines = (text + '').split(/\r?\n/); // a Windows line ending too
+    const mesh = new Mesh, lines = textLines(text); // a Windows line ending too
     lines.forEach((line, j)=>
     {
         const y = ((lines.length - 1) / 2 - j) * charSize.y * RENDER3D_TEXT_LEADING;
         const characters = textCharacters(line); // as ImageFont reads them, an emoji one box
         for (let i = 0; i < characters.length; ++i)
         {
-            const charCode = characters[i];
+            const charCode = textCharacterCode(characters, i);
             const index = charCode < 32 || charCode > 127 ? 95 : charCode - 32; // like ImageFont
             if (!index) continue; // space
             let glyph = glyphs.get(index);

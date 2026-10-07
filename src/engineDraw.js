@@ -1329,23 +1329,38 @@ function drawFontCheck(context, fontText, font)
             `a family name with spaces or digits goes in quotes, as "'Press Start 2P'"`);
 }
 
+// the lines of a text, split at a Windows line ending too
+const textLines = (text)=> (text += '').includes('\r') ? text.split(/\r?\n/) : text.split('\n');
+
+// how many lines a text has, counted without splitting it
+function textLineCount(text)
+{
+    let count = 1;
+    for (let i = -1; (i = text.indexOf('\n', i + 1)) >= 0;)
+        ++count;
+    return count;
+}
+
 // the characters of a line of text as a reader counts them, each as its first code point: an emoji with its joiners
-// is one, and a letter with combining accents its letter; plain text takes the quick way, it is most of what is drawn
+// is one, and a letter with combining accents its letter; plain text takes the quick way, it is most of what is drawn,
+// so read character i with textCharacterCode
 const textIntl = /** @type {any} */ (globalThis.Intl); // Segmenter is newer than the library the source is checked with
 const textSegmenter = textIntl?.Segmenter && new textIntl.Segmenter;
+// a line with no mark, joiner or character past the 16 bit range, plain or accented letters of their own, Greek or
+// Japanese, has one code unit a character, so it is handed back as it is, read with charCodeAt, and nothing is made
+const textJoins = /[\p{M}\u200d\u1100-\u11ff\u{10000}-\u{10ffff}]/u;
+/** @return {string|Array<number>} */
 function textCharacters(line)
 {
-    if (/^[\x20-\x7e]*$/.test(line))
-    {
-        const codes = new Array(line.length);
-        for (let i = line.length; i--;)
-            codes[i] = line.charCodeAt(i);
-        return codes;
-    }
+    if (!textJoins.test(line))
+        return line;
     // where graphemes can not be split, code points with the joiners, variation selectors and accents left out
     return textSegmenter ? Array.from(textSegmenter.segment(line), (s)=> s.segment.codePointAt(0)) :
         Array.from(line, (c)=> c.codePointAt(0)).filter((c)=> c !== 0x200d && c !== 0xfe0f && !(c >= 0x300 && c < 0x370));
 }
+
+// character i of what textCharacters gave, its code
+const textCharacterCode = (characters, i)=> typeof characters == 'string' ? characters.charCodeAt(i) : characters[i];
 
 /** Draw text in screen space
  *  Automatically splits new lines into rows
@@ -1377,7 +1392,7 @@ function drawTextScreen(text, pos, size, color=WHITE, lineWidth=0, lineColor=BLA
 
     if (headlessMode && !context) return; // headless has no canvas, only a context passed in is drawn to
     
-    const lines = (text+'').split(/\r?\n/); // a Windows line ending too
+    const lines = textLines(text); // a Windows line ending too
     // save before style mutations so caller's context state is preserved
     context.save();
     context.fillStyle = color.toString();
@@ -1917,7 +1932,7 @@ class ImageFont
         const tileInfo = this.tileInfo.frame(0);
 
         // draw each line of text, centered vertically like drawTextScreen when center is set
-        const lines = (text+'').split(/\r?\n/); // a Windows line ending too
+        const lines = textLines(text); // a Windows line ending too
         const centerOffsetY = center ? (lines.length-1) * glyphSize.y / 2 : 0;
         lines.forEach((line, j)=>
         {
@@ -1926,7 +1941,7 @@ class ImageFont
             for (let i=characters.length; i--;)
             {
                 // get the glyph, out of range characters use the last one
-                const charCode = characters[i];
+                const charCode = textCharacterCode(characters, i);
                 this.getGlyphPos(charCode < 32 || charCode > 127 ? 95 : charCode - 32, tileInfo.pos);
 
                 // snap the glyph edges to whole pixels

@@ -36,3 +36,21 @@ test('a Windows line ending breaks a line as \n does', ()=>
         return JSON.stringify(drawn); })()`));
     assert.deepEqual(lines, ['ab', 'cd']);
 });
+
+test('a line that needs nothing joined is read without the segmenter and handed back as it is', ()=>
+{
+    // accented letters of their own, Greek and Japanese are one code unit a character; only marks, joiners and
+    // characters past the 16 bit range need the segmenter, which costs about 20 microseconds and an array a line
+    let calls = 0;
+    const real = new Intl.Segmenter;
+    const { run } = loadEngine({ Intl: { Segmenter: class { segment(line) { ++calls; return real.segment(line); } } } });
+    run('setHeadlessMode(true)');
+    for (const line of ['hello', 'café ñ', 'Ωμέγα', '日本語'])
+        run(`textCharacters(${JSON.stringify(line)})`);
+    assert.equal(calls, 0, 'plain lines');
+    assert.equal(run(`textCharacters('café')`), 'café', 'given back as it is, nothing made');
+    for (const line of ['e' + String.fromCharCode(0x301), 'a' + String.fromCharCode(0x200d) + 'b',
+        String.fromCodePoint(0x1f600), String.fromCharCode(0x2764, 0xfe0f)])
+        run(`textCharacters(${JSON.stringify(line)})`);
+    assert.equal(calls, 4, 'a mark, a joiner, an emoji and a variation selector');
+});
