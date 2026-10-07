@@ -1,4 +1,4 @@
-let mouseLight;
+let mouseLight, sun;
 
 // walls cast shadows by default
 class Wall extends EngineObject
@@ -51,11 +51,22 @@ function gameInit()
     new Light(vec2(-7, 4), 8, hsl(.1,.8,.9));
     new Light(vec2(0, -4), 8, hsl(.55,.8,.9));
     mouseLight = new Light(vec2(), 10, WHITE);
+
+    // a low sun from the upper left, and a background wall it lights from
+    // its edges; S turns the sun
+    sun = new DirectionalLight(vec2(1, -.6), hsl(.12, .5, .6));
+    sun.shadowLength = 8;
+    const back = new EngineObject(vec2(-8, -5), vec2(6, 3), undefined, 0,
+        hsl(0, 0, .5));
+    back.castShadow = false;
+    back.castBackgroundShadow = true;
 }
 
 function gameUpdate()
 {
     mouseLight.pos = mousePos;
+    if (keyWasPressed('KeyS'))
+        sun.direction = sun.direction.rotate(PI / 8);
 }
 
 function gameRender()
@@ -113,11 +124,21 @@ has `castShadow` too, where it means the light's rays stop at casters.
 A light inside a caster is blocked completely, which is what happens
 to the mouse light when the mouse is inside a pillar.
 
+### The sun
+`new DirectionalLight(direction, color)` is a sun: it lights the whole
+scene from one direction, here down and to the right, and S turns it.
+Objects that cast shadows throw long ones across the floor, fading
+out by the light's `shadowLength`, 8 here. The gray block at the left sets
+`castShadow = false` and `castBackgroundShadow = true`, which makes it
+a background: the sun lights it only at the edges that face the
+light, fading in by `backgroundDepth`.
+
 ## Try it
 - Set `coin.castShadow` to `true` and the coin casts a shadow.
 - Set `lava.emissive` to `0`: the brick is dark until a light reaches
   it.
 - Make the red glass green: its `hsl(0, 1, .5)` to `hsl(.3, 1, .5)`.
+- Set `sun.shadowLength = 20;`, the default: longer shadows.
 - Add `lightSystem.shadowSoftness = 0;` after the `shadows` line. It is
   how much light bleeds into the side of a caster that faces the light,
   `.5` by default.
