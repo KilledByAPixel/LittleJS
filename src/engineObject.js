@@ -80,6 +80,9 @@ class EngineObject
         this.shader = undefined;
         /** @property {boolean} - Does this object draw into the light system's shadow map; false for a floor layer, a background, a pickup */
         this.castShadow = true;
+        /** @property {boolean} - Does this object draw into the light system's background map, which a
+         *  DirectionalLight lights only at its edges facing the light; for a background layer, with castShadow false */
+        this.castBackgroundShadow = false;
         /** @property {number} - With the light system, how much it lights itself: 0 lit only by the lights, 1 full
          *  brightness in its own colors whatever the lights do, between partly; drawn into the lightmap through
          *  renderEmissive, as 3D's emissive. Exact for solid pixels; a partly transparent one is self lit by its alpha

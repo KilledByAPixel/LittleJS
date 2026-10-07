@@ -50,6 +50,7 @@ export
     lightSystem,
     LightSystemPlugin,
     Light,
+    DirectionalLight,
 
     // Audio Effects
     AudioEffect,

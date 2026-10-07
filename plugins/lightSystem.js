@@ -135,6 +135,12 @@ class LightSystemPlugin
         this.shadowMapOrigin = vec2();
         /** @property {number} - World size the shadow map covers, set each shadow pass */
         this.shadowMapWorldSize = 0;
+        /** @property {DirectionalLight|undefined} - The scene's directional light, a sun, or undefined, read only
+         *  @type {DirectionalLight|undefined} */
+        this.directionalLight = undefined;
+        /** @property {number} - Pixels across the square textures a directional light is built in, covering the
+         *  shadow map's area; larger is sharper and slower */
+        this.directionalTextureSize = 256;
         this.shadowMapSizeAllocated = 0;     // sizes the textures were made at, to remake them on a change
         this.shadowTextureSizeAllocated = 0;
 
@@ -779,5 +785,65 @@ class Light extends EngineObject
         if (this.glowTileInfo?.textureInfo !== texture)
             this.glowTileInfo = new TileInfo(vec2(), texture.size, texture);
         drawTile(this.pos, size, this.glowTileInfo, this.color, 0, false, undefined, true, false);
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+/**
+ * A DirectionalLight is a sun for the 2D light system: it lights the whole scene from one direction, added into the
+ * lightmap with the point lights
+ * - One at a time, made after the LightSystemPlugin, lightSystem.directionalLight is the one
+ * - Its castShadow lets foreground casters, objects with castShadow, throw long shadows across open space, fading out
+ *   by shadowLength; a light does not need lightSystem.shadows for that
+ * - Objects with castBackgroundShadow, a background layer, are dark to it inside and lit at the edges that face it,
+ *   fading in by backgroundDepth
+ * @extends EngineObject
+ * @memberof LightSystem
+ * @example
+ * new DirectionalLight(vec2(1, -1), hsl(.1, .3, 1)); // a warm sun shining down and to the right
+ */
+class DirectionalLight extends EngineObject
+{
+    /** Create the scene's directional light
+     *  @param {Vector2} [direction] - The way the light travels
+     *  @param {Color} [color] - Color of the light; alpha modulates intensity */
+    constructor(direction=vec2(1, -1), color=WHITE)
+    {
+        ASSERT(!!lightSystem, 'make a LightSystemPlugin before a DirectionalLight');
+        ASSERT(isVector2(direction) && !!(direction.x || direction.y),
+            'DirectionalLight: direction is a vec2 that is not zero, the way the light travels', direction);
+        ASSERT(!lightSystem?.directionalLight, 'there is one DirectionalLight at a time, destroy the old one first');
+        super(vec2(), vec2(), undefined, 0, color);
+        this.mass = 0; // it does not fall in a game with gravity
+
+        /** @property {Vector2} - The way the light travels */
+        this.direction = direction.copy();
+        /** @property {number} - World units a long shadow reaches before it has faded out */
+        this.shadowLength = 20;
+        /** @property {number} - World units the light gets into a background area from its edges facing it */
+        this.backgroundDepth = 3;
+        // castShadow is EngineObject's, true: foreground casters throw long shadows; it draws nothing, so never casts
+        lightSystem && (lightSystem.directionalLight = this);
+    }
+
+    /** Check its settings, called automatically each frame */
+    update()
+    {
+        ASSERT(this.shadowLength >= 0 && this.backgroundDepth >= 0,
+            'DirectionalLight: shadowLength and backgroundDepth are world units, 0 or more', this.shadowLength,
+            this.backgroundDepth);
+    }
+
+    /** A directional light draws nothing of its own, it is added into the lightmap by the plugin */
+    render() {}
+
+    /** Destroy the light, the scene goes without it from the next frame
+     *  @param {boolean} [immediate] */
+    destroy(immediate)
+    {
+        if (lightSystem?.directionalLight === this)
+            lightSystem.directionalLight = undefined;
+        super.destroy(immediate);
     }
 }

@@ -1131,6 +1131,16 @@ light.glow = 0          // size across of a soft hazy glow over the light, like 
                         // over the lit scene after the lightmap, so it shows in the dark, in front of everything
 light.glowFalloff = 1   // how fast the glow fades from its middle, .5 a wide haze, 2 a tight bright core
 
+// One directional light, a sun: lights the whole scene from one direction, added with the point lights
+new DirectionalLight(direction=vec2(1,-1), color=WHITE) // the way the light travels, its color, alpha the strength
+sun.castShadow = true      // foreground casters (castShadow) throw long shadows; no lightSystem.shadows needed
+sun.shadowLength = 20      // world units a long shadow reaches before it has faded out
+sun.backgroundDepth = 3    // world units the light gets into a background area from its edges facing it
+lightSystem.directionalLight          // the one there is, or undefined; a second one asserts, destroy the first
+lightSystem.directionalTextureSize = 256 // pixels across its work textures, which cover the shadow map's area
+obj.castBackgroundShadow = false      // a background: dark to the directional light inside, lit at its edges;
+                                      // a background layer sets castShadow = false and this true
+
 // Per-object lightmap contribution hook (on every EngineObject)
 class LavaTile extends EngineObject {
     renderLight() {
