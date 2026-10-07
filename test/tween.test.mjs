@@ -724,3 +724,23 @@ test('a tween whose last callback throws is ended, not called again every update
     assert.equal(calls, after);
     tweenStopAll();
 });
+
+test('a tween whose callback throws anywhere is ended: mid-run, on restart, and as a loop starts again', () =>
+{
+    tweenStopAll();
+    const ended = (make, act)=>
+    {
+        let calls = 0, throwing = false;
+        const tween = make((v)=> { ++calls; if (throwing) throw new Error('broke'); });
+        throwing = true;
+        try { act(tween); } catch {}
+        const after = calls;
+        for (let i = 5; i--;)
+            try { tweenUpdate(.05); } catch {}
+        return [tween.isActive(), calls - after];
+    };
+    assert.deepEqual(ended((f)=> new Tween(f, 0, 1, 1), ()=> tweenUpdate(.1)), [false, 0], 'mid-run');
+    assert.deepEqual(ended((f)=> new Tween(f, 0, 1, 1), (t)=> t.restart()), [false, 0], 'on restart');
+    assert.deepEqual(ended((f)=> new Tween(f, 0, 1, .1).loop(), ()=> tweenUpdate(.15)), [false, 0], 'a loop again');
+    tweenStopAll();
+});

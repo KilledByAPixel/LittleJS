@@ -28,6 +28,19 @@ function tweenActivate(tween)
 }
 function tweenDeactivate(tween) { tween.active = false; }
 
+// call a tween's callback; one that throws is ended, or it would be called and throw at every update, unless the
+// callback itself started it again, which is its own new run (pass, the update it is in, undefined outside one)
+function tweenCall(tween, value, pass)
+{
+    try { tween.callback(value); }
+    catch (error)
+    {
+        if (tween.active && (pass === undefined || tween.activePass < pass))
+            tweenDeactivate(tween);
+        throw error;
+    }
+}
+
 // True if the value is an instance of a class that exposes a numeric-percent
 // `lerp(other, percent)` method (Vector2, Color, or any future class).
 function tweenIsLerpable(v) { return v && typeof v.lerp === 'function'; }
@@ -129,8 +142,7 @@ class Tween
 
         tweenActivate(this);
         // Snap target to start immediately; one that throws here is no tween, the game never gets it to stop
-        try { callback(this.interp(duration)); }
-        catch (error) { tweenDeactivate(this); throw error; }
+        tweenCall(this, this.interp(duration));
     }
 
     /** Set the easing curve and return this for chaining
@@ -210,7 +222,7 @@ class Tween
         this.lastTime = time;
         this.lastTimeReal = timeReal;
         tweenActivate(this);
-        this.callback(this.interp(this.duration));
+        tweenCall(this, this.interp(this.duration));
     }
 
     /** True if this tween is in the active list and not paused
@@ -528,7 +540,7 @@ function tweenNextIteration(tween, passed, continuation)
     tweenCarryOvershoot(tween);
     tween.thenCallback = continuation;
     tweenActivate(tween);
-    tween.callback(tween.interp(tween.life)); // snap to where the new iteration is
+    tweenCall(tween, tween.interp(tween.life)); // snap to where the new iteration is
     return true;
 }
 
@@ -639,15 +651,13 @@ function tweenStep(t, pass, enginePath, gameDelta, realDelta)
     t.life -= dt;
     if (t.life > 1e-9) // the engine's deltas add up a rounding error short of the duration
     {
-        t.callback(t.interp(t.life));
+        tweenCall(t, t.interp(t.life), pass);
     }
     else
     {
         // Completion: fire end value, remove from active, start the next iteration
         // of a loop or pingPong, or when there is none it has completed, fire onComplete
-        // one whose last call throws is ended all the same, or it would be called and throw at every update
-        try { t.callback(t.interp(0)); }
-        catch (error) { t.active && t.activePass < pass && tweenDeactivate(t); throw error; }
+        tweenCall(t, t.interp(0), pass); // one whose last call throws is ended all the same
         if (!t.active || t.activePass >= pass)
             return; // stopped or restarted by its own callback, the run it was on ends without completing
         tweenDeactivate(t);
