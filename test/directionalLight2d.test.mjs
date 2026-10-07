@@ -13,16 +13,17 @@ function engine()
 }
 const thrown = (run, code)=> run(`(()=> { try { ${code} } catch (e) { return e.message; } })()`);
 
-test('a DirectionalLight has its direction, color and settings, and is the light system\'s', ()=>
+test('a DirectionalLight has its sunDirection, toward the sun as 3D\'s, its color and settings, and is the light system\'s', ()=>
 {
     const run = engine();
     const light = JSON.parse(run(`var sun = new DirectionalLight(vec2(2, -1), hsl(.1, .5, .9));
-        JSON.stringify({x: sun.direction.x, y: sun.direction.y, castShadow: sun.castShadow,
+        JSON.stringify({x: sun.sunDirection.x, y: sun.sunDirection.y, castShadow: sun.castShadow,
             shadowLength: sun.shadowLength, backgroundDepth: sun.backgroundDepth, current: lightSystem.directionalLight === sun,
             size: lightSystem.directionalTextureSize})`));
     assert.deepEqual(light, {x: 2, y: -1, castShadow: true, shadowLength: 20, backgroundDepth: 3, current: true, size: 512});
     run('sun.destroy()');
-    assert.equal(run('new DirectionalLight().direction.y'), -1, 'down and to the right by default');
+    assert.deepEqual(JSON.parse(run('JSON.stringify(new DirectionalLight().sunDirection)')), {x: -1, y: 1},
+        'the sun up and to the left by default, shining down and to the right');
 });
 
 test('one at a time: a second asserts while the first lives, and destroying it lets another be made', ()=>
@@ -41,8 +42,8 @@ test('it asserts without the plugin, and on a direction that is no vector or zer
     run('setHeadlessMode(true); console.assert = ()=> {};');
     assert.match(thrown(run, 'new DirectionalLight') ?? '', /LightSystemPlugin/);
     run('new LightSystemPlugin');
-    assert.match(thrown(run, 'new DirectionalLight(vec2())') ?? '', /direction/);
-    assert.match(thrown(run, 'new DirectionalLight(5)') ?? '', /direction/);
+    assert.match(thrown(run, 'new DirectionalLight(vec2())') ?? '', /sunDirection/);
+    assert.match(thrown(run, 'new DirectionalLight(5)') ?? '', /sunDirection/);
 });
 
 test('a negative shadowLength or backgroundDepth asserts at its update', ()=>

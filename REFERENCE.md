@@ -1132,7 +1132,8 @@ light.glow = 0          // size across of a soft hazy glow over the light, like 
 light.glowFalloff = 1   // how fast the glow fades from its middle, .5 a wide haze, 2 a tight bright core
 
 // One directional light, a sun: lights the whole scene from one direction, added with the point lights
-new DirectionalLight(direction=vec2(1,-1), color=WHITE) // the way the light travels, its color, alpha the strength
+new DirectionalLight(sunDirection=vec2(-1,1), color=WHITE) // toward the sun, as render3D.sunDirection; its color
+sun.sunDirection           // toward the sun, it shines the other way
 sun.castShadow = true      // foreground casters (castShadow) throw long shadows; no lightSystem.shadows needed
 sun.shadowLength = 20      // world units a long shadow reaches before it has faded out
 sun.backgroundDepth = 3    // world units the light gets into a background area from its edges facing it

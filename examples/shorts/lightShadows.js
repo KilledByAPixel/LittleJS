@@ -54,7 +54,7 @@ function gameInit()
 
     // a low sun from the upper left, and a background wall it lights from
     // its edges; S turns the sun
-    sun = new DirectionalLight(vec2(1, -.6), hsl(.12, .5, .6));
+    sun = new DirectionalLight(vec2(-1, .6), hsl(.12, .5, .6));
     sun.shadowLength = 8;
     const back = new EngineObject(vec2(-8, -5), vec2(6, 3), undefined, 0,
         hsl(0, 0, .5));
@@ -66,7 +66,7 @@ function gameUpdate()
 {
     mouseLight.pos = mousePos;
     if (keyWasPressed('KeyS'))
-        sun.direction = sun.direction.rotate(PI / 8);
+        sun.sunDirection = sun.sunDirection.rotate(PI / 8);
 }
 
 function gameRender()
@@ -125,8 +125,9 @@ A light inside a caster is blocked completely, which is what happens
 to the mouse light when the mouse is inside a pillar.
 
 ### The sun
-`new DirectionalLight(direction, color)` is a sun: it lights the whole
-scene from one direction, here down and to the right, and S turns it.
+`new DirectionalLight(sunDirection, color)` is a sun: it lights the
+whole scene from one side. `sunDirection` points toward the sun, here
+up and to the left, so it shines down and to the right; S turns it.
 Objects that cast shadows throw long ones across the floor, fading
 out by the light's `shadowLength`, 8 here. The gray block at the left sets
 `castShadow = false` and `castBackgroundShadow = true`, which makes it

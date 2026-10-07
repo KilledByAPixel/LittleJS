@@ -36,7 +36,7 @@ smokeRun(async ()=>
     check('with no directional light there is no background map', !lightSystem.backgroundMap);
     check('and the floor is dark', bright(-2, 3) < 40, bright(-2, 3));
 
-    const sun = new DirectionalLight(vec2(1, 0), rgb(1, 1, 1));
+    const sun = new DirectionalLight(vec2(-1, 0), rgb(1, 1, 1)); // the sun to the left, shining right
     engineStep(3);
     check('a directional light makes the background map', !!lightSystem.backgroundMap);
     check('and the shadow map, with shadows off', !!lightSystem.shadowMap && !lightSystem.shadows);
@@ -49,13 +49,13 @@ smokeRun(async ()=>
     check('the background area is lit at its edge facing the light', bright(1.3, -5) > 80, bright(1.3, -5));
     check('and dark inside', bright(6.5, -5) < 40, bright(6.5, -5));
 
-    sun.direction = vec2(0, -1); // straight down
+    sun.sunDirection = vec2(0, 1); // the sun straight up, shining down
     engineStep(3);
     check('a vertical light casts straight down', bright(-4, -3) < 120 && bright(-2, -3) > 200,
         [bright(-4, -3), bright(-2, -3)]);
 
     // a lost context takes its textures with it, and they are made again once it is back
-    sun.direction = vec2(1, 0);
+    sun.sunDirection = vec2(-1, 0);
     const lose = glContext.getExtension('WEBGL_lose_context');
     const event = (name)=> new Promise((resolve, reject)=>
     {

@@ -566,7 +566,7 @@ class LightSystemPlugin
                 if (ls.shadersFailed) return;
             }
             const p = ls.directionalPrograms, N = ls.directionalTextureSize, W = ls.shadowMapWorldSize;
-            const d = light.direction.normalize(), toUV = (texels)=> vec2(d.x * texels / N, d.y * texels / N);
+            const d = light.sunDirection.normalize(-1), toUV = (texels)=> vec2(d.x * texels / N, d.y * texels / N);
             const casts = light.castShadow ? 1 : 0;
             const cap = ceil(log2(N)) + 1; // passes enough to cross the texture, so a long shadow fades out, never cut off
 
@@ -1049,24 +1049,24 @@ class Light extends EngineObject
  * @extends EngineObject
  * @memberof LightSystem
  * @example
- * new DirectionalLight(vec2(1, -1), hsl(.1, .3, 1)); // a warm sun shining down and to the right
+ * new DirectionalLight(vec2(-1, 1), hsl(.1, .3, 1)); // a warm sun up and to the left, shining down and to the right
  */
 class DirectionalLight extends EngineObject
 {
     /** Create the scene's directional light
-     *  @param {Vector2} [direction] - The way the light travels
+     *  @param {Vector2} [sunDirection] - Toward the sun, it shines the other way, as render3D.sunDirection
      *  @param {Color} [color] - Color of the light; alpha modulates intensity */
-    constructor(direction=vec2(1, -1), color=WHITE)
+    constructor(sunDirection=vec2(-1, 1), color=WHITE)
     {
         ASSERT(!!lightSystem, 'make a LightSystemPlugin before a DirectionalLight');
-        ASSERT(isVector2(direction) && !!(direction.x || direction.y),
-            'DirectionalLight: direction is a vec2 that is not zero, the way the light travels', direction);
+        ASSERT(isVector2(sunDirection) && !!(sunDirection.x || sunDirection.y),
+            'DirectionalLight: sunDirection is a vec2 that is not zero, toward the sun', sunDirection);
         ASSERT(!lightSystem?.directionalLight, 'there is one DirectionalLight at a time, destroy the old one first');
         super(vec2(), vec2(), undefined, 0, color);
         this.mass = 0; // it does not fall in a game with gravity
 
-        /** @property {Vector2} - The way the light travels */
-        this.direction = direction.copy();
+        /** @property {Vector2} - Toward the sun, it shines the other way, as render3D.sunDirection */
+        this.sunDirection = sunDirection.copy();
         /** @property {number} - World units a long shadow reaches before it has faded out */
         this.shadowLength = 20;
         /** @property {number} - World units the light gets into a background area from its edges facing it */
