@@ -196,16 +196,22 @@ function engineCollideGridBuild(list)
     let extent = 0;
     for (const o of list)
         extent += min(max(abs(o.size.x), abs(o.size.y)), 16) || 0; // a negative size is a mirrored one
-    const grid = {size: max(2 * extent / list.length, .5), cells: new Map, at: new Map, index: new Map, big: new Set};
-    list.forEach((o, i)=> { grid.index.set(o, i); engineCollideGridPlace(grid, o); });
+    const index = new Map;
+    const grid = {size: max(2 * extent / list.length, .5), cells: new Map, at: new Map, index, big: new Set,
+        seen: new Map, stamp: 0, byIndex: (a, b)=> index.get(a) - index.get(b)}; // what a query found, and its order
+    list.forEach((o, i)=> { index.set(o, i); engineCollideGridPlace(grid, o); });
     return grid;
 }
 
-// the cells an object's box covers, first and last along x and y; a negative size is a mirrored sprite of that size
+// the cells an object's box covers, first and last along x and y, in one kept array to read at once; a negative size
+// is a mirrored sprite of that size
+const engineCollideGridBox = [0, 0, 0, 0];
 function engineCollideGridCells(grid, o)
 {
-    const s = grid.size, w = abs(o.size.x) / 2, h = abs(o.size.y) / 2;
-    return [floor((o.pos.x - w) / s), floor((o.pos.y - h) / s), floor((o.pos.x + w) / s), floor((o.pos.y + h) / s)];
+    const s = grid.size, w = abs(o.size.x) / 2, h = abs(o.size.y) / 2, box = engineCollideGridBox;
+    box[0] = floor((o.pos.x - w) / s), box[1] = floor((o.pos.y - h) / s);
+    box[2] = floor((o.pos.x + w) / s), box[3] = floor((o.pos.y + h) / s);
+    return box;
 }
 
 // whether a box is kept in its cells: not over 1024 of them, and within 2^31 cells of the origin, past which a cell
@@ -244,20 +250,38 @@ function engineCollideGridPlace(grid, o)
     grid.at.set(o, [x0, y0, x1, y1, big]);
 }
 
-// the solids a mover is near, after a place in the list, in list order
-function engineCollideGridNear(grid, o, after)
+// the solids a mover is near, after a place in the list, in list order, filled into near; each found once, by the
+// query's stamp
+function engineCollideGridNear(grid, o, after, near)
 {
     const [x0, y0, x1, y1] = engineCollideGridCells(grid, o);
-    const near = new Set(grid.big);
+    const stamp = ++grid.stamp;
+    near.length = 0;
+    for (const other of grid.big)
+        engineCollideGridAdd(grid, other, after, stamp, near);
     if (engineCollideGridFits(x0, y0, x1, y1))
+    {
         for (let x = x0; x <= x1; ++x)
         for (let y = y0; y <= y1; ++y)
-            for (const other of grid.cells.get(x * 1048576 + y) || [])
-                near.add(other);
+        {
+            const cell = grid.cells.get(x * 1048576 + y);
+            if (cell)
+                for (const other of cell)
+                    engineCollideGridAdd(grid, other, after, stamp, near);
+        }
+    }
     else
-        grid.index.forEach((i, other)=> near.add(other)); // a mover too big for cells is near everything
-    const index = grid.index;
-    return [...near].filter((other)=> index.get(other) > after).sort((a, b)=> index.get(a) - index.get(b));
+        for (const other of grid.index.keys()) // a mover too big for cells is near everything
+            engineCollideGridAdd(grid, other, after, stamp, near);
+    near.sort(grid.byIndex);
+}
+
+// add a solid to what a query found, once, when it is after the place in the list
+function engineCollideGridAdd(grid, other, after, stamp, near)
+{
+    if (grid.seen.get(other) === stamp) return;
+    grid.seen.set(other, stamp);
+    grid.index.get(other) > after && near.push(other);
 }
 
 // the solids a mover checks, as checking every one would reach them: in list order, and found again from where it is
@@ -265,13 +289,14 @@ function engineCollideGridNear(grid, o, after)
 function* engineCollideGridWalk(o)
 {
     const grid = engineCollideGrid.built ||= engineCollideGridBuild(engineCollideGrid.list);
-    let after = -1, x, y, w, h, near = [], k = 0;
+    let after = -1, x, y, w, h, k = 0;
+    const near = [];
     for (;;)
     {
         if (o.pos.x !== x || o.pos.y !== y || o.size.x !== w || o.size.y !== h)
         {
             x = o.pos.x, y = o.pos.y, w = o.size.x, h = o.size.y;
-            near = engineCollideGridNear(grid, o, after);
+            engineCollideGridNear(grid, o, after, near);
             k = 0;
         }
         if (k >= near.length) return;
