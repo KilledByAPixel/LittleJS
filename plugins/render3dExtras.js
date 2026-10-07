@@ -652,11 +652,26 @@ class HeightMap extends EngineObject3D
     {
         const p = o.pos3D, m = this.pos3D, size = this.mapSize;
         if (abs(p.x - m.x) > size.x / 2 || abs(p.z - m.z) > size.y / 2) return; // off the map
-        const half = o.size3D.y * abs(o.scale3D.y) / 2, ground = this.getHeight(p.x, p.z);
-        // one that stood on it and is not rising keeps to it going downhill, as far down as it moved across, so it
-        // stays grounded down a slope as steep as 45 degrees instead of falling in small hops
-        const follow = wasOn && o.velocity3D.y <= 0 ? hypot(p.x - oldPos.x, p.z - oldPos.z) : 0;
-        if (p.y - half > ground + follow) return;
+        const half = o.size3D.y * abs(o.scale3D.y) / 2;
+        let ground = this.getHeight(p.x, p.z);
+        // only the ends of a move are kept above the ground, so a ridge it goes over is met by a sweep, as a
+        // particle's move is, a quarter of its height up from its foot, from where it was to where it would stand: a
+        // bump lower than that is walked over as before, and it goes up on the near side of anything taller
+        const lift = half / 2, endFoot = max(p.y - half, ground) + lift;
+        const hit = oldPos && this.levelSegment3D(vec3(oldPos.x, oldPos.y - half + lift, oldPos.z), vec3(p.x, endFoot, p.z));
+        if (hit && hit.distance)
+        {
+            p.x = oldPos.x + (p.x - oldPos.x) * hit.distance;
+            p.z = oldPos.z + (p.z - oldPos.z) * hit.distance;
+            ground = this.getHeight(p.x, p.z);
+        }
+        else
+        {
+            // one that stood on it and is not rising keeps to it going downhill, as far down as it moved across, so
+            // it stays grounded down a slope as steep as 45 degrees instead of falling in small hops
+            const follow = wasOn && o.velocity3D.y <= 0 ? hypot(p.x - oldPos.x, p.z - oldPos.z) : 0;
+            if (p.y - half > ground + follow) return;
+        }
         p.y = ground + half;
         const v = o.velocity3D;
         if (v.y < 0)

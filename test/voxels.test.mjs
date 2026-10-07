@@ -504,3 +504,43 @@ test('a short move that starts on a block\'s face, coming in, hits it there; one
     assert.equal(map.levelSegment3D(vec3(1.5, 2, 1.5), vec3(1.5, 2.5, 1.5)), undefined, 'on the face going away');
     map.destroy();
 });
+
+test('an object fast enough to step over a height map ridge in one move meets it, and still walks the flat as before', () =>
+{
+    // a ridge 2 tall and a cell wide each side, both ends of a move of 1 clear of it: only the ends were checked
+    const { run } = loadEngine();
+    const result = JSON.parse(run(`setHeadlessMode(true); new Render3DPlugin;
+        const row = [0, 0, 0, 0, 1, 0, 0, 0, 0];
+        const ridge = new HeightMap([row, row, row], vec2(4), 2);
+        const o = new EngineObject3D(vec3(-.5, .25, 0)); o.size3D = vec3(.5); o.setCollision(); o.mass = 1;
+        o.velocity3D = vec3(1, 0, 0); o.damping = 1;
+        o.updatePhysics();
+        const walker = new EngineObject3D(vec3(-1.9, .25, .5)); walker.size3D = vec3(.5); walker.setCollision();
+        walker.mass = 1; walker.damping = 1; walker.velocity3D = vec3(.2, 0, 0);
+        walker.updatePhysics();
+        JSON.stringify({x: o.pos3D.x, y: o.pos3D.y, walked: walker.pos3D.x})`));
+    assert.ok(result.x < .1, 'stopped at the ridge, not past it: ' + result.x);
+    assert.ok(result.y > .25, 'and up on its side: ' + result.y);
+    assert.ok(Math.abs(result.walked + 1.7) < 1e-9, 'a move on the flat goes its whole way: ' + result.walked);
+});
+
+test('an object walking up a slope or over gently rolling ground covers its whole way, as before the ridge sweep', () =>
+{
+    const { run } = loadEngine();
+    const walked = JSON.parse(run(`setHeadlessMode(true); new Render3DPlugin; render3D.gravity = vec3(0, -.01, 0);
+        const columns = 33, slope = [], rolling = [];
+        for (let i = 0; i < columns; ++i)
+            slope.push(i / (columns - 1)), rolling.push(.5 + .02 * Math.sin(i * 1.3));
+        const walk = (heights, z)=>
+        {
+            const map = new HeightMap([heights, heights, heights], vec2(16, 4), 4, undefined, vec3(0, 0, z));
+            const o = new EngineObject3D(vec3(-6, map.getHeight(-6, z) + .25, z)); o.size3D = vec3(.5); o.setCollision();
+            o.mass = 1; o.damping = 1;
+            for (let i = 40; i--;) { o.velocity3D.x = .25; o.updatePhysics(); }
+            map.destroy();
+            return o.pos3D.x;
+        };
+        JSON.stringify([walk(slope, 0), walk(rolling, 20)])`));
+    for (const x of walked)
+        assert.ok(Math.abs(x - 4) < 1e-6, 'forty steps of .25 from -6: ' + x);
+});
