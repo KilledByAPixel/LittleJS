@@ -56,10 +56,6 @@ function gameInit()
     // its edges; S turns the sun
     sun = new DirectionalLight(vec2(-1, .6), hsl(.12, .5, .6));
     sun.shadowLength = 8;
-    const back = new EngineObject(vec2(-8, -5), vec2(6, 3), undefined, 0,
-        hsl(0, 0, .5));
-    back.castShadow = false;
-    back.castBackgroundShadow = true;
 }
 
 function gameUpdate()
