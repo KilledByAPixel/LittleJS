@@ -908,8 +908,10 @@ function engineObjectsUpdate()
         o.collideSolidObjects && (engineObjectsCollide.push(o), (o.mass ? engineObjectsCollideStaticLast : fixed).push(o));
     for (const o of fixed)
         engineObjectsCollideStaticLast.push(o);
-    engineCollideGrid = engineObjectsCollideStaticLast.length >= engineCollideGridMin ?
-        engineCollideGridBuild(engineObjectsCollideStaticLast) : undefined;
+    // written only when there is a grid: V8 keeps a variable that is never written as a constant, and writing it
+    // every frame makes this function deoptimize again and again in a game with no grid
+    if (engineObjectsCollideStaticLast.length >= engineCollideGridMin)
+        engineCollideGrid = engineCollideGridBuild(engineObjectsCollideStaticLast);
 
     // update physics before object update, each solid put where it moved to in the grid, for the movers after it;
     // the grid is let go even when a callback throws, so an updatePhysics called before the next update checks all
@@ -922,7 +924,7 @@ function engineObjectsUpdate()
                 engineCollideGrid && engineCollideGridPlace(engineCollideGrid, o);
             }
     }
-    finally { engineCollideGrid = undefined; }
+    finally { engineCollideGrid && (engineCollideGrid = undefined); }
 
     // recursive object update: the children are walked from a copy on a shared stack, since a child that
     // destroys itself leaves its parent's list on the spot and the next child would slide past the loop

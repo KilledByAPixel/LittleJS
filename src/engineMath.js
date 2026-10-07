@@ -68,7 +68,7 @@ const sign = (x) => Math.sign(x);
  *  @param {...number} values
  *  @return {number}
  *  @memberof Math */
-const hypot = (...values) => Math.hypot(...values);
+const hypot = Math.hypot; // not a function of its own, which would gather its arguments into an array each call
 
 /** Returns log2 of value passed in
  *  @param {number} x
