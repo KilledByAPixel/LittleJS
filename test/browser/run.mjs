@@ -14,7 +14,7 @@ import { extname, join, normalize } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = fileURLToPath(new URL('../../', import.meta.url));
-const pages = ['draw2d', 'layers2d', 'parallax', 'canvas2d', 'lights2d', 'shaders', 'focusBlur', 'draw3d', 'depth3d', 'environment', 'shaderFallback', 'spotLight', 'lensFlare',
+const pages = ['draw2d', 'layers2d', 'parallax', 'canvas2d', 'lights2d', 'lights2dSun', 'shaders', 'focusBlur', 'draw3d', 'depth3d', 'environment', 'shaderFallback', 'spotLight', 'lensFlare',
     'editorScene', 'contextLoss'];
 // one Chrome, and this many tabs of it at a time: measured, 4, 6 and 8 take the same 55 seconds, since every tab
 // draws through the one GPU process, and 12 or more are slower; do not raise it, and never start a second Chrome

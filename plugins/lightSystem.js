@@ -110,6 +110,10 @@ class LightSystemPlugin
         /** @property {WebGLTexture|undefined} - The shadow map, casters drawn black on white around the camera, read only
          *  @type {WebGLTexture|undefined} */
         this.shadowMap = undefined;
+        /** @property {WebGLTexture|undefined} - The background map, objects with castBackgroundShadow drawn black on
+         *  white, the shadow map's size and place, made only while a directional light exists, read only
+         *  @type {WebGLTexture|undefined} */
+        this.backgroundMap = undefined;
         /** @property {WebGLTexture|undefined} - One of the two textures each light's shadow is built in
          *  @type {WebGLTexture|undefined} */
         this.shadowTextureA = undefined;
@@ -354,6 +358,7 @@ class LightSystemPlugin
             gl.deleteTexture(ls.shadowMap);
             gl.deleteTexture(ls.shadowTextureA);
             gl.deleteTexture(ls.shadowTextureB);
+            gl.deleteTexture(ls.backgroundMap);
             gl.deleteProgram(ls.shadowCopyShader);
             gl.deleteProgram(ls.shadowStretchShader);
             gl.deleteVertexArray(ls.shadowCopyVAO);
@@ -363,7 +368,7 @@ class LightSystemPlugin
         function clearShadows()
         {
             const ls = lightSystem;
-            ls.shadowMap = ls.shadowTextureA = ls.shadowTextureB = undefined;
+            ls.shadowMap = ls.shadowTextureA = ls.shadowTextureB = ls.backgroundMap = undefined;
             ls.shadowCopyShader = ls.shadowStretchShader = undefined;
             ls.shadowCopyVAO = ls.shadowStretchVAO = undefined;
         }
@@ -400,19 +405,34 @@ class LightSystemPlugin
             cameraScale = size / worldSize;
             cameraAngle = 0;
             canvasClearColor = WHITE;
-            glSetRenderTarget(ls.shadowMap, true);
             glSkipScreenSpace = true; // the map's camera would put them anywhere
             ls.shadowPass = true;
             try
             {
-                for (const o of engineObjects)
+                // the foreground map, then the background map while a directional light needs it, each cleared to
+                // white, every caster black with its alpha kept, set for each object since a render that left
+                // setShadowTransparent on ends with it
+                const drawMap = (target, casts)=>
                 {
-                    if (o.destroyed || !o.castShadow) continue;
-                    // every color black, its alpha kept, set for each object since a render that left
-                    // setShadowTransparent on ends with it
-                    glColorMask = 0xff000000;
-                    setShader(o.shader); // its own Shader as in the main pass, so a snippet that cuts holes casts the same shape
-                    o.renderShadow();
+                    glSetRenderTarget(target, true);
+                    for (const o of engineObjects)
+                    {
+                        if (o.destroyed || !casts(o)) continue;
+                        glColorMask = 0xff000000;
+                        setShader(o.shader); // its own Shader as in the main pass, so a snippet that cuts holes casts the same shape
+                        o.renderShadow();
+                    }
+                    glFlush();
+                };
+                drawMap(ls.shadowMap, (o)=> o.castShadow);
+                if (ls.directionalLight)
+                {
+                    if (!ls.backgroundMap)
+                    {
+                        ls.backgroundMap = createTexture(size);
+                        glActiveTexture && glContext.bindTexture(glContext.TEXTURE_2D, glActiveTexture);
+                    }
+                    drawMap(ls.backgroundMap, (o)=> o.castBackgroundShadow);
                 }
             }
             finally
@@ -441,8 +461,8 @@ class LightSystemPlugin
             glFlush();
             const prevAdditive = glAdditive;
 
-            // 1b. the shadow pass draws every caster black into the shadow map
-            if (lightSystem.shadows)
+            // 1b. the shadow pass draws every caster black into the shadow map, for shadows or a directional light
+            if (lightSystem.shadows || lightSystem.directionalLight)
                 lightSystemShadowPass();
             if (lightSystem.shadersFailed) return;
 

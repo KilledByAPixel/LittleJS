@@ -1,0 +1,45 @@
+<!DOCTYPE html><meta charset=utf-8>
+<title>LittleJS smoke: the 2D directional light</title>
+<script src=../../dist/littlejs.js></script>
+<script src=smoke.js></script>
+<pre id=result>PENDING</pre>
+<script>
+'use strict';
+
+// the 2D directional light: a sun from the left over a white floor, a block that throws a long shadow to the right, and
+// a background area dark inside and lit at its left edge
+// the view is 16 units across, so a place (x, y) is at (.5 + x / 16, .5 + y / 16) of the canvas; the block is at
+// (-4, 0), 1 by 2, the background area spans x 1 to 7 and y -6.5 to -3.5
+smokeRun(async ()=>
+{
+    setShowSplashScreen(false);
+    setDebugWatermark(false);
+    setEngineManualStep(true);
+    setCanvasFixedSize(vec2(128));
+    setCanvasClearColor(rgb(0, 0, 0));
+    const bright = (x, y)=> smokePixel(.5 + x / 16, .5 + y / 16)[0];
+    let block, back;
+    await engineInit(()=>
+    {
+        setCameraScale(8);
+        new LightSystemPlugin; // pitch dark where no light reaches
+        block = new EngineObject(vec2(-4, 0), vec2(1, 2), tile(1, 16)); // white, it casts
+        back = new EngineObject(vec2(4, -5), vec2(6, 3), tile(1, 16)); // white, a background area
+        back.castShadow = false;
+        back.castBackgroundShadow = true;
+    }, ()=> {}, ()=> {}, ()=>
+    {
+        drawTile(vec2(), vec2(16), tile(1, 16)); // a white floor over the whole view
+    }, ()=> {}, [smokeSheet('#888', '#fff')]);
+
+    engineStep(3);
+    check('with no directional light there is no background map', !lightSystem.backgroundMap);
+    check('and the floor is dark', bright(-2, 3) < 40, bright(-2, 3));
+
+    const sun = new DirectionalLight(vec2(1, 0), rgb(1, 1, 1));
+    engineStep(3);
+    check('a directional light makes the background map', !!lightSystem.backgroundMap);
+    check('and the shadow map, with shadows off', !!lightSystem.shadowMap && !lightSystem.shadows);
+    checkGLError();
+});
+</script>
