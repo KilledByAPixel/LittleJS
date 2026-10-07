@@ -1139,10 +1139,13 @@ light.glowFalloff = 1   // how fast the glow fades from its middle, .5 a wide ha
 new DirectionalLight(sunDirection=vec2(-1,1), color=WHITE) // toward the sun, as render3D.sunDirection; its color
 sun.sunDirection           // toward the sun, it shines the other way
 sun.castShadow = true      // foreground casters (castShadow) throw long shadows; no lightSystem.shadows needed
-sun.shadowLength = 20      // world units a long shadow reaches before it has faded out
+sun.shadowLength = 20      // world units a long shadow reaches before it has faded out; a caster casts from inside
+                           // the shadow map only, (shadowMapScale - 1) / 2 of a view past the screen
 sun.backgroundDepth = 3    // world units the light gets into a background area from its edges facing it
 lightSystem.directionalLight          // the one there is, or undefined; a second one asserts, destroy the first
-lightSystem.directionalTextureSize = 512 // pixels across its work textures, which cover the shadow map's area
+                                      // (a release build destroys the first itself)
+lightSystem.directionalTextureSize = 512 // pixels across its work textures, which cover the shadow map's area; a
+                                      // power of two, as shadowMapSize is, or the shadows shimmer as the view pans
 obj.castBackgroundShadow = false      // a background: dark to the directional light inside, lit at its edges;
                                       // a background layer sets castShadow = false and this true
 

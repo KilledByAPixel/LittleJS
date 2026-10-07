@@ -1217,7 +1217,14 @@ class TileCollisionLayer extends TileLayer
         const hitPos = lineTest(t0 ? a.add(d.scale(t0)) : a, t1 < 1 ? a.add(d.scale(t1)) : posEnd.subtract(offset),
             testFunction, normal);
         if (hitPos)
+        {
+            // into the world, kept inside its tile there too, as adding the layer's place can round it onto the edge
+            const cell = hitPos.floor();
             hitPos.x += offset.x, hitPos.y += offset.y;
+            const inside = (v, low)=> v < low ? low : v < low + 1 ? v : low + 1 - max(1e-9, abs(low) * 1e-15);
+            hitPos.x = inside(hitPos.x, cell.x + offset.x);
+            hitPos.y = inside(hitPos.y, cell.y + offset.y);
+        }
         if (debugRaycast && hitPos)
         {
             const tilePos = hitPos.floor().add(vec2(.5));

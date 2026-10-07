@@ -48,9 +48,9 @@ What changed in each release, newest first. Releases before 1.20.0 are on the
 - An EngineObject3D on a height map is kept above a ridge it goes over in one move, where only the ends of the move were checked; a short move starting on a voxel block's face hits it there
 - particleEffect keeps a negative speed and angle speed, and particleEffectFromEmitter of a finished emitter gives the time it emitted for, where it gave 0, for ever
 - loadSound and a glTF's buffers and images name the file they could not load, with the hint for a page opened from disk; writeSaveData says when the data can not be written as JSON rather than blaming storage
-- A lens flare made while the game is paused shows, as the 3D editor's Scene box makes one, where it waited for an update that never came
+- A lens flare made while the game is paused shows, as the 3D editor's Scene box makes one, where it waited for an update that never came, and follows the camera while the game stays paused
 - A release build goes on past an error in its first frame, as it does in any later one, where it stopped the game
-- The 3D settle of a shoved object sees a wall that blocks solids without being solid itself; a see-through part of an additive owner passes the fade assert; with a sun the shadow map moves by whole work texels, so shadows no longer shimmer as the camera pans
+- The 3D settle of a shoved object sees a wall that blocks solids without being solid itself; a see-through part of an additive owner passes the fade assert
 - Examples: the platformer's bullets spark where they hit the wall; the Light Shadows short has a sun and a background block lit at its edges
 
 - setEnablePhysicsSolver(false) stops 3D collision too, solids, the level, the speed cap and 3D particles hitting the level, as it does in 2D, where 3D objects still collided
@@ -58,10 +58,18 @@ What changed in each release, newest first. Releases before 1.20.0 are on the
 - Wavedash: a board or achievement named like a built-in property, as constructor or toString, is one like any other
 - A Box2dObject's EngineObject physics fields, which Box2D does not read (velocity, angleVelocity, damping, angleDamping, mass, friction, restitution, gravityScale), are documented as unused with the Box2D call to use, and a debug build warns once when one is set; damping out of 0 to 1 asserts in setObjectDefaultDamping and setObjectDefaultAngleDamping, and on a 3D object as on a 2D one, so a debug build that set one out of range stops there now
 - A release build's second engineInit prints no second version line and hands back the first call's promise, done when the game is set up, where it was done at once
-- A second DirectionalLight in a release build, where the assert is gone, takes over from the first and destroys it, where the first stayed alive doing nothing and destroying the second left no sun
 - The script build no longer has a top level colorHex, so a game's own colorHex is not a redeclaration
+- Medals: a tab of the game opened before another tab unlocked a medal keeps that unlock when it saves its own, where it wrote the medal locked again; medalsReset still clears them all
+- A 3D object a collision callback sends across a height map's ridge stays where it was sent, and the object pushing it is not carried back, where the settle swept it back to the ridge
+- Sounds played or changed with a volume, rate or pan of NaN or Infinity, as a sound at the camera in a hidden page, play silent, at the normal rate or centered in a release build, where the browser's audio threw
+- Box2D in a release build takes NaN or Infinity in a joint's force, torque, frequency, limits, a mass and a pulley ratio of 0 as the nearest value it can take, makes no joint of an object to itself and no fixture of an infinite box or circle (addCircle returns undefined then), where the wasm stopped for good
+- UI: two quick taps in frames one after the other click twice, and a press over a button whose release was missed in a hitch releases and clicks it first, where a click and a release were lost; a held button let go of by the window losing focus is released, not clicked
+- A tween whose easing throws is ended, as one whose callback throws is
+- Shader.dispose() in the frame it drew in draws that batch first, where the batch compiled it again and kept it
+- tileCollisionRaycast on a layer away from the origin gives a hit inside the tile it met, where it could land on its edge, in the empty tile beside it
+- writeSaveData with data whose JSON is nothing, as a toJSON that returns nothing, writes nothing and says so, where it stored the text undefined
 - A lens flare whose sun or light is hidden when it is made starts hidden, where it showed at full and faded out over its fade time
-- A moving particle emitter, 2D or 3D, spreads each update's particles along its move since the last one, where they came out in a clump at where it is, so a fast emitter leaves an even trail instead of beads; a jump further than twice objectMaxSpeed in one update, a teleport or a respawn, spreads nothing, and a local space emitter is unchanged
+- A moving particle emitter, 2D or 3D, spreads each update's particles along its move since the last one, where they came out in a clump at where it is, so a fast emitter leaves an even trail instead of beads; a jump further than twice objectMaxSpeed in one update, a teleport or a respawn, spreads nothing, so an emitter moved by hand faster than that, as one following the mouse, is not spread either, and a local space emitter is unchanged
 - A sound whose file fails to load calls its onloadCallback too, with isLoaded false, so a game counting its sounds before it starts no longer waits for ever on a missing file; a callback written for success checks isLoaded()
 - The speed cap, objectMaxSpeed, is applied after damping and gravity, 2D and 3D alike: each axis of a colliding object's move is within it, gravity included, where a falling object moved the cap plus its gravity a frame; what does not collide is not capped, a velocity over the cap keeps the capped value, and a cap of 0 holds a colliding 3D object still as it does a 2D one
 - Audio: a one shot paused after its end and before its ended event stays at its end, where a resume played it again; a zzfx array's own randomness is kept to 0 to 1, as one passed in is; a sound at exactly its range, 2D or 3D, is out of it, not a silent voice

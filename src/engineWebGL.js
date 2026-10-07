@@ -534,7 +534,7 @@ function glShaderDispose(shader)
     i < 0 || glShaderObjects.splice(i, 1);
     if (glContext && !headlessMode)
     {
-        if (shader.program && glBatchShader === shader.program)
+        if (glBatchShader === shader) // a batch drawing with it is drawn first, the batch holds the Shader
             glFlush();
         for (const program of [shader.program, shader.program3D])
             program && glContext.deleteProgram(program);

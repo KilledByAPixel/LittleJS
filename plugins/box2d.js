@@ -88,6 +88,9 @@ function box2dWakeWithContacts(body)
         edge.get_other().SetAwake(true);
 }
 
+// a number Box2D can take: it stops for good on NaN or Infinity, and a release build has no asserts to catch one first
+const box2dFinite = (value, otherwise)=> isFinite(value) ? value : otherwise;
+
 // wake both bodies of a joint whose length, spring, ratio or strength changed, a sleeping body would stay where it was
 function box2dWakeJoint(joint)
 {
@@ -408,8 +411,8 @@ class Box2dObject extends EngineObject
         ASSERT(isNumber(angle), 'angle must be a number');
 
         // Box2D stops for good on a box with almost no area, like addPoly no fixture is made from one
-        ASSERT(size.x * size.y > 1e-6, 'box is too small for Box2D');
-        if (!(size.x * size.y > 1e-6)) return;
+        ASSERT(size.x * size.y > 1e-6 && isFinite(size.x * size.y), 'box is too small or too big for Box2D');
+        if (!(size.x * size.y > 1e-6) || !isFinite(size.x * size.y)) return;
 
         const shape = new box2d.instance.b2PolygonShape();
         shape.SetAsBox(size.x/2, size.y/2, box2dTemp(offset), -angle);
@@ -514,12 +517,13 @@ class Box2dObject extends EngineObject
      *  @param {number}  [friction]
      *  @param {number}  [restitution]
      *  @param {boolean} [isSensor]
-     *  @return {Object} - The fixture made, Box2D's own */
+     *  @return {Object|undefined} - The fixture made, Box2D's own, undefined for a circle too big to make */
     addCircle(diameter=1, offset=vec2(), density, friction, restitution, isSensor)
     {
-        ASSERT(isNumber(diameter) && diameter>0, 'diameter must be a positive number');
+        ASSERT(isNumber(diameter) && diameter>0 && isFinite(diameter), 'diameter must be a positive number');
         ASSERT(isVector2(offset), 'offset must be a Vector2');
-        
+        if (!isFinite(diameter)) return; // Box2D stops for good on it, no fixture is made
+
         const shape = new box2d.instance.b2CircleShape();
         shape.set_m_p(box2dTemp(offset));
         shape.set_m_radius(diameter/2);
@@ -834,7 +838,7 @@ class Box2dObject extends EngineObject
             const f = Math.fround;
             const oldInertia = f(data.get_I() - box2dCenterInertia(oldMass, center.get_x(), center.get_y()));
             const inertia = momentOfInertia ?? oldInertia;
-            mass ??= oldMass;
+            mass = box2dFinite(mass ?? oldMass, oldMass);
             const offset = box2dCenterInertia(mass > 0 ? mass : 1, cx, cy); // a mass of 0 or less is 1 to Box2D
             const I = f(inertia + offset);
             data.set_mass(mass);
@@ -1155,13 +1159,15 @@ class Box2dJoint
         const bodyA = jointDef.get_bodyA(), bodyB = jointDef.get_bodyB();
         const bothLive = !box2d.isNull(bodyA) && !box2d.isNull(bodyB);
         ASSERT(bothLive, 'a joint needs two objects that are not destroyed');
-        ASSERT(box2d.instance.getPointer(bodyA) !== box2d.instance.getPointer(bodyB), 'a joint needs two different objects');
+        const twoObjects = !bothLive || box2d.instance.getPointer(bodyA) !== box2d.instance.getPointer(bodyB);
+        ASSERT(twoObjects, 'a joint needs two different objects');
 
         /** @property {Object} - The Box2d joint, 0 once it is destroyed, as it is when either object is */
         this.box2dJoint = 0;
-        if (!bothLive)
+        if (!bothLive || !twoObjects)
         {
-            // one of its objects is gone, so it is made destroyed, as it would be had it gone after
+            // one of its objects is gone, so it is made destroyed, as it would be had it gone after; a joint of an
+            // object to itself, which Box2D stops for good on, is made destroyed too in a release build
             box2d.instance.destroy(jointDef);
             return;
         }
@@ -1273,7 +1279,7 @@ class Box2dTargetJoint extends Box2dJoint
     
     /** Sets the joint frequency in Hertz, above 0, Box2D stops for good on 0
      *  @param {number} hz */
-    setFrequency(hz) { this.box2dJoint.SetFrequency(max(hz, 1e-3)); box2dWakeJoint(this.box2dJoint); }
+    setFrequency(hz) { this.box2dJoint.SetFrequency(max(box2dFinite(hz, 0), 1e-3)); box2dWakeJoint(this.box2dJoint); }
     
     /** Gets the joint frequency in Hertz
      *  @return {number} */
@@ -1469,6 +1475,7 @@ class Box2dRevoluteJoint extends Box2dJoint
     setLimits(min, max)
     {
         ASSERT(min <= max, 'the lower limit must not be above the upper one');
+        min = box2dFinite(min, 0), max = box2dFinite(max, 0); // or on NaN, which passes the order check
         if (min > max) [min, max] = [max, min]; // Box2D stops on them reversed
         this.box2dJoint.SetLimits(-max, -min);
     }
@@ -1671,6 +1678,7 @@ class Box2dPrismaticJoint extends Box2dJoint
     setLimits(min, max)
     {
         ASSERT(min <= max, 'the lower limit must not be above the upper one');
+        min = box2dFinite(min, 0), max = box2dFinite(max, 0); // or on NaN, which passes the order check
         if (min > max) [min, max] = [max, min]; // Box2D stops on them reversed
         this.box2dJoint.SetLimits(min, max);
     }
@@ -1906,7 +1914,7 @@ class Box2dFrictionJoint extends Box2dJoint
 
     /** Set the maximum friction force
      *  @param {number} force */
-    setMaxForce(force) { this.box2dJoint.SetMaxForce(max(force, 0)); } // Box2D stops on a negative one
+    setMaxForce(force) { this.box2dJoint.SetMaxForce(max(box2dFinite(force, 0), 0)); } // Box2D stops on a negative one
 
     /** Get the maximum friction force
      *  @return {number} */
@@ -1914,7 +1922,7 @@ class Box2dFrictionJoint extends Box2dJoint
 
     /** Set the maximum friction torque
      *  @param {number} torque */
-    setMaxTorque(torque) { this.box2dJoint.SetMaxTorque(max(torque, 0)); } // Box2D stops on a negative one
+    setMaxTorque(torque) { this.box2dJoint.SetMaxTorque(max(box2dFinite(torque, 0), 0)); } // Box2D stops on a negative one
 
     /** Get the maximum friction torque
      *  @return {number} */
@@ -1955,7 +1963,7 @@ class Box2dPulleyJoint extends Box2dJoint
         jointDef.set_localAnchorA(box2dTemp(localAnchorA));
         jointDef.set_localAnchorB(box2dTemp(localAnchorB));
         ASSERT(ratio, 'a pulley ratio can not be 0');
-        jointDef.set_ratio(ratio);
+        jointDef.set_ratio(box2dFinite(ratio, 1) || 1); // Box2D stops for good on 0
         jointDef.set_lengthA(groundAnchorA.distance(anchorA));
         jointDef.set_lengthB(groundAnchorB.distance(anchorB));
         jointDef.set_collideConnected(collide);
@@ -2034,7 +2042,7 @@ class Box2dMotorJoint extends Box2dJoint
 
     /** Set the maximum force
      *  @param {number} force */
-    setMaxForce(force) { this.box2dJoint.SetMaxForce(max(force, 0)); box2dWakeJoint(this.box2dJoint); } // Box2D stops on a negative one
+    setMaxForce(force) { this.box2dJoint.SetMaxForce(max(box2dFinite(force, 0), 0)); box2dWakeJoint(this.box2dJoint); } // Box2D stops on a negative one
 
     /** Get the maximum force
      *  @return {number} */
@@ -2042,7 +2050,7 @@ class Box2dMotorJoint extends Box2dJoint
 
     /** Set the maximum torque
      *  @param {number} torque */
-    setMaxTorque(torque) { this.box2dJoint.SetMaxTorque(max(torque, 0)); box2dWakeJoint(this.box2dJoint); } // Box2D stops on a negative one
+    setMaxTorque(torque) { this.box2dJoint.SetMaxTorque(max(box2dFinite(torque, 0), 0)); box2dWakeJoint(this.box2dJoint); } // Box2D stops on a negative one
 
     /** Get the maximum torque
      *  @return {number} */

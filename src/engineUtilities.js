@@ -292,6 +292,11 @@ function writeSaveData(saveName, saveData)
         console.warn('writeSaveData: the save ' + saveName + ' can not be written as JSON, ' + error.message);
         return false;
     }
+    if (text === undefined) // a toJSON that returns nothing, which would be stored as the text undefined
+    {
+        console.warn('writeSaveData: the save ' + saveName + ' is nothing as JSON, it is not written');
+        return false;
+    }
     try { localStorage.setItem(saveName, text); return true; }
     catch
     {

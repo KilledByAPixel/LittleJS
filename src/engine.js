@@ -860,8 +860,6 @@ function engineUpdateCanvas()
     mainContext.lineCap  = 'round';
 }
 
-// ask for the next frame of the loop, once however often it is called before that frame, and skip it if manual
-// step was turned on since, so turning it off and on again within a frame can not start a second loop
 // a release build goes on past an error in a frame, a frozen game is the worst a player can get; an error is logged
 // when it is not the last one again, one every frame would flood the console
 function engineFrameFailed(error)
@@ -874,6 +872,8 @@ function engineFrameFailed(error)
     engineScheduleFrame();
 }
 
+// ask for the next frame of the loop, once however often it is called before that frame, and skip it if manual
+// step was turned on since, so turning it off and on again within a frame can not start a second loop
 function engineScheduleFrame()
 {
     if (engineFrameScheduled) return;

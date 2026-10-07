@@ -142,10 +142,11 @@ function medalsReset()
     medalsForEach(medal=> medal.isLocal() && (medal.unlocked = false));
     if (medalsSaveName && !debugMedals)
     {
-        // the saved unlocks of medals not made yet are cleared too, they are read when those medals are made
+        // the saved unlocks of the local medals and of medals not made yet are cleared too, since a save keeps an
+        // unlock another tab wrote, and those not made yet read theirs when they are made
         const saved = readSaveData(medalsSaveName);
         for (const id in saved)
-            if (!medals[id] && saved[id] && typeof saved[id] === 'object')
+            if ((!medals[id] || medals[id].isLocal()) && saved[id] && typeof saved[id] === 'object')
                 saved[id].unlocked = false;
         writeSaveData(medalsSaveName, saved);
     }
@@ -171,7 +172,7 @@ function medalsSave()
             name: medal.name,
             description: medal.description,
             icon: medal.icon,
-            unlocked: medal.unlocked,
+            unlocked: medal.unlocked || !!saved[medal.id]?.unlocked, // another tab may have unlocked it since
         };
         if (medal.image) entry.src = medal.image.src;
         data[medal.id] = entry;

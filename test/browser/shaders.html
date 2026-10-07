@@ -15,7 +15,7 @@ smokeRun(async ()=>
     setEngineManualStep(true);
     setCanvasFixedSize(vec2(64));
     setCanvasClearColor(rgb(0, 0, 0));
-    let object;
+    let object, disposeInFrame = false;
     await engineInit(()=>
     {
         setCameraScale(1);
@@ -37,7 +37,10 @@ smokeRun(async ()=>
                 c.r = .25 + .5 * texture(iChannel1, uv).r;
                 c.a = 1.;
             }`, false, true);
-    }, ()=> {}, ()=> {}, ()=> {}, ()=> {});
+    }, ()=> {}, ()=> {}, ()=> {}, ()=>
+    {
+        disposeInFrame && object.shader.dispose(); // in the frame, the object's draw still waiting in the batch
+    });
 
     const reds = [];
     for (let i = 0; i < 3; ++i)
@@ -59,6 +62,14 @@ smokeRun(async ()=>
     const again = smokePixel(.75, .5);
     check('drawn again it compiles again and gives its color', again[1] > 230 && again[2] > 230 && !!shader.program &&
         shader.program !== first && glShaderObjects.includes(shader), again);
+
+    // let go of in the frame right after drawing with it, its batch is drawn first, and it is not compiled again
+    disposeInFrame = true;
+    engineStep();
+    disposeInFrame = false;
+    const inFrame = smokePixel(.75, .5);
+    check('disposed in the frame it drew in, that draw shows and it stays let go of',
+        inFrame[1] > 230 && inFrame[2] > 230 && !shader.program && !glShaderObjects.includes(shader), inFrame);
     checkGLError();
 });
 </script>

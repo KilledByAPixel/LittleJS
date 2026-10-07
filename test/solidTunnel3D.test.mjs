@@ -304,3 +304,28 @@ test('a crate shoved into a voxel wall by a pusher is settled against the wall, 
         assert.ok(worst < 9.75 + 1e-6, (pusherFirst ? 'pusher first' : 'crate first') + ': the crate stays out of the wall: ' + worst);
     }
 });
+
+test('a crate a collision callback teleports past a height map ridge stays there, and its pusher is not carried back', ()=>
+{
+    // the settle's level step swept from where the crate began the pass to where the callback put it, so the ridge
+    // between stopped it there, and the pusher then took back what the crate could not move
+    for (const pusherFirst of [true, false])
+    {
+        const { run } = loadEngine();
+        const ends = JSON.parse(run(`setHeadlessMode(true); new Render3DPlugin;
+            const row = []; for (let i = 0; i < 41; ++i) row.push(i == 20 ? 1 : 0); // a ridge 5 tall at x 0
+            const ground = new HeightMap([row, row, row], vec2(40, 4), 5);
+            const make = (x, mass)=> { const o = new EngineObject3D(vec3(x, .6, 0)); o.size3D = vec3(1);
+                o.setCollision(); o.mass = mass; o.damping = 1; o.restitution = 0; return o; };
+            const a = ${pusherFirst} ? make(-9, 20) : undefined, b = make(-8, 1), pusher = a || make(-9, 20);
+            let teleported = false;
+            b.collideWithObject = (o)=> { if (!teleported) { teleported = true; b.pos3D = vec3(8, .6, 0); } return true; };
+            for (let i = 5; i--;) { pusher.velocity3D = vec3(.3, 0, 0); engineObjectsUpdate(); }
+            ground.destroy();
+            JSON.stringify({pusher: pusher.pos3D.x, crate: b.pos3D.x, teleported})`));
+        const order = pusherFirst ? 'pusher first' : 'crate first';
+        assert.ok(ends.teleported, order + ': the two met');
+        assert.ok(ends.crate > 7, order + ': the crate stays where it was sent: ' + ends.crate);
+        assert.ok(ends.pusher > -9, order + ': the pusher is not carried back: ' + ends.pusher);
+    }
+});

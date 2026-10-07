@@ -28,6 +28,10 @@ let uiSystem;
  *  @memberof UISystem */
 let uiDebug = 0;
 
+// the active object's press was let go of in the frame it came, a tap, so it is clicked on the next with no release
+// then; a click needs a release, which the mouse let go of by a window losing focus is not
+let uiActiveReleased = false;
+
 /** Enable UI system debug drawing
  *  0=off, 1=normal, 2=show invisible
  *  @param {number|boolean} debugMode
@@ -1102,10 +1106,24 @@ class UIObject
             return;
 
         const wasHover = uiSystem.lastHoverObject === this;
-        const isActive = this.isActiveObject();
+        let isActive = this.isActiveObject();
         const mouseDown = mouseIsDown(0);
         // a press and release in one frame is a press too, as it is for a button that is not drag activated
         const mousePress = mouseWasPressed(0) || this.dragActivate && mouseDown;
+
+        // a new press while this is still active from the one before means that one was let go of in between, by a
+        // second quick tap or a release missed in a hitch: it is clicked and released first, so neither is lost
+        if (isActive && mouseWasPressed(0))
+        {
+            if (!uiSystem.activateOnPress && this.interactive && !disabled)
+                this.click();
+            if (this.destroyed) return;
+            uiSystem.activeObject = undefined;
+            isActive = false;
+            this.onRelease();
+            this.soundRelease && this.soundRelease.play();
+            if (this.destroyed) return;
+        }
         if (this.canBeHover)
         if (!uiSystem.navigationMode) // no mouse hover in navigation mode
         if (mousePress || isActive || (!mouseDown && !isTouchDevice))
@@ -1137,7 +1155,10 @@ class UIObject
                             this.soundRelease && this.soundRelease.play();
                         }
                         else
+                        {
                             uiSystem.activeObject = this;
+                            uiActiveReleased = !mouseDown;
+                        }
 
                         if (newPress && uiSystem.activateOnPress)
                             this.click(!this.soundPress);
@@ -1149,6 +1170,7 @@ class UIObject
                 // frame is clicked on the next, with its release, not on both
                 if (!uiSystem.activateOnPress)
                 if (!mouseDown && isActive && this.isActiveObject() && this.interactive)
+                if (mouseWasReleased(0) || uiActiveReleased)
                     this.click();
                 if (this.destroyed) return;
             }

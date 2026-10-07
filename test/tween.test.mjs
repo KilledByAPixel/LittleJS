@@ -744,3 +744,16 @@ test('a tween whose callback throws anywhere is ended: mid-run, on restart, and 
     assert.deepEqual(ended((f)=> new Tween(f, 0, 1, .1).loop(), ()=> tweenUpdate(.15)), [false, 0], 'a loop again');
     tweenStopAll();
 });
+
+test('a tween whose easing throws partway through is ended, as one whose callback throws is', () =>
+{
+    tweenStopAll();
+    let eases = 0;
+    new Tween(()=> {}, 0, 1, 1, {ease: (p)=> { if (p > .5) { ++eases; throw new Error('eased'); } return p; }});
+    let thrown = 0;
+    for (let i = 10; i--;)
+        try { tweenUpdate(.2); } catch { ++thrown; }
+    assert.equal(thrown, 1, 'it threw once and was ended');
+    assert.equal(eases, 1);
+    tweenStopAll();
+});

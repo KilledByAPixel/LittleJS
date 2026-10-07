@@ -28,11 +28,12 @@ function tweenActivate(tween)
 }
 function tweenDeactivate(tween) { tween.active = false; }
 
-// call a tween's callback; one that throws is ended, or it would be called and throw at every update, unless the
-// callback itself started it again, which is its own new run (pass, the update it is in, undefined outside one)
-function tweenCall(tween, value, pass)
+// call a tween's callback with its value at life; one that throws, its easing too, is ended, or it would be called and
+// throw at every update, unless the callback itself started it again, which is its own new run (pass, the update it
+// is in, undefined outside one)
+function tweenCall(tween, life, pass)
 {
-    try { tween.callback(value); }
+    try { tween.callback(tween.interp(life)); }
     catch (error)
     {
         if (tween.active && (pass === undefined || tween.activePass < pass))
@@ -142,7 +143,7 @@ class Tween
 
         tweenActivate(this);
         // Snap target to start immediately; one that throws here is no tween, the game never gets it to stop
-        tweenCall(this, this.interp(duration));
+        tweenCall(this, duration);
     }
 
     /** Set the easing curve and return this for chaining
@@ -222,7 +223,7 @@ class Tween
         this.lastTime = time;
         this.lastTimeReal = timeReal;
         tweenActivate(this);
-        tweenCall(this, this.interp(this.duration));
+        tweenCall(this, this.duration);
     }
 
     /** True if this tween is in the active list and not paused
@@ -540,7 +541,7 @@ function tweenNextIteration(tween, passed, continuation)
     tweenCarryOvershoot(tween);
     tween.thenCallback = continuation;
     tweenActivate(tween);
-    tweenCall(tween, tween.interp(tween.life)); // snap to where the new iteration is
+    tweenCall(tween, tween.life); // snap to where the new iteration is
     return true;
 }
 
@@ -651,13 +652,13 @@ function tweenStep(t, pass, enginePath, gameDelta, realDelta)
     t.life -= dt;
     if (t.life > 1e-9) // the engine's deltas add up a rounding error short of the duration
     {
-        tweenCall(t, t.interp(t.life), pass);
+        tweenCall(t, t.life, pass);
     }
     else
     {
         // Completion: fire end value, remove from active, start the next iteration
         // of a loop or pingPong, or when there is none it has completed, fire onComplete
-        tweenCall(t, t.interp(0), pass); // one whose last call throws is ended all the same
+        tweenCall(t, 0, pass); // one whose last call throws is ended all the same
         if (!t.active || t.activePass >= pass)
             return; // stopped or restarted by its own callback, the run it was on ends without completing
         tweenDeactivate(t);

@@ -141,16 +141,24 @@ smokeRun(async ()=>
         try { engineStep(); } finally { glContext.drawArrays = drawArrays; }
         return draws;
     };
+    // a see through caster, half dark in the shadow map, is lit the same inside whether or not a background caster is
+    // somewhere in the scene, its far side most of all
+    const glass = new EngineObject(vec2(-2, 5), vec2(2, 2), tile(1, 16), 0, rgb(1, 1, 1, .5));
     sun.castShadow = true;
-    engineStep();
+    engineStep(3);
+    const glassWithBack = bright(-1.2, 5);
     const withBack = drawsInAStep();
     back.destroy();
     engineStep();
     const withoutBack = drawsInAStep();
+    check('a see through caster is lit the same with a background caster in the scene or without',
+        Math.abs(bright(-1.2, 5) - glassWithBack) < 8, [glassWithBack, bright(-1.2, 5)]);
+    glass.destroy();
     check('with no background caster its leak is not drawn', withBack - withoutBack >= 6, [withBack, withoutBack]);
     check('and the light still draws, its long shadow too', bright(-6, 4) > 200 && bright(0, 0) < 120,
         [bright(-6, 4), bright(0, 0)]);
 
+    const copyProgram = lightSystem.shadowCopyShader;
     sun.destroy();
     engineStep(3);
     check('destroyed, it adds nothing', bright(-6, 4) < 40, bright(-6, 4));
@@ -162,6 +170,7 @@ smokeRun(async ()=>
     engineStep(2);
     check('which draws with them, not compiled again', lightSystem.directionalPrograms.seed === kept && bright(-6, 4) > 200,
         bright(-6, 4));
+    check('the programs of the shadow map are kept too, with shadows off', lightSystem.shadowCopyShader === copyProgram);
     next.destroy();
     checkGLError();
 });

@@ -380,3 +380,17 @@ test('a flare made while the game is paused shows, as the 3D editor makes them, 
     run('var wall = new EngineObject3D(vec3(0, 0, -20), render3D.boxMesh); wall.scale3D = vec3(10); var hidden = new LensFlare3D;');
     assert.equal(run('hidden.getScreenElements().length'), 0, 'paused behind a wall, it does not');
 });
+
+test('a flare drawn while the game is paused follows the camera turning to the sun and away again', async ()=>
+{
+    // nothing updates it while paused, so it found whether it shows on its first draw and kept that
+    const { run } = loadEngine();
+    run('setHeadlessMode(true); setEngineManualStep(true)');
+    await run('engineInit(()=> { new Render3DPlugin; render3D.camera.pos = vec3(); render3D.camera.rotation = vec3(); render3D.sunDirection = vec3(0, 0, -1); }, ()=> {}, ()=> {}, ()=> {}, ()=> {})');
+    run('setPaused(true); render3D.camera.rotation = vec3(0, PI, 0); var flare = new LensFlare3D; engineStep(2);');
+    assert.equal(run('flare.getScreenElements().length'), 0, 'looking away, it does not show');
+    run('render3D.camera.rotation = vec3(); engineStep(2);');
+    assert.ok(run('flare.getScreenElements().length') > 0, 'turned to the sun, it shows');
+    run('render3D.camera.rotation = vec3(0, PI, 0); engineStep(2);');
+    assert.equal(run('flare.getScreenElements().length'), 0, 'turned away again, it does not');
+});

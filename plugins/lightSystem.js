@@ -113,7 +113,7 @@ class LightSystemPlugin
          *  @type {WebGLTexture|undefined} */
         this.shadowMap = undefined;
         /** @property {WebGLTexture|undefined} - The background map, objects with castBackgroundShadow drawn black on
-         *  white, the shadow map's size and place, made only while a directional light exists, read only
+         *  white, the shadow map's size and place, made by a directional light when something casts into it and kept while the light is, read only
          *  @type {WebGLTexture|undefined} */
         this.backgroundMap = undefined;
         /** @property {WebGLTexture|undefined} - One of the two textures each light's shadow is built in
@@ -312,6 +312,8 @@ class LightSystemPlugin
             // put back the texture the engine tracks
             if (glActiveTexture)
                 gl.bindTexture(gl.TEXTURE_2D, glActiveTexture);
+            if (ls.shadowCopyShader)
+                return; // the programs are kept while the textures are made again
 
             // copy: the shadow map around the light into the light's texture, light at the center
             ls.shadowCopyShader = glCreateProgram(quadVertex,
@@ -366,18 +368,15 @@ class LightSystemPlugin
             gl.useProgram(ls.shadowStretchShader);
             gl.uniform1i(glUniformLocation(ls.shadowStretchShader, 's'), 1);
         }
-        function freeShadows()
+        // let go of the shadow textures, the programs stay, small, so a new size or a sun made again compiles nothing
+        function freeShadowTextures()
         {
             const gl = glContext, ls = lightSystem;
             gl.deleteTexture(ls.shadowMap);
             gl.deleteTexture(ls.shadowTextureA);
             gl.deleteTexture(ls.shadowTextureB);
             gl.deleteTexture(ls.backgroundMap);
-            gl.deleteProgram(ls.shadowCopyShader);
-            gl.deleteProgram(ls.shadowStretchShader);
-            gl.deleteVertexArray(ls.shadowCopyVAO);
-            gl.deleteVertexArray(ls.shadowStretchVAO);
-            clearShadows();
+            ls.shadowMap = ls.shadowTextureA = ls.shadowTextureB = ls.backgroundMap = undefined;
         }
         function clearShadows()
         {
@@ -395,7 +394,7 @@ class LightSystemPlugin
             if (!ls.shadowMap || ls.shadowMapSize !== ls.shadowMapSizeAllocated
                 || ls.shadowTextureSize !== ls.shadowTextureSizeAllocated)
             {
-                ls.shadowMap && freeShadows();
+                ls.shadowMap && freeShadowTextures();
                 initShadows();
                 if (ls.shadersFailed) return;
             }
@@ -408,6 +407,9 @@ class LightSystemPlugin
             // with a sun, on the coarser of its texels and the map's, or its area would move by half its texels and a
             // still caster's shadow edge would jump as the camera pans
             const grid = ls.directionalLight ? min(size, ls.directionalTextureSize) : size;
+            ASSERT(!ls.directionalLight || max(size, ls.directionalTextureSize) % grid === 0,
+                'with a DirectionalLight, shadowMapSize and directionalTextureSize must each be a whole multiple of the ' +
+                'other, as powers of two are, or the shadows shimmer as the camera pans', size, ls.directionalTextureSize);
             const texel = worldSize / grid;
             const center = vec2(floor(cameraPos.x/texel)*texel, floor(cameraPos.y/texel)*texel);
             ls.shadowMapOrigin = center.subtract(vec2(worldSize/2));
@@ -562,6 +564,7 @@ class LightSystemPlugin
             freeDirectionalTextures();
             glContext.deleteTexture(lightSystem.backgroundMap);
             lightSystem.backgroundMap = undefined;
+            lightSystem.backgroundCasters = false;
         }
         function clearDirectional()
         {
@@ -602,7 +605,7 @@ class LightSystemPlugin
 
             // long shadows: the foreground seeded into A, then passes shifting twice as far each time, ping ponged
             let program = use('seed');
-            bind(1, ls.shadowMap); bind(2, ls.backgroundMap);
+            bind(1, ls.shadowMap); bind(2, ls.backgroundMap || ls.shadowMap); // a texture on the unit, though unread
             gl.uniform1f(u(program, 'useF'), casts);
             gl.uniform1f(u(program, 'useB'), 0);
             gl.uniform1f(u(program, 'tap'), .25 / N);
@@ -624,14 +627,15 @@ class LightSystemPlugin
             }
             const shadows = src, free = dst; // the long shadows, and the other work texture
 
-            // the background leak, seeded from foreground times background into the free texture, only when something
-            // casts into the background map; with nothing there the combine leaves it out
+            // the background leak, seeded from the background alone into the free texture, only when something casts
+            // into the background map; with nothing there the combine leaves it out; the foreground is in the long
+            // shadows already, and seeding it here too darkened a see through caster twice, only beside a background
             const leaks = ls.backgroundCasters;
             if (leaks)
             {
                 program = use('seed');
                 bind(1, ls.shadowMap); bind(2, ls.backgroundMap);
-                gl.uniform1f(u(program, 'useF'), casts);
+                gl.uniform1f(u(program, 'useF'), 0);
                 gl.uniform1f(u(program, 'useB'), 1);
                 target(free); draw();
             }
@@ -704,7 +708,7 @@ class LightSystemPlugin
                 if (lightSystem.directionalTexture || lightSystem.backgroundMap)
                     freeDirectional();
                 if (!lightSystem.shadows && lightSystem.shadowMap)
-                    freeShadows();
+                    freeShadowTextures();
             }
             if (lightSystem.shadersFailed) return;
 
@@ -879,8 +883,8 @@ class LightSystemPlugin
         this.shadowMapSize = glClampTextureSize(this.shadowMapSize);
         this.shadowTextureSize = glClampTextureSize(this.shadowTextureSize);
         ASSERT(isNumber(this.directionalTextureSize) && this.directionalTextureSize >= 1,
-            'directionalTextureSize is a whole number of texels, 1 or more', this.directionalTextureSize);
-        this.directionalTextureSize = glClampTextureSize(floor(this.directionalTextureSize));
+            'directionalTextureSize is texels, 1 or more, taken down to whole texels', this.directionalTextureSize);
+        this.directionalTextureSize = glClampTextureSize(max(1, floor(this.directionalTextureSize) || 1));
         const size = this.textureSize;
         if (!size) return;
         const x = glClampTextureSize(size.x), y = glClampTextureSize(size.y);

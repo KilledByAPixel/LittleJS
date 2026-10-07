@@ -181,11 +181,16 @@ function audioEffectNode(effectOrNode, key)
     return /** @type {AudioNode} */ (effectOrNode);
 }
 
+// a value for an audio param, which throws on one that is not finite, so a release build, with no asserts to stop it,
+// takes NaN or Infinity as the value given in its place: silent, centered or the normal rate
+const audioFinite = (value, otherwise)=> isFinite(value) ? value : otherwise;
+
 // ramp an audio param to a value, cancelling anything already scheduled so stacked calls don't fight;
 // returns when the ramp ends
 function audioParamRamp(param, value, fadeTime=0)
 {
     ASSERT(fadeTime >= 0, 'fadeTime must be positive or zero');
+    value = audioFinite(value, 0), fadeTime = audioFinite(fadeTime, 0);
     const startTime = audioContext.currentTime;
     param.cancelScheduledValues(startTime);
     if (fadeTime)
@@ -531,11 +536,11 @@ class SoundInstance
         /** @property {Sound} - The sound object */
         this.sound = sound;
         /** @property {number} - How much to scale volume by */
-        this.volume = volume;
+        this.volume = audioFinite(volume, 0);
         /** @property {number} - The playback rate to use */
-        this.rate = rate;
+        this.rate = audioFinite(rate, 1);
         /** @property {number} - How much to apply stereo panning */
-        this.pan = pan;
+        this.pan = audioFinite(pan, 0);
         /** @property {boolean} - Should the sound loop */
         this.loop = loop;
         /** @property {number|undefined} - Where it is in the sound while not playing, in the sound's own seconds, undefined while playing
@@ -627,7 +632,7 @@ class SoundInstance
     {
         ASSERT(volume >= 0, 'Sound volume must be positive or zero');
         ASSERT(fadeTime >= 0, 'Sound fade time must be positive or zero');
-        this.volume = volume;
+        this.volume = volume = audioFinite(volume, 0);
         this.gainNode && audioParamRamp(this.gainNode.gain, volume, fadeTime);
     }
 
@@ -637,7 +642,7 @@ class SoundInstance
     setPan(pan)
     {
         ASSERT(isNumber(pan), 'Sound pan must be a number');
-        this.pan = pan;
+        this.pan = pan = audioFinite(pan, 0);
         if (this.pannerNode)
             this.pannerNode.pan.value = clamp(pan, -1, 1);
     }
@@ -655,7 +660,7 @@ class SoundInstance
             this.startOffset = this.getCurrentTime();
             this.startTime = audioContext.currentTime;
         }
-        this.rate = rate;
+        this.rate = rate = audioFinite(rate, 1);
         if (this.source)
             this.source.playbackRate.value = rate;
     }
@@ -872,6 +877,8 @@ function playAudioBuffer(buffer, volume=1, rate=1, pan=0, loop=false, gainNode, 
             audioResume();
         return;
     }
+
+    volume = audioFinite(volume, 0), rate = audioFinite(rate, 1), pan = audioFinite(pan, 0);
 
     // setup source, many sources can share one buffer
     const source = audioContext.createBufferSource();

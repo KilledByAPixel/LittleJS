@@ -1790,8 +1790,13 @@ class LensFlare3D extends EngineObject3D
      *      tileInfo: TileInfo|undefined, angle: number}>} */
     getScreenElements()
     {
-        // one made while the game is paused, as the 3D editor makes them, has had no update to find it
-        this.visibleFound || this.updateVisible(0);
+        // one made while the game is paused, as the 3D editor makes them, has had no update to find it, and while
+        // paused nothing updates it, so it is found at once each time it is drawn, as the camera turns
+        if (!this.visibleFound || paused)
+        {
+            this.visibleFound = false;
+            this.updateVisible(0);
+        }
         const look = this.visible > 0 && this.flareLook();
         if (!look) return [];
         const {sun, center, tint, height} = look, strength = look.strength * this.visible;

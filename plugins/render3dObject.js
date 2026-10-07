@@ -648,8 +648,9 @@ function render3DFixedSolids()
 
 // push an object pushed by another out of the solids that do not move, mass 0, back to the side it came from;
 // they take the touch as any pair does, so a one way platform still lets it through; not the one that pushed it, which
-// already did, and a push of a rounding error is none, or a box on a turned ramp would be pushed along its slant
-function render3DSettleFixed(o, pusher)
+// already did, and a push of a rounding error is none, or a box on a turned ramp would be pushed along its slant;
+// from is where it was before the push
+function render3DSettleFixed(o, pusher, from)
 {
     if (o.destroyed || !o.collideSolidObjects) return;
     let shape = render3DSolidShape(o);
@@ -681,9 +682,10 @@ function render3DSettleFixed(o, pusher)
         if (o.velocity3D.dot(normal) < 0)
             o.velocity3D = o.velocity3D.reflect(normal, o.restitution);
     }
-    // and out of the level, the voxel and height maps, from where it was when the pass began, as its own turn does
+    // and out of the level, the voxel and height maps, from where it was before the push, so a move of the game's own,
+    // as a collision callback that sends it away, is not swept back across the level
     if (o.collideLevel && o.mass)
-        render3DCollideLevel(o, render3DCollideFrom(o), undefined);
+        render3DCollideLevel(o, from, undefined);
 }
 
 // what moves shape a back clear of shape b to the side it came from: along an axis the two were clear on where they
@@ -771,6 +773,7 @@ function render3DCollideSolid(a)
         const total = a.mass + b.mass;
         const weightA = !a.mass ? 0 : !b.mass ? 1 : b.mass / total;
         const weightB = !b.mass ? 0 : !a.mass ? 1 : a.mass / total;
+        const fromA = a.pos3D.copy(), fromB = b.pos3D.copy(); // where the push moves them from, for the settles
         a.pos3D = a.pos3D.add(push.scale(weightA));
         b.pos3D = b.pos3D.subtract(push.scale(weightB));
         // mass 0 keeps its velocity too, so a moving platform keeps moving, and what hits it bounces by its own
@@ -787,7 +790,7 @@ function render3DCollideSolid(a)
             // a met the solids before it in the list already, the fixed ones among them, so a push from something
             // that moves is settled against those now, and b takes what a could not move, as if a were fixed
             const pushed = a.pos3D.copy();
-            render3DSettleFixed(a, b);
+            render3DSettleFixed(a, b, fromA);
             b.pos3D = b.pos3D.add(a.pos3D.subtract(pushed));
         }
         if (weightB)
@@ -796,12 +799,12 @@ function render3DCollideSolid(a)
             // the frame in the wall, and a hard enough shove would carry it through; then a takes what b could not
             // move, as a pusher stops against a crate held by a wall, and is settled itself, squeezed at worst
             const pushed = b.pos3D.copy();
-            render3DSettleFixed(b, a);
+            render3DSettleFixed(b, a, fromB);
             const backX = b.pos3D.x - pushed.x, backY = b.pos3D.y - pushed.y, backZ = b.pos3D.z - pushed.z;
             if (weightA && (backX || backY || backZ))
             {
                 a.pos3D = a.pos3D.add(vec3(backX, backY, backZ));
-                render3DSettleFixed(a, b);
+                render3DSettleFixed(a, b, fromA);
             }
         }
         if (weightA)
