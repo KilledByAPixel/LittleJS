@@ -469,7 +469,8 @@ class EngineObject
     /** Optional hook called during the light system plugin's lightmap pass to draw this object's lightmap contribution. Does nothing by default */
     renderLight() {}
 
-    /** Draw this object into the light system's shadow map, called during its shadow pass when castShadow is set.
+    /** Draw this object into the light system's shadow map, called during its shadow pass when castShadow is set, and into
+     *  its background map when castBackgroundShadow is set and a DirectionalLight is out.
      *  Calls render() by default so the object casts its own shape; override to cast a different one, like a blob at a character's feet so its body stays lit;
      *  screen space WebGL draws in render() are skipped during the pass */
     renderShadow() { this.render(); }

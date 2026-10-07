@@ -161,6 +161,13 @@ class LightSystemPlugin
         this.shadowMapSizeAllocated = 0;     // sizes the textures were made at, to remake them on a change
         this.shadowTextureSizeAllocated = 0;
 
+        // a full texture quad, the vertex shader of the shadow and directional programs
+        const quadVertex =
+            '#version 300 es\n' +
+            'precision highp float;'+
+            'in vec2 p;'+                   // unit quad [0..1]
+            'out vec2 uv;'+
+            'void main(){gl_Position=vec4(p+p-1.,1,1);uv=p;}';
         initLightSystem();
         engineAddPlugin(undefined, lightSystemRender,
             lightSystemContextLost, lightSystemContextRestored);
@@ -293,13 +300,6 @@ class LightSystemPlugin
             gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
             return texture;
         }
-        // a full texture quad, the vertex shader of the shadow and directional programs
-        const quadVertex =
-            '#version 300 es\n' +
-            'precision highp float;'+
-            'in vec2 p;'+                   // unit quad [0..1]
-            'out vec2 uv;'+
-            'void main(){gl_Position=vec4(p+p-1.,1,1);uv=p;}';
         function initShadows()
         {
             const gl = glContext, ls = lightSystem;
@@ -437,7 +437,8 @@ class LightSystemPlugin
                     }
                     glFlush();
                 };
-                drawMap(ls.shadowMap, (o)=> o.castShadow);
+                if (ls.shadows || ls.directionalLight?.castShadow)
+                    drawMap(ls.shadowMap, (o)=> o.castShadow); // nothing reads it for a sun that casts no shadows
                 if (ls.directionalLight)
                 {
                     if (!ls.backgroundMap)
@@ -459,14 +460,27 @@ class LightSystemPlugin
             }
         }
         // the directional light's textures and programs, made when one is first drawn and again when the size changes
-        function initDirectional()
+        function initDirectionalTextures()
         {
-            const gl = glContext, ls = lightSystem, size = ls.directionalTextureSize, p = ls.directionalPrograms;
+            const gl = glContext, ls = lightSystem, size = ls.directionalTextureSize;
             ls.directionalTexture = createTexture(size);
             ls.directionalTextureA = createTexture(size);
             ls.directionalTextureB = createTexture(size);
             ls.directionalTextureSizeAllocated = size;
             glActiveTexture && gl.bindTexture(gl.TEXTURE_2D, glActiveTexture);
+        }
+        function freeDirectionalTextures()
+        {
+            const gl = glContext, ls = lightSystem;
+            for (const texture of [ls.directionalTexture, ls.directionalTextureA, ls.directionalTextureB])
+                gl.deleteTexture(texture);
+            ls.directionalTexture = ls.directionalTextureA = ls.directionalTextureB = undefined;
+            ls.directionalTextureSizeAllocated = 0;
+        }
+        // its programs, made once, a new texture size keeps them
+        function initDirectional()
+        {
+            const gl = glContext, ls = lightSystem, p = ls.directionalPrograms;
 
             // the maps are stored world up at v=0, the work textures world up at v=1, so a map is read at 1-v
             const header = '#version 300 es\nprecision highp float;in vec2 uv;out vec4 c;';
@@ -534,11 +548,13 @@ class LightSystemPlugin
             units(p.combine, ['s', 't', 'f']);
             units(p.add, ['s']);
         }
+        // let go of everything a directional light made, its textures, programs and background map
         function freeDirectional()
         {
             const gl = glContext, ls = lightSystem, p = ls.directionalPrograms;
-            for (const texture of [ls.directionalTexture, ls.directionalTextureA, ls.directionalTextureB])
-                gl.deleteTexture(texture);
+            freeDirectionalTextures();
+            gl.deleteTexture(ls.backgroundMap);
+            ls.backgroundMap = undefined;
             for (const name of ['seed', 'shadow', 'leak', 'combine', 'add'])
             {
                 gl.deleteProgram(p[name]);
@@ -559,11 +575,15 @@ class LightSystemPlugin
         function lightSystemDirectionalPass()
         {
             const gl = glContext, ls = lightSystem, light = ls.directionalLight;
-            if (!ls.directionalTexture || ls.directionalTextureSize !== ls.directionalTextureSizeAllocated)
+            if (!ls.directionalPrograms.seed)
             {
-                ls.directionalTexture && freeDirectional();
                 initDirectional();
                 if (ls.shadersFailed) return;
+            }
+            if (!ls.directionalTexture || ls.directionalTextureSize !== ls.directionalTextureSizeAllocated)
+            {
+                ls.directionalTexture && freeDirectionalTextures();
+                initDirectionalTextures();
             }
             const p = ls.directionalPrograms, N = ls.directionalTextureSize, W = ls.shadowMapWorldSize;
             const d = light.sunDirection.normalize(-1), toUV = (texels)=> vec2(d.x * texels / N, d.y * texels / N);
@@ -669,7 +689,10 @@ class LightSystemPlugin
 
             // 1c. the directional light is built from the maps, before the lightmap is bound
             const sun = lightSystem.directionalLight;
-            sun && lightSystemDirectionalPass();
+            if (sun)
+                lightSystemDirectionalPass();
+            else if (lightSystem.directionalTexture || lightSystem.backgroundMap)
+                freeDirectional(); // the sun is gone, so is what it was drawn with
             if (lightSystem.shadersFailed) return;
 
             // an automatic size follows the canvas, so reallocate the lightmap when
@@ -1078,6 +1101,8 @@ class DirectionalLight extends EngineObject
     /** Check its settings, called automatically each frame */
     update()
     {
+        ASSERT(isVector2(this.sunDirection) && !!(this.sunDirection.x || this.sunDirection.y),
+            'DirectionalLight: sunDirection is a vec2 that is not zero, toward the sun', this.sunDirection);
         ASSERT(this.shadowLength >= 0 && this.backgroundDepth >= 0,
             'DirectionalLight: shadowLength and backgroundDepth are world units, 0 or more', this.shadowLength,
             this.backgroundDepth);

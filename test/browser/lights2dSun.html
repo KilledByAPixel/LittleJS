@@ -34,6 +34,7 @@ smokeRun(async ()=>
 
     engineStep(3);
     check('with no directional light there is no background map', !lightSystem.backgroundMap);
+    check('nor any of its textures', !lightSystem.directionalTexture);
     check('and the floor is dark', bright(-2, 3) < 40, bright(-2, 3));
 
     const sun = new DirectionalLight(vec2(-1, 0), rgb(1, 1, 1)); // the sun to the left, shining right
@@ -77,18 +78,33 @@ smokeRun(async ()=>
         [bright(-6, 4), bright(0, 0)]);
 
     sun.castShadow = false;
+    let shadowDraws = 0;
+    const renderShadow = block.renderShadow;
+    block.renderShadow = function() { ++shadowDraws; renderShadow.call(this); };
     engineStep(3);
     check('with castShadow off there is no long shadow', bright(0, 0) > 200, bright(0, 0));
+    check('and the foreground map is not drawn, nothing reads it', shadowDraws === 0, shadowDraws);
+    block.renderShadow = renderShadow;
+
+    // a diagonal sun, up and to the left: the block's shadow goes down and to the right
+    sun.castShadow = true;
+    sun.sunDirection = vec2(-1, 1);
+    engineStep(3);
+    check('a diagonal sun casts down and to the right', bright(-1, -3) < 120 && bright(-7, -3) > 200,
+        [bright(-1, -3), bright(-7, -3)]);
+    sun.sunDirection = vec2(-1, 0);
 
     // a long shadow past what 10 passes reach on a big texture still fades out, it is not cut off: a caster at x -15,
     // off screen but in the map, its shadow 40 long, which at 2048 texels over the map's 32 units is 2560 texels
     sun.castShadow = true;
+    const seedProgram = lightSystem.directionalPrograms.seed;
     lightSystem.directionalTextureSize = 2048;
     sun.shadowLength = 40;
     const far = new EngineObject(vec2(-15, 5), vec2(1, 2), tile(1, 16));
     engineStep(3);
     check('a long shadow on a big texture fades on, not cut off where the passes end', bright(3, 5) < 200,
         bright(3, 5));
+    check('a new texture size keeps the shaders', lightSystem.directionalPrograms.seed === seedProgram);
     far.destroy();
     lightSystem.directionalTextureSize = 512;
     sun.shadowLength = 20;
@@ -104,6 +120,7 @@ smokeRun(async ()=>
     sun.destroy();
     engineStep(3);
     check('destroyed, it adds nothing', bright(-6, 4) < 40, bright(-6, 4));
+    check('and its textures are let go', !lightSystem.directionalTexture && !lightSystem.backgroundMap);
     checkGLError();
 });
 </script>

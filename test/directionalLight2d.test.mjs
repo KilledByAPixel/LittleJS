@@ -46,13 +46,14 @@ test('it asserts without the plugin, and on a direction that is no vector or zer
     assert.match(thrown(run, 'new DirectionalLight(5)') ?? '', /sunDirection/);
 });
 
-test('a negative shadowLength or backgroundDepth asserts at its update', ()=>
+test('a negative shadowLength or backgroundDepth, or a zero sunDirection, asserts at its update', ()=>
 {
     const run = engine();
     run('var sun = new DirectionalLight');
     assert.equal(thrown(run, 'sun.update()'), undefined);
     assert.match(thrown(run, 'sun.shadowLength = -1; sun.update()') ?? '', /shadowLength/);
     assert.match(thrown(run, 'sun.shadowLength = 2; sun.backgroundDepth = -1; sun.update()') ?? '', /backgroundDepth/);
+    assert.match(thrown(run, 'sun.backgroundDepth = 3; sun.sunDirection = vec2(); sun.update()') ?? '', /sunDirection/);
 });
 
 test('every object has castBackgroundShadow, off by default', ()=>
