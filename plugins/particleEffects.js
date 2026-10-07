@@ -107,7 +107,7 @@ particleEffectAddSetting('collideLevel', 'checkbox', false, 0, 0, 0,
 particleEffectAddSetting('restitution', 'number', 0, 0, 1, .01,
     'Bounce when hitting tiles');
 particleEffectAddSetting('friction', 'number', .8, 0, 1, .01,
-    'Speed kept sliding along tiles, the larger of this and the layer's, as an object's');
+    'Speed kept sliding along tiles, the larger of this and the friction of the layer, as for an object');
 
 particleEffectSettingGroup = 'Texture';
 particleEffectAddSetting('shape', 'shape', 'soft', 0, 0, 0,
