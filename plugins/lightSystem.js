@@ -22,6 +22,8 @@
  *   setShadowTransparent lets its color tint the light
  * - Set light.glow for a soft hazy glow over a light, like a lamp at night; it is added over the lit scene after the
  *   lightmap, so it shows in the dark and sits in front of everything there
+ * - A DirectionalLight is a sun: one per scene, it lights everything from one direction, foreground casters throw long
+ *   shadows and objects with castBackgroundShadow are lit only at their edges facing it
  * - Must be constructed BEFORE PostProcessPlugin so post-process sees lit pixels
  * @namespace LightSystem
  */
@@ -144,7 +146,7 @@ class LightSystemPlugin
         this.directionalLight = undefined;
         /** @property {number} - Pixels across the square textures a directional light is built in, covering the
          *  shadow map's area; larger is sharper and slower */
-        this.directionalTextureSize = 256;
+        this.directionalTextureSize = 512;
         /** @property {WebGLTexture|undefined} - The directional light as built this frame, white where it reaches,
          *  over the shadow map's area, read only
          *  @type {WebGLTexture|undefined} */
@@ -486,14 +488,14 @@ class LightSystemPlugin
                 'vec3 b=u==clamp(u,0.,1.)?texture(s,u).rgb+fade:vec3(1);'+
                 'c=vec4(min(texture(s,uv).rgb,b),1);}');
 
-            // background leak pass, Frank Engine's: add a little of the light upstream, then keep the foreground
-            // black; past the area upstream is open sky
+            // background leak pass, the long shadow pass turned around: the brighter of this texel and the light a
+            // shift upstream made dimmer by fade, so light comes into a background area from its edges facing the
+            // light and fades evenly to nothing by backgroundDepth; past the area upstream is open sky
             p.leak = glCreateProgram(quadVertex, header +
-                'uniform sampler2D s,f;uniform vec2 shift;uniform float gain,useF;'+
+                'uniform sampler2D s;uniform vec2 shift;uniform float fade;'+
                 'void main(){vec2 u=uv-shift;'+
-                'vec3 b=u==clamp(u,0.,1.)?texture(s,u).rgb:vec3(1);'+
-                'vec3 v=min(texture(s,uv).rgb+gain*b,1.);'+
-                'c=vec4(v*mix(vec3(1),texture(f,vec2(uv.x,1.-uv.y)).rgb,useF),1);}');
+                'vec3 b=(u==clamp(u,0.,1.)?texture(s,u).rgb:vec3(1))-fade;'+
+                'c=vec4(max(texture(s,uv).rgb,b),1);}');
 
             // combine: long shadows times the leak, and a caster's texels take some of the light just upstream
             // of them, a rim on its side facing the light
@@ -526,7 +528,7 @@ class LightSystemPlugin
             };
             units(p.seed, ['f', 'b']);
             units(p.shadow, ['s']);
-            units(p.leak, ['s', 'f']);
+            units(p.leak, ['s']);
             units(p.combine, ['s', 't', 'f']);
             units(p.add, ['s']);
         }
@@ -604,26 +606,35 @@ class LightSystemPlugin
             gl.uniform1f(u(program, 'useF'), casts);
             gl.uniform1f(u(program, 'useB'), 1);
             target(free); draw();
-            program = use('leak');
-            const D = light.backgroundDepth * N / W;
-            gl.uniform1f(u(program, 'gain'), .1);
             let leakSrc = free, leakDst = ls.directionalTexture;
-            for (let j = 0; j < 10; ++j) // an even count, so the result ends back in free
+            const D = light.backgroundDepth * N / W;
+            if (D > 0)
             {
-                const shift = toUV((j + 1) * D / 55); // the shifts add up to D
-                gl.uniform2f(u(program, 'shift'), shift.x, shift.y);
-                gl.uniform1f(u(program, 'useF'), j < 8 ? casts : 0); // the last two let light onto casters
-                bind(1, leakSrc); bind(2, ls.shadowMap); target(leakDst); draw();
-                [leakSrc, leakDst] = [leakDst, leakSrc];
+                // passes shifting twice as far each time, as the long shadows, so the light fades in evenly by D
+                program = use('leak');
+                const passes = clamp(ceil(log2(max(D, 1))), 1, 10);
+                for (let k = 0; k < passes; ++k)
+                {
+                    const shift = toUV(2**k);
+                    gl.uniform2f(u(program, 'shift'), shift.x, shift.y);
+                    gl.uniform1f(u(program, 'fade'), 2**k / D);
+                    bind(1, leakSrc); target(leakDst); draw();
+                    [leakSrc, leakDst] = [leakDst, leakSrc];
+                }
             }
 
-            // combine into directionalTexture: long shadows times the leak, with a rim on casters
+            // combine into the one of the three textures left, long shadows times the leak, with a rim on casters;
+            // it is the built light from now on, the other two its work textures
+            const textures = [ls.directionalTexture, ls.directionalTextureA, ls.directionalTextureB];
+            const built = textures.find((texture)=> texture !== shadows && texture !== leakSrc);
             program = use('combine');
             bind(1, shadows); bind(2, leakSrc); bind(3, ls.shadowMap);
             const rim = toUV(3);
             gl.uniform2f(u(program, 'rim'), rim.x, rim.y);
             gl.uniform1f(u(program, 'useF'), casts);
-            target(ls.directionalTexture); draw();
+            target(built); draw();
+            [ls.directionalTextureA, ls.directionalTextureB] = textures.filter((texture)=> texture !== built);
+            ls.directionalTexture = built;
 
             // hand the engine its state back: unit 0 active with its texture, no framebuffer
             bind(1, null); bind(2, null); bind(3, null);

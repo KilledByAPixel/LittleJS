@@ -20,7 +20,7 @@ test('a DirectionalLight has its direction, color and settings, and is the light
         JSON.stringify({x: sun.direction.x, y: sun.direction.y, castShadow: sun.castShadow,
             shadowLength: sun.shadowLength, backgroundDepth: sun.backgroundDepth, current: lightSystem.directionalLight === sun,
             size: lightSystem.directionalTextureSize})`));
-    assert.deepEqual(light, {x: 2, y: -1, castShadow: true, shadowLength: 20, backgroundDepth: 3, current: true, size: 256});
+    assert.deepEqual(light, {x: 2, y: -1, castShadow: true, shadowLength: 20, backgroundDepth: 3, current: true, size: 512});
     run('sun.destroy()');
     assert.equal(run('new DirectionalLight().direction.y'), -1, 'down and to the right by default');
 });
