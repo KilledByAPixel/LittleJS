@@ -366,7 +366,7 @@ function oscillate(frequency=1, amplitude=1, t=time, offset=0, type=0)
  * @param {any} n
  * @return {boolean}
  * @memberof Math */
-function isNumber(n) { return typeof n === 'number' && !isNaN(n); }
+function isNumber(n) { return typeof n === 'number' && n === n; } // NaN is the one number not equal to itself
 
 /**
  * Check if a value is stringifiable — i.e. it has a toString that returns
@@ -711,8 +711,8 @@ class Vector2
         this.x = x;
         /** @property {number} - Y axis location */
         this.y = y;
-        ASSERT(this.isValid(), 'vec2: x and y must be numbers (add, subtract, multiply and divide take a vec2, scale a ' +
-            'number)', this);
+        ASSERT(this.isValid(), 'vec2: x and y must be numbers (add, subtract, multiply and divide take a vec2, scale a number)',
+            this); // one literal, as it is built at every vector made in a debug build
     }
 
     /** Sets values of this vector and returns self
@@ -983,6 +983,9 @@ function isColor(c) { return c instanceof Color && c.isValid(); }
 // color asserts
 function ASSERT_COLOR_VALID(c) { ASSERT(isColor(c), 'expected a color', c); }
 
+// two hex digits of a color channel of 0 to 1
+const colorHex = (c)=> ((c = round(clamp(c) * 255)) < 16 ? '0' : '') + c.toString(16);
+
 /**
  * Color object (red, green, blue, alpha) with some helpful functions
  * @memberof Engine
@@ -1174,8 +1177,7 @@ class Color
     {
         if (!this.isValid())
             return '#000'; // in release too, as a canvas would keep its last color for #NaN
-        const toHex = (c)=> ((c=round(clamp(c)*255))<16 ? '0' : '') + c.toString(16);
-        return '#' + toHex(this.r) + toHex(this.g) + toHex(this.b) + (useAlpha ? toHex(this.a) : '');
+        return '#' + colorHex(this.r) + colorHex(this.g) + colorHex(this.b) + (useAlpha ? colorHex(this.a) : '');
     }
 
     /** Set this color from a hex code

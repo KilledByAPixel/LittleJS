@@ -118,13 +118,16 @@ class ParticleEmitter extends EngineObject
                 tileInfo);
             const numbers = {emitTime, emitRate, emitConeAngle, particleTime, sizeStart, sizeEnd, speed, angleSpeed,
                 damping, angleDamping, gravityScale, particleConeAngle, fadeRate, randomness};
+            // plain strings, as a message is built at every emitter made in a debug build
             for (const name in numbers)
-                ASSERT(isNumber(numbers[name]), `ParticleEmitter: ${name} must be a number, the arguments may be out of order`,
-                    numbers[name]);
+                ASSERT(isNumber(numbers[name]),
+                    'ParticleEmitter: an argument is not a number, they may be out of order; its name and value:',
+                    name, numbers[name]);
             const colors = {colorStartA, colorStartB, colorEndA, colorEndB};
             for (const name in colors)
-                ASSERT(isColor(colors[name]), `ParticleEmitter: ${name} must be a color, the arguments may be out of order`,
-                    colors[name]);
+                ASSERT(isColor(colors[name]),
+                    'ParticleEmitter: an argument is not a color, they may be out of order; its name and value:',
+                    name, colors[name]);
         }
 
         // emitter settings

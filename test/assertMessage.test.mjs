@@ -68,7 +68,7 @@ test('common mistakes say what to do', ()=>
     assert.match(said(`new Color().setHex('#12')`), /setHex: use #rgb/);
     assert.match(said('drawText("hi", vec2(), vec2(1))'), /drawText: size is a number/);
     assert.match(said('new ParticleEmitter(vec2(), 0, 1, 0, 100, PI, undefined, 5)'),
-        /ParticleEmitter: colorStartA must be a color, the arguments may be out of order/);
+        /ParticleEmitter: an argument is not a color, they may be out of order; its name and value: colorStartA/);
     assert.match(said('RED.a = .5'), /engine constants like RED can not be changed, change a copy/);
 });
 
