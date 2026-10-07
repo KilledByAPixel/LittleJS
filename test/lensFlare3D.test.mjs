@@ -13,7 +13,10 @@ function load()
         render3D.camera.pos = vec3(); render3D.camera.rotation = vec3();
         var sun = (x, y, z)=> { render3D.sunDirection = vec3(x, y, z); render3D.updateMatrices(); };
         var shown = (flare)=> flare.getScreenElements().map((e)=> [e.pos.x, e.pos.y, e.size, e.color.a]);
-        var steps = (flare, n)=> { for (let i = 0; i < n; ++i) flare.update(); };`);
+        var steps = (flare, n)=> { for (let i = 0; i < n; ++i) flare.update(); };
+        // the engine updates an object before it draws, so a flare read before its first update has one first
+        const elements = LensFlare3D.prototype.getScreenElements;
+        LensFlare3D.prototype.getScreenElements = function(...a) { this.visibleFound || this.update(); return elements.apply(this, a); };`);
     return run;
 }
 const near = (a, b, message, epsilon=.5)=> assert.ok(Math.abs(a - b) < epsilon, message ?? `${a} is not ${b}`);
@@ -76,7 +79,7 @@ test('no flare with the sun behind the camera, and it fades as the sun leaves th
     const run = load();
     run('var flare = new LensFlare3D; sun(0, 0, 1);');
     assert.equal(run('flare.getScreenElements().length'), 0);
-    run('sun(0, 0, -1)');
+    run('sun(0, 0, -1); steps(flare, 20);'); // in view, it fades in
     const full = json(run, 'shown(flare)')[0][3];
     run('sun(.62, 0, -1)'); // just past the edge of the screen
     const edge = json(run, 'shown(flare)')[0]?.[3] ?? 0;
@@ -185,7 +188,7 @@ test('a spotlight\'s flare shows from inside its beam only', ()=>
     const run = load();
     run(lampCode + 'lamp.coneAngle = .5;'); // it shines down -z, away from the camera
     assert.equal(run('flare.getScreenElements().length'), 0);
-    run('lamp.rotation3D = vec3(0, PI, 0)');
+    run('lamp.rotation3D = vec3(0, PI, 0); steps(flare, 20);');
     assert.ok(run('flare.getScreenElements().length') > 0, 'turned to shine at the camera');
 });
 
@@ -355,4 +358,16 @@ test('a light\'s fixture is told from a room by how near its surface is to the l
     assert.equal(shows(20, [6, 6, 6]), 0, 'a closed room 6 wide around a light that reaches far hides it');
     assert.equal(shows(5, [3, 3, 3]), 1, 'a globe 3 wide around a light of the default reach is its own fixture');
     assert.equal(shows(8, [.3, 6, .3]), 1, 'a thin lamp post holding the light is too');
+});
+
+test('a flare made with the sun already hidden starts hidden, not fading out from full over its fade time', ()=>
+{
+    const run = load();
+    run(`var wall = new EngineObject3D(vec3(0, 0, -20), render3D.boxMesh); wall.scale3D = vec3(10);
+        var flare = new LensFlare3D; sun(0, 0, -1);`);
+    assert.equal(run('flare.visible'), 0, 'not shown before its first update');
+    run('steps(flare, 1)');
+    assert.equal(run('flare.visible'), 0, 'hidden from the first update');
+    run('wall.pos3D = vec3(50, 0, -20); steps(flare, 1);');
+    assert.ok(run('flare.visible') > 0 && run('flare.visible') < 1, 'after that it eases in as before');
 });

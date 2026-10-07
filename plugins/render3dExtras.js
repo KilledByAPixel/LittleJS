@@ -1682,8 +1682,9 @@ class LensFlare3D extends EngineObject3D
         /** @property {number} - Seconds the flare takes to fade out or in when the sun is hidden or shows again */
         this.fadeTime = .15;
         /** @property {number} - How much of the sun shows, 0 hidden, off the screen or behind the camera to 1 in
-         *  plain view, eased */
-        this.visible = 1;
+         *  plain view, eased; the first update sets it at once, so a sun hidden from the start never shows */
+        this.visible = 0;
+        this.visibleFound = false; // the first update has found it
         this.renderOrder = 1e9; // over the game's sprites, it is light in the lens
         this.madeKey = '';
         /** @type {Array<LensFlareElement>} */
@@ -1848,9 +1849,12 @@ class LensFlare3D extends EngineObject3D
         super.update();
         if (this.light?.destroyed)
             return this.destroy(); // the flare of a light that is gone
+        // the first update finds it at once, from the camera as it is, its matrices made before the first draw
+        this.visibleFound || render3D.updateMatrices();
         const shows = !!this.flareLook() && !(this.occlusion && this.isHidden());
-        const step = this.fadeTime > 0 ? timeDelta / this.fadeTime : 1;
+        const step = this.fadeTime > 0 && this.visibleFound ? timeDelta / this.fadeTime : 1;
         this.visible = clamp(this.visible + (shows ? step : -step));
+        this.visibleFound = true;
     }
 
     /** Draw the flare over the 3D scene, added onto it, called automatically in the 2D pass */
