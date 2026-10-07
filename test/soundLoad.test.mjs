@@ -209,3 +209,21 @@ test('loading a sound again replaces the samples read from the one before', asyn
     }
     finally { ctxProto.decodeAudioData = decode; }
 });
+
+test('a sound whose file fails to load still calls onloadCallback, and isLoaded says it is not loaded', async () =>
+{
+    // a game counting its callbacks to start waited for ever when one file was missing
+    const fetchBefore = globalThis.fetch, warn = console.warn;
+    globalThis.fetch = async ()=> ({ ok: false, status: 404, statusText: 'Not Found' });
+    console.warn = ()=> {};
+    try
+    {
+        let called;
+        const sound = new LJS.Sound('missing.mp3', 0, 0, 1, (s)=> called = s);
+        for (let i = 10; i-- && !called;)
+            await new Promise((resolve)=> setTimeout(resolve, 5));
+        assert.equal(called, sound);
+        assert.equal(sound.isLoaded(), false);
+    }
+    finally { globalThis.fetch = fetchBefore; console.warn = warn; }
+});

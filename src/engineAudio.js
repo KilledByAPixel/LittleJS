@@ -201,7 +201,7 @@ function audioParamRamp(param, value, fadeTime=0)
 ///////////////////////////////////////////////////////////////////////////////
 
 /**
- * @callback SoundLoadCallback - Function called when sound is loaded
+ * @callback SoundLoadCallback - Function called once a sound has loaded, or failed to, which sound.isLoaded() tells
  * @param {Sound} sound
  * @memberof Audio
  */
@@ -232,7 +232,8 @@ class Sound
      *  @param {number} [randomness] - How much to randomize frequency each time sound plays, for zzfx sounds it overrides the array's own randomness, which is used if undefined
      *  @param {number} [range=soundDefaultRange] - World space max range of sound
      *  @param {number} [taper=soundDefaultTaper] - At what percentage of range should it start tapering
-     *  @param {SoundLoadCallback} [onloadCallback] - callback function to call when sound is loaded
+     *  @param {SoundLoadCallback} [onloadCallback] - Called once the sound has loaded, or its file failed to, so a
+     *    game counting its sounds goes on; isLoaded says which
      */
     constructor(asset, randomness, range, taper=soundDefaultTaper, onloadCallback)
     {
@@ -307,7 +308,10 @@ class Sound
             // report failures rather than leaving an unhandled rejection, the sound just stays unloaded and silent
             const filename = asset + '';
             engineAddLoad(this.loadSound(filename).catch(e=> // startup waits for it, and a release build says why too
-                console.warn('Sound load failed for', filename, '-', e?.message ?? e)));
+            {
+                console.warn('Sound load failed for', filename, '-', e?.message ?? e);
+                this.loadedPercent === 1 || this.onloadCallback?.(this); // failed, not loaded and its callback threw
+            }));
         }
     }
 

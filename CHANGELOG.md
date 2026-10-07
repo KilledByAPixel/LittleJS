@@ -39,6 +39,7 @@ What changed in each release, newest first. Releases before 1.20.0 are on the
 
 ### Fixes
 
+- A sound whose file fails to load calls its onloadCallback too, with isLoaded false, so a game counting its sounds before it starts no longer waits for ever on a missing file
 - The speed cap, objectMaxSpeed, is applied after gravity in 2D and 3D, so no move is longer than it; a falling object moved the cap plus its gravity a frame
 - Audio: a one shot paused after its end and before its ended event stays at its end, where a resume played it again; a zzfx array's own randomness is kept to 0 to 1, as one passed in is; a sound at exactly its range, 2D or 3D, is out of it, not a silent voice
 - particleEffect: an option that is not a value of its kind keeps the effect's own value, saying so in a debug build, where it quietly became the library's default ({speed: null} on fire, an emitTime of '0.5' that never stopped); a vec2 emitSize is a rectangle, as ParticleEmitter takes one; an option of no name asserts in a debug build
