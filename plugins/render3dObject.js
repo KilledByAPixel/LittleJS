@@ -600,6 +600,20 @@ function render3DPushFrom(shapeA, shapeB, a, b, push)
     return render3DSolidPushBack(shapeA, shapeB, aFrom, bFrom) ?? push;
 }
 
+// the solids that do not move, mass 0, in the order of the engine's list, gathered once a pass for the settles, which
+// would otherwise walk every collider for each push between two movers
+const render3DFixed = {pass: -1, list: []};
+function render3DFixedSolids()
+{
+    if (render3DFixed.pass !== engineObjectsUpdateCount)
+    {
+        render3DFixed.pass = engineObjectsUpdateCount;
+        render3DFixed.list = engineObjectsCollide.filter((b)=> !b.mass && b.isSolid && b instanceof EngineObject3D &&
+            !b.parent && !b.sync2D);
+    }
+    return render3DFixed.list;
+}
+
 // push an object pushed by another out of the solids that do not move, mass 0, back to the side it came from;
 // they take the touch as any pair does, so a one way platform still lets it through; not the one that pushed it, which
 // already did, and a push of a rounding error is none, or a box on a turned ramp would be pushed along its slant
@@ -608,10 +622,9 @@ function render3DSettleFixed(o, pusher)
     if (o.destroyed || !o.collideSolidObjects) return;
     let shape = render3DSolidShape(o);
     const reachO = render3DSolidReach(o);
-    for (const b of engineObjectsCollide)
+    for (const b of render3DFixedSolids())
     {
-        if (b === o || b === pusher || b.mass || !b.isSolid || b.destroyed || !(b instanceof EngineObject3D) || b.parent ||
-            b.sync2D)
+        if (b === o || b === pusher || b.mass || b.destroyed)
             continue;
         const p = shape.pos, q = b.pos3D, reach = reachO + render3DSolidReach(b);
         const dx = p.x - q.x, dy = p.y - q.y, dz = p.z - q.z;
