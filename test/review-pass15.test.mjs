@@ -106,3 +106,16 @@ test('an effect taken from an emitter keeps a negative speed, and one from a fin
     assert.equal(result.angleSpeed, -.2);
     assert.equal(result.emitTime, .5, 'the time it emitted for, where 0 emits for ever');
 });
+
+test('the speed cap comes after gravity, so a falling object moves no more than objectMaxSpeed a frame, 2D and 3D', () =>
+{
+    const { run } = loadEngine();
+    const moved = JSON.parse(run(`setHeadlessMode(true); new Render3DPlugin;
+        setGravity(vec2(0, -.05)); render3D.gravity = vec3(0, -.05, 0);
+        const flat = new EngineObject(vec2(0, 100), vec2(1)); flat.setCollision(); flat.velocity = vec2(0, -1);
+        const deep = new EngineObject3D(vec3(0, 100, 0)); deep.setCollision(); deep.mass = 1; deep.velocity3D = vec3(0, -1, 0);
+        const y2 = flat.pos.y, y3 = deep.pos3D.y;
+        flat.updatePhysics(); deep.updatePhysics();
+        JSON.stringify([y2 - flat.pos.y, y3 - deep.pos3D.y])`));
+    assert.deepEqual(moved, [1, 1]);
+});

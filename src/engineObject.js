@@ -191,14 +191,6 @@ class EngineObject
         // bail if a collision callback destroyed us mid-frame
         if (this.destroyed) return;
 
-        // limit max speed to prevent missing collisions, only for what collides: with solids, or with tiles while it
-        // has a mass, which tile collision needs; anything else moves as fast as it is told
-        if (this.clampSpeed && enablePhysicsSolver && (this.collideSolidObjects || this.collideLevel && this.mass))
-        {
-            this.velocity.x = clamp(this.velocity.x, -objectMaxSpeed, objectMaxSpeed);
-            this.velocity.y = clamp(this.velocity.y, -objectMaxSpeed, objectMaxSpeed);
-        }
-
         // physics sanity checks
         ASSERT(this.angleDamping >= 0 && this.angleDamping <= 1, 'angleDamping must be 0 to 1, the fraction kept each frame');
         ASSERT(this.damping >= 0 && this.damping <= 1, 'damping must be 0 to 1, the fraction of velocity kept each frame');
@@ -213,6 +205,14 @@ class EngineObject
             // apply gravity only if it has mass
             this.velocity.x += gravity.x * this.gravityScale;
             this.velocity.y += gravity.y * this.gravityScale;
+        }
+        // limit max speed to prevent missing collisions, after gravity so no move is past it, only for what collides:
+        // with solids, or with tiles while it has a mass, which tile collision needs; anything else moves as fast as
+        // it is told
+        if (this.clampSpeed && enablePhysicsSolver && (this.collideSolidObjects || this.collideLevel && this.mass))
+        {
+            this.velocity.x = clamp(this.velocity.x, -objectMaxSpeed, objectMaxSpeed);
+            this.velocity.y = clamp(this.velocity.y, -objectMaxSpeed, objectMaxSpeed);
         }
         this.pos.x += this.velocity.x;
         this.pos.y += this.velocity.y;
@@ -517,6 +517,8 @@ class EngineObject
      *    positions it only tries, so keep it free of side effects or guard them to once a frame
      *  - this.pos has already moved, so a check on where it came from, like a one way platform, needs the position
      *    saved in update, as the platformer example does
+     *  - For the point of impact, like sparks where a bullet hit, raycast from where this frame's move started,
+     *    this.pos minus this.velocity, to this.pos with tileCollisionRaycast, as the platformer's Bullet does
      *  @param {number}  tileData - the value of the tile at the position
      *  @param {Vector2} pos - the tile's bottom left corner in world space
      *  @return {boolean} - true if the collision should be resolved by modifying it's position and velocity */
