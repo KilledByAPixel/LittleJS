@@ -509,7 +509,9 @@ class LightSystemPlugin
             // add: a world space quad over the area, the built light in the light's color, into the lightmap
             p.add = glCreateProgram(
                 '#version 300 es\nprecision highp float;uniform mat4 m;uniform vec2 origin;uniform float worldSize;'+
-                'in vec2 g;out vec2 uv;void main(){gl_Position=m*vec4(origin+g*worldSize,1,1);uv=g;}',
+                // three times the area, its edge texels carried on by the clamp, so the sun reaches the whole view however
+                // small the map or turned the camera
+                'in vec2 g;out vec2 uv;void main(){uv=g*3.-1.;gl_Position=m*vec4(origin+uv*worldSize,1,1);}',
                 header + 'uniform sampler2D s;uniform vec4 color;'+
                 'void main(){c=vec4(texture(s,uv).rgb*color.rgb*color.a,1);}');
 
@@ -566,6 +568,7 @@ class LightSystemPlugin
             const p = ls.directionalPrograms, N = ls.directionalTextureSize, W = ls.shadowMapWorldSize;
             const d = light.direction.normalize(), toUV = (texels)=> vec2(d.x * texels / N, d.y * texels / N);
             const casts = light.castShadow ? 1 : 0;
+            const cap = ceil(log2(N)) + 1; // passes enough to cross the texture, so a long shadow fades out, never cut off
 
             gl.bindFramebuffer(gl.FRAMEBUFFER, glFramebuffer);
             gl.viewport(0, 0, N, N);
@@ -588,7 +591,7 @@ class LightSystemPlugin
             if (casts && L > 0)
             {
                 program = use('shadow');
-                const passes = clamp(ceil(log2(max(L, 1))), 1, 10);
+                const passes = clamp(ceil(log2(max(L, 1))), 1, cap);
                 for (let k = 0; k < passes; ++k)
                 {
                     const shift = toUV(2**k);
@@ -612,7 +615,7 @@ class LightSystemPlugin
             {
                 // passes shifting twice as far each time, as the long shadows, so the light fades in evenly by D
                 program = use('leak');
-                const passes = clamp(ceil(log2(max(D, 1))), 1, 10);
+                const passes = clamp(ceil(log2(max(D, 1))), 1, cap);
                 for (let k = 0; k < passes; ++k)
                 {
                     const shift = toUV(2**k);

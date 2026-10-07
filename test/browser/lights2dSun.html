@@ -29,7 +29,7 @@ smokeRun(async ()=>
         back.castBackgroundShadow = true;
     }, ()=> {}, ()=> {}, ()=>
     {
-        drawTile(vec2(), vec2(16), tile(1, 16)); // a white floor over the whole view
+        drawTile(vec2(), vec2(40), tile(1, 16)); // a white floor past the whole view, turned too
     }, ()=> {}, [smokeSheet('#888', '#fff')]);
 
     engineStep(3);
@@ -79,6 +79,27 @@ smokeRun(async ()=>
     sun.castShadow = false;
     engineStep(3);
     check('with castShadow off there is no long shadow', bright(0, 0) > 200, bright(0, 0));
+
+    // a long shadow past what 10 passes reach on a big texture still fades out, it is not cut off: a caster at x -15,
+    // off screen but in the map, its shadow 40 long, which at 2048 texels over the map's 32 units is 2560 texels
+    sun.castShadow = true;
+    lightSystem.directionalTextureSize = 2048;
+    sun.shadowLength = 40;
+    const far = new EngineObject(vec2(-15, 5), vec2(1, 2), tile(1, 16));
+    engineStep(3);
+    check('a long shadow on a big texture fades on, not cut off where the passes end', bright(3, 5) < 200,
+        bright(3, 5));
+    far.destroy();
+    lightSystem.directionalTextureSize = 512;
+    sun.shadowLength = 20;
+
+    // the sun reaches the corners of a turned view whose shadow map covers no more than it
+    lightSystem.shadowMapScale = 1;
+    setCameraAngle(.5);
+    engineStep(3);
+    check('a turned view with a small shadow map is lit to its corners', bright(-7.5, 7.5) > 200, bright(-7.5, 7.5));
+    setCameraAngle(0);
+    lightSystem.shadowMapScale = 2;
 
     sun.destroy();
     engineStep(3);
