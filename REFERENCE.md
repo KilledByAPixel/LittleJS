@@ -1823,6 +1823,7 @@ emitter3D.gravityScale = 0 // a share of render3D.gravity added on top of its ow
 // an emitter with an emitTime destroys itself once its last particle is gone, so a burst is fire and forget
 // untextured particles are soft round dots, textured ones are billboards of the tile
 emitter.collideLevel = false // particles hit the height maps and voxel maps, bounce by restitution, slide by friction
+                             // only: not solid objects, as 2D particles hit only tile layers
 emitter.particleCreateCallback / particleUpdateCallback / particleCollideCallback / particleDestroyCallback
                        // as in 2D, each given a Particle3D {pos, velocity, age, lifeTime, emitter, destroy()}, one object
                        // the emitter reuses, so copy what you keep; the collide callback gets (particle, level, pos) and
