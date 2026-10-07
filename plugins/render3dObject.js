@@ -669,8 +669,17 @@ function render3DCollideSolid(a, from)
         const weightA = !a.mass ? 0 : !b.mass ? 1 : b.mass / total;
         const weightB = !b.mass ? 0 : !a.mass ? 1 : a.mass / total;
         const bFrom = weightB ? b.pos3D.copy() : undefined;
+        const aFrom = a.pos3D.copy();
         a.pos3D = a.pos3D.add(push.scale(weightA));
         b.pos3D = b.pos3D.subtract(push.scale(weightB));
+        if (weightA && weightB)
+        {
+            // a met the solids before it in the list already, the fixed ones among them, so a push from something
+            // that moves is settled against those now, and b takes what a could not move, as if a were fixed
+            const pushed = a.pos3D.copy();
+            render3DSettleFixed(a, aFrom);
+            b.pos3D = b.pos3D.add(a.pos3D.subtract(pushed));
+        }
         if (weightA)
             shapeA = render3DSolidShape(a); // it moved, so the next solid must be tested against where it is now
         // b had its turn already, so a push into a wall is settled against the fixed solids now, or it would end the

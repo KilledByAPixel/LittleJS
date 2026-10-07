@@ -44,9 +44,9 @@ test(`objects knocked around a room of solid walls never leave it, seed ${seed}`
     // six walls 1 thick around a room 8 across, and 30 movers of many sizes, kicked up to the speed cap, colliding
     // with the walls; after every frame each one is still inside. A move longer than the mover's size and the
     // wall's thickness together skips it with no overlap at all, in 2D too, so the walls are thick enough that every
-    // move overlaps, many of them past the wall's middle, which pushing by least overlap sent through. The movers do
-    // not push each other: one shoved into a wall by another after its own turn is not settled against the wall that
-    // frame, a known limit of the 3D solver, which moves both of a pair where 2D moves only the one updating
+    // move overlaps, many of them past the wall's middle, which pushing by least overlap sent through. The movers
+    // push each other, a few of them heavy, under gravity, so piles press into the floor and the walls, and none may
+    // end a frame even partly in a wall
     const { run } = loadEngine();
     const result = run(`setHeadlessMode(true); new Render3DPlugin; setGravity(vec2());
         const random = new RandomGenerator(${seed}), half = 4, w = half + .5;
@@ -63,7 +63,7 @@ test(`objects knocked around a room of solid walls never leave it, seed ${seed}`
             const o = new EngineObject3D(vec3(random.float(-3, 3), random.float(-3, 3), random.float(-3, 3)));
             o.size3D = random.float() < .5 ? vec3(random.float(.2, 1)) : vec3(random.float(.2, 1), random.float(.2, 1), random.float(.2, 1));
             o.collideAsSphere3D = random.float() < .3;
-            o.setCollision(true, random.float() < .7); o.mass = random.float(.5, 2);
+            o.setCollision(true, random.float() < .7); o.mass = random.float() < .2 ? 20 : random.float(.5, 2);
             o.restitution = random.float(0, .9); o.damping = 1;
             bodies.push(o);
         }
@@ -76,8 +76,13 @@ test(`objects knocked around a room of solid walls never leave it, seed ${seed}`
                         o.velocity3D = vec3(random.float(-1, 1), random.float(-1, 1), random.float(-1, 1));
             engineObjectsUpdate();
             for (const o of bodies)
-                if (!(Math.abs(o.pos3D.x) < half && Math.abs(o.pos3D.y) < half && Math.abs(o.pos3D.z) < half))
-                    found = 'frame ' + frame + ': ' + bodies.indexOf(o) + ' at ' + o.pos3D;
+            {
+                // all of it inside, a hair allowed for one resting against a wall
+                const s = o.size3D, e = o.collideAsSphere3D ? vec3(Math.max(s.x, s.y, s.z) / 2) : s.scale(.5);
+                if (!(Math.abs(o.pos3D.x) + e.x < half + 1e-4 && Math.abs(o.pos3D.y) + e.y < half + 1e-4 &&
+                    Math.abs(o.pos3D.z) + e.z < half + 1e-4))
+                    found = 'frame ' + frame + ': ' + bodies.indexOf(o) + ' at ' + o.pos3D + ' size ' + s;
+            }
         }
         found || 'clean'`);
     assert.equal(result, 'clean');
@@ -106,5 +111,23 @@ test('a mover shoved into a wall by another is settled against it at once, a pai
             assert.ok(Math.abs(result.b - .25) < 1e-6, 'back against the wall: ' + result.b);
             assert.equal(result.asked, 1, 'the wall heard about it once');
         }
+    }
+});
+
+test('a mover pushed into the floor by one before it in the list, in its own turn, stays on the floor', ()=>
+{
+    // a heavy b sinks into a light a resting on the floor; b is earlier in the list, so a meets it in a's own turn,
+    // after a met the floor: a stays on the floor and b takes the whole push, sideways as well as down
+    for (const [ax, label] of [[0, 'straight'], [.1, 'off center']])
+    {
+        const { run } = loadEngine();
+        const result = JSON.parse(run(`setHeadlessMode(true); new Render3DPlugin;
+            const ground = new EngineObject3D(vec3(0, -.5, 0)); ground.size3D = vec3(4, 1, 4); ground.setCollision(); ground.mass = 0;
+            const b = new EngineObject3D(vec3(0, .55, 0)); b.size3D = vec3(.5); b.setCollision(); b.mass = 20; b.damping = 1;
+            const a = new EngineObject3D(vec3(${ax}, .25, 0)); a.size3D = vec3(.5); a.setCollision(); a.mass = 1; a.damping = 1;
+            engineObjectsUpdate();
+            JSON.stringify({a: a.pos3D.y, b: b.pos3D.y})`));
+        assert.ok(Math.abs(result.a - .25) < 1e-6, label + ': a on the floor: ' + result.a);
+        assert.ok(result.b > .75 - 1e-6, label + ': b on a: ' + result.b);
     }
 });
