@@ -261,7 +261,7 @@ class EngineObject
                     const collide1 = this.collideWithObject(o);
                     const collide2 = o.collideWithObject(this);
                     // a callback may have moved either one, the grid follows
-                    engineCollideGrid && engineCollideGridPlace(engineCollideGrid, o);
+                    engineCollideGrid?.built && engineCollideGridPlace(engineCollideGrid.built, o);
                     if (!collide1 || !collide2)
                     {
                         engineObjectsCollidePairAdd(this, o);

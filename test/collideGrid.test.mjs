@@ -124,3 +124,23 @@ test('a collision callback that throws leaves no grid behind', () =>
     assert.throws(()=> run('engineObjectsUpdate()'));
     assert.equal(run('engineCollideGrid'), undefined);
 });
+
+test('the grid is made only when a 2D mover asks for it, so 3D solids alone make none', () =>
+{
+    // 3D solids are in the list of solids but resolve in 3D and never walk the grid, which cost them a build and a
+    // place each a frame; a 2D mover among enough solids still gets one, made once an update
+    const { run } = loadEngine();
+    run(`setHeadlessMode(true); new Render3DPlugin;
+        var builds = 0; const build = engineCollideGridBuild;
+        engineCollideGridBuild = (...a)=> (++builds, build(...a));
+        for (let i = 0; i < 80; ++i)
+        {
+            const o = new EngineObject3D(vec3(i * 2, 0, 0)); o.setCollision(); o.mass = i % 2;
+        }`);
+    run('for (let i = 3; i--;) engineObjectsUpdate();');
+    assert.equal(run('builds'), 0, '3D solids alone');
+    run(`for (let i = 0; i < 70; ++i) { const o = new EngineObject(vec2(i * 2, 50), vec2(1)); o.setCollision(); o.mass = 0; }
+        const mover = new EngineObject(vec2(0, 52), vec2(1)); mover.setCollision();`);
+    run('for (let i = 3; i--;) engineObjectsUpdate();');
+    assert.equal(run('builds'), 3, 'once an update with a 2D mover');
+});

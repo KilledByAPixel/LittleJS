@@ -184,8 +184,10 @@ function engineObjectsCollidePairAdd(asker, other, resolve=false)
 // solid, a big game's cost going from every pair to what is close; it resolves the same contacts in the same order,
 // so a game plays the same either way, and a few solids are quicker checked all
 let engineCollideGridMin = 64;
-// the grid for this update, made with the list of solids: each cell's solids, each solid's cells, and each solid's
-// place in the list, which the contacts are taken in; solids too big for cells are near everything
+// the grid for this update, {list, built}: the list of solids, and the grid made from it the first time a 2D mover
+// walks it, so a frame with no 2D mover, as 3D solids alone, makes none; built is each cell's solids, each solid's
+// cells, and each solid's place in the list, which the contacts are taken in; solids too big for cells are near
+// everything
 let engineCollideGrid;
 
 // the grid of a list of solids, its cells about twice a typical solid so most are in one to four
@@ -262,7 +264,7 @@ function engineCollideGridNear(grid, o, after)
 // whenever its box has moved, as a push does, so a solid it is pushed into later in the list is still checked
 function* engineCollideGridWalk(o)
 {
-    const grid = engineCollideGrid;
+    const grid = engineCollideGrid.built ||= engineCollideGridBuild(engineCollideGrid.list);
     let after = -1, x, y, w, h, near = [], k = 0;
     for (;;)
     {
@@ -911,7 +913,7 @@ function engineObjectsUpdate()
     // written only when there is a grid: V8 keeps a variable that is never written as a constant, and writing it
     // every frame makes this function deoptimize again and again in a game with no grid
     if (engineObjectsCollideStaticLast.length >= engineCollideGridMin)
-        engineCollideGrid = engineCollideGridBuild(engineObjectsCollideStaticLast);
+        engineCollideGrid = {list: engineObjectsCollideStaticLast, built: undefined};
 
     // update physics before object update, each solid put where it moved to in the grid, for the movers after it;
     // the grid is let go even when a callback throws, so an updatePhysics called before the next update checks all
@@ -921,7 +923,7 @@ function engineObjectsUpdate()
             if (!o.parent && !o.destroyed)
             {
                 o.updatePhysics();
-                engineCollideGrid && engineCollideGridPlace(engineCollideGrid, o);
+                engineCollideGrid?.built && engineCollideGridPlace(engineCollideGrid.built, o);
             }
     }
     finally { engineCollideGrid && (engineCollideGrid = undefined); }
