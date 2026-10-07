@@ -40,6 +40,7 @@ What changed in each release, newest first. Releases before 1.20.0 are on the
 
 ### Fixes
 
+- A ParallaxLayer casts no shadow in the light system, as a backdrop threw huge ones, a sun's above all; set its castShadow to true for one that should
 - A tween whose callback throws is ended, at any call: made, mid-run, restarted or starting a loop's next iteration, where it was called and threw at every update
 - A texture sheet load that throws, as an atlas whose data can not be read, is forgotten and loaded again on the next call, as a failed file already was; loadSprite and loadTiles too
 - A text field's Backspace takes off a whole character as a reader counts it, an emoji family too, and maxLength counts those; an image font draws a letter with an accent of its own, as é, as its letter
