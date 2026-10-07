@@ -145,6 +145,17 @@ class LightSystemPlugin
         /** @property {number} - Pixels across the square textures a directional light is built in, covering the
          *  shadow map's area; larger is sharper and slower */
         this.directionalTextureSize = 256;
+        /** @property {WebGLTexture|undefined} - The directional light as built this frame, white where it reaches,
+         *  over the shadow map's area, read only
+         *  @type {WebGLTexture|undefined} */
+        this.directionalTexture = undefined;
+        /** @type {WebGLTexture|undefined} */
+        this.directionalTextureA = undefined; // where it is built, ping ponged
+        /** @type {WebGLTexture|undefined} */
+        this.directionalTextureB = undefined;
+        this.directionalTextureSizeAllocated = 0;
+        /** @type {Object<string, WebGLProgram|WebGLVertexArrayObject>} */
+        this.directionalPrograms = {}; // its programs and their vertex arrays, by name
         this.shadowMapSizeAllocated = 0;     // sizes the textures were made at, to remake them on a change
         this.shadowTextureSizeAllocated = 0;
 
@@ -280,6 +291,13 @@ class LightSystemPlugin
             gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
             return texture;
         }
+        // a full texture quad, the vertex shader of the shadow and directional programs
+        const quadVertex =
+            '#version 300 es\n' +
+            'precision highp float;'+
+            'in vec2 p;'+                   // unit quad [0..1]
+            'out vec2 uv;'+
+            'void main(){gl_Position=vec4(p+p-1.,1,1);uv=p;}';
         function initShadows()
         {
             const gl = glContext, ls = lightSystem;
@@ -291,13 +309,6 @@ class LightSystemPlugin
             // put back the texture the engine tracks
             if (glActiveTexture)
                 gl.bindTexture(gl.TEXTURE_2D, glActiveTexture);
-
-            const quadVertex =
-                '#version 300 es\n' +
-                'precision highp float;'+
-                'in vec2 p;'+                   // unit quad [0..1]
-                'out vec2 uv;'+
-                'void main(){gl_Position=vec4(p+p-1.,1,1);uv=p;}';
 
             // copy: the shadow map around the light into the light's texture, light at the center
             ls.shadowCopyShader = glCreateProgram(quadVertex,
@@ -445,6 +456,182 @@ class LightSystemPlugin
                 [drawContext, mainCanvasSize, cameraPos, cameraScale, cameraAngle, canvasClearColor, glCustomShader] = saved;
             }
         }
+        // the directional light's textures and programs, made when one is first drawn and again when the size changes
+        function initDirectional()
+        {
+            const gl = glContext, ls = lightSystem, size = ls.directionalTextureSize, p = ls.directionalPrograms;
+            ls.directionalTexture = createTexture(size);
+            ls.directionalTextureA = createTexture(size);
+            ls.directionalTextureB = createTexture(size);
+            ls.directionalTextureSizeAllocated = size;
+            glActiveTexture && gl.bindTexture(gl.TEXTURE_2D, glActiveTexture);
+
+            // the maps are stored world up at v=0, the work textures world up at v=1, so a map is read at 1-v
+            const header = '#version 300 es\nprecision highp float;in vec2 uv;out vec4 c;';
+
+            // seed: the darkest of four taps across a work texel, so a caster thinner than a texel still darkens it;
+            // the foreground when useF is on, times the background when useB is
+            p.seed = glCreateProgram(quadVertex, header +
+                'uniform sampler2D f,b;uniform float useF,useB,tap;'+
+                'void main(){vec3 o=vec3(1);'+
+                'for(int i=0;i<4;i++){vec2 m=uv+tap*(vec2(i%2,i/2)*2.-1.);m.y=1.-m.y;'+
+                'vec3 v=mix(vec3(1),texture(f,m).rgb,useF)*mix(vec3(1),texture(b,m).rgb,useB);o=min(o,v);}'+
+                'c=vec4(o,1);}');
+
+            // long shadow pass: the darker of this texel and the one a shift upstream made lighter by fade, so a
+            // shadow lightens with its distance from the caster; past the area upstream is open
+            p.shadow = glCreateProgram(quadVertex, header +
+                'uniform sampler2D s;uniform vec2 shift;uniform float fade;'+
+                'void main(){vec2 u=uv-shift;'+
+                'vec3 b=u==clamp(u,0.,1.)?texture(s,u).rgb+fade:vec3(1);'+
+                'c=vec4(min(texture(s,uv).rgb,b),1);}');
+
+            // background leak pass, Frank Engine's: add a little of the light upstream, then keep the foreground
+            // black; past the area upstream is open sky
+            p.leak = glCreateProgram(quadVertex, header +
+                'uniform sampler2D s,f;uniform vec2 shift;uniform float gain,useF;'+
+                'void main(){vec2 u=uv-shift;'+
+                'vec3 b=u==clamp(u,0.,1.)?texture(s,u).rgb:vec3(1);'+
+                'vec3 v=min(texture(s,uv).rgb+gain*b,1.);'+
+                'c=vec4(v*mix(vec3(1),texture(f,vec2(uv.x,1.-uv.y)).rgb,useF),1);}');
+
+            // combine: long shadows times the leak, and a caster's texels take some of the light just upstream
+            // of them, a rim on its side facing the light
+            p.combine = glCreateProgram(quadVertex, header +
+                'uniform sampler2D s,t,f;uniform vec2 rim;uniform float useF;'+
+                'void main(){vec3 l=texture(s,uv).rgb*texture(t,uv).rgb;'+
+                'vec2 u=uv-rim;vec3 up=u==clamp(u,0.,1.)?texture(s,u).rgb*texture(t,u).rgb:vec3(1);'+
+                'vec3 dark=1.-mix(vec3(1),texture(f,vec2(uv.x,1.-uv.y)).rgb,useF);'+
+                'c=vec4(max(l,.8*up*dark),1);}');
+
+            // add: a world space quad over the area, the built light in the light's color, into the lightmap
+            p.add = glCreateProgram(
+                '#version 300 es\nprecision highp float;uniform mat4 m;uniform vec2 origin;uniform float worldSize;'+
+                'in vec2 g;out vec2 uv;void main(){gl_Position=m*vec4(origin+g*worldSize,1,1);uv=g;}',
+                header + 'uniform sampler2D s;uniform vec4 color;'+
+                'void main(){c=vec4(texture(s,uv).rgb*color.rgb*color.a,1);}');
+
+            if (lightSystemShadersFailed(p.seed, p.shadow, p.leak, p.combine, p.add)) return;
+            p.seedVAO = createQuadVAO(p.seed, 'p');
+            p.shadowVAO = createQuadVAO(p.shadow, 'p');
+            p.leakVAO = createQuadVAO(p.leak, 'p');
+            p.combineVAO = createQuadVAO(p.combine, 'p');
+            p.addVAO = createQuadVAO(p.add, 'g');
+
+            // samplers on units 1, 2 and 3, the engine's tracked texture on unit 0 stays as it is
+            const units = (program, names)=>
+            {
+                gl.useProgram(program);
+                names.forEach((name, i)=> gl.uniform1i(glUniformLocation(program, name), i + 1));
+            };
+            units(p.seed, ['f', 'b']);
+            units(p.shadow, ['s']);
+            units(p.leak, ['s', 'f']);
+            units(p.combine, ['s', 't', 'f']);
+            units(p.add, ['s']);
+        }
+        function freeDirectional()
+        {
+            const gl = glContext, ls = lightSystem, p = ls.directionalPrograms;
+            for (const texture of [ls.directionalTexture, ls.directionalTextureA, ls.directionalTextureB])
+                gl.deleteTexture(texture);
+            for (const name of ['seed', 'shadow', 'leak', 'combine', 'add'])
+            {
+                gl.deleteProgram(p[name]);
+                gl.deleteVertexArray(p[name + 'VAO']);
+            }
+            clearDirectional();
+        }
+        function clearDirectional()
+        {
+            const ls = lightSystem;
+            ls.directionalTexture = ls.directionalTextureA = ls.directionalTextureB = undefined;
+            ls.directionalPrograms = {};
+            ls.directionalTextureSizeAllocated = 0;
+        }
+
+        // build the directional light into directionalTexture, over the shadow map's area: long shadows from the
+        // foreground, times the background leak, with a rim on casters; leaves no framebuffer bound
+        function lightSystemDirectionalPass()
+        {
+            const gl = glContext, ls = lightSystem, light = ls.directionalLight;
+            if (!ls.directionalTexture || ls.directionalTextureSize !== ls.directionalTextureSizeAllocated)
+            {
+                ls.directionalTexture && freeDirectional();
+                initDirectional();
+                if (ls.shadersFailed) return;
+            }
+            const p = ls.directionalPrograms, N = ls.directionalTextureSize, W = ls.shadowMapWorldSize;
+            const d = light.direction.normalize(), toUV = (texels)=> vec2(d.x * texels / N, d.y * texels / N);
+            const casts = light.castShadow ? 1 : 0;
+
+            gl.bindFramebuffer(gl.FRAMEBUFFER, glFramebuffer);
+            gl.viewport(0, 0, N, N);
+            gl.disable(gl.BLEND);
+            const target = (texture)=> gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, texture, 0);
+            const bind = (unit, texture)=> { gl.activeTexture(gl.TEXTURE0 + unit); gl.bindTexture(gl.TEXTURE_2D, texture); };
+            const use = (name)=> { gl.useProgram(p[name]); gl.bindVertexArray(p[name + 'VAO']); return p[name]; };
+            const draw = ()=> gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+            const u = glUniformLocation;
+
+            // long shadows: the foreground seeded into A, then passes shifting twice as far each time, ping ponged
+            let program = use('seed');
+            bind(1, ls.shadowMap); bind(2, ls.backgroundMap);
+            gl.uniform1f(u(program, 'useF'), casts);
+            gl.uniform1f(u(program, 'useB'), 0);
+            gl.uniform1f(u(program, 'tap'), .25 / N);
+            target(ls.directionalTextureA); draw();
+            let src = ls.directionalTextureA, dst = ls.directionalTextureB;
+            const L = light.shadowLength * N / W;
+            if (casts && L > 0)
+            {
+                program = use('shadow');
+                const passes = clamp(ceil(log2(max(L, 1))), 1, 10);
+                for (let k = 0; k < passes; ++k)
+                {
+                    const shift = toUV(2**k);
+                    gl.uniform2f(u(program, 'shift'), shift.x, shift.y);
+                    gl.uniform1f(u(program, 'fade'), 2**k / L);
+                    bind(1, src); target(dst); draw();
+                    [src, dst] = [dst, src];
+                }
+            }
+            const shadows = src, free = dst; // the long shadows, and the other work texture
+
+            // the background leak, seeded from foreground times background into the free texture
+            program = use('seed');
+            bind(1, ls.shadowMap); bind(2, ls.backgroundMap);
+            gl.uniform1f(u(program, 'useF'), casts);
+            gl.uniform1f(u(program, 'useB'), 1);
+            target(free); draw();
+            program = use('leak');
+            const D = light.backgroundDepth * N / W;
+            gl.uniform1f(u(program, 'gain'), .1);
+            let leakSrc = free, leakDst = ls.directionalTexture;
+            for (let j = 0; j < 10; ++j) // an even count, so the result ends back in free
+            {
+                const shift = toUV((j + 1) * D / 55); // the shifts add up to D
+                gl.uniform2f(u(program, 'shift'), shift.x, shift.y);
+                gl.uniform1f(u(program, 'useF'), j < 8 ? casts : 0); // the last two let light onto casters
+                bind(1, leakSrc); bind(2, ls.shadowMap); target(leakDst); draw();
+                [leakSrc, leakDst] = [leakDst, leakSrc];
+            }
+
+            // combine into directionalTexture: long shadows times the leak, with a rim on casters
+            program = use('combine');
+            bind(1, shadows); bind(2, leakSrc); bind(3, ls.shadowMap);
+            const rim = toUV(3);
+            gl.uniform2f(u(program, 'rim'), rim.x, rim.y);
+            gl.uniform1f(u(program, 'useF'), casts);
+            target(ls.directionalTexture); draw();
+
+            // hand the engine its state back: unit 0 active with its texture, no framebuffer
+            bind(1, null); bind(2, null); bind(3, null);
+            gl.activeTexture(gl.TEXTURE0);
+            glActiveTexture && gl.bindTexture(gl.TEXTURE_2D, glActiveTexture);
+            gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+            gl.enable(gl.BLEND);
+        }
         function lightSystemRender()
         {
             if (headlessMode || !glEnable || lightSystem.shadersFailed) return;
@@ -464,6 +651,11 @@ class LightSystemPlugin
             // 1b. the shadow pass draws every caster black into the shadow map, for shadows or a directional light
             if (lightSystem.shadows || lightSystem.directionalLight)
                 lightSystemShadowPass();
+            if (lightSystem.shadersFailed) return;
+
+            // 1c. the directional light is built from the maps, before the lightmap is bound
+            const sun = lightSystem.directionalLight;
+            sun && lightSystemDirectionalPass();
             if (lightSystem.shadersFailed) return;
 
             // an automatic size follows the canvas, so reallocate the lightmap when
@@ -518,6 +710,26 @@ class LightSystemPlugin
                     if (o.destroyed) continue;
                     glAdditive || setAdditiveBlendMode(); // added again, an emitter ends its render with it off
                     o.renderLight();
+                }
+
+                // 3a. the directional light, added over the shadow map's area in its color
+                if (sun && lightSystem.directionalTexture)
+                {
+                    glFlush();
+                    const gl = glContext, p = lightSystem.directionalPrograms, as = p.add, c = sun.color;
+                    gl.useProgram(as);
+                    gl.bindVertexArray(p.addVAO);
+                    gl.uniformMatrix4fv(glUniformLocation(as, 'm'), false, glTransform);
+                    gl.uniform2f(glUniformLocation(as, 'origin'), lightSystem.shadowMapOrigin.x, lightSystem.shadowMapOrigin.y);
+                    gl.uniform1f(glUniformLocation(as, 'worldSize'), lightSystem.shadowMapWorldSize);
+                    gl.uniform4f(glUniformLocation(as, 'color'), c.r, c.g, c.b, c.a);
+                    gl.activeTexture(gl.TEXTURE1);
+                    gl.bindTexture(gl.TEXTURE_2D, lightSystem.directionalTexture);
+                    gl.activeTexture(gl.TEXTURE0);
+                    gl.enable(gl.BLEND);
+                    gl.blendFunc(gl.ONE, gl.ONE);
+                    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+                    glSetInstancedMode(true);
                 }
 
                 // 3b. emissive objects draw their shape in gray at their emissive level, white at 1, adding that much
@@ -599,6 +811,7 @@ class LightSystemPlugin
             lightSystem.lightVAO = undefined;
             lightSystem.compositeVAO = undefined;
             clearShadows();
+            clearDirectional();
             LOG('LightSystemPlugin: WebGL context lost');
         }
         function lightSystemContextRestored()
@@ -615,6 +828,7 @@ class LightSystemPlugin
     {
         this.shadowMapSize = glClampTextureSize(this.shadowMapSize);
         this.shadowTextureSize = glClampTextureSize(this.shadowTextureSize);
+        this.directionalTextureSize = glClampTextureSize(this.directionalTextureSize);
         const size = this.textureSize;
         if (!size) return;
         const x = glClampTextureSize(size.x), y = glClampTextureSize(size.y);

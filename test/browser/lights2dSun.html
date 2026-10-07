@@ -40,6 +40,49 @@ smokeRun(async ()=>
     engineStep(3);
     check('a directional light makes the background map', !!lightSystem.backgroundMap);
     check('and the shadow map, with shadows off', !!lightSystem.shadowMap && !lightSystem.shadows);
+    check('open floor is lit in the color of the light', bright(-6, 4) > 200, bright(-6, 4));
+    check('the block throws a long shadow to its right', bright(0, 0) < 120, bright(0, 0));
+    check('which fades the further it goes', bright(6, 0) > bright(0, 0) + 20, [bright(6, 0), bright(0, 0)]);
+    check('above the shadow is lit', bright(0, 3) > 200, bright(0, 3));
+    check('the side of the block facing the light is lit, its far side is not',
+        bright(-4.4, 0) > bright(-3.6, 0) + 30, [bright(-4.4, 0), bright(-3.6, 0)]);
+    check('the background area is lit at its edge facing the light', bright(1.3, -5) > 80, bright(1.3, -5));
+    check('and dark inside', bright(6.5, -5) < 40, bright(6.5, -5));
+
+    sun.direction = vec2(0, -1); // straight down
+    engineStep(3);
+    check('a vertical light casts straight down', bright(-4, -3) < 120 && bright(-2, -3) > 200,
+        [bright(-4, -3), bright(-2, -3)]);
+
+    // a lost context takes its textures with it, and they are made again once it is back
+    sun.direction = vec2(1, 0);
+    const lose = glContext.getExtension('WEBGL_lose_context');
+    const event = (name)=> new Promise((resolve, reject)=>
+    {
+        glCanvas.addEventListener(name, resolve, {once: true});
+        setTimeout(()=> reject(name + ' never came'), 3e3);
+    });
+    const lost = event('webglcontextlost');
+    lose.loseContext();
+    await lost;
+    await new Promise((resolve)=> setTimeout(resolve)); // a restore is allowed only once the lost event is through
+    engineStep(2);
+    check('a lost context lets go of its textures', !lightSystem.directionalTexture && !lightSystem.backgroundMap);
+    const restored = event('webglcontextrestored');
+    lose.restoreContext();
+    await restored;
+    await new Promise((resolve)=> setTimeout(resolve));
+    engineStep(3);
+    check('and once it is back the light and its shadow draw again', bright(-6, 4) > 200 && bright(0, 0) < 120,
+        [bright(-6, 4), bright(0, 0)]);
+
+    sun.castShadow = false;
+    engineStep(3);
+    check('with castShadow off there is no long shadow', bright(0, 0) > 200, bright(0, 0));
+
+    sun.destroy();
+    engineStep(3);
+    check('destroyed, it adds nothing', bright(-6, 4) < 40, bright(-6, 4));
     checkGLError();
 });
 </script>
