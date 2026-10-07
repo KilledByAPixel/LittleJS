@@ -94,7 +94,7 @@ let remaining = 36000;
   gravity, at the fixed 60 updates a second
 - **Seconds:** `Timer`, `Tween`, `time`, a particle emitter's `emitTime` and `particleTime` and its `emitRate` (per
   second) and `lifeTime`; a particle's `fadeRate` is a part of its life, not seconds
-- **Materials:** `roughness`, `reflectivity` and `specular` run 0 to 1, `shininess` 1 to about 10,000 (a mirror), and
+- **Materials:** `roughness`, `reflectivity` and `specular` run 0 to 1, `shininess` 1 up, about 10,000 a mirror (a roughness of 0 sets it far higher), and
   `emissive` from 0 up
 - **Milliseconds:** `gamepadVibrate`'s duration, `vibrate` patterns and `saveDataURL`'s `revokeTime`
 - **Limits:** the GPU draws with 32-bit floats: keep the world within about ±10,000 units of the origin, and a
@@ -489,7 +489,8 @@ speakStop()                                          // Stop all queued speech
 getNoteFrequency(semitoneOffset, rootFrequency=220)  // Get frequency for musical notes
 
 // Audio settings
-soundEnable = true      // Should sound be enabled?
+soundEnable = true      // Should sound be enabled? set it before sounds are made, setSoundEnable(false)
+                        // before they are, setSoundVolume(0) to mute while the game runs
 soundIgnoreSilentSwitch = false // play with an iPhone's silent switch on, as media, pausing the player's music;
                         // off, the switch mutes the game; setSoundIgnoreSilentSwitch(true)
 soundVolume = .3        // Volume scale to apply to all sound
@@ -1560,7 +1561,7 @@ obj.emissive = 1                        // 0 by default; how much it lights itse
                                         // things, between partly self lit, above 1 brighter for bloom; still casts
 obj.specular = .5                       // highlight strength, 0 is none and 1 is full, as render3D.specular; 0 by default
 obj.shininess = 100                     // 16 by default; the highlight's exponent, higher is smaller and sharper
-obj.roughness = .5                      // the same as a roughness, 0 a mirror to 1 matte as glTF has it: it sets
+obj.roughness = .5                      // shininess set the way glTF measures it, 0 a mirror to 1 matte: it sets
                                         // shininess = 2 / roughness^4 - 2, at least 1, and reads it back, as
                                         // .9 from about .9 up, where shininess is 1
 obj.normalMap = textureInfo             // bumps and grooves that catch the light, read at the color texture's uvs;

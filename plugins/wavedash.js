@@ -32,10 +32,16 @@ const wavedashDisplayTypes = {number: 0, seconds: 1, milliseconds: 2, ticks: 3};
 // the SDK Wavedash put on the page, read at each call, undefined off Wavedash
 const wavedashSDK = ()=> globalThis['Wavedash'];
 
-// a call's answer, or undefined if it does not come in time or fails, with a warning
-const wavedashWait = (name, answer)=> Promise.race([Promise.resolve(answer),
-    new Promise((resolve)=> setTimeout(resolve, wavedashTimeoutMS))]).catch((error)=>
-    { console.warn('Wavedash ' + name + ' failed: ' + error); });
+// a call's answer, or undefined if it does not come in time or fails, with a warning; the time limit is let go of once
+// the answer is in, so nothing waits on it after
+function wavedashWait(name, answer)
+{
+    let timer;
+    const limit = new Promise((resolve)=> timer = setTimeout(resolve, wavedashTimeoutMS));
+    return Promise.race([Promise.resolve(answer), limit])
+        .catch((error)=> { console.warn('Wavedash ' + name + ' failed: ' + error); })
+        .finally(()=> clearTimeout(timer));
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 /**
@@ -107,9 +113,13 @@ class WavedashPlugin
          *  has made or found it, undefined when it could not
          *  @type {Object<string, Promise<string|undefined>>} */
         this.leaderboards = Object.create(null); // no inherited names, a board may be called constructor
+        /** @type {Object<string, {lowerWins?: boolean, display?: string}>} */
         this.leaderboardSettings = leaderboards; // how each one sorts and shows its scores, read as its own entries
+        /** @type {Set<string>} */
         this.achievementsSent = new Set; // the achievements Wavedash took this visit, or refused for good
+        /** @type {Object<string, number>} */
         this.achievementTries = Object.create(null); // how many times each one not taken yet was sent
+        /** @type {ReturnType<typeof setTimeout>|undefined} */
         this.achievementRetry = undefined; // the timer that sends refused ones again
 
         // Wavedash keeps its loading screen until init, which is called once
@@ -123,7 +133,7 @@ class WavedashPlugin
      *  @return {boolean} */
     isActive() { return !!wavedashSDK(); }
 
-    /** Call the SDK, undefined off Wavedash; a call that throws, as on an argument of the wrong type, says so once in
+    /** Call the SDK, undefined off Wavedash; a call that throws, as on an argument of the wrong type, says so in
      *  the console and gives undefined
      *  @param {string} name - The SDK function
      *  @param {...*} args

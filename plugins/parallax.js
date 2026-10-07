@@ -47,6 +47,7 @@ class ParallaxLayer extends CanvasLayer
         ASSERT(isNumber(parallax) || isVector2(parallax), 'parallax must be a number or a Vector2');
         ASSERT(typeof drawFunction == 'function', 'drawFunction must be a function');
         super(pos, size, 0, renderOrder, canvasSize);
+        this.castShadow = false; // a backdrop, it would throw huge shadows in the light system, a sun's above all
 
         /** @property {Vector2} - How much of the camera's movement it follows on each axis, 0 stays with the world
          *  and 1 with the screen */

@@ -132,3 +132,46 @@ test('damping out of 0 to 1 fails where it is set as a default, and on a 3D obje
         /damping/);
     assert.match(thrown('const o = new EngineObject3D(vec3()); o.angleDamping = 2; o.updatePhysics();') ?? '', /damping/i);
 });
+
+test('pass 16 lows: a parallax layer casts no shadow, an assert value whose JSON is nothing still makes a message', () =>
+{
+    const { run } = loadEngine();
+    run('setHeadlessMode(true); console.assert = ()=> {}');
+    assert.equal(run('new ParallaxLayer().castShadow'), false, 'a backdrop, which would throw huge shadows from a sun');
+    assert.match(run(`(()=> { try { ASSERT(false, 'x', {toJSON() {}}); } catch (e) { return e.message; } })()`),
+        /^Assert failed: x /);
+});
+
+test('pass 16 lows: the quick text path joins what the segmenter joins, a zero width non-joiner, a Thai SARA AM', () =>
+{
+    const { run } = loadEngine({ Intl });
+    run('setHeadlessMode(true)');
+    for (const text of ['a' + String.fromCharCode(0x200c) + 'b', 'ก' + String.fromCharCode(0x0e33),
+        String.fromCharCode(0xff76, 0xff9e), String.fromCharCode(0x0600) + 'a'])
+    {
+        const quick = run(`textGraphemes(${JSON.stringify(text)}).length`);
+        const segmenter = [...new Intl.Segmenter().segment(text)].length;
+        assert.equal(quick, segmenter, JSON.stringify(text));
+    }
+});
+
+test('pass 16 lows: a sound callback that throws on a failed load is caught and said, not left as an uncaught rejection', async () =>
+{
+    const warnings = [];
+    const { run } = loadEngine({ console: { ...console, warn: (...a)=> warnings.push(a.join(' ')) },
+        fetch: async ()=> ({ ok: false, status: 404, statusText: 'Not Found' }), AudioContext: class
+        {
+            constructor() { this.currentTime = 0; this.destination = {}; this.state = 'running'; }
+            createGain() { return { connect(n) { return n; }, disconnect() {}, gain: { value: 0 } }; }
+            resume() { return Promise.resolve(); }
+        } });
+    run('setHeadlessMode(false); engineInitialized = true; audioContext ||= new AudioContext;');
+    const rejected = [];
+    const onRejection = (reason)=> rejected.push(String(reason));
+    process.on('unhandledRejection', onRejection);
+    run(`new Sound('missing.mp3', 0, 0, 1, ()=> { throw new Error('callback broke'); })`);
+    await new Promise((resolve)=> setTimeout(resolve, 50));
+    process.off('unhandledRejection', onRejection);
+    assert.deepEqual(rejected, []);
+    assert.ok(warnings.some((w)=> w.includes('callback broke')), warnings.join(' | '));
+});

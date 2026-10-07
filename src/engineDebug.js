@@ -98,6 +98,7 @@ function ASSERT(assert, ...output)
                 '[' + (value.constructor?.name || 'object') + ']' : String(value);
         }
         catch { text = Object.prototype.toString.call(value); }
+        text = String(text); // JSON of nothing, as from a toJSON that returns nothing, is undefined
         return text.length > 200 ? text.slice(0, 199) + '…' : text;
     }).join(' ');
     throw new Error(text ? 'Assert failed: ' + text : 'Assert failed!'); // halt execution

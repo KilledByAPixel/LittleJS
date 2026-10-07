@@ -607,7 +607,8 @@ function render3DSettleAsked(a, b, mark=false)
     return !!kept.pairs.get(a)?.has(b);
 }
 
-// where a solid was when this pass of the engine began, kept the first time it moves or is pushed in the pass, so a
+// where a solid was when this pass of the engine began, taken at the start of its own updatePhysics, or the first time
+// a pair needs it if that comes first, as for one pushed or a mass 0 one not updated yet, so a
 // pair resolved in the turn of either one knows where both came from
 function render3DCollideFrom(o)
 {

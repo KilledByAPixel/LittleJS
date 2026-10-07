@@ -1355,8 +1355,10 @@ function textLineCount(text)
 const textIntl = /** @type {any} */ (globalThis.Intl); // Segmenter is newer than the library the source is checked with
 const textSegmenter = textIntl?.Segmenter && new textIntl.Segmenter;
 // a line with no mark, joiner or character past the 16 bit range, plain or accented letters of their own, Greek or
-// Japanese, has one code unit a character, so it is handed back as it is, read with charCodeAt, and nothing is made
-const textJoins = /[\p{M}\u200d\u1100-\u11ff\u{10000}-\u{10ffff}]/u;
+// Japanese, has one code unit a character, so it is handed back as it is, read with charCodeAt, and nothing is made;
+// the class also holds what the segmenter joins that is not a mark: joiners, prepend, Thai and Lao SARA AM, Hangul
+// jamo extended and the halfwidth katakana voiced marks
+const textJoins = /[\p{M}\u200c\u200d\u0600-\u0605\u06dd\u070f\u0890\u0891\u08e2\u0d4e\u0e33\u0eb3\u1100-\u11ff\ua960-\ua97c\ud7b0-\ud7fb\uff9e\uff9f\u{10000}-\u{10ffff}]/u;
 /** @return {string|Array<number>} */
 function textCharacters(line)
 {

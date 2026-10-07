@@ -1105,7 +1105,9 @@ class DirectionalLight extends EngineObject
 
         /** @property {Vector2} - Toward the sun, it shines the other way, as render3D.sunDirection */
         this.sunDirection = sunDirection.copy();
-        /** @property {number} - World units a long shadow reaches before it has faded out */
+        /** @property {number} - World units a long shadow reaches before it has faded out; a caster casts only from
+         *  inside the shadow map, shadowMapScale views across, so past (shadowMapScale - 1) / 2 of a view beyond the
+         *  screen it throws none in */
         this.shadowLength = 20;
         /** @property {number} - World units the light gets into a background area from its edges facing it */
         this.backgroundDepth = 3;

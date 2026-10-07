@@ -484,7 +484,7 @@ async function loadGLTF(url)
  *    is fetched then
  *  - A file the model needs that is not found is named in the error, and an image that can not be read is named in
  *    a warning and left out
- *  @param {ArrayBuffer|ArrayBufferView|Object|string} data - GLB bytes, or the glTF JSON as bytes, text or an object
+ *  @param {ArrayBuffer|ArrayBufferView|Object<string, any>|string} data - GLB bytes, or the glTF JSON as bytes, text or an object
  *  @param {string} [baseUrl] - Where the .bin and image files are, with its trailing slash; loadGLTF passes the file's folder
  *  @param {Map<string, Blob>} [files] - The files it refers to, by their paths, in place of fetching them
  *  @return {Promise<GLTFModel>}
@@ -499,7 +499,7 @@ async function parseGLTF(data, baseUrl='', files)
     // bytes as a typed array, a Node Buffer or a view into a bigger buffer, read as an ArrayBuffer of just them
     if (ArrayBuffer.isView(data))
         data = data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength);
-    let json = data, glbBuffer;
+    let json = /** @type {any} */ (data), glbBuffer; // bytes, text or the parsed glTF, an object once parsed
     if (data instanceof ArrayBuffer)
     {
         const view = new DataView(data);

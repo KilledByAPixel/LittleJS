@@ -310,7 +310,9 @@ class Sound
             engineAddLoad(this.loadSound(filename).catch(e=> // startup waits for it, and a release build says why too
             {
                 console.warn('Sound load failed for', filename, '-', e?.message ?? e);
-                this.loadedPercent === 1 || this.onloadCallback?.(this); // failed, not loaded and its callback threw
+                // failed, not loaded and its callback threw; one that throws here says so, a load is no place to stop
+                try { this.loadedPercent === 1 || this.onloadCallback?.(this); }
+                catch (callbackError) { console.warn('Sound onloadCallback failed for', filename, '-', callbackError); }
             }));
         }
     }
