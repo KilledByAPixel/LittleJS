@@ -854,7 +854,7 @@ particleEffectApply(emitter, effect)    // set a live 2D emitter to an effect
 particleEffectApply3D(emitter, effect)  // the same for a ParticleEmitter3D, its particles, place and scale kept
 particleEffectFromEmitter(emitter, name='Effect') // a 2D emitter's settings as an effect, to save or build in 3D
 particleEffectsAddBehavior(name, update, update3D, min=-2, max=2, value=1, description='') // add a behavior effects
-                                        // can name, with 2D and 3D pushes; min, max and value for the designer
+                                        // can name, with 2D and 3D pushes; min and max for the designer and to clamp a strength to, value to start at
 particleEffectsAdd(effects)             // add effects to play by name, one of the same name replaces it
 particleEffectsGet(name)                // an effect's data, any case, to change or build by hand
 await particleEffectsLoad(url)          // load the file the particle designer's Save Library wrote, and add its effects

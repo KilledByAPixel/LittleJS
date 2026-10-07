@@ -85,9 +85,9 @@ particleEffectAddSetting('randomColorLinear', 'checkbox', true, 0, 0, 0,
 
 particleEffectSettingGroup = 'Motion';
 particleEffectAddSetting('speed', 'number', .1, 0, .5, .005,
-    'Start speed, world units per frame', 0, 1e9);
+    'Start speed, world units per frame', -1e9, 1e9); // negative goes back against the cone, as the emitter takes it
 particleEffectAddSetting('angleSpeed', 'number', .05, 0, .5, .005,
-    'Spin speed, radians per frame', 0, 1e9);
+    'Spin speed, radians per frame', -1e9, 1e9);
 particleEffectAddSetting('damping', 'number', 1, .8, 1, .001,
     'Speed kept each frame, 1 keeps it all', 0, 1);
 particleEffectAddSetting('angleDamping', 'number', 1, .8, 1, .001,
@@ -107,7 +107,7 @@ particleEffectAddSetting('collideLevel', 'checkbox', false, 0, 0, 0,
 particleEffectAddSetting('restitution', 'number', 0, 0, 1, .01,
     'Bounce when hitting tiles');
 particleEffectAddSetting('friction', 'number', .8, 0, 1, .01,
-    'Speed kept sliding along tiles');
+    'Speed kept sliding along tiles, the larger of this and the layer's, as an object's');
 
 particleEffectSettingGroup = 'Texture';
 particleEffectAddSetting('shape', 'shape', 'soft', 0, 0, 0,
@@ -415,7 +415,7 @@ function particleEffectShapeTile(name)
  *  @param {string} name
  *  @param {function(Particle, number): void} update - Pushes a 2D particle, given the strength
  *  @param {function(Particle3D, number): void} [update3D] - The same for a 3D particle, none leaves 3D alone
- *  @param {number} [min] - Strength range the designer offers
+ *  @param {number} [min] - Strength range the designer offers, and the range a strength is clamped to
  *  @param {number} [max]
  *  @param {number} [value] - Strength when first added
  *  @param {string} [description]
@@ -557,8 +557,9 @@ function particleEffect(nameOrEffect, pos=vec2(), options={})
 }
 
 /** An effect with a 2D emitter's settings, to save, build again, or build in 3D with particleEffect3D; its tile is
- *  left out, since a hand made emitter's tile is its own texture and not one an effect can name, and so is its
- *  scale, which an effect does not keep: pass it again with options.scale
+ *  left out, since a hand made emitter's tile is its own texture and not one an effect can name, and so are its
+ *  scale, which an effect does not keep: pass it again with options.scale, and its renderOrder, which an effect takes
+ *  from additive; a finished emitter's emit time is the time it emitted for
  *  @param {ParticleEmitter} emitter
  *  @param {string} [name]
  *  @return {Object}
@@ -569,6 +570,8 @@ function particleEffectFromEmitter(emitter, name='Effect')
     for (const setting of particleEffectSettings)
         if (!particleEffectIndirect.includes(setting.name) && emitter[setting.name] !== undefined)
             settings[setting.name] = emitter[setting.name]; // a Color is taken as its channels by the sanitizer
+    if (emitter.emitTime < 0) // destroyed, its last particles going: as long as it emitted, not 0, for ever
+        settings.emitTime = emitter.emitElapsed;
     settings.emitRect = !emitter.emitCircle;
     settings.emitSize = emitter.emitSize.x;
     settings.emitHeight = emitter.emitSize.y;

@@ -91,3 +91,18 @@ test('a file that can not be reached is named with who asked, and the error keep
     assert.match(error.message, /^loadSound: could not load song\.mp3, network down/);
     assert.equal(error.cause.message, 'network down');
 });
+
+test('an effect taken from an emitter keeps a negative speed, and one from a finished emitter is not made endless', () =>
+{
+    const { run } = loadEngine();
+    run('setHeadlessMode(true)');
+    const result = JSON.parse(run(`(()=> {
+        const e = new ParticleEmitter(vec2(), 0, 1, .5, 10); e.speed = -.1; e.angleSpeed = -.2;
+        const kept = particleEffectFromEmitter(e).settings;
+        e.emitElapsed = .5; e.destroy(); // finished, its last particles going
+        const ended = particleEffectFromEmitter(e).settings;
+        return JSON.stringify({speed: kept.speed, angleSpeed: kept.angleSpeed, emitTime: ended.emitTime}); })()`));
+    assert.equal(result.speed, -.1);
+    assert.equal(result.angleSpeed, -.2);
+    assert.equal(result.emitTime, .5, 'the time it emitted for, where 0 emits for ever');
+});

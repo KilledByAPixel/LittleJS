@@ -369,7 +369,8 @@ class ParticleEmitter extends EngineObject
     isActive() { return !this.emitTime || this.emitElapsed < this.emitTime; }
 
     /** Destroy the particle emitter
-     *  @param {boolean} [immediate] - true removes attached effects like particle emitters at once, false lets them finish first */
+     *  @param {boolean} [immediate] - true removes it and its particles at once, with no particleDestroyCallback for
+     *    them, false stops emitting and lets the particles finish first */
     destroy(immediate=false)
     {
         if (this.destroyed) return;
