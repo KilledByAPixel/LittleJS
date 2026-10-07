@@ -1314,14 +1314,16 @@ function drawText(text, pos, size=1, color=WHITE, lineWidth=0, lineColor=BLACK, 
     drawTextScreen(text, pos, size, color, lineWidth, lineColor, textAlign, font, fontStyle, maxWidth, angle, context);
 }
 
-// the font strings a debug build has checked the canvas takes, and a font it does not, which would draw as 10px
-// sans-serif with no word, warned of once; a family name with spaces and digits, as Press Start 2P, needs quotes
+// the fonts a debug build has checked the canvas takes, by style and family, as a size never decides it and a zooming
+// camera draws at a new size each frame, and a font it does not, which would draw as 10px sans-serif with no word,
+// warned of once; a family name with spaces and digits, as Press Start 2P, needs quotes
 const drawFontsChecked = new Set;
-function drawFontCheck(context, fontText, font)
+function drawFontCheck(context, fontText, font, fontStyle)
 {
-    if (drawFontsChecked.has(fontText)) return;
-    drawFontsChecked.add(fontText);
-    const sentinel = '7px serif';
+    const key = fontStyle + '|' + font;
+    if (drawFontsChecked.has(key)) return;
+    drawFontsChecked.add(key);
+    const sentinel = '1px littlejs-font-check'; // no font a game draws with
     context.font = sentinel;
     context.font = fontText;
     if (context.font === sentinel)
@@ -1400,7 +1402,7 @@ function drawTextScreen(text, pos, size, color=WHITE, lineWidth=0, lineColor=BLA
     context.lineWidth = lineWidth;
     context.textAlign = textAlign;
     const fontText = fontStyle + ' ' + size + 'px '+ font;
-    debug && drawFontCheck(context, fontText, font);
+    debug && drawFontCheck(context, fontText, font, fontStyle);
     context.font = fontText;
     context.textBaseline = 'middle';
     context.translate(pos.x + .5, pos.y + .5); // a screen position is the center of a pixel, as for every other draw

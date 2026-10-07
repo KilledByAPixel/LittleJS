@@ -867,7 +867,7 @@ function setSoundIgnoreSilentSwitch(ignore)
  *  @memberof Settings */
 function setSoundVolume(volume)
 {
-    ASSERT(isNumber(volume), 'setSoundVolume: volume must be a number, 1 is full', volume);
+    ASSERT(isNumber(volume) && abs(volume) < Infinity, 'setSoundVolume: volume must be a finite number, 1 is full', volume);
     soundVolume = volume;
     audioUpdateVolume(); // update gain immediately, sound off or not
 }

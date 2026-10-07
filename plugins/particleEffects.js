@@ -495,9 +495,11 @@ function particleEffectResolve(nameOrEffect, options)
     const found = typeof nameOrEffect == 'string' ? particleEffectsGet(nameOrEffect) : nameOrEffect;
     ASSERT(!!found, 'no particle effect named ' + nameOrEffect);
     if (!found) return;
-    // a vec2 emitSize is a rectangle, as ParticleEmitter takes one
+    // a vec2 emitSize is a rectangle, as ParticleEmitter takes one, unless emitRect is false, which makes a circle as
+    // wide as its x
     if (isVector2(options.emitSize))
-        options = {...options, emitSize: options.emitSize.x, emitHeight: options.emitSize.y, emitRect: true};
+        options = {...options, emitSize: options.emitSize.x, emitHeight: options.emitSize.y,
+            emitRect: options.emitRect ?? true};
     if (debug)
         for (const key in options)
             ASSERT(PARTICLE_EFFECT_OPTIONS.includes(key) || particleEffectSettings.some((setting)=> setting.name === key),
@@ -539,6 +541,7 @@ function particleEffectResolve(nameOrEffect, options)
  *  @memberof ParticleEffects */
 function particleEffect(nameOrEffect, pos=vec2(), options={})
 {
+    options ||= {}; // null is no options too
     const effect = particleEffectResolve(nameOrEffect, options);
     if (!effect) return;
     const emitter = new ParticleEmitter(pos.copy());
@@ -655,6 +658,7 @@ function particleEffectSet3D(emitter, effect)
  *  @memberof ParticleEffects */
 function particleEffect3D(nameOrEffect, pos3D=vec3(), options={})
 {
+    options ||= {}; // null is no options too
     const effect = particleEffectResolve(nameOrEffect, options);
     if (!effect) return;
     const e = new ParticleEmitter3D(pos3D.copy());
