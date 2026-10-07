@@ -999,8 +999,8 @@ class Render3DPlugin
         if (range)
         {
             const distance = offset.length();
-            if (distance > range)
-                return; // out of range
+            if (distance >= range)
+                return; // out of range, at it too, where the fade is silent
             const taperRange = range * sound.taper;
             if (distance > taperRange)
                 volume *= percent(distance, range, taperRange);

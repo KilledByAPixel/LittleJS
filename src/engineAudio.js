@@ -291,7 +291,7 @@ class Sound
 
             // remove randomness so it can be applied on playback, a value passed in wins over the array's
             const randomnessIndex = 1;
-            this.randomness = randomness ?? zzfxSound[randomnessIndex] ?? .05;
+            this.randomness = randomness ?? clamp(zzfxSound[randomnessIndex] ?? .05); // 0 to 1, as one passed in
             zzfxSound[randomnessIndex] = 0;
 
             // generate the zzfx samples, then hand them to an audio buffer so
@@ -390,8 +390,8 @@ class Sound
             {
                 // apply range based fade
                 const lengthSquared = cameraPos.distanceSquared(pos);
-                if (lengthSquared > range*range)
-                    return; // out of range
+                if (lengthSquared >= range*range)
+                    return; // out of range, at it too, where the fade is silent
 
                 // attenuate volume by distance, full volume out to the taper and a fade past it,
                 // so a taper of 1 plays at full volume right up to the range
@@ -725,7 +725,9 @@ class SoundInstance
         if (!this.isPlaying()) return this.pausedTime;
         const duration = this.getDuration();
         const place = this.startOffset + (audioContext.currentTime - this.startTime) * this.rate;
-        return duration ? mod(place, duration) : 0; // a sound still loading has no length yet
+        // a sound still loading has no length yet; a loop goes around, a one shot past its end, before its ended
+        // event, stays at its end, so a pause there does not play it again on resume
+        return !duration ? 0 : this.loop ? mod(place, duration) : min(place, duration);
     }
 
     /** Get the length of the sound in its own seconds, the same at any rate; divide by the rate for how long it takes to play

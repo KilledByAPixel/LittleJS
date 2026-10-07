@@ -446,3 +446,35 @@ test('setSoundVolume sets the master gain even while sound is off', () =>
     assert.equal(LJS.audioMasterGain.gain.value, .7);
     LJS.setSoundVolume(before);
 });
+
+test('a one shot paused after its end and before its ended event stays at its end, a loop wraps', () =>
+{
+    // its place past the end was taken around the length, so a pause there recorded a time near the start and a
+    // resume played it again
+    const length = sound.getDuration();
+    audioContext.currentTime = 50;
+    const once = sound.play();
+    audioContext.currentTime = 50 + length + .02;
+    assert.ok(Math.abs(once.getCurrentTime() - length) < epsilon, 'at its end');
+    once.stop();
+    audioContext.currentTime = 60;
+    const looped = sound.play(undefined, 1, 1, 1, true);
+    audioContext.currentTime = 60 + length + .02;
+    assert.ok(Math.abs(looped.getCurrentTime() - .02) < 1e-6, 'a loop goes around');
+    looped.stop();
+});
+
+test('a zzfx array\'s own randomness is kept to 0 to 1, as one passed in is', () =>
+{
+    assert.equal(new LJS.Sound([1, 2]).randomness, 1);
+    assert.equal(new LJS.Sound([1, -1]).randomness, 0);
+});
+
+test('a sound at exactly its range is out of it, not a silent voice', () =>
+{
+    const ranged = new LJS.Sound([1, 0, 220, 0, .1, .1], 0, 10);
+    assert.equal(ranged.play(LJS.cameraPos.add(LJS.vec2(10, 0))), undefined);
+    const near = ranged.play(LJS.cameraPos.add(LJS.vec2(9, 0)));
+    assert.ok(near, 'just inside plays');
+    near.stop();
+});
