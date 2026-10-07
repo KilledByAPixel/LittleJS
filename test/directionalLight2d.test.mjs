@@ -62,3 +62,14 @@ test('every object has castBackgroundShadow, off by default', ()=>
     assert.equal(run('new EngineObject().castBackgroundShadow'), false);
     assert.equal(run('new TileLayer(vec2(), vec2(4)).castBackgroundShadow'), false);
 });
+
+test('directionalTextureSize is a whole number of 1 or more, checked where the sizes are', ()=>
+{
+    const run = engine();
+    assert.match(thrown(run, 'lightSystem.directionalTextureSize = 0; lightSystem.clampTextureSizes()') ?? '',
+        /directionalTextureSize/);
+    assert.match(thrown(run, 'lightSystem.directionalTextureSize = NaN; lightSystem.clampTextureSizes()') ?? '',
+        /directionalTextureSize/);
+    run('lightSystem.directionalTextureSize = 300.7; lightSystem.clampTextureSizes()');
+    assert.equal(run('lightSystem.directionalTextureSize'), 300, 'a fraction is taken down to whole texels');
+});

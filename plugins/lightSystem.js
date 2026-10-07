@@ -145,7 +145,7 @@ class LightSystemPlugin
          *  @type {DirectionalLight|undefined} */
         this.directionalLight = undefined;
         /** @property {number} - Pixels across the square textures a directional light is built in, covering the
-         *  shadow map's area; larger is sharper and slower */
+         *  shadow map's area; larger is sharper and slower; a power of two, as shadowMapSize, so their texels line up */
         this.directionalTextureSize = 512;
         /** @property {WebGLTexture|undefined} - The directional light as built this frame, white where it reaches,
          *  over the shadow map's area, read only
@@ -404,7 +404,10 @@ class LightSystemPlugin
             const size = ls.shadowMapSize;
             const view = mainCanvasSize.scale(1/cameraScale);
             const worldSize = ls.shadowMapScale * max(view.x, view.y);
-            const texel = worldSize / size;
+            // with a sun, on the coarser of its texels and the map's, or its area would move by half its texels and a
+            // still caster's shadow edge would jump as the camera pans
+            const grid = ls.directionalLight ? min(size, ls.directionalTextureSize) : size;
+            const texel = worldSize / grid;
             const center = vec2(floor(cameraPos.x/texel)*texel, floor(cameraPos.y/texel)*texel);
             ls.shadowMapOrigin = center.subtract(vec2(worldSize/2));
             ls.shadowMapWorldSize = worldSize;
@@ -865,7 +868,9 @@ class LightSystemPlugin
     {
         this.shadowMapSize = glClampTextureSize(this.shadowMapSize);
         this.shadowTextureSize = glClampTextureSize(this.shadowTextureSize);
-        this.directionalTextureSize = glClampTextureSize(this.directionalTextureSize);
+        ASSERT(isNumber(this.directionalTextureSize) && this.directionalTextureSize >= 1,
+            'directionalTextureSize is a whole number of texels, 1 or more', this.directionalTextureSize);
+        this.directionalTextureSize = glClampTextureSize(floor(this.directionalTextureSize));
         const size = this.textureSize;
         if (!size) return;
         const x = glClampTextureSize(size.x), y = glClampTextureSize(size.y);

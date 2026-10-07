@@ -55,6 +55,21 @@ smokeRun(async ()=>
     check('a vertical light casts straight down', bright(-4, -3) < 120 && bright(-2, -3) > 200,
         [bright(-4, -3), bright(-2, -3)]);
 
+    // panning, the area the sun is built over moves by whole texels of its own textures, or a still caster's shadow
+    // edge jumps back and forth a map texel as the camera moves
+    const offsets = [];
+    for (let i = 0; i < 8; ++i)
+    {
+        setCameraPos(vec2(i * .06, i * .04));
+        engineStep();
+        const texel = lightSystem.shadowMapWorldSize / lightSystem.directionalTextureSize;
+        const place = lightSystem.shadowMapOrigin.scale(1 / texel);
+        offsets.push(+Math.max(Math.abs(place.x - Math.round(place.x)), Math.abs(place.y - Math.round(place.y))).toFixed(3));
+    }
+    check('panning moves the sun\'s area by whole texels of its own', offsets.every((o)=> o < .01), offsets);
+    setCameraPos(vec2());
+    engineStep(2);
+
     // a lost context takes its textures with it, and they are made again once it is back
     sun.sunDirection = vec2(-1, 0);
     const lose = glContext.getExtension('WEBGL_lose_context');
