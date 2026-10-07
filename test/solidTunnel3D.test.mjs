@@ -258,3 +258,29 @@ test('a wall is asked about an object once a frame, also when it is made after t
         assert.ok(asked.every((n)=> n <= 1), (letThrough ? 'one way' : 'solid') + ': asked once a frame at most: ' + asked);
     }
 });
+
+test('a wall that blocks solids but is not solid itself holds a shoved crate too, in every order', ()=>
+{
+    // setCollision(true, false): it stops a solid that meets it, as a pair does, and the settle must agree
+    for (const order of ['ABW', 'WAB', 'WBA', 'BAW', 'BWA', 'AWB'])
+    {
+        const { run } = loadEngine();
+        const result = JSON.parse(run(`setHeadlessMode(true); new Render3DPlugin;
+            const made = {};
+            for (const name of '${order}')
+            {
+                const [x, size, mass] = name == 'A' ? [-1, .5, 20] : name == 'B' ? [0, .5, 1] : [1, 1, 0];
+                const o = made[name] = new EngineObject3D(vec3(x, 0, 0)); o.size3D = vec3(size, 2, 2);
+                o.setCollision(true, name != 'W'); o.mass = mass; o.damping = 1; o.restitution = 0;
+            }
+            let worst = -9;
+            for (let i = 30; i--;)
+            {
+                made.A.velocity3D = vec3(.4, 0, 0); engineObjectsUpdate();
+                worst = Math.max(worst, made.B.pos3D.x);
+            }
+            JSON.stringify({b: worst, a: made.A.pos3D.x, bEnd: made.B.pos3D.x})`));
+        assert.ok(result.b < .25 + 1e-6, order + ': the crate never goes into the wall: ' + result.b);
+        assert.ok(result.a < result.bEnd - .5 + 1e-6, order + ': the pusher stays behind the crate: ' + JSON.stringify(result));
+    }
+});

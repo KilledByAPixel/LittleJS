@@ -639,7 +639,7 @@ function render3DFixedSolids()
     if (render3DFixed.pass !== engineObjectsUpdateCount)
     {
         render3DFixed.pass = engineObjectsUpdateCount;
-        render3DFixed.list = engineObjectsCollide.filter((b)=> !b.mass && b.isSolid && b instanceof EngineObject3D &&
+        render3DFixed.list = engineObjectsCollide.filter((b)=> !b.mass && b instanceof EngineObject3D &&
             !b.parent && !b.sync2D);
     }
     return render3DFixed.list;
@@ -655,7 +655,8 @@ function render3DSettleFixed(o, pusher)
     const reachO = render3DSolidReach(o);
     for (const b of render3DFixedSolids())
     {
-        if (b === o || b === pusher || b.mass || b.destroyed)
+        // a pair where neither is solid passes through, as in the pair loop; a solid against one that is not still meets
+        if (b === o || b === pusher || b.mass || b.destroyed || !o.isSolid && !b.isSolid)
             continue;
         const p = shape.pos, q = b.pos3D, reach = reachO + render3DSolidReach(b);
         const dx = p.x - q.x, dy = p.y - q.y, dz = p.z - q.z;
