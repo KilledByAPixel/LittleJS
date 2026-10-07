@@ -85,15 +85,20 @@ function ASSERT(assert, ...output)
     if (assert) return;
     console.assert(assert, ...output)
     // the error says what went wrong, so an error box or overlay that shows only the error shows the message too: a
-    // value with a toString of its own as that, a vec2 or a color, a plain object as JSON
+    // value with a toString of its own as that, a vec2 or a color, a plain object as JSON, an object of a class with
+    // none by its class's name, each cut at 200 characters, so a whole level is not the message
     const text = output.map((value)=>
     {
+        let text;
         try
         {
-            return value && typeof value === 'object' && value.toString === Object.prototype.toString ?
-                JSON.stringify(value) : String(value);
+            const prototype = value && typeof value === 'object' ? Object.getPrototypeOf(value) : undefined;
+            text = prototype === Object.prototype || prototype === null ? JSON.stringify(value) :
+                prototype && value.toString === Object.prototype.toString ?
+                '[' + (value.constructor?.name || 'object') + ']' : String(value);
         }
-        catch { return String(value); }
+        catch { text = Object.prototype.toString.call(value); }
+        return text.length > 200 ? text.slice(0, 199) + '…' : text;
     }).join(' ');
     throw new Error(text ? 'Assert failed: ' + text : 'Assert failed!'); // halt execution
 }

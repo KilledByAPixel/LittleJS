@@ -80,3 +80,12 @@ test('a color given as 0 to 255 warns once in a debug build', ()=>
     assert.equal(warnings.length, 1, warnings.join(' | '));
     assert.match(warnings[0], /0 to 1 here, not 0 to 255/);
 });
+
+test('a value given with an assert is kept short, an object of a class is named by it, and none can break the message', ()=>
+{
+    const big = thrown(`ASSERT(false, 'a level', {objects: [...Array(1000)].map((_, i)=> ({id: i, pos: [i, i]}))})`);
+    assert.ok(big.length < 300, 'a big plain object cut short: ' + big.length);
+    assert.match(big, /…$/);
+    assert.equal(thrown(`ASSERT(false, 'an object', new (class Thing {}))`), 'Assert failed: an object [Thing]');
+    assert.match(thrown(`ASSERT(false, 'no prototype', Object.create(null))`), /^Assert failed: no prototype /);
+});
