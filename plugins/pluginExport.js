@@ -24,6 +24,11 @@ export
     NewgroundsPlugin,
     NewgroundsMedal,
 
+    // Wavedash
+    wavedash,
+    WavedashPlugin,
+    WavedashMedal,
+
     // Post Process
     postProcess,
     PostProcessPlugin,

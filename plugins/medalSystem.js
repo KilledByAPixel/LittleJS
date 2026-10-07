@@ -71,6 +71,8 @@ function medalsInit(saveName)
         early.forEach((medal)=> medal.unlocked = true);
         medalsSave();
     }
+    // the saved unlocks of Wavedash medals go to Wavedash, when that plugin is in the build and started
+    typeof wavedash != 'undefined' && wavedash?.sendAchievements();
 
     // add the medal display once, however often this is called
     if (!medalsRenderAdded)

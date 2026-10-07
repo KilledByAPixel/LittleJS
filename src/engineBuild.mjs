@@ -42,6 +42,7 @@ const enginePluginFiles =
 [
     `${PLUGIN_FOLDER}/medalSystem.js`,
     `${PLUGIN_FOLDER}/newgrounds.js`,
+    `${PLUGIN_FOLDER}/wavedash.js`,
     `${PLUGIN_FOLDER}/postProcess.js`,
     `${PLUGIN_FOLDER}/lightSystem.js`,
     `${PLUGIN_FOLDER}/audioEffects.js`,

@@ -2247,6 +2247,42 @@ newgrounds.resendUnlocks()           // advanced: send the ones whose request di
                                      // the minute's session check does; one the server refused is not resent
 ```
 
+## LittleJS Wavedash
+- Optional plugin for Wavedash achievements and leaderboards, the same shape as the Newgrounds one
+- Wavedash serves the game's page and puts its SDK in `window.Wavedash`, so nothing is bundled; off Wavedash every call
+  does nothing and medals unlock as any do
+- Make the plugin at the end of `gameInit`: it calls `Wavedash.init()`, until which Wavedash keeps its loading screen
+- Achievements are made with the Wavedash CLI, `--description` required; numbering the identifiers (`ACH_01_...`)
+  orders them, since Wavedash lists them by identifier
+- A game built with its own minifier keeps the SDK's names (`Wavedash`, `init`, `success`, `data`, `id` and the
+  methods) and real booleans: the SDK throws on a renamed call or a 1 for true (Terser's booleans_as_integers); the
+  engine's own builds keep both
+
+```javascript
+// the medals, each with the identifier of its achievement on Wavedash
+const medal_finish = new WavedashMedal(0, 'ACH_01_FINISH', 'Finish', 'Finish a level');
+function gameInit()
+{
+    medalsInit('My Game');
+    new WavedashPlugin({LEVEL_1: {lowerWins: true, display: 'milliseconds'}, HIGH_SCORE: {}}); // last, it calls init
+}
+// later, in game code
+medal_finish.unlock();               // Wavedash's toast on Wavedash, the engine's popup anywhere else
+wavedash.postScore('LEVEL_1', timeMs);
+
+new WavedashMedal(id, achievement, name, description, icon, src) // a Medal that is also a Wavedash achievement; its
+                                     // unlock is sent until Wavedash takes it, which it refuses until it has loaded
+                                     // the player's, a moment after launch; saved unlocks are sent too
+new WavedashPlugin(leaderboards)     // sets the wavedash global, calls Wavedash.init and makes the leaderboards: by
+                                     // name, lowerWins for times and golf (higher wins when left out) and display
+                                     // 'number' (the default), 'seconds', 'milliseconds' or 'ticks' (60 a second)
+wavedash.isActive()                  // whether the game is on Wavedash, its SDK on the page
+await wavedash.postScore(name, score) // a whole number, milliseconds for a time, Wavedash keeping the best; true once
+                                     // posted, false off Wavedash; a board not in the table is made then, higher wins
+await wavedash.getScores(name, offset=0, limit=10, friendsOnly=false) // the entries as Wavedash gives them
+wavedash.leaderboards                // each board's id promise by its name
+```
+
 ## LittleJS Drawing Utilities
 - Optional plugin: nine-slice and three-slice helpers for scalable UI panels, plus a crescent shape
 - World-space (WebGL or 2D) and screen-space (2D by default, useWebGL for WebGL) variants

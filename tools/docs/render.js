@@ -13,7 +13,7 @@ const CORE_NAMESPACES = ['Engine', 'Math', 'Random', 'Utilities', 'Draw', 'Audio
     'TileLayers', 'Settings', 'WebGL', 'Editor', 'Debug'];
 const PLUGIN_NAMESPACES = ['AudioEffects', 'TweenSystem', 'SceneSystem', 'Parallax', 'PathFinding', 'UISystem',
     'LightSystem', 'PostProcess', 'Math3D', 'Render3D', 'Level3D', 'GLTF', 'ThreeJS', 'Box2D', 'Medals',
-    'Newgrounds', 'ParticleEffects', 'DrawUtilities', 'TextureSheets', 'Tweakables'];
+    'Newgrounds', 'ParticleEffects', 'DrawUtilities', 'TextureSheets', 'Tweakables', 'Wavedash'];
 const ENTRY_KINDS = ['function', 'member', 'constant', 'typedef'];
 
 // escape text for html
