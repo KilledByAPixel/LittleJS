@@ -292,3 +292,35 @@ test('parseAtlas uses Aseprite frame tags as animations', () =>
     assert.deepEqual(groups.map(g=> [g.name, g.frames.length]),
         [['walk', 3], ['hero 3', 1]]);
 });
+
+test('an atlas whose data throws as it is read is loaded again on the next call, as a failed fetch is', async () =>
+{
+    // the failed fetch was let go of so a retry loads again; one that threw in the queue stayed kept as loaded,
+    // empty for the rest of the page
+    const { loadEngine } = await import('./vmEngine.mjs');
+    const { run } = loadEngine({}, 'setHeadlessMode(true)');
+    const result = await run(`(async ()=> {
+        headlessMode = false; engineInitialized = true;
+        let fetches = 0, valid = false;
+        console.error = ()=> {}; console.assert = ()=> {};
+        Image = class
+        {
+            constructor() { this.width = this.height = 16; }
+            set src(value) { queueMicrotask(()=> this.onload()); }
+        };
+        const good = {frames: {'hero.png': {frame: {x: 0, y: 0, w: 16, h: 16}}}};
+        globalThis.fetch = async ()=> { ++fetches; return {ok: true, json: async ()=> valid ? good : {frames: null}}; };
+        textureSheetAdd = ()=> ({tile: new TileInfo(vec2(), vec2(16), undefined, 0, 0, 1),
+            sheet: {context: {drawImage() {}}}});
+        const first = loadAtlas('atlas.png', 'atlas.json');
+        await spritesReady();
+        valid = true;
+        const retry = loadAtlas('atlas.png', 'atlas.json');
+        await spritesReady();
+        return {fetches, same: first === retry, frames: Object.keys(retry).join(), pending: textureSheetPendingCount};
+    })()`);
+    assert.equal(result.fetches, 2, 'fetched again');
+    assert.equal(result.same, false);
+    assert.equal(result.frames, 'hero');
+    assert.equal(result.pending, 0);
+});

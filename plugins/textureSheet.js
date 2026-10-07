@@ -263,7 +263,7 @@ function loadSprite(src, frameSize, padding=textureSheetPadding, sourcePadding=0
             console.warn('loadSprite failed to load image:', src);
             textureSheetLoadFailed(key, tileInfo);
         }
-    });
+    }, ()=> textureSheetLoadFailed(key, tileInfo));
 
     return tileInfo;
 }
@@ -329,7 +329,7 @@ function loadTiles(sources, tileSize=tileDefaultSize, padding=textureSheetPaddin
             added.sheet.drawImage(image, added.tile, false); // upload once per batch
             for (let k = 0; k < count; ++k)
                 set.tiles.push(added.tile.frame(k));
-        });
+        }, ()=> textureSheetLoadFailed(key, set));
     }
     return set;
 }
@@ -434,20 +434,21 @@ function loadAtlas(imageSrc, jsonSrc, padding=textureSheetPadding)
             console.warn('loadAtlas failed to load:', imageSrc, jsonSrc);
             textureSheetLoadFailed(key, atlas);
         }
-    });
+    }, ()=> textureSheetLoadFailed(key, atlas));
 
     return atlas;
 }
 
-// run a load in the queue: a load that throws is reported and the loads after it carry on, the pending count
-// always comes back down, and the sheets upload to webgl once per batch, when the last pending load finishes
-function textureSheetQueueJob(name, job)
+// run a load in the queue: a load that throws is reported, let go of so the next call loads it again (failed), as
+// one whose file did not load is, and the loads after it carry on; the pending count always comes back down, and the
+// sheets upload to webgl once per batch, when the last pending load finishes
+function textureSheetQueueJob(name, job, failed)
 {
     ++textureSheetPendingCount;
     textureSheetQueue = textureSheetQueue.then(async ()=>
     {
         try { await job(); }
-        catch (e) { console.error(name + ' failed:', e); }
+        catch (e) { console.error(name + ' failed:', e); failed?.(); }
         finally
         {
             if (!--textureSheetPendingCount)
