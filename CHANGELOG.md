@@ -7,6 +7,7 @@ What changed in each release, newest first. Releases before 1.20.0 are on the
 
 ### New Changes
 
+- The package exports its plugins and engine source, littlejsengine/plugins/* and littlejsengine/src/*, which it shipped but would not let a tool reach; they are plain scripts, for a script tag or a copy, while the ESM build already holds every plugin
 - DirectionalLight, a sun for the 2D light system: it lights the whole scene from one side, its sunDirection toward the sun as in 3D, foreground casters throw long shadows that fade by shadowLength, and a background marked castBackgroundShadow is lit only at the edges that face it, Frank Engine's look; one per scene, nothing changes for a game without one
 - Wavedash plugin: achievements and leaderboards on Wavedash, the same shape as the Newgrounds plugin. A `WavedashMedal` is a medal with the identifier of its Wavedash achievement, sent until Wavedash takes it and shown with Wavedash's own toast there; `new WavedashPlugin(leaderboards)` calls `Wavedash.init` and makes the game's leaderboards with how each sorts and shows; `wavedash.postScore` and `getScores`, which give up after 15 seconds. An achievement Wavedash refuses for a minute warns once with its identifier. Off Wavedash every call does nothing
 - Common mistakes say so: drawTile given a color where its tile goes asserts, engineInit takes one image file given as a string, a save that can not be read or written warns in release builds too, and the color constants like RED are frozen in release builds too, where changing one changed it everywhere

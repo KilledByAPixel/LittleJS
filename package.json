@@ -11,6 +11,8 @@
       "default": "./dist/littlejs.esm.js"
     },
     "./dist/*": "./dist/*",
+    "./plugins/*": "./plugins/*",
+    "./src/*": "./src/*",
     "./package.json": "./package.json"
   },
   "repository": {
