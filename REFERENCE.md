@@ -451,6 +451,7 @@ glDraw(x, y, sizeX, sizeY, angle=0, uv0X, uv0Y, uv1X, uv1Y, rgba=-1, rgbaAdditiv
 ```javascript
 // Sound Object
 Sound(zzfxSound, randomness, range, taper, onloadCallback) // Create a zzfx sound
+zzfx(...zzfxSound)                                     // Generate and play a zzfx sound at once, no Sound kept
 Sound(filename, randomness, range, taper, onloadCallback)  // Load a wave, mp3, or ogg
 Sound.play(pos, volume=1, pitch=1, randomnessScale=1, loop=false, paused=false) // Play a sound, returns SoundInstance
 Sound.playLoop(pos, volume=1, pitch=1, randomnessScale=1, paused=false) // Play on a loop, like play with loop on

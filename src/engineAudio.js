@@ -922,8 +922,8 @@ function zzfx(...zzfxSound) { return playSamples([zzfxG(...zzfxSound)]); }
  *  @param {number}  [release] - Release time, how fast sound fades out (seconds)
  *  @param {number}  [shape] - Shape of the sound wave
  *  @param {number}  [shapeCurve] - Squareness of wave (0=square, 1=normal, 2=pointy)
- *  @param {number}  [slide] - How much to slide frequency (kHz/s)
- *  @param {number}  [deltaSlide] - How much to change slide (kHz/s/s)
+ *  @param {number}  [slide] - How much to slide frequency, 1 is about 500 Hz a second, as ZzFX has it
+ *  @param {number}  [deltaSlide] - How much to change slide each second, in the units of slide
  *  @param {number}  [pitchJump] - Frequency of pitch jump (Hz)
  *  @param {number}  [pitchJumpTime] - Time of pitch jump (seconds)
  *  @param {number}  [repeatTime] - Resets some parameters periodically (seconds)
@@ -934,7 +934,8 @@ function zzfx(...zzfxSound) { return playSamples([zzfxG(...zzfxSound)]); }
  *  @param {number}  [sustainVolume] - Volume level for sustain (percent)
  *  @param {number}  [decay] - Decay time, how long to reach sustain after attack (seconds)
  *  @param {number}  [tremolo] - Trembling effect, rate controlled by repeat time (percent)
- *  @param {number}  [filter] - Filter cutoff frequency, positive for HPF, negative for LPF (Hz)
+ *  @param {number}  [filter] - Filter cutoff, positive for HPF, negative for LPF; the cutoff is about twice this in
+ *    Hz, as ZzFX has it, and its resonance can take the samples past 1
  *  @return {Float32Array} - The audio samples
  *  @memberof Audio */
 function zzfxG
