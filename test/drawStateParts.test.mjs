@@ -85,3 +85,12 @@ test('a voxel map\'s see through blocks draw in its render order too', ()=>
     assert.equal(run(`render3DSetting(map.children[0], 'renderOrder')`), 7);
     assert.equal(run('map.children[0].transparent'), true, 'still blended');
 });
+
+test('a see-through part of an additive owner draws without the fade assert, as it draws in the blended stage', ()=>
+{
+    const run = engine();
+    run(`console.assert = ()=> {};
+        var owner = new EngineObject3D, part = new EngineObject3D(vec3(), render3D.boxMesh, undefined, rgb(1, 1, 1, .5));
+        render3DShareSettings(part, owner); owner.addChild(part); owner.additive = true;`);
+    assert.equal(run('(()=> { try { part.render3D(); } catch (e) { return e.message; } })()'), undefined);
+});

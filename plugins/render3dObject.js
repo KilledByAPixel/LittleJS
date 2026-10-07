@@ -371,7 +371,7 @@ class EngineObject3D extends EngineObject
     render3D()
     {
         // an opaque draw comes out solid however low its alpha is, so a fade with no flag looks like nothing happened
-        ASSERT(this.transparent || this.additive || this.color.a >= 1,
+        ASSERT(this.transparent || render3DSetting(this, 'additive') || this.color.a >= 1, // a part, its owner's
             'an object that fades needs its transparent flag, an opaque draw ignores the color alpha', this.color);
         // the matrix the object keeps, rebuilt only when it moved, the same one for the shadow pass and the main pass
         const matrix = render3DObjectMatrix(this);
