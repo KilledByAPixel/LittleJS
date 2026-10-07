@@ -1772,7 +1772,7 @@ class LensFlare3D extends EngineObject3D
         if (!source) return true;
         const ray = new Ray3D(render3D.camera.pos, source.direction), reach = source.distance;
         const blockers = engineObjects.filter((o)=> o !== this && o instanceof EngineObject3D && !o.destroyed &&
-            !o.transparent && !o.additive);
+            !o.transparent && !render3DSetting(o, 'additive'));
         // a voxel map says block by block what is see through: glass, water and leaves let the sun by, and the
         // ray goes on to the blocks behind them
         const maps = /** @type {Array<VoxelMap>} */ (typeof VoxelMap == 'undefined' ? [] :

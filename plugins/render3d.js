@@ -177,7 +177,8 @@ function render3DWithState(fields, fn)
 }
 
 // which side of the 2D scene an object draws on, its own flag or the plugin default
-function render3DIsAfter2D(o) { return !!(o.renderAfter2D ?? render3D.renderAfter2D); }
+function render3DIsAfter2D(o)
+{ return !!((o.drawOwner ? render3DSetting(o, 'renderAfter2D') : o.renderAfter2D) ?? render3D.renderAfter2D); }
 
 // a size given as a number or a vec3
 /** @param {Vector3|number} size
@@ -253,31 +254,33 @@ function render3DQuadAxes(center, right, up)
 function render3DSetObjectState(o)
 {
     const r = render3D;
-    const emissive = o?.emissive || 0;
+    const transparent = o?.transparent;
+    const p = o?.drawOwner ? render3DPartSettings(o) : o; // a part draws with its owner's settings
+    const emissive = p?.emissive || 0;
     ASSERT(isNumber(emissive) && emissive >= 0, 'emissive must be a number, 0 or more', emissive);
     r.lighting = true;
     r.emissive = emissive;
-    r.additive = !!o?.additive;
-    r.specular = o?.specular || 0;
-    const shininess = o?.shininess ?? 16, reflectivity = o?.reflectivity || 0;
+    r.additive = !!p?.additive;
+    r.specular = p?.specular || 0;
+    const shininess = p?.shininess ?? 16, reflectivity = p?.reflectivity || 0;
     ASSERT(isNumber(shininess) && shininess > 0, 'shininess must be a number above 0', shininess);
     ASSERT(isNumber(reflectivity) && reflectivity >= 0 && reflectivity <= 1, 'reflectivity must be 0 to 1', reflectivity);
     r.shininess = shininess;
     r.reflectivity = reflectivity;
-    r.normalMap = o?.normalMap || undefined;
-    r.normalScale = o?.normalScale ?? 1;
-    r.emissiveMap = o?.emissiveMap || undefined;
-    r.emissiveMapColor = o?.emissiveMapColor || WHITE;
-    ASSERT(!o?.environment || o.environment instanceof CubeMap, 'environment must be a CubeMap');
-    r.environmentMap = o?.environment || undefined;
-    r.receiveShadow = !o || o.receiveShadow;
+    r.normalMap = p?.normalMap || undefined;
+    r.normalScale = p?.normalScale ?? 1;
+    r.emissiveMap = p?.emissiveMap || undefined;
+    r.emissiveMapColor = p?.emissiveMapColor || WHITE;
+    ASSERT(!p?.environment || p.environment instanceof CubeMap, 'environment must be a CubeMap');
+    r.environmentMap = p?.environment || undefined;
+    r.receiveShadow = !p || p.receiveShadow;
     r.cullBackFaces = r.mirrored = false; // each mesh sets these as it draws
-    r.pixelated = !!o?.pixelated;
-    ASSERT(!o?.shader || o.shader instanceof Shader, 'shader must be a Shader, not the snippet itself');
-    r.shader = o?.shader || undefined; // null is no shader too, so it batches with none
+    r.pixelated = !!p?.pixelated;
+    ASSERT(!p?.shader || p.shader instanceof Shader, 'shader must be a Shader, not the snippet itself');
+    r.shader = p?.shader || undefined; // null is no shader too, so it batches with none
     r.depthTest = true;
     if (r.shadowPass)
-        r.blend = !!o?.transparent; // the depth shader cuts a see through caster by the alpha it would blend with
+        r.blend = !!transparent; // the depth shader cuts a see through caster by the alpha it would blend with
 }
 
 // draw objects each with the draw state set from its own flags, then reset to the defaults
@@ -1176,14 +1179,15 @@ class Render3DPlugin
     {
         const opaque = [], transparent = [];
         for (const o of objects)
-            (o.transparent || o.additive ? transparent : opaque).push(o);
+            (o.transparent || render3DSetting(o, 'additive') ? transparent : opaque).push(o);
 
         isDefault && (this.skyBox && this.skyBox !== this.capturingCube || this.sky) && this.drawSky();
 
         // opaque: no blending, depth writes on, by render order
         this.blend = false;
         this.depthWrite = true;
-        const byOrder = (a, b)=> a.renderOrder - b.renderOrder;
+        const byOrder = (a, b)=> (a.drawOwner ? render3DSetting(a, 'renderOrder') : a.renderOrder) -
+            (b.drawOwner ? render3DSetting(b, 'renderOrder') : b.renderOrder);
         opaque.sort(byOrder);
         transparent.sort(byOrder);
         render3DDrawObjects(opaque);
@@ -2849,7 +2853,7 @@ function render3DRenderShadowMap()
     {
         // see through objects cast only when textured, their alpha cuts the shadow out
         const casters = render3DLayerObjects(!!r.renderAfter2D).filter(o=>
-            o.castShadow && !o.additive && (!o.transparent || o.tileInfo));
+            render3DSetting(o, 'castShadow') && !render3DSetting(o, 'additive') && (!o.transparent || o.tileInfo));
         render3DDrawObjects(casters);
         r.onRenderOpaque?.();
         r.flush();
@@ -2914,7 +2918,8 @@ function render3DRenderDepth()
     r.shadowPass = r.depthPass = true;
     try
     {
-        const solids = render3DLayerObjects(!!r.renderAfter2D).filter(o=> !o.additive && (!o.transparent || o.tileInfo));
+        const solids = render3DLayerObjects(!!r.renderAfter2D).filter(o=>
+            !render3DSetting(o, 'additive') && (!o.transparent || o.tileInfo));
         render3DDrawObjects(solids);
         r.onRenderOpaque?.();
         r.flush();

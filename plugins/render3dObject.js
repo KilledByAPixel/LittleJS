@@ -156,6 +156,8 @@ class EngineObject3D extends EngineObject
         this.movePass = engineObjectsUpdateCount; // the engine pass a child last moved in, so a refresh is not a step
         this.collideFrom = vec3();       // where it was when the pass it collided in began, see render3DCollideFrom
         this.collideFromPass = -1;
+        /** @type {EngineObject3D|undefined} */
+        this.drawOwner = undefined;      // the object this one is drawn as a part of, see render3DShareSettings
     }
 
     /** Move by the 3D velocities and push out of solids, called automatically each frame before update, like the 2D physics
@@ -335,6 +337,8 @@ class EngineObject3D extends EngineObject
     {
         if (child instanceof EngineObject3D && !child.destroyed)
             render3DTakeWorld(child, render3DObjectMatrix(child));
+        if (child instanceof EngineObject3D && child.drawOwner === this)
+            child.drawOwner = undefined; // a part taken off draws with its own settings
         super.removeChild(child);
     }
 
@@ -386,18 +390,33 @@ const RENDER3D_PART_SETTINGS = {emissive: 0, additive: false, specular: 0, shini
     castShadow: true, pixelated: false, shader: undefined, environment: undefined, renderAfter2D: undefined,
     renderOrder: 0};
 
-// make a part draw with its owner's settings: each reads the owner's where the owner set it away from the default, and
-// the part's own otherwise, so a model's unlit or rough part keeps what its file gave it; read each time, so a setting
-// changed later is seen, before the stage is chosen too
-function render3DShareSettings(part, owner)
+// make a part draw with its owner's settings: it draws with the owner's where the owner set it away from the default,
+// and its own otherwise, so a model's unlit or rough part keeps what its file gave it; a link the renderer follows
+// where it reads them (render3DSetting), so a setting changed later is seen, before the stage is chosen too, and the
+// part keeps its own values as plain properties, which keeps its shape as fast as any object's
+function render3DShareSettings(part, owner) { part.drawOwner = owner; }
+
+// the value of a draw setting an object draws with: for a part, its owner's where that is set, through every owner
+// up, and its own otherwise
+function render3DSetting(o, name)
+{
+    const owner = o.drawOwner;
+    if (owner)
+    {
+        const value = render3DSetting(owner, name);
+        if (value !== RENDER3D_PART_SETTINGS[name])
+            return value;
+    }
+    return o[name];
+}
+
+// a part's draw settings gathered for the draw state, in one object kept for it, so nothing is made per draw
+const render3DPartScratch = {...RENDER3D_PART_SETTINGS};
+function render3DPartSettings(o)
 {
     for (const name in RENDER3D_PART_SETTINGS)
-    {
-        let own = part[name];
-        const unset = RENDER3D_PART_SETTINGS[name];
-        Object.defineProperty(part, name, {get: ()=> owner[name] !== unset ? owner[name] : own,
-            set: (value)=> { own = value; }, configurable: true, enumerable: true});
-    }
+        render3DPartScratch[name] = render3DSetting(o, name);
+    return render3DPartScratch;
 }
 
 // make an object's own transform a world one, for an object leaving its parent: its position, rotation and scale
