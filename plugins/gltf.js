@@ -1015,7 +1015,7 @@ function gltfFetch(uri, baseUrl, files)
     const page = typeof location !== 'undefined' && location.href;
     const base = page ? new URL(baseUrl, page) : /^[a-z][a-z0-9+.-]*:/i.test(baseUrl) ? baseUrl : undefined;
     const url = base ? new URL(uri, base).href : baseUrl + uri;
-    return fetch(url).then(r=>
+    return loadFetch(url, 'glTF').then(r=>
     {
         if (!r.ok) throw new Error('glTF needs ' + uri + ', not found at ' + url);
         return r;

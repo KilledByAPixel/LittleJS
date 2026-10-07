@@ -2457,7 +2457,7 @@ function render3DSetMaterialUniforms(state)
         environment === r.capturingCube && (environment = undefined);
         render3DBindEnvironment(environment);
         // a rough reflection is blurred over half of sqrt(2 / (shininess + 2)), the spread Blinn-Phong and Beckmann
-        // give a shininess, about a third of the width of the Phong highlight the shader draws, and a texel of mipmap
+        // give a shininess, narrower than the Phong highlight the shader draws, and a texel of mipmap
         // L spans (PI/2) / size * 2^L, so the shader reads level log2(size * .45) - log2(shininess + 2)
         // / 2: the same blur for any size of map; it stops at 4 by 4 a face, where sampling across the edges still
         // blends neighboring faces

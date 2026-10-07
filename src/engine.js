@@ -431,7 +431,7 @@ function engineLoadingScreenDraw(elapsed)
  *  @param {GameCallback} [gameUpdatePost] - Called after physics and objects are updated, even when paused, use for UI updates
  *  @param {GameCallback} [gameRender] - Called before objects are rendered, use for drawing backgrounds/world elements
  *  @param {GameCallback} [gameRenderPost] - Called after objects are rendered, use for drawing UI/overlays
- *  @param {Array<string>} [imageSources=[]] - List of image file paths to preload (e.g., ['player.png', 'tiles.png'])
+ *  @param {Array<string>|string} [imageSources=[]] - List of image file paths to preload (e.g., ['player.png', 'tiles.png']), or one path
  *  @param {HTMLElement} [rootElement] - Root DOM element to attach canvas to, defaults to document.body
  *    It keeps its own inline styles and the canvas centers inside it, but the canvas is still sized from the window,
  *    so set canvasFixedSize or canvasMaxSize to fit a smaller element

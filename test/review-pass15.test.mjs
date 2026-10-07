@@ -72,3 +72,22 @@ test('an effect name cut at 60 characters is cut between characters, never insid
     const kept = run(`particleEffectSanitize({name: ${JSON.stringify(name)}}).name`);
     assert.equal(kept, 'a'.repeat(59) + String.fromCodePoint(0x1f600), 'the emoji whole, as the 60th character');
 });
+
+test('writeSaveData says when the data can not be written as JSON, not that storage is full', () =>
+{
+    const warnings = [];
+    const { run } = loadEngine({ console: { ...console, warn: (...a)=> warnings.push(a.join(' ')) } });
+    run('setHeadlessMode(true); var circular = {}; circular.self = circular;');
+    assert.equal(run(`writeSaveData('save', circular)`), false);
+    assert.match(warnings[0], /can not be written as JSON/);
+});
+
+test('a file that can not be reached is named with who asked, and the error keeps its cause', async () =>
+{
+    const failing = ()=> Promise.reject(new TypeError('network down'));
+    const { run } = loadEngine({ fetch: failing });
+    run('setHeadlessMode(true)');
+    const error = await run(`loadFetch('song.mp3', 'loadSound').catch((e)=> e)`);
+    assert.match(error.message, /^loadSound: could not load song\.mp3, network down/);
+    assert.equal(error.cause.message, 'network down');
+});

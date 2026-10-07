@@ -123,7 +123,7 @@ async function fetchJSON(url)
 {
     const response = await loadFetch(url, 'fetchJSON');
     if (!response.ok)
-        throw new Error(`Failed to fetch JSON from ${url}: ${response.status} ${response.statusText}`);
+        throw new Error(`fetchJSON: could not load ${url}, HTTP ${response.status} ${response.statusText}`);
     const text = await response.text();
     let json;
     try { json = JSON.parse(text); }
@@ -148,8 +148,10 @@ async function loadFetch(url, who)
     catch (error)
     {
         const fromDisk = globalThis.location?.protocol === 'file:';
-        throw new Error(`${who}: could not load ${url}, ${error.message}` + (fromDisk ?
+        const failed = new Error(`${who}: could not load ${url}, ${error.message}` + (fromDisk ?
             ', the page was opened from a file, serve it from a local web server' : ''));
+        /** @type {any} */ (failed).cause = error; // what the browser said, as the error option newer libraries know
+        throw failed;
     }
 }
 
@@ -281,9 +283,17 @@ function writeSaveData(saveName, saveData)
     ASSERT(isStringLike(saveName), 'writeSaveData requires saveName string');
     ASSERT(typeof saveData === 'object' && saveData !== null && !isArray(saveData),
         'writeSaveData: save data must be an object, readSaveData reads it back into one');
-    // tolerate localStorage being unavailable or quota exceeded
-    try { localStorage.setItem(saveName, JSON.stringify(saveData)); return true; }
-    catch // in release too, a player's save going nowhere is not silent
+    // tolerate localStorage being unavailable or quota exceeded; in release too, a player's save going nowhere is
+    // not silent, and the warning says which it was
+    let text;
+    try { text = JSON.stringify(saveData); }
+    catch (error)
+    {
+        console.warn('writeSaveData: the save ' + saveName + ' can not be written as JSON, ' + error.message);
+        return false;
+    }
+    try { localStorage.setItem(saveName, text); return true; }
+    catch
     {
         console.warn('writeSaveData: the save ' + saveName + ' could not be written, storage is full or off');
         return false;

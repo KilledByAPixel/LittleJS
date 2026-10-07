@@ -67,7 +67,7 @@ class ParticleEmitter extends EngineObject
      *  @param {number} [angleSpeed]        - How fast are particles rotating, in radians per frame (at 60fps)
      *  @param {number} [damping]           - How much to dampen particle speed, per-frame velocity multiplier (1 = no damping, .9 = lose 10% speed each frame)
      *  @param {number} [angleDamping]      - How much to dampen particle angular speed, per-frame multiplier (1 = no damping)
-     *  @param {number} [gravityScale]      - How much gravity effect particles
+     *  @param {number} [gravityScale]      - How much gravity affects particles
      *  @param {number} [particleConeAngle] - Half angle each side of the emitter's angle for a particle's start angle, PI is any angle
      *  @param {number} [fadeRate]          - Fraction of life spent fading: half at fade-in (start), half at fade-out (end). e.g. .2 = 10% fade-in, 80% full opacity, 10% fade-out
      *  @param {number} [randomness]    - Apply extra randomness percent

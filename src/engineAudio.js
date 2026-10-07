@@ -472,9 +472,9 @@ class Sound
     *  @return {Promise} */
     async loadSound(filename)
     {
-        const response = await fetch(filename);
+        const response = await loadFetch(filename, 'loadSound'); // named, with the hint for a page opened from disk
         if (!response.ok)
-            throw new Error(`Failed to load sound from ${filename}: ${response.status} ${response.statusText}`);
+            throw new Error(`loadSound: could not load ${filename}, HTTP ${response.status} ${response.statusText}`);
         const arrayBuffer = await response.arrayBuffer();
         const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
         
