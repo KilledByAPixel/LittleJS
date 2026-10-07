@@ -306,6 +306,7 @@ function* engineCollideGridWalk(o)
     }
 }
 let engineInitialized = false; // engineInit ran, with or without a canvas
+let engineInitDone; // the promise the first engineInit hands back, which a second call hands back too
 // the loads startup waits for, each counted for the loading screen, and how many are done; undefined once the game
 // loop starts
 let engineLoads, engineLoadsDone = 0;
@@ -449,12 +450,12 @@ function engineLoadingScreenDraw(elapsed)
  *  @return {Promise<void>} - Done when the images have loaded and gameInit has run */
 async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost, imageSources=[], rootElement)
 {
-    showEngineVersion && console.log(`${engineName} Engine v${engineVersion}`);
     ASSERT(!engineInitialized, 'engine already initialized');
     // runtime guard so release builds (where the assert is stripped) don't
-    // double-register listeners / double-add canvases on a second call
-    if (engineInitialized) return;
+    // double-register listeners / double-add canvases on a second call, which is done when the first is
+    if (engineInitialized) return engineInitDone;
     engineInitialized = true;
+    showEngineVersion && console.log(`${engineName} Engine v${engineVersion}`);
     engineLoads = [], engineLoadsDone = 0;
     if (typeof imageSources === 'string')
         imageSources = [imageSources]; // one image given alone
@@ -658,7 +659,7 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
     }
 
     // skip setup if headless
-    if (headlessMode) return startEngine([]);
+    if (headlessMode) return engineInitDone = startEngine([]);
 
     // ensure body exists for minimal HTML where the script runs before <body> is parsed
     if (!document.body)
@@ -736,14 +737,15 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
         promises.push(splash);
     }
 
-    // the splash first, the images load under it, then the loading screen for the rest
-    showSplashScreen && await promises[promises.length - 1];
-    return startEngine(promises);
+    // kept before anything is awaited, so a second call has it
+    return engineInitDone = startEngine(promises);
 
-    // gameInit runs once the images are in, and the game loop starts once it and everything loaded while it ran are
-    // done, the loading screen showing in the meantime; an error in gameInit reaches the caller
+    // the splash first, the images load under it, then gameInit runs once they are in, and the game loop starts once
+    // it and everything loaded while it ran are done, the loading screen showing in the meantime; an error in gameInit
+    // reaches the caller
     async function startEngine(images)
     {
+        showSplashScreen && !headlessMode && await images[images.length - 1]; // headless has no splash
         const init = (async ()=> { await Promise.all(images); await gameInit(); })();
         engineAddLoad(init);
         await engineWaitForLoads();

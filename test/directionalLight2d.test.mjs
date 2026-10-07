@@ -73,3 +73,13 @@ test('directionalTextureSize is a whole number of 1 or more, checked where the s
     run('lightSystem.directionalTextureSize = 300.7; lightSystem.clampTextureSizes()');
     assert.equal(run('lightSystem.directionalTextureSize'), 300, 'a fraction is taken down to whole texels');
 });
+
+test('in a release build, where the assert is gone, a second sun takes over and the first is destroyed', ()=>
+{
+    const { run } = loadEngine({}, '', 'littlejs.release.js');
+    run('setHeadlessMode(true); new LightSystemPlugin; var first = new DirectionalLight; var second = new DirectionalLight;');
+    assert.equal(run('lightSystem.directionalLight === second'), true);
+    assert.equal(run('first.destroyed'), true, 'the first is not left alive and doing nothing');
+    run('first.destroy()');
+    assert.equal(run('lightSystem.directionalLight === second'), true, 'destroying the first again leaves the second');
+});

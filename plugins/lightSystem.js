@@ -1079,7 +1079,8 @@ class Light extends EngineObject
 /**
  * A DirectionalLight is a sun for the 2D light system: it lights the whole scene from one direction, added into the
  * lightmap with the point lights
- * - One at a time, made after the LightSystemPlugin, lightSystem.directionalLight is the one
+ * - One at a time, made after the LightSystemPlugin, lightSystem.directionalLight is the one; a debug build asserts on
+ *   a second while the first lives, a release build destroys the first
  * - Its castShadow lets foreground casters, objects with castShadow, throw long shadows across open space, fading out
  *   by shadowLength; a light does not need lightSystem.shadows for that
  * - Objects with castBackgroundShadow, a background layer, are dark to it inside and lit at the edges that face it,
@@ -1112,6 +1113,8 @@ class DirectionalLight extends EngineObject
         /** @property {number} - World units the light gets into a background area from its edges facing it */
         this.backgroundDepth = 3;
         // castShadow is EngineObject's, true: foreground casters throw long shadows; it draws nothing, so never casts
+        // in a release build, with no assert, a second takes over and the first goes, not left alive doing nothing
+        lightSystem?.directionalLight?.destroy();
         lightSystem && (lightSystem.directionalLight = this);
     }
 

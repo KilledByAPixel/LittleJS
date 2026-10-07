@@ -156,32 +156,53 @@ const box2dUnusedFields = {
     restitution: 'the restitution of its shapes, given to addBox and the rest'};
 const box2dUnusedWarned = new Set, box2dUnusedStarts = new WeakMap;
 
-// the values of those fields, a vector as its two numbers
+// the values of those fields as numbers, a vector as its two, then gravityScale, kept for the object
 function box2dUnusedFieldValues(o)
 {
-    const values = {};
+    const values = [];
     for (const name in box2dUnusedFields)
     {
         const value = o[name];
-        values[name] = value instanceof Vector2 ? value.x + ',' + value.y : value;
+        value instanceof Vector2 ? values.push(value.x, value.y) : values.push(value);
     }
+    values.push(o.gravityScale);
     return values;
 }
 
-// warn once a field of one set on a Box2dObject, and of gravityScale set on the field, not with setGravityScale
+// warn once a field
+function box2dUnusedWarn(name, use)
+{
+    if (box2dUnusedWarned.has(name)) return;
+    box2dUnusedWarned.add(name);
+    console.warn('Box2dObject.' + name + ' does nothing on a Box2D body, use ' + use);
+}
+
+// warn once a field of one set on a Box2dObject, and of gravityScale set on the field, not with setGravityScale;
+// compared in place, as it runs for every body every step of a debug build
 function box2dCheckUnusedFields(o)
 {
     const start = box2dUnusedStarts.get(o);
     if (!start) return;
-    const now = box2dUnusedFieldValues(o), warn = (name, use)=>
-    {
-        if (box2dUnusedWarned.has(name)) return;
-        box2dUnusedWarned.add(name);
-        console.warn('Box2dObject.' + name + ' does nothing on a Box2D body, use ' + use);
-    };
+    let i = 0;
     for (const name in box2dUnusedFields)
-        now[name] === start[name] || warn(name, box2dUnusedFields[name]);
-    Math.fround(o.gravityScale) === o.body.GetGravityScale() || warn('gravityScale', 'setGravityScale');
+    {
+        const value = o[name];
+        let changed;
+        if (value instanceof Vector2)
+        {
+            changed = value.x !== start[i] || value.y !== start[i + 1];
+            i += 2;
+        }
+        else
+            changed = value !== start[i++];
+        changed && box2dUnusedWarn(name, box2dUnusedFields[name]);
+    }
+
+    // the body's own scale is a call into Box2D, asked only when the field changed since it was last asked,
+    // since setGravityScale sets both
+    if (o.gravityScale === start[i]) return;
+    start[i] = o.gravityScale;
+    Math.fround(o.gravityScale) === o.body.GetGravityScale() || box2dUnusedWarn('gravityScale', 'setGravityScale');
 }
 
 ///////////////////////////////////////////////////////////////////////////////

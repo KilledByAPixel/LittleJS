@@ -70,3 +70,17 @@ test('gravityScale set straight on the field warns, set with setGravityScale doe
     assert.equal(said.length, 1);
     assert.match(said[0], /gravityScale.*setGravityScale/);
 });
+
+test('the check asks the body for its gravity scale only when the field changed, as it runs every step', () =>
+{
+    const o = new Box2dObject(vec2(20, 0));
+    o.addBox(vec2(1));
+    let asked = 0;
+    const ask = o.body.GetGravityScale.bind(o.body);
+    o.body.GetGravityScale = ()=> (++asked, ask());
+    engineStep(5);
+    assert.equal(asked, 0);
+    o.setGravityScale(3);
+    engineStep(5);
+    assert.equal(asked, 1);
+});

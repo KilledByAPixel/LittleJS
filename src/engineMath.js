@@ -983,9 +983,6 @@ function isColor(c) { return c instanceof Color && c.isValid(); }
 // color asserts
 function ASSERT_COLOR_VALID(c) { ASSERT(isColor(c), 'expected a color', c); }
 
-// two hex digits of a color channel of 0 to 1
-const colorHex = (c)=> ((c = round(clamp(c) * 255)) < 16 ? '0' : '') + c.toString(16);
-
 /**
  * Color object (red, green, blue, alpha) with some helpful functions
  * @memberof Engine
@@ -1177,6 +1174,9 @@ class Color
     {
         if (!this.isValid())
             return '#000'; // in release too, as a canvas would keep its last color for #NaN
+
+        // two hex digits of a channel of 0 to 1, kept in here as the script build shares its top level with the game
+        const colorHex = (c)=> ((c = round(clamp(c) * 255)) < 16 ? '0' : '') + c.toString(16);
         return '#' + colorHex(this.r) + colorHex(this.g) + colorHex(this.b) + (useAlpha ? colorHex(this.a) : '');
     }
 
