@@ -1785,6 +1785,8 @@ class LensFlare3D extends EngineObject3D
      *      tileInfo: TileInfo|undefined, angle: number}>} */
     getScreenElements()
     {
+        // one made while the game is paused, as the 3D editor makes them, has had no update to find it
+        this.visibleFound || this.updateVisible(0);
         const look = this.visible > 0 && this.flareLook();
         if (!look) return [];
         const {sun, center, tint, height} = look, strength = look.strength * this.visible;
@@ -1849,10 +1851,18 @@ class LensFlare3D extends EngineObject3D
         super.update();
         if (this.light?.destroyed)
             return this.destroy(); // the flare of a light that is gone
-        // the first update finds it at once, from the camera as it is, its matrices made before the first draw
+        this.updateVisible(timeDelta);
+    }
+
+    /** Ease visible toward whether the sun shows over some seconds; the first time it is found at once, from the
+     *  camera as it is, its matrices made, by the first update or the first draw, whichever comes first
+     *  @param {number} seconds
+     *  @ignore */
+    updateVisible(seconds)
+    {
         this.visibleFound || render3D.updateMatrices();
         const shows = !!this.flareLook() && !(this.occlusion && this.isHidden());
-        const step = this.fadeTime > 0 && this.visibleFound ? timeDelta / this.fadeTime : 1;
+        const step = this.fadeTime > 0 && this.visibleFound ? seconds / this.fadeTime : 1;
         this.visible = clamp(this.visible + (shows ? step : -step));
         this.visibleFound = true;
     }

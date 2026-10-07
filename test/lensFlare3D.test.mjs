@@ -13,10 +13,7 @@ function load()
         render3D.camera.pos = vec3(); render3D.camera.rotation = vec3();
         var sun = (x, y, z)=> { render3D.sunDirection = vec3(x, y, z); render3D.updateMatrices(); };
         var shown = (flare)=> flare.getScreenElements().map((e)=> [e.pos.x, e.pos.y, e.size, e.color.a]);
-        var steps = (flare, n)=> { for (let i = 0; i < n; ++i) flare.update(); };
-        // the engine updates an object before it draws, so a flare read before its first update has one first
-        const elements = LensFlare3D.prototype.getScreenElements;
-        LensFlare3D.prototype.getScreenElements = function(...a) { this.visibleFound || this.update(); return elements.apply(this, a); };`);
+        var steps = (flare, n)=> { for (let i = 0; i < n; ++i) flare.update(); };`);
     return run;
 }
 const near = (a, b, message, epsilon=.5)=> assert.ok(Math.abs(a - b) < epsilon, message ?? `${a} is not ${b}`);
@@ -370,4 +367,16 @@ test('a flare made with the sun already hidden starts hidden, not fading out fro
     assert.equal(run('flare.visible'), 0, 'hidden from the first update');
     run('wall.pos3D = vec3(50, 0, -20); steps(flare, 1);');
     assert.ok(run('flare.visible') > 0 && run('flare.visible') < 1, 'after that it eases in as before');
+});
+
+test('a flare made while the game is paused shows, as the 3D editor makes them, and one hidden stays hidden', async ()=>
+{
+    // objects do not update while paused, so the flare finds whether it shows when it is first drawn too
+    const { run } = loadEngine();
+    run('setHeadlessMode(true); setEngineManualStep(true)');
+    await run('engineInit(()=> { new Render3DPlugin; render3D.camera.pos = vec3(); render3D.camera.rotation = vec3(); render3D.sunDirection = vec3(0, 0, -1); }, ()=> {}, ()=> {}, ()=> {}, ()=> {})');
+    run('setPaused(true); var flare = new LensFlare3D; engineStep(3);');
+    assert.ok(run('flare.getScreenElements().length') > 0, 'paused, it shows');
+    run('var wall = new EngineObject3D(vec3(0, 0, -20), render3D.boxMesh); wall.scale3D = vec3(10); var hidden = new LensFlare3D;');
+    assert.equal(run('hidden.getScreenElements().length'), 0, 'paused behind a wall, it does not');
 });
