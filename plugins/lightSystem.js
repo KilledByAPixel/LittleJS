@@ -555,19 +555,13 @@ class LightSystemPlugin
             units(p.combine, ['s', 't', 'f']);
             units(p.add, ['s']);
         }
-        // let go of everything a directional light made, its textures, programs and background map
+        // let go of the textures a directional light made, its work textures and the background map; its programs
+        // stay, small, so a sun made again, as a day and night or a level with its own does, compiles nothing
         function freeDirectional()
         {
-            const gl = glContext, ls = lightSystem, p = ls.directionalPrograms;
             freeDirectionalTextures();
-            gl.deleteTexture(ls.backgroundMap);
-            ls.backgroundMap = undefined;
-            for (const name of ['seed', 'shadow', 'leak', 'combine', 'add'])
-            {
-                gl.deleteProgram(p[name]);
-                gl.deleteVertexArray(p[name + 'VAO']);
-            }
-            clearDirectional();
+            glContext.deleteTexture(lightSystem.backgroundMap);
+            lightSystem.backgroundMap = undefined;
         }
         function clearDirectional()
         {
@@ -704,8 +698,14 @@ class LightSystemPlugin
             const sun = lightSystem.directionalLight;
             if (sun)
                 lightSystemDirectionalPass();
-            else if (lightSystem.directionalTexture || lightSystem.backgroundMap)
-                freeDirectional(); // the sun is gone, so is what it was drawn with
+            else
+            {
+                // the sun is gone, so are its textures, and the shadow map it made when shadows are off
+                if (lightSystem.directionalTexture || lightSystem.backgroundMap)
+                    freeDirectional();
+                if (!lightSystem.shadows && lightSystem.shadowMap)
+                    freeShadows();
+            }
             if (lightSystem.shadersFailed) return;
 
             // an automatic size follows the canvas, so reallocate the lightmap when

@@ -155,6 +155,14 @@ smokeRun(async ()=>
     engineStep(3);
     check('destroyed, it adds nothing', bright(-6, 4) < 40, bright(-6, 4));
     check('and its textures are let go', !lightSystem.directionalTexture && !lightSystem.backgroundMap);
+    check('and the shadow map it made, with shadows off', !lightSystem.shadowMap);
+    const kept = lightSystem.directionalPrograms.seed;
+    check('its shaders are kept for the next sun', !!kept);
+    const next = new DirectionalLight(vec2(-1, 0));
+    engineStep(2);
+    check('which draws with them, not compiled again', lightSystem.directionalPrograms.seed === kept && bright(-6, 4) > 200,
+        bright(-6, 4));
+    next.destroy();
     checkGLError();
 });
 </script>
