@@ -128,8 +128,9 @@ class Tween
         this.target = undefined;
 
         tweenActivate(this);
-        // Snap target to start immediately.
-        callback(this.interp(duration));
+        // Snap target to start immediately; one that throws here is no tween, the game never gets it to stop
+        try { callback(this.interp(duration)); }
+        catch (error) { tweenDeactivate(this); throw error; }
     }
 
     /** Set the easing curve and return this for chaining
@@ -644,7 +645,9 @@ function tweenStep(t, pass, enginePath, gameDelta, realDelta)
     {
         // Completion: fire end value, remove from active, start the next iteration
         // of a loop or pingPong, or when there is none it has completed, fire onComplete
-        t.callback(t.interp(0));
+        // one whose last call throws is ended all the same, or it would be called and throw at every update
+        try { t.callback(t.interp(0)); }
+        catch (error) { t.active && t.activePass < pass && tweenDeactivate(t); throw error; }
         if (!t.active || t.activePass >= pass)
             return; // stopped or restarted by its own callback, the run it was on ends without completing
         tweenDeactivate(t);

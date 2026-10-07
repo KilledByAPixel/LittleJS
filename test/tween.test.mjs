@@ -693,3 +693,34 @@ test('a nested tweenUpdate then a restart of a tween still waiting in the outer 
     assert.deepEqual(values, [0, .5], 'the next update moves it');
     tweenStopAll();
 });
+
+test('a tween whose callback or easing throws as it is made is not left running, others go on', () =>
+{
+    tweenStopAll();
+    const other = [];
+    new Tween((v)=> other.push(v), 0, 1, 1);
+    for (const make of [
+        (count)=> new Tween(()=> { ++count.n; throw new Error('failed'); }, 0, 1, .1),
+        (count)=> new Tween(()=> {}, 0, 1, .1, {ease: ()=> { ++count.n; throw new Error('failed'); }})])
+    {
+        const count = {n: 0};
+        assert.throws(()=> make(count), /failed/);
+        for (let i = 10; i--;)
+            tweenUpdate(.1);
+        assert.equal(count.n, 1, 'run once, as it was made, and never again');
+    }
+    assert.ok(other.length > 10, 'the other tween went on');
+    tweenStopAll();
+});
+
+test('a tween whose last callback throws is ended, not called again every update', () =>
+{
+    tweenStopAll();
+    let calls = 0;
+    new Tween((v)=> { ++calls; if (v === 1) throw new Error('at the end'); }, 0, 1, .1);
+    assert.throws(()=> tweenUpdate(.2), /at the end/);
+    const after = calls;
+    tweenUpdate(.1); tweenUpdate(.1);
+    assert.equal(calls, after);
+    tweenStopAll();
+});
