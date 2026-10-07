@@ -38,24 +38,30 @@ test('a fast fall onto a thin floor lands on it', ()=>
     assert.ok(Math.abs(at.y - .275) < 1e-6, 'standing on it: ' + at.y);
 });
 
+for (const wallsFirst of [true, false])
 for (const seed of [1, 2, 3])
-test(`objects knocked around a room of solid walls never leave it, seed ${seed}`, ()=>
+test(`objects knocked around a room of solid walls never leave it, walls made ${wallsFirst ? 'first' : 'last'}, seed ${seed}`, ()=>
 {
     // six walls 1 thick around a room 8 across, and 30 movers of many sizes, kicked up to the speed cap, colliding
     // with the walls; after every frame each one is still inside. A move longer than the mover's size and the
     // wall's thickness together skips it with no overlap at all, in 2D too, so the walls are thick enough that every
     // move overlaps, many of them past the wall's middle, which pushing by least overlap sent through. The movers
     // push each other, a few of them heavy, under gravity, so piles press into the floor and the walls, and none may
-    // end a frame even partly in a wall
+    // end a frame even partly in a wall. Objects update in the order they were made, and a pair is resolved in the
+    // turn of the later one, so the room is built before the movers and after them
     const { run } = loadEngine();
     const result = run(`setHeadlessMode(true); new Render3DPlugin; setGravity(vec2());
         const random = new RandomGenerator(${seed}), half = 4, w = half + .5;
-        for (const [pos, size] of [[vec3(w, 0, 0), vec3(1, 10, 10)], [vec3(-w, 0, 0), vec3(1, 10, 10)],
-            [vec3(0, w, 0), vec3(10, 1, 10)], [vec3(0, -w, 0), vec3(10, 1, 10)],
-            [vec3(0, 0, w), vec3(10, 10, 1)], [vec3(0, 0, -w), vec3(10, 10, 1)]])
+        const makeWalls = ()=>
         {
-            const wall = new EngineObject3D(pos); wall.size3D = size; wall.setCollision(); wall.mass = 0;
-        }
+            for (const [pos, size] of [[vec3(w, 0, 0), vec3(1, 10, 10)], [vec3(-w, 0, 0), vec3(1, 10, 10)],
+                [vec3(0, w, 0), vec3(10, 1, 10)], [vec3(0, -w, 0), vec3(10, 1, 10)],
+                [vec3(0, 0, w), vec3(10, 10, 1)], [vec3(0, 0, -w), vec3(10, 10, 1)]])
+            {
+                const wall = new EngineObject3D(pos); wall.size3D = size; wall.setCollision(); wall.mass = 0;
+            }
+        };
+        ${wallsFirst ? 'makeWalls();' : ''}
         render3D.gravity = vec3(0, -.01, 0);
         const bodies = [];
         for (let i = 0; i < 30; ++i)
@@ -67,6 +73,7 @@ test(`objects knocked around a room of solid walls never leave it, seed ${seed}`
             o.restitution = random.float(0, .9); o.damping = 1;
             bodies.push(o);
         }
+        ${wallsFirst ? '' : 'makeWalls();'}
         let found;
         for (let frame = 0; frame < 900 && !found; ++frame)
         {
@@ -129,5 +136,101 @@ test('a mover pushed into the floor by one before it in the list, in its own tur
             JSON.stringify({a: a.pos3D.y, b: b.pos3D.y})`));
         assert.ok(Math.abs(result.a - .25) < 1e-6, label + ': a on the floor: ' + result.a);
         assert.ok(result.b > .75 - 1e-6, label + ': b on a: ' + result.b);
+    }
+});
+
+test('a box resting on a turned ramp stays put, whichever of the two updates first', ()=>
+{
+    // the settle after a push tested the box against the ramp that pushed it, found a rounding error of overlap and
+    // pushed it along the ramp's slanted normal, a little downhill each time, where standing holds it
+    for (const boxFirst of [true, false])
+    {
+        const { run } = loadEngine();
+        const result = JSON.parse(run(`setHeadlessMode(true); new Render3DPlugin; render3D.gravity = vec3(0, -.01, 0);
+            const makeRamp = ()=> { const r = new EngineObject3D(vec3()); r.size3D = vec3(10, 1, 4);
+                r.rotation3D = vec3(0, 0, .3); r.setCollision(); r.mass = 0; };
+            ${boxFirst ? '' : 'makeRamp();'}
+            const box = new EngineObject3D(vec3(0, 1, 0)); box.size3D = vec3(.5); box.setCollision(); box.mass = 1;
+            ${boxFirst ? 'makeRamp();' : ''}
+            for (let i = 60; i--;) engineObjectsUpdate(); // it lands
+            const x = box.pos3D.x; let on = 0;
+            for (let i = 300; i--;) { engineObjectsUpdate(); on += !!box.groundObject; }
+            JSON.stringify({landed: x, moved: box.pos3D.x - x, on})`));
+        const label = boxFirst ? 'box first' : 'ramp first';
+        assert.ok(Math.abs(result.landed) < .01, label + ': it lands where it fell: ' + result.landed);
+        assert.ok(Math.abs(result.moved) < 1e-3, label + ': and stays: ' + result.moved);
+        assert.equal(result.on, 300, label + ': standing all along');
+    }
+});
+
+// two objects of the given sizes, masses and speeds along x, made in the given order, a's speed and b's kept each
+// frame; true when a ends the frames still on its side of b
+function pass(order, a, b, frames=6)
+{
+    const { run } = loadEngine();
+    return run(`setHeadlessMode(true); new Render3DPlugin;
+        const make = (o)=> { const e = new EngineObject3D(vec3(o.x, 0, 0)); e.size3D = vec3(o.size, o.size, 2);
+            e.setCollision(); e.mass = o.mass; e.damping = 1; e.restitution = 0; e.speed = o.speed; return e; };
+        const specA = ${JSON.stringify(a)}, specB = ${JSON.stringify(b)};
+        const first = make(${order == 'ab' ? 'specA' : 'specB'}), second = make(${order == 'ab' ? 'specB' : 'specA'});
+        const a = ${order == 'ab' ? 'first' : 'second'}, b = ${order == 'ab' ? 'second' : 'first'};
+        for (let i = ${frames}; i--;)
+        {
+            a.velocity3D = vec3(a.speed, 0, 0);
+            b.velocity3D = vec3(b.speed, 0, 0);
+            engineObjectsUpdate();
+        }
+        a.pos3D.x < b.pos3D.x`);
+}
+
+test('two movers do not pass through each other, whichever was made first', ()=>
+{
+    // head on at .3 each, a closing speed of .6, which 2D holds to 1; and one at .6 into one at rest
+    for (const order of ['ab', 'ba'])
+    {
+        assert.ok(pass(order, {x: -1, size: .5, mass: 1, speed: .3}, {x: 1, size: .5, mass: 1, speed: -.3}),
+            'head on, ' + order);
+        assert.ok(pass(order, {x: -1, size: .5, mass: 1, speed: .6}, {x: 0, size: .5, mass: 1, speed: 0}),
+            'into one at rest, ' + order);
+    }
+});
+
+test('a thin platform rising into a falling box carries it, whichever was made first', ()=>
+{
+    // closing at .4 a frame, under the .6 of the two sizes, past which 2D goes through too
+    for (const platformFirst of [true, false])
+    {
+        const { run } = loadEngine();
+        const y = run(`setHeadlessMode(true); new Render3DPlugin;
+            const makePlatform = ()=> { const p = new EngineObject3D(vec3(0, -1, 0)); p.size3D = vec3(4, .1, 4);
+                p.setCollision(); p.mass = 0; p.velocity3D = vec3(0, .2, 0); return p; };
+            ${platformFirst ? 'var platform = makePlatform();' : ''}
+            const box = new EngineObject3D(vec3(0, .5, 0)); box.size3D = vec3(.5); box.setCollision(); box.mass = 1;
+            box.damping = 1; box.velocity3D = vec3(0, -.2, 0);
+            ${platformFirst ? '' : 'var platform = makePlatform();'}
+            for (let i = 8; i--;) engineObjectsUpdate();
+            box.pos3D.y - platform.pos3D.y`);
+        assert.ok(y > .3 - 1e-6, (platformFirst ? 'platform first' : 'box first') + ': the box stays on top: ' + y);
+    }
+});
+
+test('a heavy pusher shoving a crate into a wall leaves both on their sides, in every order', ()=>
+{
+    // A of mass 20 driven at .1 a frame into crate B of mass 1, which is pushed into a fixed wall .2 thick
+    for (const order of ['ABW', 'WAB', 'WBA', 'BAW'])
+    {
+        const { run } = loadEngine();
+        const result = JSON.parse(run(`setHeadlessMode(true); new Render3DPlugin;
+            const made = {};
+            for (const name of '${order}')
+            {
+                const [x, size, mass] = name == 'A' ? [-1, .5, 20] : name == 'B' ? [0, .5, 1] : [.6, .2, 0];
+                const o = made[name] = new EngineObject3D(vec3(x, 0, 0)); o.size3D = vec3(size, 2, 2);
+                o.setCollision(); o.mass = mass; o.damping = 1; o.restitution = 0;
+            }
+            for (let i = 30; i--;) { made.A.velocity3D = vec3(.1, 0, 0); engineObjectsUpdate(); }
+            JSON.stringify({a: made.A.pos3D.x, b: made.B.pos3D.x})`));
+        assert.ok(result.b < .5 - .25 + 1e-6, order + ': the crate stays this side of the wall: ' + result.b);
+        assert.ok(result.a < result.b - .5 + 1e-6, order + ': the pusher stays behind the crate: ' + result.a);
     }
 });

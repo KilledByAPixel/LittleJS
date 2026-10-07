@@ -154,6 +154,8 @@ class EngineObject3D extends EngineObject
         this.matrixParent = undefined;   // the parent it was built under, and that parent's version then
         this.matrixParentVersion = 0;
         this.movePass = engineObjectsUpdateCount; // the engine pass a child last moved in, so a refresh is not a step
+        this.collideFrom = vec3();       // where it was when the pass it collided in began, see render3DCollideFrom
+        this.collideFromPass = -1;
     }
 
     /** Move by the 3D velocities and push out of solids, called automatically each frame before update, like the 2D physics
@@ -185,6 +187,7 @@ class EngineObject3D extends EngineObject
         // and a solid it hits sends it back to the side it came from
         const oldPos = (this.collideLevel || this.collideSolidObjects) && this.mass && !this.sync2D ?
             this.pos3D.copy() : undefined;
+        this.collideSolidObjects && !this.sync2D && render3DCollideFrom(this);
         render3DMove(this);
         if (ground && this.mass && !this.sync2D)
         {
@@ -198,7 +201,7 @@ class EngineObject3D extends EngineObject
         oldPos && this.collideLevel && render3DCollideLevel(this, oldPos, ground);
         // the engine only runs this for objects that own where they are, a child rides along with its parent
         if (this.collideSolidObjects && !this.sync2D)
-            render3DCollideSolid(this, oldPos);
+            render3DCollideSolid(this);
     }
 
     /** Move a child by its own velocities, bring a sync2D object's pos3D up to its 2D pos, then update the children,
@@ -520,7 +523,8 @@ function render3DSolidReach(o)
     const kx = abs(k.x), ky = abs(k.y), kz = abs(k.z);
     if (o.collideAsSphere3D)
         return max(s.x, s.y, s.z) / 2 * max(kx, ky, kz);
-    return hypot(s.x * kx, s.y * ky, s.z * kz) / 2;
+    const x = s.x * kx, y = s.y * ky, z = s.z * kz;
+    return (x*x + y*y + z*z) ** .5 / 2; // written out, it is asked for every pair each frame
 }
 
 // what it takes to move shape a clear of shape b, whichever pair of shapes they are, or undefined for no touch
@@ -553,25 +557,59 @@ function render3DCollideAsk(a, b, push, useKept=true)
     return resolve;
 }
 
-// push an object pushed by another out of the solids that do not move, mass 0, back to the side it was pushed from;
-// they take the touch as any pair does, so a one way platform still lets it through
-function render3DSettleFixed(o, from)
+// where a solid was when this pass of the engine began, kept the first time it moves or is pushed in the pass, so a
+// pair resolved in the turn of either one knows where both came from
+function render3DCollideFrom(o)
+{
+    if (o.collideFromPass !== engineObjectsUpdateCount)
+    {
+        o.collideFromPass = engineObjectsUpdateCount;
+        o.collideFrom.set(o.pos3D.x, o.pos3D.y, o.pos3D.z);
+    }
+    return o.collideFrom;
+}
+
+// a push that would carry a on the way it is going relative to b, out the far side past b's middle, as a fast object
+// goes through a thin wall or two movers through each other, is turned back to the side a came from, as 2D resolves
+// from where an object was; both go by where they were when the pass began, so it is the same in either one's turn
+function render3DPushFrom(shapeA, shapeB, a, b, push)
+{
+    const aFrom = render3DCollideFrom(a), bFrom = render3DCollideFrom(b), pa = a.pos3D, pb = b.pos3D;
+    const mx = pa.x - aFrom.x - pb.x + bFrom.x, my = pa.y - aFrom.y - pb.y + bFrom.y, mz = pa.z - aFrom.z - pb.z + bFrom.z;
+    if (push.x * mx + push.y * my + push.z * mz <= 0)
+        return push;
+    return render3DSolidPushBack(shapeA, shapeB, aFrom, bFrom) ?? push;
+}
+
+// push an object pushed by another out of the solids that do not move, mass 0, back to the side it came from;
+// they take the touch as any pair does, so a one way platform still lets it through; not the one that pushed it, which
+// already did, and a push of a rounding error is none, or a box on a turned ramp would be pushed along its slant
+function render3DSettleFixed(o, pusher)
 {
     if (o.destroyed || !o.collideSolidObjects) return;
     let shape = render3DSolidShape(o);
     const reachO = render3DSolidReach(o);
     for (const b of engineObjectsCollide)
     {
-        if (b === o || b.mass || !b.isSolid || b.destroyed || !(b instanceof EngineObject3D) || b.parent || b.sync2D)
+        if (b === o || b === pusher || b.mass || !b.isSolid || b.destroyed || !(b instanceof EngineObject3D) || b.parent ||
+            b.sync2D)
             continue;
         const p = shape.pos, q = b.pos3D, reach = reachO + render3DSolidReach(b);
         const dx = p.x - q.x, dy = p.y - q.y, dz = p.z - q.z;
         if (dx*dx + dy*dy + dz*dz > reach*reach) continue;
         const shapeB = render3DSolidShape(b);
         let push = render3DSolidPush(shape, shapeB);
-        if (!push || !render3DCollideAsk(o, b, push)) continue;
-        if (push.dot(shape.pos.subtract(from)) > 0)
-            push = render3DSolidPushBack(shape, shapeB, from) ?? push;
+        if (!push || push.lengthSquared() < 1e-12) continue;
+        push = render3DPushFrom(shape, shapeB, o, b, push);
+        if (!render3DCollideAsk(o, b, push)) continue;
+        // standing as in a pair: a push off a face within its groundAngle of up holds it there, turned straight up
+        const lengthSquared = push.lengthSquared(), up = push.y / lengthSquared ** .5;
+        if (up > 0 && o.mass && up >= cos(o.groundAngle) && render3DOnFace(push, shapeB))
+        {
+            o.groundObject = b;
+            if (push.x || push.z)
+                push = vec3(0, lengthSquared / push.y, 0);
+        }
         o.pos3D = o.pos3D.add(push);
         shape = render3DSolidShape(o);
         const normal = push.normalize();
@@ -580,10 +618,10 @@ function render3DSettleFixed(o, from)
     }
 }
 
-// what moves shape a back clear of shape b to the side it came from: along an axis it was clear of b on before it
-// moved, the least of those, as 2D resolves it from where the object was; undefined when it overlapped on every axis
-// before too, or a box is turned, which keeps the least push
-function render3DSolidPushBack(a, b, from)
+// what moves shape a back clear of shape b to the side it came from: along an axis the two were clear on where they
+// came from, the least of those, as 2D resolves it from where the object was; undefined when they overlapped on every
+// axis there too, or a box is turned, which keeps the least push
+function render3DSolidPushBack(a, b, aFrom, bFrom)
 {
     if (a.axes || b.axes) return;
     const half = (shape)=> shape.size ? shape.size.scale(.5) : vec3(shape.radius);
@@ -591,7 +629,7 @@ function render3DSolidPushBack(a, b, from)
     let axis, amount = Infinity, side = 0;
     for (const k of ['x', 'y', 'z'])
     {
-        const reach = halfA[k] + halfB[k], was = from[k] - b.pos[k];
+        const reach = halfA[k] + halfB[k], was = aFrom[k] - bFrom[k];
         // it overlapped on this axis before it moved as well; one resting against it touches, which is clear, give or
         // take the rounding of the push that put it there
         if (abs(was) < reach - 1e-6) continue;
@@ -622,7 +660,7 @@ function render3DOnFace(push, shape)
 // turned collision on this frame, tests them all itself and is not tested back
 // one pair per test is half the work of the 2D solver, which tests both directions; the difference only shows
 // when a collideWithObject destroys some third object, whose own turn then finds the pair already gone
-function render3DCollideSolid(a, from)
+function render3DCollideSolid(a)
 {
     let shapeA = render3DSolidShape(a);
     const reachA = render3DSolidReach(a);
@@ -643,10 +681,7 @@ function render3DCollideSolid(a, from)
         const shapeB = render3DSolidShape(b);
         let push = render3DSolidPush(shapeA, shapeB);
         if (!push) continue;
-        // a push the way it was moving sends it on out the far side, past the middle of what it hit, as a fast
-        // object would go through a thin wall; it goes back to the side it came from, as in 2D
-        if (from && push.dot(shapeA.pos.subtract(from)) > 0)
-            push = render3DSolidPushBack(shapeA, shapeB, from) ?? push;
+        push = render3DPushFrom(shapeA, shapeB, a, b, push);
 
         // both objects hear about it, and either one can take the touch over
         if (!render3DCollideAsk(a, b, push, false)) continue;
@@ -668,23 +703,8 @@ function render3DCollideSolid(a, from)
         const total = a.mass + b.mass;
         const weightA = !a.mass ? 0 : !b.mass ? 1 : b.mass / total;
         const weightB = !b.mass ? 0 : !a.mass ? 1 : a.mass / total;
-        const bFrom = weightB ? b.pos3D.copy() : undefined;
-        const aFrom = a.pos3D.copy();
         a.pos3D = a.pos3D.add(push.scale(weightA));
         b.pos3D = b.pos3D.subtract(push.scale(weightB));
-        if (weightA && weightB)
-        {
-            // a met the solids before it in the list already, the fixed ones among them, so a push from something
-            // that moves is settled against those now, and b takes what a could not move, as if a were fixed
-            const pushed = a.pos3D.copy();
-            render3DSettleFixed(a, aFrom);
-            b.pos3D = b.pos3D.add(a.pos3D.subtract(pushed));
-        }
-        if (weightA)
-            shapeA = render3DSolidShape(a); // it moved, so the next solid must be tested against where it is now
-        // b had its turn already, so a push into a wall is settled against the fixed solids now, or it would end the
-        // frame in the wall, and a hard enough shove would carry it through
-        bFrom && render3DSettleFixed(b, bFrom);
         // mass 0 keeps its velocity too, so a moving platform keeps moving, and what hits it bounces by its own
         // restitution as it would off a static wall
         const normal = push.normalize();
@@ -692,6 +712,32 @@ function render3DCollideSolid(a, from)
             a.velocity3D = a.velocity3D.reflect(normal, a.restitution);
         if (weightB && b.velocity3D.dot(normal) > 0)
             b.velocity3D = b.velocity3D.reflect(normal, b.restitution);
+
+        // the settles come after the bounce, so a wall's push is the last word on the velocity
+        if (weightA && weightB)
+        {
+            // a met the solids before it in the list already, the fixed ones among them, so a push from something
+            // that moves is settled against those now, and b takes what a could not move, as if a were fixed
+            const pushed = a.pos3D.copy();
+            render3DSettleFixed(a, b);
+            b.pos3D = b.pos3D.add(a.pos3D.subtract(pushed));
+        }
+        if (weightB)
+        {
+            // b had its turn already, so a push into a wall is settled against the fixed solids now, or it would end
+            // the frame in the wall, and a hard enough shove would carry it through; then a takes what b could not
+            // move, as a pusher stops against a crate held by a wall, and is settled itself, squeezed at worst
+            const pushed = b.pos3D.copy();
+            render3DSettleFixed(b, a);
+            const backX = b.pos3D.x - pushed.x, backY = b.pos3D.y - pushed.y, backZ = b.pos3D.z - pushed.z;
+            if (weightA && (backX || backY || backZ))
+            {
+                a.pos3D = a.pos3D.add(vec3(backX, backY, backZ));
+                render3DSettleFixed(a, b);
+            }
+        }
+        if (weightA)
+            shapeA = render3DSolidShape(a); // it moved, so the next solid must be tested against where it is now
     }
 }
 
