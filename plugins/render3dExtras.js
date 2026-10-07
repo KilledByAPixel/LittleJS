@@ -1008,7 +1008,8 @@ class ParticleEmitter3D extends EngineObject3D
         /** @property {boolean} - Flatten the spawn area across the way it emits, its own up: a sphere becomes a disc
          *  and a box a flat rectangle, for rain from a sheet of sky or flames from a patch of ground */
         this.emitFlat = false;
-        /** @property {number} - How long to keep emitting, 0 is forever */
+        /** @property {number} - How long to keep emitting, 0 is forever; raised while its particles are still alive,
+         *  it emits again for the added time */
         this.emitTime = emitTime;
         /** @property {number} - Particles per second, 0 does not emit */
         this.emitRate = emitRate;
@@ -1109,7 +1110,8 @@ class ParticleEmitter3D extends EngineObject3D
             this.emitElapsed += timeDelta;
             if (rate > 0 && rate < Infinity)
             {
-                this.emitTimeBuffer += rate * step;
+                // the update that ends the emit time adds a hair, as the steps' sum comes out a rounding under it
+                this.emitTimeBuffer += rate * step + (this.emitTime && this.emitElapsed >= this.emitTime ? 1e-6 : 0);
                 for (; this.emitTimeBuffer >= 1; --this.emitTimeBuffer)
                     this.emitParticle();
             }

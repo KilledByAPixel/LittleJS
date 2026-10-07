@@ -47,3 +47,25 @@ test('a 3D one shot does the same', async ()=>
         return JSON.stringify([...counts]); })()`));
     assert.deepEqual(counts, [61]);
 });
+
+test('round rates and times give 1 + rate times time, the last particle not lost to rounding, 2D and 3D', async ()=>
+{
+    // the sum of the steps comes out a hair under the emit time, and rate 30 for a second gave 30 where it is 31
+    const { run } = await engine();
+    const pairs = [[30, 1], [30, .3], [30, .6], [30, .7], [30, .8], [30, .9], [60, 1/3], [60, .7]];
+    for (let t = 1; t <= 100; ++t)
+        pairs.push([100, t / 100]);
+    const wrong = JSON.parse(run(`(()=> { const wrong = [];
+        for (const [rate, time] of ${JSON.stringify(pairs)})
+        for (const make of [()=> new ParticleEmitter(vec2(), 0, 0, time, rate), ()=> new ParticleEmitter3D(vec3(), 0, time, rate)])
+        {
+            let n = 0;
+            const e = make();
+            e.particleCreateCallback = ()=> ++n;
+            engineStep(ceil(time * 60) + 3);
+            const want = 1 + round(rate * time);
+            n === want || wrong.push([rate, time, n, want]);
+        }
+        return JSON.stringify(wrong); })()`));
+    assert.deepEqual(wrong, []);
+});

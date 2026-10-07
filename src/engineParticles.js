@@ -132,7 +132,8 @@ class ParticleEmitter extends EngineObject
         this.emitCircle = typeof emitSize === 'number';
         /** @property {Vector2} - World space size of the emitter, x is the diameter when emitCircle is set */
         this.emitSize = typeof emitSize === 'number' ? vec2(emitSize) : emitSize.copy();
-        /** @property {number} - How long to stay alive (0 is forever) */
+        /** @property {number} - How long to emit for in seconds, 0 is forever; raised while its particles are still
+         *  alive, it emits again for the added time */
         this.emitTime = emitTime;
         /** @property {number} - How many particles per second to spawn, does not emit if 0 */
         this.emitRate = emitRate;
@@ -254,8 +255,9 @@ class ParticleEmitter extends EngineObject
             this.emitElapsed += timeDelta;
             if (rate > 0 && rate < Infinity)
             {
-                // counted in particles, so a new rate applies at once
-                this.emitTimeBuffer += rate * step;
+                // counted in particles, so a new rate applies at once; the update that ends the emit time adds a
+                // hair, as the steps' sum comes out a rounding under it and lost the last particle
+                this.emitTimeBuffer += rate * step + (this.emitTime && this.emitElapsed >= this.emitTime ? 1e-6 : 0);
                 for (; this.emitTimeBuffer >= 1; --this.emitTimeBuffer)
                     this.emitParticle();
             }
