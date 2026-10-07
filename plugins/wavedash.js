@@ -119,7 +119,7 @@ class WavedashPlugin
         this.achievementsSent = new Set; // the achievements Wavedash took this visit, or refused for good
         /** @type {Object<string, number>} */
         this.achievementTries = Object.create(null); // how many times each one not taken yet was sent
-        /** @type {ReturnType<typeof setTimeout>|undefined} */
+        /** @type {number|undefined} */
         this.achievementRetry = undefined; // the timer that sends refused ones again
 
         // Wavedash keeps its loading screen until init, which is called once

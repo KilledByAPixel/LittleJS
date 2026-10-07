@@ -5,6 +5,10 @@ What changed in each release, newest first. Releases before 1.20.0 are on the
 
 ## Unreleased
 
+Nothing yet.
+
+## 1.26.0 - 2026-10-07
+
 ### New Changes
 
 - The package exports its plugins and engine source, littlejsengine/plugins/* and littlejsengine/src/*, which it shipped but would not let a tool reach; they are plain scripts, for a script tag or a copy, while the ESM build already holds every plugin
@@ -52,7 +56,6 @@ What changed in each release, newest first. Releases before 1.20.0 are on the
 - A release build goes on past an error in its first frame, as it does in any later one, where it stopped the game
 - The 3D settle of a shoved object sees a wall that blocks solids without being solid itself; a see-through part of an additive owner passes the fade assert
 - Examples: the platformer's bullets spark where they hit the wall; the Light Shadows short has a sun and a background block lit at its edges
-
 - setEnablePhysicsSolver(false) stops 3D collision too, solids, the level, the speed cap and 3D particles hitting the level, as it does in 2D, where 3D objects still collided
 - Shader.dispose() frees a shader's programs and takes it off the engine's list, which kept every Shader made for the life of the page; a scene that makes its shaders each time it starts can let them go
 - Wavedash: a board or achievement named like a built-in property, as constructor or toString, is one like any other
