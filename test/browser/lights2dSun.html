@@ -132,6 +132,25 @@ smokeRun(async ()=>
     setCameraAngle(0);
     lightSystem.shadowMapScale = 2;
 
+    // with no background caster the background map and its leak are not drawn, the common case costs less
+    const drawsInAStep = ()=>
+    {
+        const drawArrays = glContext.drawArrays;
+        let draws = 0;
+        glContext.drawArrays = function(...a) { ++draws; return drawArrays.apply(this, a); };
+        try { engineStep(); } finally { glContext.drawArrays = drawArrays; }
+        return draws;
+    };
+    sun.castShadow = true;
+    engineStep();
+    const withBack = drawsInAStep();
+    back.destroy();
+    engineStep();
+    const withoutBack = drawsInAStep();
+    check('with no background caster its leak is not drawn', withBack - withoutBack >= 6, [withBack, withoutBack]);
+    check('and the light still draws, its long shadow too', bright(-6, 4) > 200 && bright(0, 0) < 120,
+        [bright(-6, 4), bright(0, 0)]);
+
     sun.destroy();
     engineStep(3);
     check('destroyed, it adds nothing', bright(-6, 4) < 40, bright(-6, 4));

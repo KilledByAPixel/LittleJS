@@ -156,6 +156,7 @@ class LightSystemPlugin
         /** @type {WebGLTexture|undefined} */
         this.directionalTextureB = undefined;
         this.directionalTextureSizeAllocated = 0;
+        this.backgroundCasters = false; // anything has castBackgroundShadow, checked each shadow pass
         /** @type {Object<string, WebGLProgram|WebGLVertexArrayObject>} */
         this.directionalPrograms = {}; // its programs and their vertex arrays, by name
         this.shadowMapSizeAllocated = 0;     // sizes the textures were made at, to remake them on a change
@@ -442,7 +443,10 @@ class LightSystemPlugin
                 };
                 if (ls.shadows || ls.directionalLight?.castShadow)
                     drawMap(ls.shadowMap, (o)=> o.castShadow); // nothing reads it for a sun that casts no shadows
-                if (ls.directionalLight)
+                // the background map only when something casts into it, most scenes have nothing there
+                ls.backgroundCasters = !!ls.directionalLight &&
+                    engineObjects.some((o)=> !o.destroyed && o.castBackgroundShadow);
+                if (ls.backgroundCasters)
                 {
                     if (!ls.backgroundMap)
                     {
@@ -517,9 +521,9 @@ class LightSystemPlugin
             // combine: long shadows times the leak, and a caster's texels take some of the light just upstream
             // of them, a rim on its side facing the light
             p.combine = glCreateProgram(quadVertex, header +
-                'uniform sampler2D s,t,f;uniform vec2 rim;uniform float useF;'+
-                'void main(){vec3 l=texture(s,uv).rgb*texture(t,uv).rgb;'+
-                'vec2 u=uv-rim;vec3 up=u==clamp(u,0.,1.)?texture(s,u).rgb*texture(t,u).rgb:vec3(1);'+
+                'uniform sampler2D s,t,f;uniform vec2 rim;uniform float useF,useT;'+
+                'void main(){vec3 l=texture(s,uv).rgb*mix(vec3(1),texture(t,uv).rgb,useT);'+
+                'vec2 u=uv-rim;vec3 up=u==clamp(u,0.,1.)?texture(s,u).rgb*mix(vec3(1),texture(t,u).rgb,useT):vec3(1);'+
                 'vec3 dark=1.-mix(vec3(1),texture(f,vec2(uv.x,1.-uv.y)).rgb,useF);'+
                 'c=vec4(max(l,.8*up*dark),1);}');
 
@@ -626,15 +630,20 @@ class LightSystemPlugin
             }
             const shadows = src, free = dst; // the long shadows, and the other work texture
 
-            // the background leak, seeded from foreground times background into the free texture
-            program = use('seed');
-            bind(1, ls.shadowMap); bind(2, ls.backgroundMap);
-            gl.uniform1f(u(program, 'useF'), casts);
-            gl.uniform1f(u(program, 'useB'), 1);
-            target(free); draw();
+            // the background leak, seeded from foreground times background into the free texture, only when something
+            // casts into the background map; with nothing there the combine leaves it out
+            const leaks = ls.backgroundCasters;
+            if (leaks)
+            {
+                program = use('seed');
+                bind(1, ls.shadowMap); bind(2, ls.backgroundMap);
+                gl.uniform1f(u(program, 'useF'), casts);
+                gl.uniform1f(u(program, 'useB'), 1);
+                target(free); draw();
+            }
             let leakSrc = free, leakDst = ls.directionalTexture;
             const D = light.backgroundDepth * N / W;
-            if (D > 0)
+            if (leaks && D > 0)
             {
                 // passes shifting twice as far each time, as the long shadows, so the light fades in evenly by D
                 program = use('leak');
@@ -658,6 +667,7 @@ class LightSystemPlugin
             const rim = toUV(3);
             gl.uniform2f(u(program, 'rim'), rim.x, rim.y);
             gl.uniform1f(u(program, 'useF'), casts);
+            gl.uniform1f(u(program, 'useT'), leaks ? 1 : 0);
             target(built); draw();
             [ls.directionalTextureA, ls.directionalTextureB] = textures.filter((texture)=> texture !== built);
             ls.directionalTexture = built;
