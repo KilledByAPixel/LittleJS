@@ -410,11 +410,11 @@ if (!ball && LJS.mouseWasPressed(0)) // if there is no ball and left mouse is pr
 
 Let's add some effects when the bricks break. You can use the [LittleJS particle system designer](https://killedbyapixel.github.io/LittleJS/examples/particles/) to create an explosion effect.
 
-This will be a one shot type of effect, not a continuous emitter so change emitTime to something small like .1 for this example. Now before you play with it too much, let's test it by pasting in the code it generated into the Brick's collideWithObject function.
+This will be a one shot type of effect, not a continuous emitter so change emitTime to something small like .1 for this example. Now before you play with it too much, let's test it by pasting in the code it generated into the Brick's collideWithObject function. Tick **Expanded** in the code panel first, then press Copy: expanded, the designer writes the whole emitter, `const emitter = new ParticleEmitter(` with one setting a line, which is what is used here. Left unticked it writes a one line `particleEffect('Name', vec2())`, which plays an effect from the built-in library by its name, and an effect you changed only once your own library is loaded.
 
 Make sure you replace the first parameter, vec2(), with this.pos so the effect appears wherever the brick is, otherwise it will spawn at the world origin.
 
-The designer writes code for a plain script where every engine name is global, so in this module project put `LJS.` in front of each engine name it uses that the file does not take from `LJS` at the top, like `ParticleEmitter`, `tile`, `PI` or `particleEffectShapeTile`; `vec2` and `hsl` are already taken. Here the tile is left `undefined` for plain untextured particles.
+The designer writes code for a plain script where every engine name is global, so in this module project put `LJS.` in front of each engine name it uses that the file does not take from `LJS` at the top, like `ParticleEmitter`, `particleEffect`, `tile`, `PI` or `particleEffectShapeTile`; `vec2` and `hsl` are already taken. Here the tile is left `undefined` for plain untextured particles, and the settings are written on one line to save room.
 
 ```javascript
 // create explosion effect
