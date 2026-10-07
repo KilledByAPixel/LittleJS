@@ -119,3 +119,16 @@ test('the speed cap comes after gravity, so a falling object moves no more than 
         JSON.stringify([y2 - flat.pos.y, y3 - deep.pos3D.y])`));
     assert.deepEqual(moved, [1, 1]);
 });
+
+test('damping out of 0 to 1 fails where it is set as a default, and on a 3D object as on a 2D one', () =>
+{
+    const { run } = loadEngine();
+    run('setHeadlessMode(true); console.assert = ()=> {}; new Render3DPlugin;');
+    const thrown = (code)=> run(`(()=> { try { ${code} } catch (e) { return e.message; } })()`);
+    assert.match(thrown('setObjectDefaultDamping(10)') ?? '', /damping/);
+    assert.match(thrown('setObjectDefaultAngleDamping(-1)') ?? '', /damping/i);
+    assert.equal(thrown('setObjectDefaultDamping(.9); setObjectDefaultDamping(1)'), undefined, 'in range is fine');
+    assert.match(thrown('const o = new EngineObject3D(vec3()); o.mass = 1; o.damping = 10; o.updatePhysics();') ?? '',
+        /damping/);
+    assert.match(thrown('const o = new EngineObject3D(vec3()); o.angleDamping = 2; o.updatePhysics();') ?? '', /damping/i);
+});

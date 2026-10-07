@@ -688,12 +688,23 @@ function setObjectDefaultMass(mass) { objectDefaultMass = mass; }
 /** Set the fraction of velocity objects keep each frame, 1 keeps all of it, 0 stops at once
  *  @param {number} damp
  *  @memberof Settings */
-function setObjectDefaultDamping(damp) { objectDefaultDamping = damp; }
+function setObjectDefaultDamping(damp)
+{
+    ASSERT(damp >= 0 && damp <= 1,
+        'setObjectDefaultDamping: damping is 0 to 1, the fraction of velocity kept each frame', damp);
+    objectDefaultDamping = damp;
+}
 
 /** Set the fraction of angular velocity objects keep each frame, 1 keeps all of it, 0 stops at once
  *  @param {number} damp
  *  @memberof Settings */
-function setObjectDefaultAngleDamping(damp) { objectDefaultAngleDamping = damp; }
+function setObjectDefaultAngleDamping(damp)
+{
+    ASSERT(damp >= 0 && damp <= 1,
+        'setObjectDefaultAngleDamping: angle damping is 0 to 1, the fraction of angular velocity kept each frame',
+        damp);
+    objectDefaultAngleDamping = damp;
+}
 
 /** Set how much to bounce when a collision occurs
  *  @param {number} restitution

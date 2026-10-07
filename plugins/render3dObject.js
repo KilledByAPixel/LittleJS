@@ -171,6 +171,10 @@ class EngineObject3D extends EngineObject
             'a sync2D object collides in 2D, so give it a 2D size as well as a size3D', this.size);
         if (this.sync2D)
             super.updatePhysics();
+        ASSERT(this.damping >= 0 && this.damping <= 1, 'damping must be 0 to 1, the fraction of velocity kept each frame',
+            this.damping);
+        ASSERT(this.angleDamping >= 0 && this.angleDamping <= 1,
+            'angleDamping must be 0 to 1, the fraction of angular velocity kept each frame', this.angleDamping);
         ASSERT(isNumber(this.groundAngle) && this.groundAngle >= 0 && this.groundAngle < PI / 2,
             'groundAngle must be 0 to less than PI/2, a slope from level', this.groundAngle);
         // what it stands on is found again each frame, by the level and by the solids it rests on; a sync2D

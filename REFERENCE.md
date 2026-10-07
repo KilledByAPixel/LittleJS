@@ -2092,9 +2092,10 @@ obj.syncMesh()                 // copy the 2D transform to the mesh
   read only, move it with `setPosition`, `setAngle` or `setTransform` and push it with velocities and forces
 - Joints, raycasting, polygon/circle/edge fixtures
 - Angular values are clockwise like `angle`: angular velocity, torque, joint angles and limits, motor speeds
-- The EngineObject's own `velocity`, `angleVelocity`, `mass`, `damping` and `gravityScale` go unused on a
-  Box2dObject: use `getLinearVelocity`, `setLinearVelocity`, `setAngularVelocity`, `setMass`, `setLinearDamping` and
-  `setGravityScale`
+- The EngineObject's own physics fields do nothing on a Box2dObject, Box2D moves it: `velocity`, `angleVelocity`,
+  `damping`, `angleDamping`, `mass`, `friction`, `restitution` and `gravityScale`. Use `getLinearVelocity`,
+  `setLinearVelocity`, `setAngularVelocity`, `setLinearDamping`, `setAngularDamping`, `setMass`, the friction and
+  restitution given to its shapes, and `setGravityScale`; a debug build warns once when one is set
 - A world made again after `engineObjectsDestroy` does not step exactly as a fresh one, as Box2D reuses its ids, so
   a replay or a lockstep game that needs the same steps every time reloads the page
 - See `examples/box2d/` for a full demo
@@ -2139,8 +2140,8 @@ obj.setAwake(awake=true)
 obj.setFixedRotation(isFixed=true)     // Stop the body from rotating
 obj.setBullet(isBullet=true)           // Continuous collision for fast bodies, so they don't pass through thin ones
 obj.setSensor(isSensor=true)           // The fixtures it has now detect contacts without colliding
-obj.setLinearDamping(damping)          // Box2D's damping, 0 is none, larger slows it faster
-obj.setAngularDamping(damping)
+obj.setLinearDamping(damping)          // Box2D's damping, a rate: 0 is none, larger slows it faster, no upper limit
+obj.setAngularDamping(damping)         // the same for its turning, where an EngineObject's damping is 0 to 1
 obj.setGravityScale(scale=1)
 obj.setMassData(localCenter, mass, momentOfInertia) // undefined leaves that one as it is, inertia is about the
                                                     // center of mass

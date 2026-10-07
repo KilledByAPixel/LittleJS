@@ -147,6 +147,43 @@ function box2dDestroyGears(joint)
  *  @memberof Box2D */
 function box2dSetDebug(enable) { box2dDebug = enable; }
 
+// the EngineObject physics fields a Box2D body does not read, each with what moves the body instead; a debug build
+// warns once a field when a game sets one, which did nothing and said nothing
+const box2dUnusedFields = {
+    velocity: 'setLinearVelocity', angleVelocity: 'setAngularVelocity', damping: 'setLinearDamping',
+    angleDamping: 'setAngularDamping', mass: 'setMass or the density of its shapes',
+    friction: 'the friction of its shapes, given to addBox and the rest',
+    restitution: 'the restitution of its shapes, given to addBox and the rest'};
+const box2dUnusedWarned = new Set, box2dUnusedStarts = new WeakMap;
+
+// the values of those fields, a vector as its two numbers
+function box2dUnusedFieldValues(o)
+{
+    const values = {};
+    for (const name in box2dUnusedFields)
+    {
+        const value = o[name];
+        values[name] = value instanceof Vector2 ? value.x + ',' + value.y : value;
+    }
+    return values;
+}
+
+// warn once a field of one set on a Box2dObject, and of gravityScale set on the field, not with setGravityScale
+function box2dCheckUnusedFields(o)
+{
+    const start = box2dUnusedStarts.get(o);
+    if (!start) return;
+    const now = box2dUnusedFieldValues(o), warn = (name, use)=>
+    {
+        if (box2dUnusedWarned.has(name)) return;
+        box2dUnusedWarned.add(name);
+        console.warn('Box2dObject.' + name + ' does nothing on a Box2D body, use ' + use);
+    };
+    for (const name in box2dUnusedFields)
+        now[name] === start[name] || warn(name, box2dUnusedFields[name]);
+    Math.fround(o.gravityScale) === o.body.GetGravityScale() || warn('gravityScale', 'setGravityScale');
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 /** 
  * Box2D Object - extend with your own custom physics objects
@@ -154,6 +191,10 @@ function box2dSetDebug(enable) { box2dDebug = enable; }
  * - Provides interface for Box2D body and fixture functions
  * - Each object can have multiple fixtures and joints
  * - Angular values are clockwise like angle: angular velocity, torque, joint angles, limits and motor speeds
+ * - Box2D moves the body, so the EngineObject physics fields do nothing on it: velocity, angleVelocity, damping,
+ *   angleDamping, mass, friction, restitution and gravityScale; use setLinearVelocity, setAngularVelocity,
+ *   setLinearDamping, setAngularDamping, setMass, the friction and restitution of its shapes and setGravityScale.
+ *   A debug build warns once when one of them is set
  * @extends EngineObject
  * @memberof Box2D
  */
@@ -196,6 +237,9 @@ class Box2dObject extends EngineObject
 
         this.body.object = this; // link body to this object
         box2d.objects.push(this); // keep track of all box2d objects
+
+        // a debug build notes the engine physics fields Box2D does not read, to warn when one is set
+        debug && box2dUnusedStarts.set(this, box2dUnusedFieldValues(this));
     }
 
     /** Destroy this object and its physics body
@@ -685,12 +729,14 @@ class Box2dObject extends EngineObject
     setAngularVelocity(angularVelocity)
     { this.body.SetAngularVelocity(-angularVelocity); }
 
-    /** Sets the linear damping
+    /** Sets the linear damping, Box2D's: a rate, 0 none and larger slows it faster, with no upper limit, where the
+     *  damping of an EngineObject is the fraction it keeps each frame and does nothing on a Box2dObject
      *  @param {number} damping */
     setLinearDamping(damping)
     { this.body.SetLinearDamping(damping); }
 
-    /** Sets the angular damping
+    /** Sets the angular damping, Box2D's: a rate, 0 none and larger slows its turning faster, with no upper limit;
+     *  angleDamping does nothing on a Box2dObject
      *  @param {number} damping */
     setAngularDamping(damping)
     { this.body.SetAngularDamping(damping); }
@@ -2445,6 +2491,7 @@ async function box2dInit()
         {
             if (o.body)
             {
+                debug && box2dCheckUnusedFields(o);
                 // moved in place, as the engine moves an EngineObject's pos, so what holds it follows the body;
                 // box2d uses reverse angle
                 const p = o.body.GetPosition();

@@ -39,6 +39,7 @@ What changed in each release, newest first. Releases before 1.20.0 are on the
 
 ### Fixes
 
+- A Box2dObject's EngineObject physics fields, which Box2D does not read (velocity, angleVelocity, damping, angleDamping, mass, friction, restitution, gravityScale), are documented as unused with the Box2D call to use, and a debug build warns once when one is set; damping out of 0 to 1 asserts in setObjectDefaultDamping and setObjectDefaultAngleDamping, and on a 3D object as on a 2D one
 - A lens flare whose sun or light is hidden when it is made starts hidden, where it showed at full and faded out over its fade time
 - A moving particle emitter, 2D or 3D, spreads each update's particles along its move since the last one, where they came out in a clump at where it is, so a fast emitter leaves an even trail instead of beads
 - A sound whose file fails to load calls its onloadCallback too, with isLoaded false, so a game counting its sounds before it starts no longer waits for ever on a missing file
