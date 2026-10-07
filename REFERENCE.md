@@ -2272,14 +2272,18 @@ wavedash.postScore('LEVEL_1', timeMs);
 
 new WavedashMedal(id, achievement, name, description, icon, src) // a Medal that is also a Wavedash achievement; its
                                      // unlock is sent until Wavedash takes it, which it refuses until it has loaded
-                                     // the player's, a moment after launch; saved unlocks are sent too
+                                     // the player's, a moment after launch; saved unlocks are sent too; one refused
+                                     // for a minute warns in the console with its identifier, a typo or not made
+medal.achievement                    // the identifier of its Wavedash achievement
 new WavedashPlugin(leaderboards)     // sets the wavedash global, calls Wavedash.init and makes the leaderboards: by
                                      // name, lowerWins for times and golf (higher wins when left out) and display
                                      // 'number' (the default), 'seconds', 'milliseconds' or 'ticks' (60 a second)
 wavedash.isActive()                  // whether the game is on Wavedash, its SDK on the page
 await wavedash.postScore(name, score) // a whole number, milliseconds for a time, Wavedash keeping the best; true once
-                                     // posted, false off Wavedash; a board not in the table is made then, higher wins
-await wavedash.getScores(name, offset=0, limit=10, friendsOnly=false) // the entries as Wavedash gives them
+                                     // posted, false off Wavedash or when it failed or took over 15 seconds; a board
+                                     // not in the table is made then, higher wins
+await wavedash.getScores(name, offset=0, limit=10, friendsOnly=false) // the entries as Wavedash gives them,
+                                     // undefined off Wavedash or when they could not be read
 wavedash.leaderboards                // each board's id promise by its name
 ```
 

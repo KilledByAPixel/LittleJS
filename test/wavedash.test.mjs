@@ -125,3 +125,111 @@ test('an SDK call that throws is caught, and says so', ()=>
     assert.doesNotThrow(()=> run('new WavedashPlugin()'));
     assert.match(run('globalThis.warned'), /Wavedash init failed/);
 });
+
+// collect the warnings an engine prints, and the promises nobody caught
+function watch(run)
+{
+    run('globalThis.warnings = []; console.warn = (...a)=> warnings.push(a.join(" "));');
+    const rejected = [];
+    const onRejection = (reason)=> rejected.push(String(reason));
+    process.on('unhandledRejection', onRejection);
+    return { warnings: ()=> run('warnings'), rejected, done: ()=> process.off('unhandledRejection', onRejection) };
+}
+const settle = ()=> new Promise((resolve)=> setTimeout(resolve, 20));
+
+test('an achievement Wavedash never takes is tried for a minute, then a warning names it once', ()=>
+{
+    const log = [];
+    const sdk = mockSDK(log, Infinity);
+    let tries = 0;
+    const setAchievement = sdk.setAchievement;
+    sdk.setAchievement = (...a)=> (++tries, setAchievement(...a));
+    const { run, runTimers } = game(sdk);
+    const w = watch(run);
+    run(`var medal = new WavedashMedal(0, 'ACH_01_TYPO', 'Finish'); medalsInit('test medals');
+        new WavedashPlugin(); medal.unlock();`);
+    for (let i = 60; i--;) runTimers();
+    w.done();
+    assert.ok(tries > 20 && tries <= 32, 'about a minute of tries: ' + tries);
+    const named = w.warnings().filter((m)=> m.includes('ACH_01_TYPO'));
+    assert.equal(named.length, 1, 'one warning naming it: ' + w.warnings());
+});
+
+test('setAchievement answering with a result of success counts as taken', ()=>
+{
+    const log = [];
+    const sdk = mockSDK(log);
+    sdk.setAchievement = (id)=> (log.push(['achievement', id]), {success: true});
+    const { run, runTimers } = game(sdk);
+    run(`var medal = new WavedashMedal(0, 'ACH_01_FINISH', 'Finish'); medalsInit('test medals');
+        new WavedashPlugin(); medal.unlock();`);
+    runTimers(); runTimers();
+    assert.equal(log.filter((l)=> l[0] === 'achievement').length, 1);
+});
+
+test('odd answers and failed calls give false or undefined, with a warning and nothing uncaught', async ()=>
+{
+    const sdk = mockSDK([]);
+    sdk.init = ()=> Promise.reject(new Error('init refused'));
+    sdk.getOrCreateLeaderboard = (name)=> Promise.resolve(name == 'NULL' ? {success: true, data: null} : {success: true, data: {id: 'id-' + name}});
+    sdk.uploadLeaderboardScore = ()=> Promise.reject(new Error('upload refused'));
+    sdk.listLeaderboardEntries = undefined; // a method this SDK does not have
+    const { run } = game(sdk);
+    const w = watch(run);
+    run('new WavedashPlugin({NULL: {}})');
+    assert.equal(await run(`wavedash.postScore('NULL', 5)`), false, 'a board with no data');
+    assert.equal(await run(`wavedash.postScore('LEVEL_1', 5)`), false, 'an upload refused');
+    assert.equal(await run(`wavedash.getScores('LEVEL_1')`), undefined, 'a missing method');
+    await settle();
+    w.done();
+    assert.deepEqual(w.rejected, [], 'nothing uncaught');
+    assert.ok(w.warnings().some((m)=> m.includes('init')), 'init refused says so: ' + w.warnings());
+});
+
+test('a board that could not be made is asked for again on the next post', async ()=>
+{
+    const log = [];
+    const sdk = mockSDK(log);
+    let refuse = 1;
+    const make = sdk.getOrCreateLeaderboard;
+    sdk.getOrCreateLeaderboard = (...a)=> refuse-- > 0 ? Promise.resolve({success: false}) : make(...a);
+    const { run } = game(sdk);
+    run('new WavedashPlugin()');
+    assert.equal(await run(`wavedash.postScore('LEVEL_1', 5)`), false);
+    assert.equal(await run(`wavedash.postScore('LEVEL_1', 6)`), true);
+    assert.deepEqual(log.filter((l)=> l[0] === 'upload'), [['upload', 'id-LEVEL_1', 6, true]]);
+});
+
+test('a leaderboard call that never answers gives up, so postScore and getScores finish', async ()=>
+{
+    const sdk = mockSDK([]);
+    sdk.uploadLeaderboardScore = ()=> new Promise(()=> {});
+    sdk.listLeaderboardEntries = ()=> new Promise(()=> {});
+    const { run, runTimers } = game(sdk);
+    run('new WavedashPlugin()');
+    const posted = run(`wavedash.postScore('LEVEL_1', 5)`), read = run(`wavedash.getScores('LEVEL_1')`);
+    await settle();
+    runTimers(); // the time limit runs out
+    assert.equal(await posted, false);
+    assert.equal(await read, undefined);
+});
+
+test('a medal unlocked on Wavedash before the plugin is made shows no engine popup, and is sent once it is', ()=>
+{
+    const log = [];
+    const { run } = game(mockSDK(log));
+    run(`var medal = new WavedashMedal(0, 'ACH_01_FINISH', 'Finish'); medalsInit('test medals'); medal.unlock();`);
+    assert.equal(run('medalsDisplayQueue.length'), 0, 'Wavedash shows its own toast');
+    run('new WavedashPlugin()');
+    assert.deepEqual(log.filter((l)=> l[0] === 'achievement'), [['achievement', 'ACH_01_FINISH']]);
+});
+
+test('with debugMedals set nothing is sent to Wavedash, and the engine shows the popup', ()=>
+{
+    const log = [];
+    const { run } = game(mockSDK(log));
+    run(`debugMedals = true; var medal = new WavedashMedal(0, 'ACH_01_FINISH', 'Finish'); medalsInit('test medals');
+        new WavedashPlugin(); medal.unlock();`);
+    assert.equal(run('medalsDisplayQueue.length'), 1);
+    assert.deepEqual(log.filter((l)=> l[0] === 'achievement'), []);
+});

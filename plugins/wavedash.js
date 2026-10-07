@@ -25,10 +25,17 @@ let wavedash;
 
 // Engine internal variables not exposed to documentation
 const wavedashRetryMS = 2e3; // how long to wait before sending refused achievements again
+const wavedashRetries = 30;   // how many times one is sent before it is taken as never to be, about a minute
+const wavedashTimeoutMS = 15e3; // how long a leaderboard call may take, as the Newgrounds plugin waits
 const wavedashDisplayTypes = {number: 0, seconds: 1, milliseconds: 2, ticks: 3}; // the SDK's display types
 
 // the SDK Wavedash put on the page, read at each call, undefined off Wavedash
 const wavedashSDK = ()=> globalThis['Wavedash'];
+
+// a call's answer, or undefined if it does not come in time or fails, with a warning
+const wavedashWait = (name, answer)=> Promise.race([Promise.resolve(answer),
+    new Promise((resolve)=> setTimeout(resolve, wavedashTimeoutMS))]).catch((error)=>
+    { console.warn('Wavedash ' + name + ' failed: ' + error); });
 
 ///////////////////////////////////////////////////////////////////////////////
 /**
@@ -59,15 +66,17 @@ class WavedashMedal extends Medal
     }
 
     /** Unlocks the medal if not already unlocked, saved as any medal is; on Wavedash its achievement is sent, until
-     *  Wavedash takes it, and Wavedash shows its own toast in place of the engine's popup
+     *  Wavedash takes it, and Wavedash shows its own toast in place of the engine's popup; one unlocked before the
+     *  plugin is made is sent when it is
      *  @return {Promise<boolean>} - Whether the medal is unlocked */
     unlock()
     {
-        if (medalsPreventUnlock || this.unlocked || !wavedash?.isActive())
-            return super.unlock(); // off Wavedash, the engine's own popup
+        // off Wavedash, or testing medals with debugMedals, the engine's own popup and nothing sent
+        if (medalsPreventUnlock || this.unlocked || !wavedashSDK() || debugMedals)
+            return super.unlock();
         this.unlocked = true;
         medalsSave();
-        wavedash.sendAchievements();
+        wavedash?.sendAchievements();
         return Promise.resolve(true);
     }
 }
@@ -99,11 +108,12 @@ class WavedashPlugin
          *  @type {Object<string, Promise<string|undefined>>} */
         this.leaderboards = {};
         this.leaderboardSettings = leaderboards; // how each one sorts and shows its scores
-        this.achievementsSent = new Set; // the achievements Wavedash took this visit
+        this.achievementsSent = new Set; // the achievements Wavedash took this visit, or refused for good
+        this.achievementTries = {}; // how many times each one not taken yet was sent
         this.achievementRetry = undefined; // the timer that sends refused ones again
 
         // Wavedash keeps its loading screen until init, which is called once
-        this.call('init');
+        wavedashWait('init', this.call('init'));
         for (const name in leaderboards)
             this.leaderboard(name);
         this.sendAchievements(); // the medals the save already has, unlocked before or off Wavedash
@@ -136,10 +146,11 @@ class WavedashPlugin
         ASSERT(typeof name === 'string' && name !== '', 'Wavedash: a leaderboard name must be a string', name);
         if (this.leaderboards[name]) return this.leaderboards[name];
         const {lowerWins=false, display='number'} = this.leaderboardSettings[name] || {};
-        ASSERT(display in wavedashDisplayTypes, 'Wavedash: a leaderboard display is number, seconds, milliseconds or ticks', display);
-        const made = this.call('getOrCreateLeaderboard', name, lowerWins ? 0 : 1, wavedashDisplayTypes[display] ?? 0);
-        const id = Promise.resolve(made).then((result)=> result?.['success'] ? result['data']['id'] : undefined,
-            (error)=> { console.warn('Wavedash leaderboard ' + name + ' failed: ' + error); });
+        const known = wavedashDisplayTypes.hasOwnProperty(display);
+        ASSERT(known, 'Wavedash: a leaderboard display is number, seconds, milliseconds or ticks', display);
+        const made = this.call('getOrCreateLeaderboard', name, lowerWins ? 0 : 1, known ? wavedashDisplayTypes[display] : 0);
+        const id = wavedashWait('leaderboard ' + name, made).then((result)=>
+            result?.['success'] ? result['data']?.['id'] : undefined);
         // one that could not be made is asked for again next time
         id.then((value)=> value === undefined && this.leaderboards[name] === id && delete this.leaderboards[name]);
         return this.leaderboards[name] = id;
@@ -156,7 +167,7 @@ class WavedashPlugin
         if (!this.isActive()) return false;
         const id = await this.leaderboard(name);
         if (id === undefined) return false;
-        const result = await Promise.resolve(this.call('uploadLeaderboardScore', id, round(score), true)).catch(()=> {});
+        const result = await wavedashWait('postScore', this.call('uploadLeaderboardScore', id, round(score), true));
         return !!result?.['success'];
     }
 
@@ -171,26 +182,34 @@ class WavedashPlugin
         if (!this.isActive()) return;
         const id = await this.leaderboard(name);
         if (id === undefined) return;
-        const result = await Promise.resolve(this.call('listLeaderboardEntries', id, offset|0, limit|0, !!friendsOnly))
-            .catch(()=> {});
+        const result = await wavedashWait('getScores',
+            this.call('listLeaderboardEntries', id, offset|0, limit|0, !!friendsOnly));
         return result?.['success'] ? result['data'] : undefined;
     }
 
     /** Send every unlocked WavedashMedal's achievement Wavedash has not taken yet, again every two seconds while it
-     *  refuses some, as it does until it has loaded the player's achievements
+     *  refuses some, as it does until it has loaded the player's achievements; one refused for about a minute is
+     *  taken as an identifier Wavedash does not have, said once in the console, and not sent again this visit
      *  @ignore */
     sendAchievements()
     {
-        if (!this.isActive()) return;
+        if (!this.isActive() || debugMedals) return;
         let refused = false;
         medalsForEach((medal)=>
         {
-            if (!(medal instanceof WavedashMedal) || !medal.unlocked || this.achievementsSent.has(medal.achievement))
-                return;
-            if (this.call('setAchievement', medal.achievement, true) === true)
-                this.achievementsSent.add(medal.achievement);
-            else
+            const achievement = medal instanceof WavedashMedal && medal.unlocked && medal.achievement;
+            if (!achievement || this.achievementsSent.has(achievement)) return;
+            const result = this.call('setAchievement', achievement, true);
+            if (result === true || result?.['success'] === true)
+                this.achievementsSent.add(achievement);
+            else if ((this.achievementTries[achievement] = (this.achievementTries[achievement] || 0) + 1) < wavedashRetries)
                 refused = true;
+            else
+            {
+                console.warn('Wavedash refused achievement ' + achievement + ' ' + wavedashRetries +
+                    ' times; is it made, with that identifier?');
+                this.achievementsSent.add(achievement); // not sent again this visit
+            }
         });
         clearTimeout(this.achievementRetry);
         this.achievementRetry = refused ? setTimeout(()=> this.sendAchievements(), wavedashRetryMS) : undefined;

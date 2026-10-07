@@ -4,8 +4,8 @@
  * - Medal class with name, description, icon, and unlock tracking
  * - Automatic saving to local storage, unless a service like Newgrounds holds the medal (see Medal.isLocal)
  * - Visual display queue with slide-in notifications
- * - The Newgrounds plugin extends it with NewgroundsMedal, held on the server while logged in
- * - Setting debugMedals = true in the game code before medalsInit skips the load and the save, and in the debug build logs the Newgrounds traffic; it is not exported, so only a script tag build can set it
+ * - The Newgrounds plugin extends it with NewgroundsMedal, held on the server while logged in, and the Wavedash plugin with WavedashMedal, saved here and sent to Wavedash
+ * - Setting debugMedals = true in the game code before medalsInit skips the load and the save, sends nothing to Wavedash, and in the debug build logs the Newgrounds traffic; it is not exported, so only a script tag build can set it
  * @namespace Medals
  */
 
