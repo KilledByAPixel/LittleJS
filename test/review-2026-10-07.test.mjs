@@ -62,3 +62,18 @@ test('a release build goes on past an error in its first frame, as it does in an
     assert.ok(frames > 3, 'it runs on: ' + frames);
     assert.ok(errors.some((e)=> e.includes('first')), 'and says what went wrong: ' + errors);
 });
+
+test('the speed cap is the same in 2D and 3D: 0 holds what collides still, what does not collide is not capped', ()=>
+{
+    const { run } = loadEngine();
+    const moved = JSON.parse(run(`setHeadlessMode(true); new Render3DPlugin; setGravity(vec2());
+        setObjectMaxSpeed(0);
+        const flat = new EngineObject(vec2(), vec2(1)); flat.setCollision(); flat.velocity = vec2(.5, 0);
+        const deep = new EngineObject3D(vec3()); deep.setCollision(); deep.mass = 1; deep.velocity3D = vec3(.5, 0, 0);
+        const free2 = new EngineObject(vec2(0, 9), vec2(1)); free2.velocity = vec2(.5, 0);
+        const free3 = new EngineObject3D(vec3(0, 9, 0)); free3.mass = 1; free3.velocity3D = vec3(.5, 0, 0);
+        engineObjectsUpdate();
+        setObjectMaxSpeed(1);
+        JSON.stringify([flat.pos.x, deep.pos3D.x, free2.pos.x, free3.pos3D.x])`));
+    assert.deepEqual(moved, [0, 0, .5, .5]);
+});

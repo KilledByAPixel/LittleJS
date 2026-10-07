@@ -188,7 +188,7 @@ class EngineObject3D extends EngineObject
         // nothing of collision while setEnablePhysicsSolver is off, as in 2D, the game moves them its own way
         const solve = enablePhysicsSolver && !this.sync2D;
         const cap = this.clampSpeed && solve && (this.collideSolidObjects || this.collideLevel && this.mass) ?
-            objectMaxSpeed : 0;
+            objectMaxSpeed : undefined; // 0 holds it still, as in 2D
         // a moving object keeps out of the level, the height maps and voxel maps, from where it was before it moved,
         // and a solid it hits sends it back to the side it came from
         const oldPos = (this.collideLevel || this.collideSolidObjects) && this.mass && !this.sync2D ?
@@ -480,7 +480,7 @@ function render3DObjectMatrix(o)
 }
 
 // move an object by its 3D velocities, each slowed by its damping, an object with mass falling with render3D.gravity
-function render3DMove(o, cap=0)
+function render3DMove(o, cap)
 {
     // the vectors change in place, as the 2D object's do: this runs for every object every frame
     // a sync2D object's damping is the 2D physics', its 3D velocities are its own to set
@@ -494,7 +494,7 @@ function render3DMove(o, cap=0)
         const g = render3D.gravity, s = o.gravityScale;
         v.x += g.x * s, v.y += g.y * s, v.z += g.z * s;
     }
-    if (cap) // the speed cap of what collides, after gravity, as in 2D
+    if (cap !== undefined) // the speed cap of what collides, after gravity, as in 2D
         v.x = clamp(v.x, -cap, cap), v.y = clamp(v.y, -cap, cap), v.z = clamp(v.z, -cap, cap);
     p.x += v.x, p.y += v.y, p.z += v.z;
     r.x += a.x *= e, r.y += a.y *= e, r.z += a.z *= e;
