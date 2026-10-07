@@ -234,3 +234,27 @@ test('a heavy pusher shoving a crate into a wall leaves both on their sides, in 
         assert.ok(result.a < result.b - .5 + 1e-6, order + ': the pusher stays behind the crate: ' + result.a);
     }
 });
+
+test('a wall is asked about an object once a frame, also when it is made after the two that push', ()=>
+{
+    // crate, pusher, wall: the settle asks the wall about the crate pushed into it, and the wall's own turn asked again
+    for (const letThrough of [false, true])
+    {
+        const { run } = loadEngine();
+        const asked = JSON.parse(run(`setHeadlessMode(true); new Render3DPlugin;
+            const b = new EngineObject3D(vec3(.25, 0, 0)); b.size3D = vec3(.5); b.setCollision(); b.mass = 1; b.damping = 1;
+            const a = new EngineObject3D(vec3(-.5, 0, 0)); a.size3D = vec3(.5); a.setCollision(); a.mass = 20; a.damping = 1;
+            const wall = new EngineObject3D(vec3(1, 0, 0)); wall.size3D = vec3(1, 4, 4); wall.setCollision(); wall.mass = 0;
+            const counts = [];
+            let asked = 0;
+            wall.collideWithObject = (o)=> (o === b && ++asked, !${letThrough});
+            for (let i = 4; i--;)
+            {
+                asked = 0; a.velocity3D = vec3(.4, 0, 0);
+                engineObjectsUpdate();
+                counts.push(asked);
+            }
+            JSON.stringify(counts)`));
+        assert.ok(asked.every((n)=> n <= 1), (letThrough ? 'one way' : 'solid') + ': asked once a frame at most: ' + asked);
+    }
+});

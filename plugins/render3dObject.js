@@ -564,16 +564,41 @@ function render3DSolidPush(a, b)
 }
 
 // whether a touching pair resolves: both hear about it, and the answer is kept for the frame, so a pair met again as
-// one object is settled after being pushed is not asked twice; each object's own turn asks again, as it always has
+// one object is settled after being pushed is not asked twice; an object's own turn asks again, as it always has,
+// unless a settle asked that pair already this pass (render3DSettleAsked), so a wall hears about it once a frame
 function render3DCollideAsk(a, b, push, useKept=true)
 {
-    const kept = useKept ? engineObjectsCollidePairAnswer(a, b) : undefined;
+    const kept = useKept || render3DSettleAsked(a, b) ? engineObjectsCollidePairAnswer(a, b) : undefined;
     if (kept !== undefined) return kept;
     const resolveA = a.collideWithObject(b, push), resolveB = b.collideWithObject(a, push.scale(-1));
     const resolve = !!(resolveA && resolveB);
     engineObjectsCollidePairAdd(a, b, resolve);
     engineObjectsCollidePairAdd(b, a, resolve);
+    useKept && render3DSettleAsked(a, b, true);
     return resolve;
+}
+
+// the pairs a settle asked this pass, each object to the others; asked with mark set, it marks the pair
+const render3DSettleAskedPairs = {pass: -1, pairs: new Map};
+function render3DSettleAsked(a, b, mark=false)
+{
+    const kept = render3DSettleAskedPairs;
+    if (kept.pass !== engineObjectsUpdateCount)
+    {
+        if (!mark) return false;
+        kept.pass = engineObjectsUpdateCount;
+        kept.pairs.clear();
+    }
+    if (mark)
+    {
+        for (const [one, other] of [[a, b], [b, a]])
+        {
+            const set = kept.pairs.get(one);
+            set ? set.add(other) : kept.pairs.set(one, new Set([other]));
+        }
+        return true;
+    }
+    return !!kept.pairs.get(a)?.has(b);
 }
 
 // where a solid was when this pass of the engine began, kept the first time it moves or is pushed in the pass, so a
