@@ -462,3 +462,32 @@ test('a value JSON can not hold is not saved, false with a warning', async ()=>
     assert.equal(run('warnings.length'), 3);
     assert.equal(await run(`wavedash.cloudLoad(1)`), null, 'nothing was saved');
 });
+
+test('an SDK that answers plain booleans: an empty slot is still null, and a download of true loads', async ()=>
+{
+    const log = [], sdk = filesSDK(log);
+    const download = sdk.downloadRemoteFile, exists = sdk.remoteFileExists;
+    sdk.downloadRemoteFile = async (path)=> (await download(path)).success;
+    sdk.remoteFileExists = async (path)=> (await exists(path)).data;
+    const { run } = game(sdk);
+    run('new WavedashPlugin()');
+    assert.equal(await run(`wavedash.cloudLoad(1)`), null);
+    await run(`wavedash.cloudSave(1, {level: 2})`);
+    assert.equal(await run(`wavedash.cloudLoad(1).then((save)=> save.level)`), 2);
+
+    // with no remoteFileExists, a slot it can not download is a load that failed, never taken for empty
+    delete sdk.remoteFileExists;
+    run('var warnings = []; console.warn = (...a)=> warnings.push(a.join(" "))');
+    assert.equal(await run(`wavedash.cloudLoad(5)`), undefined);
+});
+
+test('a slot holding a file that is not a save loads as undefined, said in the console', async ()=>
+{
+    const log = [], sdk = filesSDK(log);
+    const { run } = game(sdk);
+    run('new WavedashPlugin(); var warnings = []; console.warn = (...a)=> warnings.push(a.join(" "))');
+    await sdk.writeLocalFile('saves/slot1.json', new TextEncoder().encode('{"level": 3'));
+    await sdk.uploadRemoteFile('saves/slot1.json');
+    assert.equal(await run(`wavedash.cloudLoad(1)`), undefined);
+    assert.ok(run('warnings.join()').includes('not a save'));
+});

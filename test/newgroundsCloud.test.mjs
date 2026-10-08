@@ -9,8 +9,9 @@ const inputs = [], slots = new Map;
 let failNext = false; // the next gateway call gets no answer
 globalThis.fetch = async (url, options) =>
 {
-    if (!options?.body) // a slot's saved text
-        return { text: async ()=> slots.get(url) };
+    if (!options?.body) // a slot's saved text, or an error page
+        return url.includes('broken') ? { ok: false, status: 500, text: async ()=> '{"error": "server"}' } :
+            { ok: true, status: 200, text: async ()=> slots.get(url) };
     const input = JSON.parse(options.body.get('request'));
     inputs.push(input);
     if (failNext)
@@ -28,7 +29,7 @@ globalThis.fetch = async (url, options) =>
     if (component == 'CloudSave.loadSlot')
     {
         const url = 'https://saves.example/' + parameters.id;
-        data.slot = { id: parameters.id, url: slots.has(url) ? url : null };
+        data.slot = { id: parameters.id, url: parameters.id == 7 ? 'https://saves.example/broken' : slots.has(url) ? url : null };
     }
     if (component == 'Event.logEvent')
         data.event_name = parameters.event_name;
@@ -61,7 +62,11 @@ test('a load the server does not answer is undefined, a value JSON can not hold 
         circular.self = circular;
         assert.equal(await plugin.cloudSave(3, circular), false);
         assert.equal(await plugin.cloudSave(3, undefined), false);
-        assert.equal(warnings.length, 3);
+        assert.equal(await plugin.cloudLoad(7), undefined, 'an error page, though it is JSON, is not the save');
+        slots.set('https://saves.example/8', 'not json');
+        assert.equal(await plugin.cloudLoad(8), undefined, 'a file that is not a save');
+        assert.equal(warnings.length, 5);
+        assert.ok(warnings.at(-1).includes('not a save'), 'said so');
     }
     finally { console.warn = warn; }
 });

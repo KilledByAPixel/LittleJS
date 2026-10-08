@@ -354,7 +354,8 @@ class NewgroundsPlugin
 
     /** Load the value a cloud save slot holds: null when Newgrounds says it holds none, undefined when it could not be
      *  loaded or the player is not logged in, said in the console when logged in
-     *  - Do not save over a slot that loaded as undefined, it may hold the player's save
+     *  - Do not save over a slot that loaded as undefined, it may hold the player's save; one whose file is there but
+     *    is not a save loads as undefined every time, said in the console, where a game may offer to start over
      *  @param {number} slot - The slot number
      *  @return {Promise<*>} - The value saved, null for none, undefined for a load that failed
      *  @example
@@ -373,7 +374,16 @@ class NewgroundsPlugin
         try
         {
             const signal = globalThis.AbortSignal?.timeout?.(newgroundsTimeoutMS);
-            return JSON.parse(await (await fetch(url, {'cache':'no-store', 'signal':signal})).text());
+            const saved = await fetch(url, {'cache':'no-store', 'signal':signal});
+            if (!saved.ok) // an error page is not the save, even one that is JSON
+                return void console.warn('Newgrounds could not load slot ' + slot + ': ' + saved.status);
+            const text = await saved.text();
+            try { return JSON.parse(text); }
+            catch(e)
+            {
+                console.warn('Newgrounds cloudLoad: slot ' + slot + ' holds a file that is not a save, so it loads ' +
+                    'as undefined every time; a game may offer to start over there');
+            }
         }
         catch(e) { console.warn('Newgrounds could not load slot ' + slot + ': ' + e); }
     }

@@ -259,7 +259,8 @@ class WavedashPlugin
 
     /** Load the value a cloud save slot holds: null when Wavedash says it holds none, undefined when it could not be
      *  loaded or off Wavedash, said in the console on Wavedash
-     *  - Do not save over a slot that loaded as undefined, it may hold the player's save
+     *  - Do not save over a slot that loaded as undefined, it may hold the player's save; one whose file is there but
+     *    is not a save loads as undefined every time, said in the console, where a game may offer to start over
      *  @param {number} slot - The slot number
      *  @return {Promise<*>} - The value saved, null for none, undefined for a load that failed
      *  @example
@@ -272,11 +273,12 @@ class WavedashPlugin
         {
             const path = wavedashSavePath(slot);
             const downloaded = await wavedashWait('cloudLoad', track(this.call('downloadRemoteFile', path)));
-            if (!downloaded?.['success'])
+            if (downloaded !== true && !downloaded?.['success']) // an answer of true or of {success: true}
             {
-                // a file Wavedash says is not there is an empty slot, anything else a load that failed
+                // a file Wavedash says is not there is an empty slot, anything else a load that failed; it may answer
+                // false or {success: true, data: false}
                 const exists = await wavedashWait('cloudLoad', track(this.call('remoteFileExists', path)));
-                if (exists?.['success'] && exists['data'] === false) return null;
+                if (exists === false || exists?.['success'] && exists['data'] === false) return null;
                 console.warn('Wavedash could not load slot ' + slot);
                 return;
             }
@@ -287,7 +289,11 @@ class WavedashPlugin
                 read : read?.['data'];
             if (!bytes) return void console.warn('Wavedash could not read slot ' + slot);
             try { return JSON.parse(typeof bytes == 'string' ? bytes : new TextDecoder().decode(bytes)); }
-            catch (error) { console.warn('Wavedash cloudLoad: slot ' + slot + ' does not hold a save'); }
+            catch (error)
+            {
+                console.warn('Wavedash cloudLoad: slot ' + slot + ' holds a file that is not a save, so it loads as ' +
+                    'undefined every time; a game may offer to start over there');
+            }
         });
     }
 

@@ -67,7 +67,11 @@ function engineObjectBulletSweep(object, from, to)
             if (!data || tileCollisionOneWayPass(layer, x, y, from.x, from.y)) continue;
             const tilePos = vec2(cell.x, cell.y), entry = engineObjectRayEntry(from, to, tilePos);
             object.pos = entry.pos;
-            if (!object.collideWithTile(data, tilePos)) continue;
+            if (!object.collideWithTile(data, tilePos))
+            {
+                if (object.destroyed) return false; // nor the other layers' tiles in this cell
+                continue;
+            }
             const normal = entry.side ? vec2(-sign(move.x), 0) : vec2(0, -sign(move.y));
             hit = {pos: entry.pos, normal, layer};
             return true;

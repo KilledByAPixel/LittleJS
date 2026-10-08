@@ -2290,7 +2290,8 @@ await newgrounds.getScores(id, user, social, skip, limit, period) // the scores 
 await newgrounds.cloudSave(slot, data) // any value JSON can hold, to a slot numbered from 1, as many as the app's
                                      // settings give; needs a logged in player; true once saved
 await newgrounds.cloudLoad(slot)     // the value saved there, null when the slot is empty, undefined when it could
-                                     // not be loaded or the player is not logged in: never save over one undefined
+                                     // not be loaded or the player is not logged in: never save over one undefined;
+                                     // a file there that is not a save is undefined every time, said in the console
 newgrounds.logEvent(name)            // count an event of the game's own, by name, on its stats page
 newgrounds.unlockMedal(id)           // low level request only, the medal is not changed; games call medal.unlock()
 newgrounds.pendingUnlocks            // advanced: the unlocks in flight or waiting to be resent, with their promises
@@ -2340,7 +2341,8 @@ await wavedash.cloudSave(slot, data) // any value JSON can hold, kept across dev
                                      // saves a minute and 300 an hour, so at checkpoints; true once saved, false
                                      // with a warning for a value JSON can not hold
 await wavedash.cloudLoad(slot)       // the value saved there, null when the slot is empty, undefined when it could
-                                     // not be loaded or off Wavedash: never save over one that loaded undefined
+                                     // not be loaded or off Wavedash: never save over one that loaded undefined;
+                                     // a file there that is not a save is undefined every time, said in the console
 await wavedash.setStat(name, value, storeNow=false) // a stat made in the developer portal, kept a second later or
                                      // at once; the player's stats load the first time one is used
 await wavedash.getStat(name)         // a stat's value, 0 for one never set or off Wavedash

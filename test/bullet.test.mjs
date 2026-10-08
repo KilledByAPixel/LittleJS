@@ -251,3 +251,14 @@ test('a bullet bouncing in a shaft one tile wide uses its three legs and ends in
     assert.ok(x > 11 && x < 12, 'in the shaft, ' + x);
     assert.equal(asked, 3, 'one wall a leg, three legs');
 });
+
+test('a bullet its collideWithTile destroys and lets through is asked about no other layer\'s tile in that cell', () =>
+{
+    const { run } = loadEngine();
+    run(layers(`
+        make([[5, 1]]); make([[5, 1]]);
+        var asked = 0;
+        bullet.collideWithTile = ()=> (++asked, bullet.destroy(), false);
+        bullet.velocity = vec2(10, 0);`));
+    assert.equal(run(`frames(1); asked`), 1);
+});
