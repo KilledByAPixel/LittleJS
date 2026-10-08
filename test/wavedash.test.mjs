@@ -260,6 +260,7 @@ function filesSDK(log)
         uploadRemoteFile(path) { check(typeof path === 'string'); remote.set(path, local.get(path)); return Promise.resolve({success: true, data: path}); },
         downloadRemoteFile(path) { check(typeof path === 'string'); if (!remote.has(path)) return Promise.resolve({success: false}); local.set(path, remote.get(path)); return Promise.resolve({success: true}); },
         readLocalFile(path) { check(typeof path === 'string'); return Promise.resolve(local.get(path)); },
+        remoteFileExists(path) { check(typeof path === 'string'); return Promise.resolve({success: true, data: remote.has(path)}); },
         requestStats() { log.push(['requestStats']); statsLoaded = true; return Promise.resolve({success: true}); },
         setStat(id, value, storeNow) { check(typeof id === 'string' && typeof value === 'number' && typeof storeNow === 'boolean'); if (!statsLoaded) return false; stats[id] = value; log.push(['setStat', id, value, storeNow]); return true; },
         getStat(id) { check(typeof id === 'string'); return statsLoaded ? stats[id] ?? 0 : 0; },
@@ -274,7 +275,7 @@ test('a cloud save writes the value as a file and uploads it, and loads back fro
     run('new WavedashPlugin()');
     assert.equal(await run(`wavedash.cloudSave(1, {level: 3, coins: [1, 2]})`), true);
     assert.equal(await run(`wavedash.cloudLoad(1).then((save)=> JSON.stringify(save))`), '{"level":3,"coins":[1,2]}');
-    assert.equal(await run(`wavedash.cloudLoad(2)`), undefined, 'a slot never saved');
+    assert.equal(await run(`wavedash.cloudLoad(2)`), null, 'a slot never saved is empty');
 });
 
 test('a read given as a response loads too, and an upload Wavedash refuses is false', async ()=>
@@ -410,4 +411,54 @@ test('a slot let go of keeps nothing for it, its calls all answered', async ()=>
         await run(`wavedash.cloudSave(${slot}, ${slot})`);
     await new Promise((r)=> setImmediate(r));
     assert.equal(run('wavedash.slotQueues.size + wavedash.slotCalls.size'), 0);
+});
+
+test('a load that fails is undefined with a warning, told apart from an empty slot, which is null', async ()=>
+{
+    const log = [], sdk = filesSDK(log), warnings = [];
+    const { run, runTimers } = game(sdk);
+    run('new WavedashPlugin()');
+    run('console.warn = (...a)=> warnings.push(a.join(" "))');
+    const warned = ()=> run('warnings.length');
+    run('var warnings = []');
+    await run(`wavedash.cloudSave(1, {level: 3})`);
+
+    // the download refused, and the file is there: a load that failed, not an empty slot
+    const download = sdk.downloadRemoteFile;
+    sdk.downloadRemoteFile = ()=> Promise.resolve({success: false});
+    assert.equal(await run(`wavedash.cloudLoad(1)`), undefined);
+    assert.equal(warned(), 1, 'said so');
+    sdk.downloadRemoteFile = download;
+
+    // the read never answered after the download: the time limit, said too
+    const read = sdk.readLocalFile;
+    sdk.readLocalFile = ()=> new Promise(()=> {});
+    const loading = run(`wavedash.cloudLoad(1)`);
+    for (let i = 3; i--;) await new Promise((r)=> setImmediate(r));
+    runTimers();
+    assert.equal(await loading, undefined);
+    assert.ok(warned() >= 3, 'the time limit and the read were both said');
+    sdk.readLocalFile = read;
+});
+
+test('a slot given as text and as a number is one slot, one after the other', async ()=>
+{
+    const log = [];
+    const { run } = game(filesSDK(log));
+    run('new WavedashPlugin(); ASSERT = ()=> {}'); // as a release build, where the number check is gone
+    await run(`wavedash.cloudSave(1, {level: 1})`);
+    assert.equal(await run(`Promise.all([wavedash.cloudSave('1', {level: 9}), wavedash.cloudLoad(1)])
+        .then(([saved, loaded])=> JSON.stringify([saved, loaded]))`), '[true,{"level":9}]');
+});
+
+test('a value JSON can not hold is not saved, false with a warning', async ()=>
+{
+    const log = [];
+    const { run } = game(filesSDK(log));
+    run('new WavedashPlugin(); var warnings = []; console.warn = (...a)=> warnings.push(a.join(" "))');
+    assert.equal(await run(`(()=> { const o = {}; o.self = o; return wavedash.cloudSave(1, o); })()`), false);
+    assert.equal(await run(`wavedash.cloudSave(1, 10n)`), false);
+    assert.equal(await run(`wavedash.cloudSave(1, undefined)`), false);
+    assert.equal(run('warnings.length'), 3);
+    assert.equal(await run(`wavedash.cloudLoad(1)`), null, 'nothing was saved');
 });

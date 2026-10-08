@@ -41,10 +41,23 @@ const wavedashSavePath = (slot)=> 'saves/slot' + slot + '.json';
 function wavedashWait(name, answer)
 {
     let timer;
-    const limit = new Promise((resolve)=> timer = setTimeout(resolve, wavedashTimeoutMS));
+    const timedOut = {}; // what the time limit gives, told apart from any answer
+    const limit = new Promise((resolve)=> timer = setTimeout(()=> resolve(timedOut), wavedashTimeoutMS));
     return Promise.race([Promise.resolve(answer), limit])
-        .catch((error)=> { console.warn('Wavedash ' + name + ' failed: ' + error); })
+        .then((value)=> value !== timedOut ? value :
+            void console.warn('Wavedash ' + name + ' took over ' + wavedashTimeoutMS / 1e3 + ' seconds'),
+            (error)=> { console.warn('Wavedash ' + name + ' failed: ' + error); })
         .finally(()=> clearTimeout(timer));
+}
+
+// a value as the text a cloud save keeps, undefined with a warning for one JSON can not hold, as a circular object,
+// a BigInt, a function or undefined
+function wavedashSaveText(slot, data)
+{
+    let text;
+    try { text = JSON.stringify(data); } catch (error) {}
+    text === undefined && console.warn('Wavedash cloudSave: slot ' + slot + ' was given a value JSON can not hold');
+    return text;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -127,9 +140,9 @@ class WavedashPlugin
         this.achievementRetry = undefined; // the timer that sends refused ones again
         /** @type {Promise<boolean>|undefined} */
         this.stats = undefined; // the player's stats loading, asked for the first time a stat is
-        /** @type {Map<number, Promise<*>>} */
+        /** @type {Map<string, Promise<*>>} */
         this.slotQueues = new Map; // each slot's last save or load, the next waits for it, as they share a file
-        /** @type {Map<number, Set<Promise<*>>>} */
+        /** @type {Map<string, Set<Promise<*>>>} */
         this.slotCalls = new Map; // each slot's file calls Wavedash has not answered, a timed out one may still change it
 
         // Wavedash keeps its loading screen until init, which is called once
@@ -223,7 +236,8 @@ class WavedashPlugin
     {
         ASSERT(isNumber(slot), 'Wavedash cloudSave: slot must be a number', slot);
         if (!this.isActive()) return false;
-        const text = JSON.stringify(data); // as it is now, the save waits its turn
+        const text = wavedashSaveText(slot, data); // as it is now, the save waits its turn
+        if (text === undefined) return false;
         return this.slotQueue(slot, false, async (track)=>
         {
             // written first, and only a write Wavedash says it made is uploaded, never an older file at that path
@@ -243,9 +257,11 @@ class WavedashPlugin
         });
     }
 
-    /** Load the value a cloud save slot holds, undefined when it holds none or off Wavedash
+    /** Load the value a cloud save slot holds: null when Wavedash says it holds none, undefined when it could not be
+     *  loaded or off Wavedash, said in the console on Wavedash
+     *  - Do not save over a slot that loaded as undefined, it may hold the player's save
      *  @param {number} slot - The slot number
-     *  @return {Promise<*>} - The value saved, undefined for none
+     *  @return {Promise<*>} - The value saved, null for none, undefined for a load that failed
      *  @example
      *  const save = await wavedash.cloudLoad(1); */
     async cloudLoad(slot)
@@ -256,13 +272,20 @@ class WavedashPlugin
         {
             const path = wavedashSavePath(slot);
             const downloaded = await wavedashWait('cloudLoad', track(this.call('downloadRemoteFile', path)));
-            if (!downloaded?.['success']) return;
+            if (!downloaded?.['success'])
+            {
+                // a file Wavedash says is not there is an empty slot, anything else a load that failed
+                const exists = await wavedashWait('cloudLoad', track(this.call('remoteFileExists', path)));
+                if (exists?.['success'] && exists['data'] === false) return null;
+                console.warn('Wavedash could not load slot ' + slot);
+                return;
+            }
 
             // the file's bytes, given as they are or in a response's data
             const read = await wavedashWait('cloudLoad', track(this.call('readLocalFile', path)));
             const bytes = read instanceof Uint8Array || read instanceof ArrayBuffer || typeof read == 'string' ?
                 read : read?.['data'];
-            if (!bytes) return;
+            if (!bytes) return void console.warn('Wavedash could not read slot ' + slot);
             try { return JSON.parse(typeof bytes == 'string' ? bytes : new TextDecoder().decode(bytes)); }
             catch (error) { console.warn('Wavedash cloudLoad: slot ' + slot + ' does not hold a save'); }
         });
@@ -279,8 +302,9 @@ class WavedashPlugin
      *  @ignore */
     slotQueue(slot, failed, task)
     {
-        const calls = this.slotCalls.get(slot) || new Set;
-        this.slotCalls.set(slot, calls);
+        const key = wavedashSavePath(slot); // by its file, so a slot given as '1' and as 1 share one
+        const calls = this.slotCalls.get(key) || new Set;
+        this.slotCalls.set(key, calls);
         const track = (answer)=>
         {
             if (typeof answer?.then == 'function') // any promise, one made elsewhere too
@@ -300,15 +324,15 @@ class WavedashPlugin
             }
             return task(track);
         };
-        const run = (this.slotQueues.get(slot) || Promise.resolve()).then(start, start);
+        const run = (this.slotQueues.get(key) || Promise.resolve()).then(start, start);
         const done = run.catch(()=> {});
-        this.slotQueues.set(slot, done);
+        this.slotQueues.set(key, done);
         done.then(()=>
         {
             // the slot is let go of once nothing waits on it, and its calls with it once all are answered
-            if (this.slotQueues.get(slot) !== done) return;
-            this.slotQueues.delete(slot);
-            calls.size || this.slotCalls.get(slot) !== calls || this.slotCalls.delete(slot);
+            if (this.slotQueues.get(key) !== done) return;
+            this.slotQueues.delete(key);
+            calls.size || this.slotCalls.get(key) !== calls || this.slotCalls.delete(key);
         });
         return run;
     }

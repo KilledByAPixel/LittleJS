@@ -56,7 +56,8 @@ function engineObjectBulletSweep(object, from, to)
     let hit;
     const testCell = (cell)=>
     {
-        if (cell.x === startX && cell.y === startY) return false;
+        // a bullet its collideWithTile destroyed is asked about nothing more
+        if (cell.x === startX && cell.y === startY || object.destroyed) return false;
         for (const layer of tileCollisionLayers)
         {
             if (!layer.isSolid) continue;

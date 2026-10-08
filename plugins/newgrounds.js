@@ -343,14 +343,20 @@ class NewgroundsPlugin
     {
         ASSERT(isNumber(slot), 'Newgrounds cloudSave: slot must be a number', slot);
         if (!this.session_id) return false;
-        const response = await this.call('CloudSave.setData', {'id':slot, 'data':JSON.stringify(data)});
+        let text;
+        try { text = JSON.stringify(data); } catch (error) {}
+        if (text === undefined)
+            return console.warn('Newgrounds cloudSave: slot ' + slot + ' was given a value JSON can not hold'), false;
+        const response = await this.call('CloudSave.setData', {'id':slot, 'data':text});
         newgroundsSessionLost(response) && this.dropSession();
         return !!response?.result?.data?.['success'];
     }
 
-    /** Load the value a cloud save slot holds, undefined when it holds none or the player is not logged in
+    /** Load the value a cloud save slot holds: null when Newgrounds says it holds none, undefined when it could not be
+     *  loaded or the player is not logged in, said in the console when logged in
+     *  - Do not save over a slot that loaded as undefined, it may hold the player's save
      *  @param {number} slot - The slot number
-     *  @return {Promise<*>} - The value saved, undefined for none
+     *  @return {Promise<*>} - The value saved, null for none, undefined for a load that failed
      *  @example
      *  const save = await newgrounds.cloudLoad(1); */
     async cloudLoad(slot)
@@ -359,14 +365,17 @@ class NewgroundsPlugin
         if (!this.session_id) return;
         const response = await this.call('CloudSave.loadSlot', {'id':slot});
         newgroundsSessionLost(response) && this.dropSession();
-        const url = response?.result?.data?.['slot']?.['url']; // where the saved text is, none for an empty slot
-        if (!url) return;
+        const slotData = response?.result?.data?.['slot'];
+        if (!slotData)
+            return void console.warn('Newgrounds could not load slot ' + slot);
+        const url = slotData['url']; // where the saved text is, none for an empty slot
+        if (!url) return null;
         try
         {
             const signal = globalThis.AbortSignal?.timeout?.(newgroundsTimeoutMS);
             return JSON.parse(await (await fetch(url, {'cache':'no-store', 'signal':signal})).text());
         }
-        catch(e) { debugMedals && LOG('Newgrounds cloudLoad failed', e); }
+        catch(e) { console.warn('Newgrounds could not load slot ' + slot + ': ' + e); }
     }
 
     /** Count an event of the game's own on its Newgrounds stats page, like a level finished or a button pressed

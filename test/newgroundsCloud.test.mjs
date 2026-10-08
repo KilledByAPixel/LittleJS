@@ -6,12 +6,18 @@ import { NewgroundsPlugin } from '../dist/littlejs.esm.js';
 // a url the saved text is fetched from, as Newgrounds does. One plugin per process, so this lives in its own file.
 globalThis.location = { href: 'https://uploads.ungrounded.net/game/?ngio_session_id=abc123', hostname: 'uploads.ungrounded.net' };
 const inputs = [], slots = new Map;
+let failNext = false; // the next gateway call gets no answer
 globalThis.fetch = async (url, options) =>
 {
     if (!options?.body) // a slot's saved text
         return { text: async ()=> slots.get(url) };
     const input = JSON.parse(options.body.get('request'));
     inputs.push(input);
+    if (failNext)
+    {
+        failNext = false;
+        return { text: async ()=> '' };
+    }
     const { component, parameters } = input.execute;
     const data = { success: true, session: { id: 'abc123', user: { id: 5, name: 'Frank' }, expired: false }, medals: [], scoreboards: [] };
     if (component == 'CloudSave.setData')
@@ -32,14 +38,32 @@ globalThis.setInterval = ()=> 0;
 
 const plugin = new NewgroundsPlugin('an app');
 
-test('a value saved to a slot loads back, and an empty slot loads as undefined', async () =>
+test('a value saved to a slot loads back, and an empty slot loads as null', async () =>
 {
     await plugin.ready;
     assert.equal(await plugin.cloudSave(1, { level: 3, coins: [1, 2] }), true);
     assert.deepEqual(await plugin.cloudLoad(1), { level: 3, coins: [1, 2] });
-    assert.equal(await plugin.cloudLoad(2), undefined, 'nothing saved there');
+    assert.equal(await plugin.cloudLoad(2), null, 'nothing saved there, an empty slot');
     const save = inputs.find(i => i.execute.component == 'CloudSave.setData');
     assert.equal(save.session_id, 'abc123', 'sent with the session');
+});
+
+test('a load the server does not answer is undefined, a value JSON can not hold is not saved', async () =>
+{
+    await plugin.ready;
+    const warn = console.warn, warnings = [];
+    console.warn = (...a)=> warnings.push(a.join(' '));
+    try
+    {
+        failNext = true;
+        assert.equal(await plugin.cloudLoad(1), undefined, 'not told apart from nothing, so not null');
+        const circular = {};
+        circular.self = circular;
+        assert.equal(await plugin.cloudSave(3, circular), false);
+        assert.equal(await plugin.cloudSave(3, undefined), false);
+        assert.equal(warnings.length, 3);
+    }
+    finally { console.warn = warn; }
 });
 
 test('logEvent counts an event by name, with the host', async () =>
