@@ -14,6 +14,7 @@ What changed in each release, newest first. Releases before 1.20.0 are on the
 - A Shader disposed before its first draw was drawn stayed in the engine's list of shaders, the flush compiling it put it back
 - A ParticleEmitter3D callback that changed a particle's `age` or `lifeTime` had the change thrown away, now it is kept as `pos` and `velocity` are
 - A tile layer redraw whose `onRedraw` or tile draw throws hands back the camera, the canvas and the draw target, where it left the game drawing into the layer
+- 3D level editor: a scale drag keeps a mirrored axis mirrored, where it turned every negative axis to the smallest size; a turned object lands, drops and pastes by the box around it as turned; opening the editor lets go of a mouse the game captured; a frame that throws gives the game its camera back; an orthographic game camera's near is not copied to the editor's view; the box select is drawn over a 3D pass drawn after the 2D
 
 ## 1.26.1 - 2026-10-08
 

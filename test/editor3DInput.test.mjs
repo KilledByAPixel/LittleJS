@@ -569,3 +569,61 @@ test('with own axes on, L, the Move arrows follow the object\'s turn and a drag 
     near(pos[0], .5); near(pos[1], .5 + Math.sign(d.y)); near(pos[2], .5);
     assert.equal(run('editor3DHandles().filter((h)=> h.kind === \'plane\').length'), 3);
 });
+
+test('a scale drag keeps a mirrored axis mirrored', async ()=>
+{
+    const engine = await loadGame(), { run } = engine;
+    run(`editor3DChange((l)=> editor3DSetTransform(l[0], undefined, undefined, vec3(1, -1, 1))); editor3DStrokeEnd()`);
+    click(engine, 500, 500);
+    key(engine, 'KeyR');
+    drag(engine, [600, 500], [700, 500]); // twice as far along X
+    assert.deepEqual(json(run, 'list()[0].scale'), [2, -1, 1]);
+});
+
+test('End lands a turned object by the box around it as turned', async ()=>
+{
+    // three tall, turned a quarter about Z it lies down one tall
+    const engine = await loadGame(), { run } = engine;
+    run(`editor3DChange((l)=> editor3DSetTransform(l[0], vec3(-6, 6, .5), vec3(0, 0, 90), vec3(1, 3, 1)));
+        editor3DStrokeEnd(); editor3DSelection.add(1)`);
+    key(engine, 'End');
+    assert.deepEqual(json(run, 'list()[0].pos'), [-6, .5, .5]);
+});
+
+test('a frame that throws between the editor\'s camera swap and its end gives the game its camera back', async ()=>
+{
+    const engine = await loadGame(), { run } = engine;
+    assert.equal(run(`
+        const game = render3D.camera;
+        editor3DCameraBegin(); // the frame throws here, before its End
+        editor3DCameraBegin();
+        editor3DCameraEnd();
+        render3D.camera === game`), true);
+});
+
+test('opening the editor lets go of a mouse the game captured', async ()=>
+{
+    const engine = await loadGame(), { run } = engine;
+    key(engine, 'Digit0'); // out of the editor
+    run(`var exits = 0; pointerLockIsActive = ()=> true; pointerLockExit = ()=> ++exits; levelEditor.open()`);
+    assert.equal(run('exits'), 1);
+});
+
+test('the editor\'s camera keeps its own near from an orthographic game camera', async ()=>
+{
+    const engine = await loadGame(), { run } = engine;
+    assert.equal(run(`render3D.camera.orthographic = 10; render3D.camera.near = -50; editor3DCameraStart();
+        editor3DCamera.near === new Camera3D().near`), true);
+});
+
+test('the box being dragged out to select is drawn on the main canvas, over a 3D pass drawn after the 2D', async ()=>
+{
+    const engine = await loadGame(), { run } = engine;
+    assert.equal(run(`
+        const onWebGL = [];
+        drawLine = (a, b, thickness, color, pos, angle, useWebGL)=> onWebGL.push(useWebGL);
+        editor3DDrag = {kind: 'box', from: vec2(100), to: vec2(300)};
+        editor3DDrawLabels();
+        editor3DDrag = undefined;
+        onWebGL.join()`), 'false,false,false,false');
+});

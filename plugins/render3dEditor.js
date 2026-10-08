@@ -36,8 +36,9 @@ function editor3DCameraStart()
     camera.pos = from.pos.copy();
     camera.rotation = vec3(from.rotation.x, from.rotation.y, 0);
     camera.fov = from.fov;
-    camera.near = from.near;
     camera.far = from.far;
+    // an orthographic camera's near may sit behind it, which a perspective view can not use, so it keeps its own
+    from.orthographic || (camera.near = from.near);
 }
 
 // turn the free camera on or off, it needs a Render3DPlugin and takes the keyboard and mouse while it is on
@@ -92,6 +93,7 @@ function editor3DWithView(fn)
 // called by the 3D pass before it works out its matrices: the frame is drawn with the editor's camera
 function editor3DCameraBegin()
 {
+    editor3DCameraEnd(); // a frame that threw before its End gives the game its camera back first, not the editor's
     if (!editor3DViewOn() || !editor3DCamera) return;
     const r = render3D, camera = editor3DGameCamera = r.camera;
     r.camera = editor3DCamera;
@@ -424,8 +426,17 @@ function editor3DSize(object)
     const made = editor3DInstances.get(object.id), box = editor3DPrefabBox(made);
     if (box) return box.size;
     if (!(made instanceof EngineObject3D) || !(made.mesh || made.tileInfo)) return vec3(1);
-    const s = made.size3D, k = made.scale3D;
-    return vec3(s.x * abs(k.x), s.y * abs(k.y), s.z * abs(k.z));
+    const s = made.size3D, k = made.scale3D, size = vec3(s.x * abs(k.x), s.y * abs(k.y), s.z * abs(k.z));
+    if (!editor3DTurned(object)) return size;
+
+    // a turned one's box is the box around it turned, so it lands, drops and pastes by what it covers
+    const matrix = buildMatrix(vec3(), editor3DRotation(object).scale(PI / 180), size), high = vec3();
+    for (let i = 8; i--;)
+    {
+        const p = matrix.transformPoint(vec3(i & 1 ? .5 : -.5, i & 2 ? .5 : -.5, i & 4 ? .5 : -.5));
+        high.x = max(high.x, p.x), high.y = max(high.y, p.y), high.z = max(high.z, p.z);
+    }
+    return vec3(editor3DRound(high.x * 2), editor3DRound(high.y * 2), editor3DRound(high.z * 2));
 }
 
 // the box around a prefab's instance in the world, the boxes of its parts together, as its middle and its size;
@@ -1637,6 +1648,7 @@ function editor3DSetOpen(open)
     if (open)
     {
         editor3DSetFreeCamera(false);
+        pointerLockIsActive() && pointerLockExit(); // the game's captured mouse is let go, the editor needs it
         editor3DLevel || editor3DLevelLoaded({}); // a new level, with nothing loaded
         editor3DCamera || editor3DCameraStart();
         editor3DGamePaused = paused;
@@ -2334,10 +2346,11 @@ function editor3DDragTo(drag, mouse, ray, snap)
             }
             if (factor)
             {
+                // snapped and kept from nothing by its size, its sign kept, so a mirrored axis stays mirrored
                 const size = snap ? editor3DScaleStep : 0, least = size || .01;
+                const fit = (v)=> (v < 0 ? -1 : 1) * max(editor3DSnap(abs(v), size), least);
                 const scale = s.scale.multiply(factor);
-                editor3DSetTransform(object, undefined, undefined, vec3(max(editor3DSnap(scale.x, size), least),
-                    max(editor3DSnap(scale.y, size), least), max(editor3DSnap(scale.z, size), least)));
+                editor3DSetTransform(object, undefined, undefined, vec3(fit(scale.x), fit(scale.y), fit(scale.z)));
             }
         }
     });
@@ -2858,8 +2871,9 @@ function editor3DDrawLabels()
     const drag = editor3DDrag;
     if (drag?.kind === 'box')
     {
+        // on the main canvas, over the WebGL one, so a 3D pass drawn after the 2D scene does not cover it
         const {from: a, to: b} = drag, corners = [a, vec2(b.x, a.y), b, vec2(a.x, b.y)];
-        corners.forEach((c, i)=> drawLine(c, corners[(i + 1) % 4], 2, EDITOR3D_SELECT_COLOR, undefined, 0, glEnable, true));
+        corners.forEach((c, i)=> drawLine(c, corners[(i + 1) % 4], 2, EDITOR3D_SELECT_COLOR, undefined, 0, false, true));
     }
 }
 
