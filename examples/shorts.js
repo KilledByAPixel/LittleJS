@@ -254,6 +254,7 @@ const exampleList =
     new ExampleInfo('Hill Glide Game', 'hillGlideGame.js', 'Tiny wings style sliding game', false, 'objects, physics, speed'),
     new ExampleInfo('Sliding Puzzle', 'slidingPuzzle.js', '15 tile sliding puzzle', false, 'objects, numbers, ui'),
     new ExampleInfo('Platformer Game', 'platformer.js', 'Jump and run side view', false, 'objects, gravity, level, tiles, camera'),
+    new ExampleInfo('Platform Physics', 'platformPhysics.js', 'One way platforms, a lift, a crate, a ball and ice', false, 'physics, one way, oneWay, setOneWay, jump through, drop through, platform, lift, moving platform, crate, push, mass, bounce, restitution, friction, ice, collideWithTile, collideWithObject'),
     new ExampleInfo('Top Down Game', 'topDown.js', 'Top-down style camera', false, 'objects, movement, exploration'),
     new ExampleInfo('Tilted View Game', 'tiltedView.js', 'Pseudo 3D oblique view', false, 'isometric, depth'),
     new ExampleInfo('Space Game', 'spaceGame.js', 'Spaceship shooter with parallax', false, 'objects, weapons, stars, camera, rotation'),
