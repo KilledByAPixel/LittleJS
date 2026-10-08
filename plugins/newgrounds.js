@@ -163,11 +163,8 @@ class NewgroundsPlugin
         /** @property {Array<Object>} - Scoreboards fetched from Newgrounds, empty until ready
          *  @type {Array<Object>} */
         this.scoreboards = [];
-        /** @property {string|undefined} - Why the last cloudLoad gave undefined: 'failed' when it could not load, as
-         *  when not logged in, and 'notSave' when the slot holds a file that is not a save, where a game may offer to
-         *  start over; undefined when it loaded a save or found the slot empty
-         *  @type {string|undefined} */
-        this.lastLoadFailure = undefined;
+        /** @type {Map<number, 'failed'|'notSave'>} */
+        this.loadFailures = new Map; // why each slot's last load gave undefined, see loadFailure
         /** @property {{id: number, name: string, url: string, supporter: boolean}|null} - The logged in player once ready, null when not logged in
          *  @type {{id: number, name: string, url: string, supporter: boolean}|null} */
         this.user = null;
@@ -359,8 +356,9 @@ class NewgroundsPlugin
 
     /** Load the value a cloud save slot holds: null when Newgrounds says it holds none, undefined when it could not be
      *  loaded or the player is not logged in, said in the console when logged in
-     *  - Do not save over a slot that loaded as undefined, it may hold the player's save; lastLoadFailure says why it
-     *    did: 'notSave' for a file there that is not a save, where a game may offer to start over, 'failed' otherwise
+     *  - Do not save over a slot that loaded as undefined, it may hold the player's save; loadFailure(slot) says why
+     *    it did: 'notSave' for a file there that is not a save, where a game may offer to start over, 'failed' otherwise
+     *  - A saved null loads as null, as an empty slot does
      *  @param {number} slot - The slot number
      *  @return {Promise<*>} - The value saved, null for none, undefined for a load that failed
      *  @example
@@ -368,36 +366,53 @@ class NewgroundsPlugin
     async cloudLoad(slot)
     {
         ASSERT(isNumber(slot), 'Newgrounds cloudLoad: slot must be a number', slot);
-        this.lastLoadFailure = 'failed'; // until it is known
-        if (!this.session_id) return;
+        const {value, failure} = await this.loadSlot(slot);
+        failure ? this.loadFailures.set(+slot, failure) : this.loadFailures.delete(+slot);
+        return value;
+    }
+
+    /** Why a slot's last cloudLoad gave undefined: 'notSave' when the slot holds a file that is not a save, where a
+     *  game may offer to start over, 'failed' when it could not be loaded, as when not logged in, where a game must
+     *  not save over it; undefined when it loaded a save or found the slot empty, or was not loaded
+     *  @param {number} slot - The slot number
+     *  @return {'failed'|'notSave'|undefined} */
+    loadFailure(slot) { return this.loadFailures.get(+slot); }
+
+    /** A slot's load, its value and why it failed, if it did
+     *  @param {number} slot
+     *  @return {Promise<{value: *, failure: 'failed'|'notSave'|undefined}>}
+     *  @ignore */
+    async loadSlot(slot)
+    {
+        const failed = (message)=>
+        {
+            message && console.warn('Newgrounds could not load slot ' + slot + message);
+            return {value: undefined, failure: /** @type {'failed'} */ ('failed')};
+        };
+        if (!this.session_id) return failed('');
         const response = await this.call('CloudSave.loadSlot', {'id':slot});
         newgroundsSessionLost(response) && this.dropSession();
         const slotData = response?.result?.data?.['slot'];
-        if (!slotData)
-            return void console.warn('Newgrounds could not load slot ' + slot);
+        if (!slotData) return failed('.');
         const url = slotData['url']; // where the saved text is, none for an empty slot
-        if (!url) return this.lastLoadFailure = undefined, null;
+        if (!url) return {value: null, failure: undefined};
+        let text;
         try
         {
             const signal = globalThis.AbortSignal?.timeout?.(newgroundsTimeoutMS);
             const saved = await fetch(url, {'cache':'no-store', 'signal':signal});
             if (!saved.ok) // an error page is not the save, even one that is JSON
-                return void console.warn('Newgrounds could not load slot ' + slot + ': ' + saved.status);
-            const text = await saved.text();
-            try
-            {
-                const save = JSON.parse(text);
-                this.lastLoadFailure = undefined;
-                return save;
-            }
-            catch(e)
-            {
-                this.lastLoadFailure = 'notSave';
-                console.warn('Newgrounds cloudLoad: slot ' + slot + ' holds a file that is not a save, lastLoadFailure ' +
-                    'is notSave');
-            }
+                return failed(': ' + saved.status);
+            text = await saved.text();
         }
-        catch(e) { console.warn('Newgrounds could not load slot ' + slot + ': ' + e); }
+        catch(e) { return failed(': ' + e); }
+        if (!text) return failed(', it came back empty'); // a save is never empty
+        try { return {value: JSON.parse(text), failure: undefined}; }
+        catch(e)
+        {
+            console.warn('Newgrounds cloudLoad: slot ' + slot + ' holds a file that is not a save');
+            return {value: undefined, failure: 'notSave'};
+        }
     }
 
     /** Count an event of the game's own on its Newgrounds stats page, like a level finished or a button pressed

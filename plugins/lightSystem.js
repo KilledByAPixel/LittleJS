@@ -831,8 +831,9 @@ class LightSystemPlugin
             catch (error)
             {
                 // a renderLight or renderEmissive threw: what it queued goes to the lightmap, then the screen is the
-                // target again with its viewport and blend, so a game that catches the error draws to the screen
-                glFlush();
+                // target again with its viewport and blend, so a game that catches the error draws to the screen; a
+                // flush that throws too is let go of, the first error is the one that counts
+                try { glFlush(); } catch (e) {}
                 glContext.bindFramebuffer(glContext.FRAMEBUFFER, null);
                 glContext.viewport(0, 0, glCanvas.width, glCanvas.height);
                 glActiveTexture && glContext.bindTexture(glContext.TEXTURE_2D, glActiveTexture);

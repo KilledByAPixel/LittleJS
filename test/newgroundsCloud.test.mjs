@@ -65,9 +65,10 @@ test('a load the server does not answer is undefined, a value JSON can not hold 
         assert.equal(await plugin.cloudLoad(7), undefined, 'an error page, though it is JSON, is not the save');
         slots.set('https://saves.example/8', 'not json');
         assert.equal(await plugin.cloudLoad(8), undefined, 'a file that is not a save');
-        assert.equal(plugin.lastLoadFailure, 'notSave');
+        assert.equal(plugin.loadFailure(8), 'notSave');
+        assert.equal(plugin.loadFailure(7), 'failed', 'the error page');
         assert.equal(await plugin.cloudLoad(7), undefined);
-        assert.equal(plugin.lastLoadFailure, 'failed', 'the error page');
+        assert.equal(plugin.loadFailure(8), 'notSave', 'each slot keeps its own');
         assert.equal(warnings.length, 6);
         assert.ok(warnings.some((w)=> w.includes('not a save')), 'said so');
     }

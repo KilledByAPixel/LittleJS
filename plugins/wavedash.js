@@ -144,11 +144,8 @@ class WavedashPlugin
         this.slotQueues = new Map; // each slot's last save or load, the next waits for it, as they share a file
         /** @type {Map<string, Set<Promise<*>>>} */
         this.slotCalls = new Map; // each slot's file calls Wavedash has not answered, a timed out one may still change it
-        /** @property {string|undefined} - Why the last cloudLoad gave undefined: 'failed' when it could not load, as
-         *  off Wavedash or on a timeout, and 'notSave' when the slot holds a file that is not a save, where a game may
-         *  offer to start over; undefined when it loaded a save or found the slot empty
-         *  @type {string|undefined} */
-        this.lastLoadFailure = undefined;
+        /** @type {Map<string, 'failed'|'notSave'>} */
+        this.loadFailures = new Map; // why each slot's last load gave undefined, by its file, see loadFailure
 
         // Wavedash keeps its loading screen until init, which is called once
         wavedashWait('init', this.call('init'));
@@ -264,8 +261,9 @@ class WavedashPlugin
 
     /** Load the value a cloud save slot holds: null when Wavedash says it holds none, undefined when it could not be
      *  loaded or off Wavedash, said in the console on Wavedash
-     *  - Do not save over a slot that loaded as undefined, it may hold the player's save; lastLoadFailure says why it
-     *    did: 'notSave' for a file there that is not a save, where a game may offer to start over, 'failed' otherwise
+     *  - Do not save over a slot that loaded as undefined, it may hold the player's save; loadFailure(slot) says why
+     *    it did: 'notSave' for a file there that is not a save, where a game may offer to start over, 'failed' otherwise
+     *  - A saved null loads as null, as an empty slot does
      *  @param {number} slot - The slot number
      *  @return {Promise<*>} - The value saved, null for none, undefined for a load that failed
      *  @example
@@ -273,46 +271,58 @@ class WavedashPlugin
     async cloudLoad(slot)
     {
         ASSERT(isNumber(slot), 'Wavedash cloudLoad: slot must be a number', slot);
-        this.lastLoadFailure = 'failed'; // until it is known
-        if (!this.isActive()) return;
-        return this.slotQueue(slot, undefined, async (track)=>
-        {
-            const path = wavedashSavePath(slot);
-            const downloaded = await wavedashWait('cloudLoad', track(this.call('downloadRemoteFile', path)));
-            if (downloaded !== true && !downloaded?.['success']) // an answer of true or of {success: true}
-            {
-                // a file Wavedash says is not there is an empty slot, anything else a load that failed; it may answer
-                // false or {success: true, data: false}
-                const exists = await wavedashWait('cloudLoad', track(this.call('remoteFileExists', path)));
-                if (exists === false || exists?.['success'] && exists['data'] === false)
-                    return this.lastLoadFailure = undefined, null;
-                this.lastLoadFailure = 'failed';
-                console.warn('Wavedash could not load slot ' + slot);
-                return;
-            }
+        const failed = {value: undefined, failure: /** @type {'failed'} */ ('failed')};
+        const {value, failure} = this.isActive() ?
+            await this.slotQueue(slot, failed, (track)=> this.loadSlot(slot, track)) : failed;
+        const key = wavedashSavePath(slot);
+        failure ? this.loadFailures.set(key, failure) : this.loadFailures.delete(key);
+        return value;
+    }
 
-            // the file's bytes, given as they are or in a response's data
-            const read = await wavedashWait('cloudLoad', track(this.call('readLocalFile', path)));
-            const bytes = read instanceof Uint8Array || read instanceof ArrayBuffer || typeof read == 'string' ?
-                read : read?.['data'];
-            if (!bytes)
-            {
-                this.lastLoadFailure = 'failed';
-                return void console.warn('Wavedash could not read slot ' + slot);
-            }
-            try
-            {
-                const save = JSON.parse(typeof bytes == 'string' ? bytes : new TextDecoder().decode(bytes));
-                this.lastLoadFailure = undefined;
-                return save;
-            }
-            catch (error)
-            {
-                this.lastLoadFailure = 'notSave';
-                console.warn('Wavedash cloudLoad: slot ' + slot + ' holds a file that is not a save, lastLoadFailure ' +
-                    'is notSave');
-            }
-        });
+    /** Why a slot's last cloudLoad gave undefined: 'notSave' when the slot holds a file that is not a save, where a
+     *  game may offer to start over, 'failed' when it could not be loaded, as off Wavedash or on a timeout, where a
+     *  game must not save over it; undefined when it loaded a save or found the slot empty, or was not loaded
+     *  @param {number} slot - The slot number
+     *  @return {'failed'|'notSave'|undefined} */
+    loadFailure(slot) { return this.loadFailures.get(wavedashSavePath(slot)); }
+
+    /** A slot's load, its value and why it failed, if it did
+     *  @param {number} slot
+     *  @param {function(*): *} track
+     *  @return {Promise<{value: *, failure: 'failed'|'notSave'|undefined}>}
+     *  @ignore */
+    async loadSlot(slot, track)
+    {
+        const path = wavedashSavePath(slot);
+        const failed = (message)=>
+        {
+            console.warn('Wavedash ' + message);
+            return {value: undefined, failure: /** @type {'failed'} */ ('failed')};
+        };
+        const downloaded = await wavedashWait('cloudLoad', track(this.call('downloadRemoteFile', path)));
+        if (downloaded !== true && !downloaded?.['success']) // an answer of true or of {success: true}
+        {
+            // a file Wavedash says is not there is an empty slot, anything else a load that failed; it may answer
+            // false or {success: true, data: false}
+            const exists = await wavedashWait('cloudLoad', track(this.call('remoteFileExists', path)));
+            if (exists === false || exists?.['success'] && exists['data'] === false)
+                return {value: null, failure: undefined};
+            return failed('could not load slot ' + slot);
+        }
+
+        // the file's text, its bytes given as they are or in a response's data; none is a read that failed, as a
+        // save is never empty
+        const answer = await wavedashWait('cloudLoad', track(this.call('readLocalFile', path)));
+        const bytes = answer instanceof Uint8Array || answer instanceof ArrayBuffer || typeof answer == 'string' ?
+            answer : answer?.['data'];
+        const text = !bytes ? '' : typeof bytes == 'string' ? bytes : new TextDecoder().decode(bytes);
+        if (!text) return failed('could not read slot ' + slot);
+        try { return {value: JSON.parse(text), failure: undefined}; }
+        catch (error)
+        {
+            console.warn('Wavedash cloudLoad: slot ' + slot + ' holds a file that is not a save');
+            return {value: undefined, failure: 'notSave'};
+        }
     }
 
     /** Run a slot's save or load after the one before it, as they share the slot's local file; other slots go on
@@ -334,7 +344,13 @@ class WavedashPlugin
             if (typeof answer?.then == 'function') // any promise, one made elsewhere too
             {
                 calls.add(answer);
-                const done = ()=> { calls.delete(answer); };
+                const done = ()=>
+                {
+                    calls.delete(answer);
+                    // the last of them, answered after the slot was let go of, lets go of its calls too
+                    calls.size || this.slotQueues.has(key) || this.slotCalls.get(key) !== calls ||
+                        this.slotCalls.delete(key);
+                };
                 answer.then(done, done);
             }
             return answer;

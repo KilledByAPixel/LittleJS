@@ -492,18 +492,43 @@ test('a slot holding a file that is not a save loads as undefined, said in the c
     assert.ok(run('warnings.join()').includes('not a save'));
 });
 
-test('lastLoadFailure says why a load gave undefined: notSave for a file that is not a save, failed otherwise', async ()=>
+test('loadFailure says why a slot loaded undefined: notSave for a file that is not a save, failed otherwise', async ()=>
 {
     const log = [], sdk = filesSDK(log);
     const { run } = game(sdk);
     run('new WavedashPlugin(); console.warn = ()=> {}');
     assert.equal(await run(`wavedash.cloudLoad(1)`), null);
-    assert.equal(run('wavedash.lastLoadFailure'), undefined, 'an empty slot is no failure');
+    assert.equal(run('wavedash.loadFailure(1)'), undefined, 'an empty slot is no failure');
     await sdk.writeLocalFile('saves/slot1.json', new TextEncoder().encode('not json'));
     await sdk.uploadRemoteFile('saves/slot1.json');
     assert.equal(await run(`wavedash.cloudLoad(1)`), undefined);
-    assert.equal(run('wavedash.lastLoadFailure'), 'notSave');
+    assert.equal(run('wavedash.loadFailure(1)'), 'notSave');
+    await sdk.writeLocalFile('saves/slot2.json', new Uint8Array(0)); // empty, a read that failed, not a bad save
+    await sdk.uploadRemoteFile('saves/slot2.json');
+    assert.equal(await run(`wavedash.cloudLoad(2)`), undefined);
+    assert.equal(run('wavedash.loadFailure(2)'), 'failed');
     sdk.downloadRemoteFile = ()=> Promise.resolve({success: false});
     assert.equal(await run(`wavedash.cloudLoad(1)`), undefined);
-    assert.equal(run('wavedash.lastLoadFailure'), 'failed');
+    assert.equal(run('wavedash.loadFailure(1)'), 'failed');
+});
+
+test('loads of several slots at once each keep their own reason', async ()=>
+{
+    const log = [], sdk = filesSDK(log);
+    const { run } = game(sdk);
+    run('new WavedashPlugin(); console.warn = ()=> {}');
+    await sdk.writeLocalFile('saves/slot2.json', new TextEncoder().encode('not json'));
+    await sdk.uploadRemoteFile('saves/slot2.json');
+    await run(`wavedash.cloudSave(3, {level: 3})`);
+
+    // slot 1's download fails, and slot 2, not a save, answers last
+    const download = sdk.downloadRemoteFile;
+    sdk.downloadRemoteFile = async (path)=> path.includes('slot1') ? {success: false} :
+        (await new Promise((r)=> setImmediate(r)), download(path));
+    const exists = sdk.remoteFileExists;
+    sdk.remoteFileExists = async (path)=> path.includes('slot1') ? {success: false} : exists(path);
+    const loaded = await run(`Promise.all([1, 2, 3].map((slot)=> wavedash.cloudLoad(slot)))
+        .then((saves)=> JSON.stringify(saves))`);
+    assert.equal(loaded, '[null,null,{"level":3}]', 'two failed, undefined in JSON as null, and a save');
+    assert.deepEqual([1, 2, 3].map((slot)=> run(`wavedash.loadFailure(${slot})`)), ['failed', 'notSave', undefined]);
 });

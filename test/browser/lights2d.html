@@ -95,7 +95,7 @@ smokeRun(async ()=>
     const viewport2 = [...gl.getParameter(gl.VIEWPORT)];
     check('a throwing renderEmissive that drew with a Shader leaves the screen the target and the Shader as it was',
         thrown == 'on purpose' && gl.getParameter(gl.FRAMEBUFFER_BINDING) === null && viewport2[2] == glCanvas.width &&
-        !glAdditive && glCustomShader === shaderBefore && drawContext === mainContext, [thrown, viewport2]);
+        viewport2[3] == glCanvas.height && !glAdditive && glCustomShader === shaderBefore && drawContext === mainContext, [thrown, viewport2]);
     glowing.destroy();
     checkGLError();
 });
