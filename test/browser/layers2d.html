@@ -77,6 +77,17 @@ smokeRun(async ()=>
     // a little left of the middle of each, where the hard one is still black and the smooth one is on its way to white
     check3('a pixelated texture has a hard edge', pixel(1.8, -1.5), (r)=> r < 20);
     check3('a smooth texture blends across it', pixel(1.8, -3), (r)=> r > 40 && r < 215);
+
+    // a redraw whose onRedraw throws still hands back the camera, the canvas and the target
+    const saved = [cameraPos.copy(), cameraScale, drawContext, glRenderTarget];
+    const broken = new TileLayer(vec2(), vec2(4), tile(0, 16));
+    broken.onRedraw = ()=> { throw Error('draw failed'); };
+    let thrown;
+    try { broken.redraw(); } catch (e) { thrown = e.message; }
+    broken.destroy();
+    check('a redraw that throws hands back the camera, the canvas and the target', thrown == 'draw failed' &&
+        cameraPos.x == saved[0].x && cameraPos.y == saved[0].y && cameraScale == saved[1] &&
+        drawContext == saved[2] && glRenderTarget == saved[3], [thrown, cameraPos, cameraScale]);
     checkGLError();
 });
 </script>

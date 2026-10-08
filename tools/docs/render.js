@@ -209,6 +209,7 @@ function tagsOf(doclet)
 const HIGHLIGHT_RE = /(\/\/[^\n]*|\/\*[\s\S]*?\*\/)|('(?:\\.|[^'\\\n])*'|"(?:\\.|[^"\\\n])*"|`(?:\\.|[^`\\])*`)|\b(\d+\.?\d*(?:e[+-]?\d+)?)\b|\b(const|let|var|function|class|new|return|if|else|for|while|do|switch|case|break|continue|this|true|false|null|undefined|async|await|of|in|typeof|instanceof|import|export|from|extends|super|throw|try|catch|finally|static|get|set|yield|default|delete|void)\b/g;
 function highlight(code)
 {
+    code = code.replace(/\r\n?/g, '\n'); // a checkout with CRLF endings gives the same page
     let out = '', last = 0, m;
     HIGHLIGHT_RE.lastIndex = 0;
     while ((m = HIGHLIGHT_RE.exec(code)))

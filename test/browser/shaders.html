@@ -70,6 +70,15 @@ smokeRun(async ()=>
     const inFrame = smokePixel(.75, .5);
     check('disposed in the frame it drew in, that draw shows and it stays let go of',
         inFrame[1] > 230 && inFrame[2] > 230 && !shader.program && !glShaderObjects.includes(shader), inFrame);
+
+    // let go of before its first draw is drawn: drawing that batch compiles it and lists it, and it still leaves
+    const fresh = new Shader(shader.fragmentCode);
+    setShader(fresh);
+    drawRect(vec2(), vec2(2));
+    setShader();
+    fresh.dispose();
+    check('disposed before its first batch is drawn, it leaves the list too', !fresh.program &&
+        !glShaderObjects.includes(fresh));
     checkGLError();
 });
 </script>

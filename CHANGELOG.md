@@ -9,6 +9,11 @@ What changed in each release, newest first. Releases before 1.20.0 are on the
 - 2D lights have cones and gels, as 3D spotlights do: `light.coneAngle` makes a light a cone, like a flashlight or a car's headlights, looking along its up and turned by its `angle`, its edge fading by `coneSoftness`; `light.gel` is a picture the light shines through, a tile or a texture across its square that turns with it, so one light can be a car's headlights and tail lights. Shadows still fall through both, and a light with neither draws as before. The Light System short has a swinging searchlight, and Light Shadows a mouse light shining through colored panes
 - One way collision, platforms jumped up through and landed on: `layer.setOneWay(tile, direction)` makes the cells that draw a tile passable moving that way, up, down, left or right, so they block only what was wholly on their far side before it moved; turned and mirrored as each cell's tile is, so a platform turned a quarter is one way to the side. Objects, particles and raycasts all follow it, `collideWithTile` is not asked about a tile passed through, and returning false from it drops through. A solid object's `oneWay` does the same for objects, and a rising platform keeps its rider. The new Platform Physics short shows it with a lift, a crate, a bouncy ball and an ice floor
 
+### Fixes
+- A Shader disposed before its first draw was drawn stayed in the engine's list of shaders, the flush compiling it put it back
+- A ParticleEmitter3D callback that changed a particle's `age` or `lifeTime` had the change thrown away, now it is kept as `pos` and `velocity` are
+- A tile layer redraw whose `onRedraw` or tile draw throws hands back the camera, the canvas and the draw target, where it left the game drawing into the layer
+
 ## 1.26.1 - 2026-10-08
 
 ### New Changes

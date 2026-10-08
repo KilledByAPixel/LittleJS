@@ -530,15 +530,15 @@ function glShaderTrack(shader) { glShaderObjects.includes(shader) || glShaderObj
 // let go of a Shader's programs, 2D and 3D, and of its place in the list; a batch drawing with it is drawn first
 function glShaderDispose(shader)
 {
+    // a batch drawing with it is drawn first, the batch holds the Shader; its first draw compiles it and lists it, so
+    // it comes off the list after
+    if (glContext && !headlessMode && glBatchShader === shader)
+        glFlush();
     const i = glShaderObjects.indexOf(shader);
     i < 0 || glShaderObjects.splice(i, 1);
     if (glContext && !headlessMode)
-    {
-        if (glBatchShader === shader) // a batch drawing with it is drawn first, the batch holds the Shader
-            glFlush();
         for (const program of [shader.program, shader.program3D])
             program && glContext.deleteProgram(program);
-    }
     shader.program = shader.program3D = undefined;
 }
 

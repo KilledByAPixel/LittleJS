@@ -865,13 +865,17 @@ class TileLayer extends CanvasLayer
      *  - This may be slow if not using webgl but only needs to be done once */
     redraw()
     {
+        // the camera, canvas and target are the game's again even when a tile draw or onRedraw throws
         this.redrawStart(true);
-        for (let x = this.size.x; x--;)
-        for (let y = this.size.y; y--;)
-            this.drawTileData(vec2(x,y), false);
-        this.isUsingWebGL && glFlush();
-        this.onRedraw();
-        this.redrawEnd();
+        try
+        {
+            for (let x = this.size.x; x--;)
+            for (let y = this.size.y; y--;)
+                this.drawTileData(vec2(x,y), false);
+            this.isUsingWebGL && glFlush();
+            this.onRedraw();
+        }
+        finally { this.redrawEnd(); }
         this.tilesInWebGL = this.isUsingWebGL;
     }
 
@@ -984,8 +988,8 @@ class TileLayer extends CanvasLayer
         ASSERT(drawContext !== this.context, 'redrawStart() should not be active when calling redrawTileData(), instead use drawTileData()');
 
         this.redrawStart();
-        this.drawTileData(layerPos, clear);
-        this.redrawEnd();
+        try { this.drawTileData(layerPos, clear); }
+        finally { this.redrawEnd(); }
     }
 
     /** Draw textured tile in layer space

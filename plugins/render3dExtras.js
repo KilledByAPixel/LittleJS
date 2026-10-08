@@ -1307,6 +1307,7 @@ class ParticleEmitter3D extends EngineObject3D
         const out = this.particleData;
         out[k] = view.pos.x, out[k+1] = view.pos.y, out[k+2] = view.pos.z;
         out[k+3] = view.velocity.x, out[k+4] = view.velocity.y, out[k+5] = view.velocity.z;
+        out[k+16] = view.lifeTime, out[k+17] = view.age;
         if (view.destroyed)
             out[k+17] = max(out[k+17], out[k+16]); // its life lived: a step short of it can round to just under
         return result;

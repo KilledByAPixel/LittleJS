@@ -24,7 +24,7 @@ test('no core file uses a name that only a plugin declares', () =>
 
     const uses = [];
     for (const file of core)
-        fs.readFileSync(file, 'utf8').split('\n').forEach((line, i)=>
+        fs.readFileSync(file, 'utf8').split(/\r?\n/).forEach((line, i)=> // CRLF too, or a comment's \r keeps it
         {
             // comments and strings may name a plugin, or hold shader code with its vec3
             if (/^\s*(\/\/|\*|\/\*)/.test(line)) return;
