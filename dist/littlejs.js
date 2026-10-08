@@ -35,7 +35,7 @@ const engineName = 'LittleJS';
  *  @type {string}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.26.0';
+const engineVersion = '1.26.1';
 
 /** Frames per second to update
  *  @type {number}
@@ -69,6 +69,8 @@ let engineObjectsCollideStaticLast = [];
 let frame = 0;
 
 /** Current engine time since start in seconds
+ *  - Below 20 FPS it falls behind the clock, since a frame catches up at most 50 ms of updates, so a timer in
+ *    real seconds, one that must keep up on a slow device, goes by timeReal
  *  @type {number}
  *  @memberof Engine */
 let time = 0;
@@ -94,8 +96,13 @@ function getPaused() { return paused; }
  *  @memberof Engine */
 function setPaused(isPaused=true) { paused = isPaused; }
 
+/** Frames drawn per second, smoothed over the last few seconds, in release builds too
+ *  @type {number}
+ *  @memberof Engine */
+let averageFPS = 0;
+
 // Engine internal variables
-let frameTimeLastMS = 0, frameTimeBufferMS = 0, averageFPS = 0;
+let frameTimeLastMS = 0, frameTimeBufferMS = 0;
 
 // delta smoothing, after Time Delta Smoothing by Frank Force (2013): a frame is on screen for whole display frames,
 // so each delta is rounded to them and the rest is carried to the next, keeping the total real time; the frame
@@ -436,7 +443,9 @@ function engineLoadingScreenDraw(elapsed)
  *  @param {GameCallback} [gameRender] - Called before objects are rendered, use for drawing backgrounds/world elements
  *  @param {GameCallback} [gameRenderPost] - Called after objects are rendered, use for drawing UI/overlays
  *  @param {Array<string>|string} [imageSources=[]] - List of image file paths to preload (e.g., ['player.png', 'tiles.png']), or one path
- *  @param {HTMLElement} [rootElement] - Root DOM element to attach canvas to, defaults to document.body
+ *  @param {HTMLElement} [rootElement] - Root DOM element to attach canvas to, defaults to document.body; it is
+ *                                       styled for a game (no scroll bars or selection, touch-action none),
+ *                                       where its own inline style does not say otherwise
  *    It keeps its own inline styles and the canvas centers inside it, but the canvas is still sized from the window,
  *    so set canvasFixedSize or canvasMaxSize to fit a smaller element
  *  @example
@@ -499,8 +508,10 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
         // by ~page-load-time when RAF starts handing real timestamps
         if (!frameTimeLastMS) frameTimeDeltaMS = 0;
         frameTimeLastMS = frameTimeMS;
-        if (debug || debugWatermark)
-            averageFPS = lerp(averageFPS, 1e3/(frameTimeDeltaMS||1), .05);
+        // the first frame's rate seeds the average, so it does not start out climbing from 0; a gap of over a
+        // second, a hidden tab coming back, is not a frame
+        if (frameTimeDeltaMS && frameTimeDeltaMS < 1e3)
+            averageFPS = averageFPS ? lerp(averageFPS, 1e3/frameTimeDeltaMS, .05) : 1e3/frameTimeDeltaMS;
         // the time the frame will be on screen, in whole display frames; engineStep's steps are exact already
         if (!manualStepAtStart)
             frameTimeDeltaMS = engineSmoothDelta(frameTimeDeltaMS);
@@ -5748,6 +5759,9 @@ class SpriteAnimator
  *   across the sprite or the mesh's own uv
  * - Names in 3D only: worldPos, worldNormal, cameraPos, sunDirection, sunColor, ambientColor, ambientGroundColor,
  *   lightCount, lights[i], lightColors[i] and shadow()
+ * - In 3D the snippet may also define void mainNormal(inout vec3 n), given the normal facing the camera after the
+ *   normal map, in world space, to bend it per pixel for waves or ripples; the lighting, specular, reflection and
+ *   fog then all use it, as they use a normal map
  * - In 3D the shadow map is drawn without the Shader, cut only by the texture's alpha, so a snippet that removes
  *   parts of a surface still shadows with the whole of it
  * @example
@@ -7899,8 +7913,9 @@ function inputInit()
     }
     function onContextMenu(e)
     {
-        // prevent right click menu, but a text field keeps its copy and paste menu
-        if (inputPreventDefault && !isTextInput(e.target))
+        // prevent right click menu, but a text field keeps its copy and paste menu and a link its open in new tab
+        const target = /** @type {HTMLElement} */ (e.target);
+        if (inputPreventDefault && !isTextInput(target) && !target?.closest?.('a[href]'))
             e.preventDefault();
     }
     function onBlur()
@@ -7921,6 +7936,10 @@ function inputInit()
         // handle all touch events the same way
         function handleTouch(e)
         {
+            // fix stalled audio requiring user interaction, with touch input off too since the page's sound needs it
+            if (soundEnable && !headlessMode && audioContext && !audioIsRunning())
+                audioResume();
+
             if (!touchInputEnable)
             {
                 // turned off mid touch, the finger that drove the mouse lets go of it
@@ -7930,10 +7949,6 @@ function inputInit()
                 return;
             }
             inputLastTouchTime = performance.now();
-
-            // fix stalled audio requiring user interaction
-            if (soundEnable && !headlessMode && audioContext && !audioIsRunning())
-                audioResume();
 
             // when the touch gamepad is enabled it owns touch input: suppress the
             // touch->mouse passthrough entirely unless touchGamepadPassthrough is set
@@ -14193,6 +14208,10 @@ class PostProcessPlugin
         /** @property {string} - The shadertoy style mainImage code it shades with, see setShaderCode */
         this.shaderCode = shaderCode || postProcessEffects(); // no code passes the frame through
 
+        /** @property {boolean} - Is the pass on? Off, the frame shows as the engine drew it, the shader is kept,
+         *  and the feedback texture holds the last frame drawn with it on */
+        this.enabled = true;
+
         /** @property {Object<string, number|Array<number>>} - The game's own values for the shader, a uniform each
          *  by its name, a number a float and a list of 2 to 4 numbers a vector, set every frame as they are; an
          *  effect setting can be one of these names, so it changes every frame without making the shader again, all
@@ -14278,7 +14297,7 @@ class PostProcessPlugin
         }
         function postProcessRender()
         {
-            if (headlessMode || !glEnable) return;
+            if (headlessMode || !glEnable || !postProcess.enabled) return;
 
             // clear out the buffer, before anything here binds its own
             glFlush();
@@ -24708,7 +24727,8 @@ function raycastBox(ray, pos, size, rotation)
  * - EngineObject3D is an EngineObject with a 3D position, rotation and mesh
  * - The 3D scene draws under the 2D sprites, so HUD and text land on top
  * - Lighting is the sun plus ambient, with optional extra lights, fog and shadows
- * - Any object or draw can bring its own Shader, a mainImage snippet the lighting then applies to
+ * - Any object or draw can bring its own Shader, a mainImage snippet the lighting then applies to, and a
+ *   mainNormal in it bends the normal the lighting uses
  * - Meshes and the basic builders are in render3dMesh.js, EngineObject3D, instancing and lights in
  *   render3dObject.js, both right after this one; the other builders, terrain, particles, camera controls and the
  *   OBJ loader are in the Render3D Extras plugin, which goes after those
@@ -25286,7 +25306,9 @@ class Render3DPlugin
         /** @property {Vector3|undefined} - Center of the shadowed area, read each frame, undefined follows the camera
          *  @type {Vector3|undefined} */
         this.shadowCenter = undefined;
-        /** @property {number} - Stops surfaces shadowing themselves, raise for speckles, lower if shadows drift off */
+        /** @property {number} - Stops surfaces shadowing themselves, raise for speckles, lower if shadows drift off;
+         *  a share of the shadow map's depth, twice shadowRange for the sun and a spotlight's radius, so the gap behind
+         *  a caster grows with the range as the map's texels do, and the speckles they make stay away */
         this.shadowBias = .003;
         /** @property {number} - How much to blur the shadow edges */
         this.shadowSoftness = 1;
@@ -26320,6 +26342,9 @@ class Camera3D
         /** @property {boolean} - Line the 3D camera up with the 2D camera, so 3D things at z=0 sit on the 2D sprites;
          *  it lines up with the 2D view of the main canvas, whatever canvas size a screenToRay is given */
         this.align2D = false;
+        /** @property {number} - The z of the plane align2D lines up with the 2D view, the camera sitting its
+         *  distance in front of it */
+        this.align2DZ = 0;
     }
 
     /** Returns the camera's world transform
@@ -26390,7 +26415,7 @@ class Camera3D
         ASSERT(!canvasHeight || distance < this.far,
             'align2D needs this camera distance to match the 2D view, raise camera.far past it', distance);
         this.orthographic &&= halfHeight * 2; // an orthographic camera stays orthographic and shows the same height
-        this.pos = vec3(cameraPos.x, cameraPos.y, distance);
+        this.pos = vec3(cameraPos.x, cameraPos.y, this.align2DZ + distance);
         this.rotation = vec3(0, 0, -cameraAngle); // 2D angles turn the other way
     }
 }
@@ -26442,7 +26467,8 @@ const RENDER3D_SNIPPET_NAMES =
     '#define lights extraLights\n' +
     '#define lightColors extraLightColors\n';
 
-// the fragment shader; given a Shader's snippet, its mainImage replaces the texture sample and all else is the same
+// the fragment shader; given a Shader's snippet, its mainImage replaces the texture sample and all else is the same,
+// and a mainNormal in it bends the normal after the normal map, before all the lighting reads it
 // uniforms: lightDir (xyz the way the sunlight travels, w = emissive, 1 or more skips the lighting),
 //   lightColor (the sun's rgb, a = specular), ambientFog (rgb, a = fogEnd), fogColor (rgb, a = fogStart),
 //   cameraPos, tex, shadowMap, shadowParams (x = shadows on, y = bias, z = blur step in texture space,
@@ -26451,6 +26477,7 @@ const RENDER3D_SNIPPET_NAMES =
 //   emissive map is on), skyTop, skyHorizon, skyBottom (what a reflection shows), normalTex, emissiveTex
 function render3DFragmentSource(fragmentCode)
 {
+    const hasNormal = /\bmainNormal\s*\(/.test(fragmentCode || '');
     return '#version 300 es\n' +
         'precision highp float;' +
         'uniform vec4 lightDir,lightColor,ambientFog,ambientGround,fogColor,shadowParams;' +
@@ -26498,6 +26525,7 @@ function render3DFragmentSource(fragmentCode)
         'return normalize((u*m.x-v*m.y)*inversesqrt(k)+n*m.z);}' +
         // a snippet's mainImage is declared here and written after main, so a define in it can not reach main
         (fragmentCode ? 'void mainImage(out vec4,vec2);' : '') +
+        (hasNormal ? 'void mainNormal(inout vec3);' : '') +
         'void main(){' +
         (fragmentCode ? 'vec4 t;mainImage(t,T);' : 'vec4 t=texture(tex,T);') +
         'if(premultipliedTexture&&t.a>0.)t.rgb/=t.a;' + // back to straight color, what the lighting and blend expect
@@ -26507,6 +26535,7 @@ function render3DFragmentSource(fragmentCode)
         'vec3 n=dot(N,N)>0.?normalize(N):vec3(0,1,0);' +
         'if(!gl_FrontFacing)n=-n;' + // only a double sided mesh shows a back face, light it on the side that is seen
         'if(materialParams.x!=0.)n=normalMapNormal(n);' +
+        (hasNormal ? 'mainNormal(n);n=normalize(n);' : '') +
         'float nl=dot(n,-lightDir.xyz);' +
         // the shadow is the sun's, or one spotlight's: shadowParams.x is 1 for the sun, 2 and up for that Light3D
         'float sh=shadow(),s=shadowParams.x<1.5?sh:1.;' +

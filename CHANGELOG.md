@@ -5,6 +5,10 @@ What changed in each release, newest first. Releases before 1.20.0 are on the
 
 ## Unreleased
 
+Nothing yet.
+
+## 1.26.1 - 2026-10-08
+
 ### New Changes
 - A 3D Shader may define `void mainNormal(inout vec3 n)`, given the world normal after the normal map, to bend it per pixel for waves, ripples or a flag; the lighting, shadows, specular, Fresnel, environment reflection and fog all use it
 - `postProcess.enabled`: false skips the post process pass, so an effect turns off and on without taking the plugin apart

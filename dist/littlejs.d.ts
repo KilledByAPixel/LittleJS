@@ -606,6 +606,8 @@ declare module "littlejsengine" {
      *  @memberof Engine */
     export let frame: number;
     /** Current engine time since start in seconds
+     *  - Below 20 FPS it falls behind the clock, since a frame catches up at most 50 ms of updates, so a timer in
+     *    real seconds, one that must keep up on a slow device, goes by timeReal
      *  @type {number}
      *  @memberof Engine */
     export let time: number;
@@ -613,6 +615,10 @@ declare module "littlejsengine" {
      *  @type {number}
      *  @memberof Engine */
     export let timeReal: number;
+    /** Frames drawn per second, smoothed over the last few seconds, in release builds too
+     *  @type {number}
+     *  @memberof Engine */
+    export let averageFPS: number;
     /** Is the game paused? Causes time and objects to not be updated
      *  @type {boolean}
      *  @default false
@@ -647,7 +653,9 @@ declare module "littlejsengine" {
      *  @param {GameCallback} [gameRender] - Called before objects are rendered, use for drawing backgrounds/world elements
      *  @param {GameCallback} [gameRenderPost] - Called after objects are rendered, use for drawing UI/overlays
      *  @param {Array<string>|string} [imageSources=[]] - List of image file paths to preload (e.g., ['player.png', 'tiles.png']), or one path
-     *  @param {HTMLElement} [rootElement] - Root DOM element to attach canvas to, defaults to document.body
+     *  @param {HTMLElement} [rootElement] - Root DOM element to attach canvas to, defaults to document.body; it is
+     *                                       styled for a game (no scroll bars or selection, touch-action none),
+     *                                       where its own inline style does not say otherwise
      *    It keeps its own inline styles and the canvas centers inside it, but the canvas is still sized from the window,
      *    so set canvasFixedSize or canvasMaxSize to fit a smaller element
      *  @example
@@ -2890,6 +2898,9 @@ declare module "littlejsengine" {
      *   across the sprite or the mesh's own uv
      * - Names in 3D only: worldPos, worldNormal, cameraPos, sunDirection, sunColor, ambientColor, ambientGroundColor,
      *   lightCount, lights[i], lightColors[i] and shadow()
+     * - In 3D the snippet may also define void mainNormal(inout vec3 n), given the normal facing the camera after the
+     *   normal map, in world space, to bend it per pixel for waves or ripples; the lighting, specular, reflection and
+     *   fog then all use it, as they use a normal map
      * - In 3D the shadow map is drawn without the Shader, cut only by the texture's alpha, so a snippet that removes
      *   parts of a surface still shadows with the whole of it
      * @example
@@ -5350,6 +5361,9 @@ declare module "littlejsengine" {
         constructor(shaderCode?: string, includeMainCanvas?: boolean, feedbackTexture?: boolean);
         /** @property {string} - The shadertoy style mainImage code it shades with, see setShaderCode */
         shaderCode: string;
+        /** @property {boolean} - Is the pass on? Off, the frame shows as the engine drew it, the shader is kept,
+         *  and the feedback texture holds the last frame drawn with it on */
+        enabled: boolean;
         /** @property {Object<string, number|Array<number>>} - The game's own values for the shader, a uniform each
          *  by its name, a number a float and a list of 2 to 4 numbers a vector, set every frame as they are; an
          *  effect setting can be one of these names, so it changes every frame without making the shader again, all
@@ -8788,7 +8802,8 @@ declare module "littlejsengine" {
      * - EngineObject3D is an EngineObject with a 3D position, rotation and mesh
      * - The 3D scene draws under the 2D sprites, so HUD and text land on top
      * - Lighting is the sun plus ambient, with optional extra lights, fog and shadows
-     * - Any object or draw can bring its own Shader, a mainImage snippet the lighting then applies to
+     * - Any object or draw can bring its own Shader, a mainImage snippet the lighting then applies to, and a
+     *   mainNormal in it bends the normal the lighting uses
      * - Meshes and the basic builders are in render3dMesh.js, EngineObject3D, instancing and lights in
      *   render3dObject.js, both right after this one; the other builders, terrain, particles, camera controls and the
      *   OBJ loader are in the Render3D Extras plugin, which goes after those
@@ -8873,7 +8888,9 @@ declare module "littlejsengine" {
         /** @property {Vector3|undefined} - Center of the shadowed area, read each frame, undefined follows the camera
          *  @type {Vector3|undefined} */
         shadowCenter: Vector3 | undefined;
-        /** @property {number} - Stops surfaces shadowing themselves, raise for speckles, lower if shadows drift off */
+        /** @property {number} - Stops surfaces shadowing themselves, raise for speckles, lower if shadows drift off;
+         *  a share of the shadow map's depth, twice shadowRange for the sun and a spotlight's radius, so the gap behind
+         *  a caster grows with the range as the map's texels do, and the speckles they make stay away */
         shadowBias: number;
         /** @property {number} - How much to blur the shadow edges */
         shadowSoftness: number;
@@ -9417,6 +9434,9 @@ declare module "littlejsengine" {
         /** @property {boolean} - Line the 3D camera up with the 2D camera, so 3D things at z=0 sit on the 2D sprites;
          *  it lines up with the 2D view of the main canvas, whatever canvas size a screenToRay is given */
         align2D: boolean;
+        /** @property {number} - The z of the plane align2D lines up with the 2D view, the camera sitting its
+         *  distance in front of it */
+        align2DZ: number;
         /** Returns the camera's world transform
          *  @return {Matrix4} */
         getMatrix(): Matrix4;
