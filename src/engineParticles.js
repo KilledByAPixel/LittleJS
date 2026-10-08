@@ -440,10 +440,13 @@ function particleTileSet(tileInfo)
     }
 }
 
+// where the particle being tested was before its move, which one way tiles go by
+let particleCollideFromX = 0, particleCollideFromY = 0;
+
 // tests if a particle collides with tiles at x, y, through its emitter's collide callback if it has one
 function particleCollideTest(particle, collideCallback, x, y)
 {
-    const data = tileCollisionGetData(particleCollidePos.set(x, y));
+    const data = tileCollisionGetDataFrom(particleCollidePos.set(x, y), particleCollideFromX, particleCollideFromY);
     if (!collideCallback)
         return data > 0;
 
@@ -575,6 +578,7 @@ class Particle
 
         // check collision against tiles
         this.groundObject = undefined;
+        particleCollideFromX = oldX, particleCollideFromY = oldY;
         if (particleCollideTest(this, collideCallback, this.pos.x, this.pos.y))
         {
             // if already was stuck in collision, don't do anything

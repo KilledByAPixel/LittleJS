@@ -689,6 +689,8 @@ EngineObject.clampSpeed    // Hold each axis of velocity to objectMaxSpeed while
                            // while it has a mass, so it can not pass through a thin wall; true by default, false for
                            // a fast bullet that collides; what does not collide moves as fast as it is told
 EngineObject.parent / children // Set by addChild, a child is placed by its parent and sits out solid collision
+EngineObject.oneWay        // Up, down, left or right, like vec2(0, 1): a solid passed through that way, a platform
+                           // jumped up through; it blocks only what was wholly on its far side or stood on it
 
 // Engine Object settings
 enablePhysicsSolver = true    // Enable collisions, between objects and with tiles, and in 3D with solids and the level?
@@ -766,6 +768,12 @@ TileCollisionLayer.collisionTest(pos, size=(0,0), object) // Like tileCollisionT
 TileCollisionLayer.collisionRaycast(posStart, posEnd, object, normal) // Like tileCollisionRaycast for this layer only
 TileCollisionLayer.isSolid = true                   // Solid layers block objects and particles, the solidOnly tests
                                                     // skip the others
+TileCollisionLayer.setOneWay(tile, direction=vec2(0,1)) // The cells drawing that tile index are passed through
+                                                    // moving that way and block only what was wholly on the far
+                                                    // side, objects, particles and rays; turned and mirrored with
+                                                    // each cell's art; vec2(0, 1) is a platform jumped up through
+TileCollisionLayer.oneWayTiles                      // Map of the one way tiles, tile index to direction; delete one
+                                                    // to make it solid again
 tileCollisionGetData(pos, solidOnly=true)           // Get tile collision data at pos
 tileCollisionTest(pos, size=(0,0), object)          // Check if collision should occur
 tileCollisionRaycast(posStart, posEnd, callbackObject, normal, solidOnly=true) // Where the ray meets the first tile hit,

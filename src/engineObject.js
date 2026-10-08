@@ -11,6 +11,17 @@
 
 'use strict';
 
+// a one way solid lets a box at from pass, when it was not wholly on the solid's far side, the way it is passed
+// through; a solid moving that way this frame reaches back by its move, so a rider on a rising platform stays on it
+function engineObjectOneWayPass(solid, solidPos, from, fromSize)
+{
+    const way = solid.oneWay, size = solid.size, velocity = solid.velocity, epsilon = 1e-3;
+    return way.x > .5 ? from.x - fromSize.x/2 < solidPos.x + size.x/2 - abs(velocity.x) - epsilon :
+        way.x < -.5 ? from.x + fromSize.x/2 > solidPos.x - size.x/2 + abs(velocity.x) + epsilon :
+        way.y > .5 ? from.y - fromSize.y/2 < solidPos.y + size.y/2 - abs(velocity.y) - epsilon :
+        from.y + fromSize.y/2 > solidPos.y - size.y/2 + abs(velocity.y) + epsilon;
+}
+
 /**
  * LittleJS Object Base Object Class
  * - Top level object class used by the engine
@@ -125,6 +136,12 @@ class EngineObject
         /** @property {EngineObject|undefined} - Object we are standing on, if any
          *  @type {EngineObject|undefined} */
         this.groundObject = undefined;
+        /** @property {Vector2|undefined} - Makes a solid object one way, like a platform jumped up through: up, down,
+         *  left or right, the way others pass through it; it blocks only what was wholly on its far side before it
+         *  moved, or stood on it, and the rest are not stopped or asked through collideWithObject; tiles are made one
+         *  way by the layer's setOneWay
+         *  @type {Vector2|undefined} */
+        this.oneWay = undefined;
 
         // parent child system
         /** @property {EngineObject|undefined} - Parent of object if in local space
@@ -227,6 +244,7 @@ class EngineObject
         // which way is down for this object, a negative gravityScale falls up and lands on ceilings
         const gravityY = this.gravityScale < 0 ? -gravity.y : gravity.y;
         const wasFalling = this.velocity.y < 0 && gravityY < 0 || this.velocity.y > 0 && gravityY > 0;
+        const wasOn = this.groundObject; // a one way solid it stood on still holds it
         if (this.groundObject)
         {
             // apply friction in local space of ground object
@@ -252,6 +270,10 @@ class EngineObject
 
                 // check collision
                 if (!this.isOverlappingObject(o)) continue;
+
+                // a one way solid lets through what was not wholly on its far side before it moved, either way round
+                if (o.oneWay && wasOn !== o && engineObjectOneWayPass(o, o.pos, oldPos, this.size)) continue;
+                if (this.oneWay && engineObjectOneWayPass(this, oldPos, o.pos, o.size)) continue;
 
                 // each moving object checks its own contacts, so a pair the other one already asked about this frame
                 // is not asked twice: left overlapping, ignored or only nudged apart it is skipped, and one both said
@@ -387,7 +409,8 @@ class EngineObject
         }
         if (this.collideLevel)
         {
-            // check collision against tiles
+            // check collision against tiles, one way tiles go by where it was
+            tileCollisionFromObject = this, tileCollisionFromPos = oldPos;
             const hitLayer = tileCollisionTest(this.pos, this.size, this);
             if (hitLayer)
             {
@@ -412,6 +435,7 @@ class EngineObject
                         {
                             this.pos.y = y;
                             debugPhysics && debugRect(this.pos, this.size, '#ff0', 0, 0, false, false);
+                            tileCollisionFromObject = undefined;
                             return;
                         }
 
@@ -453,6 +477,7 @@ class EngineObject
                     debugPhysics && debugRect(this.pos, this.size, '#f00', 0, 0, false, false);
                 }
             }
+            tileCollisionFromObject = undefined;
         }
     }
 
@@ -519,8 +544,8 @@ class EngineObject
     /** Called to check if a tile collision should be resolved. Return true for physics to resolve the collision or false to ignore and resolve it manually
      *  - Called for each solid tile the physics tests, which can be several times a frame for the same tile, and for
      *    positions it only tries, so keep it free of side effects or guard them to once a frame
-     *  - this.pos has already moved, so a check on where it came from, like a one way platform, needs the position
-     *    saved in update, as the platformer example does
+     *  - this.pos has already moved, so a check on where it came from needs the position saved in update; for a one
+     *    way platform the layer's setOneWay does that, and this is not asked about a one way tile it passes through
      *  - For the point of impact, like sparks where a bullet hit, raycast from where this frame's move started,
      *    this.pos minus this.velocity, to this.pos with tileCollisionRaycast, as the platformer's Bullet does
      *  @param {number}  tileData - the value of the tile at the position

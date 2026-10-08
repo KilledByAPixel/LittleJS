@@ -47,6 +47,50 @@ const tileCollisionLayers = [];
 function tileCollisionAssertWhole(layer)
 { ASSERT(layer.pos.x % 1 === 0 && layer.pos.y % 1 === 0, 'a tile collision layer must sit at a whole number position', layer.pos); }
 
+// the object the physics is moving and where it was before this frame's move, for one way tiles
+let tileCollisionFromObject, tileCollisionFromPos;
+
+// a one way tile at a layer's cell lets a box at from pass, when the cell draws a tile set one way and the box was not
+// wholly on its solid side, the side it can be passed through toward; the way is turned and mirrored as the tile's
+// art is, mirror first, then its quarter turns clockwise; a point is a box of no size
+function tileCollisionOneWayPass(layer, x, y, fromX, fromY, sizeX=0, sizeY=0)
+{
+    const oneWayTiles = layer.oneWayTiles;
+    if (!oneWayTiles.size) return false;
+    const data = layer.data[y*layer.size.x + x], way = data && oneWayTiles.get(data.tile);
+    if (!way) return false;
+    let wayX = data.mirror ? -way.x : way.x, wayY = way.y;
+    for (let turn = data.direction & 3; turn--;)
+        [wayX, wayY] = [wayY, -wayX];
+    const epsilon = 1e-3, cellX = layer.pos.x + x, cellY = layer.pos.y + y;
+    return wayX > .5 ? fromX - sizeX/2 < cellX + 1 - epsilon :
+        wayX < -.5 ? fromX + sizeX/2 > cellX + epsilon :
+        wayY > .5 ? fromY - sizeY/2 < cellY + 1 - epsilon :
+        fromY + sizeY/2 > cellY + epsilon;
+}
+
+// tileCollisionGetData of the solid layers for particles, which pass a one way tile when they were not on its far
+// side at from: a solid tile's data, else a negative marker, else 0
+function tileCollisionGetDataFrom(pos, fromX, fromY)
+{
+    let found = 0;
+    for (const layer of tileCollisionLayers)
+        if (layer.isSolid)
+        {
+            const x = pos.x - layer.pos.x, y = pos.y - layer.pos.y, size = layer.size;
+            if (x >= 0 && y >= 0 && x < size.x && y < size.y)
+            {
+                const data = layer.collisionData[(y|0)*size.x + (x|0)];
+                if (data > 0)
+                {
+                    if (!tileCollisionOneWayPass(layer, x|0, y|0, fromX, fromY)) return data;
+                }
+                else if (data && !found) found = data;
+            }
+        }
+    return found;
+}
+
 // the test a tile query applies to a cell's data: the callback, the object's collideWithTile, or solid data
 function tileCollisionTester(callbackObject)
 {
@@ -1065,6 +1109,31 @@ class TileCollisionLayer extends TileLayer
         /** @property {boolean} - In the light system's shadow pass, cast only from the cells with collision, drawn
          *  as the layer shows them, so a floor in the same layer stays lit; false casts every tile */
         this.shadowSolidOnly = true;
+        /** @property {Map<number, Vector2>} - The tiles set one way, by tile index, and the way each can be passed
+         *  through, see setOneWay
+         *  @type {Map<number, Vector2>} */
+        this.oneWayTiles = new Map;
+    }
+
+    /** Make the cells that draw a tile one way, like a platform jumped up through and landed on: an object, a
+     *  particle or a ray passes through moving that way, and the tile blocks only what was wholly on its far side
+     *  before it moved, the side it is passed toward; turned and mirrored as each cell's tile is, so a platform turned
+     *  a quarter is one way to the side
+     *  - A moving object is not stopped or asked through collideWithTile until the tile would block it, so a
+     *    collideWithTile that returns false lets it drop through
+     *  - tileCollisionTest with an object goes by the object's pos, a raycast by its start, and a test with no object
+     *    or with a callback finds every one way tile solid
+     *  @param {number} tile - The tile index, as tile() and TileLayerData take it
+     *  @param {Vector2} [direction] - Up, down, left or right, the way it can be passed through: vec2(0, 1), the
+     *    default, is a platform landed on from above; layer.oneWayTiles.delete(tile) makes the tile solid again
+     *  @example
+     *  layer.setOneWay(5); // tile 5 is a platform, jumped up through and stood on */
+    setOneWay(tile, direction=vec2(0, 1))
+    {
+        ASSERT(isNumber(tile), 'setOneWay: tile is a tile index, a number', tile);
+        ASSERT(isVector2(direction) && abs(direction.x) + abs(direction.y) === 1 && !(direction.x && direction.y),
+            'setOneWay: direction is up, down, left or right, like vec2(0, 1)', direction);
+        this.oneWayTiles.set(tile, direction.copy());
     }
 
     /** Draw this layer's shadow shape: the cells with collision in the part the shadow map covers, each row of
@@ -1156,6 +1225,10 @@ class TileCollisionLayer extends TileLayer
         tileCollisionAssertWhole(this);
         const collisionTest = tileCollisionTester(callbackObject);
 
+        // a one way tile goes by where an object was before the physics moved it, or where it is now
+        const object = callbackObject instanceof EngineObject && this.oneWayTiles.size ? callbackObject : undefined;
+        const from = object && (object === tileCollisionFromObject ? tileCollisionFromPos : object.pos);
+
         // check any tiles in the area for collision
         const posX = pos.x - this.pos.x;
         const posY = pos.y - this.pos.y;
@@ -1174,7 +1247,8 @@ class TileCollisionLayer extends TileLayer
         {
             // check if the object should collide with this tile, the callback gets its own vector, one it can keep
             const tileData = this.collisionData[y*this.size.x+x];
-            if (tileData && collisionTest(tileData, vec2(x+this.pos.x, y+this.pos.y)))
+            if (tileData && !(from && tileCollisionOneWayPass(this, x, y, from.x, from.y, size.x, size.y)) &&
+                collisionTest(tileData, vec2(x+this.pos.x, y+this.pos.y)))
                 return true;
         }
         return false;
@@ -1194,10 +1268,12 @@ class TileCollisionLayer extends TileLayer
         const collisionTest = tileCollisionTester(callbackObject);
         // the line is walked in the layer's own space, so its cells are the tiles wherever the layer sits
         const offset = this.pos;
+        // a one way tile blocks a ray that starts on its far side
         const testFunction = (pos)=>
         {
             const tileData = this.getCollisionData(pos);
-            return tileData && collisionTest(tileData, vec2(pos.x + offset.x, pos.y + offset.y));
+            return tileData && !tileCollisionOneWayPass(this, pos.x|0, pos.y|0, posStart.x, posStart.y) &&
+                collisionTest(tileData, vec2(pos.x + offset.x, pos.y + offset.y));
         }
         // only the part of the line over the layer, and a cell around it, can meet a tile, so a ray toward a point
         // far beyond is walked across the layer and no farther; the cell around keeps the step into the layer as it was
