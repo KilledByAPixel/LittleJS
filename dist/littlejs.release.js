@@ -35,7 +35,7 @@ const engineName = 'LittleJS';
  *  @type {string}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.26.1';
+const engineVersion = '1.27.0';
 
 /** Frames per second to update
  *  @type {number}
@@ -199,6 +199,10 @@ let engineCollideGridMin = 64;
 // cells, and each solid's place in the list, which the contacts are taken in; solids too big for cells are near
 // everything
 let engineCollideGrid;
+
+// where each object that collides with solids was before this frame's moves, kept only when a one way solid is among
+// them, so a one way test goes by where both were whichever of the two updates first
+let engineObjectsOneWayStart;
 
 // the grid of a list of solids, its cells about twice a typical solid so most are in one to four
 function engineCollideGridBuild(list)
@@ -960,19 +964,36 @@ function engineObjectsUpdate()
     // every frame makes this function deoptimize again and again in a game with no grid
     if (engineObjectsCollideStaticLast.length >= engineCollideGridMin)
         engineCollideGrid = {list: engineObjectsCollideStaticLast, built: undefined};
+    // written only when there is a one way solid, as the grid is
+    if (engineObjectsCollide.some((o)=> o.oneWay))
+        engineObjectsOneWayStart = new Map(engineObjectsCollide.map((o)=> [o, o.pos.copy()]));
 
     // update physics before object update, each solid put where it moved to in the grid, for the movers after it;
     // the grid is let go even when a callback throws, so an updatePhysics called before the next update checks all
+    // a one way solid with no mass moves first, nothing pushes it, so what lands on it or passes up through it sees it
+    // where it is now and where it was, whatever the render order
+    const oneWayFirst = (o)=> o.oneWay && !o.mass;
     try
     {
+        if (engineObjectsOneWayStart)
+            for (const o of engineObjects)
+                if (!o.parent && !o.destroyed && oneWayFirst(o))
+                {
+                    o.updatePhysics();
+                    engineCollideGrid?.built && engineCollideGridPlace(engineCollideGrid.built, o);
+                }
         for (const o of engineObjects)
-            if (!o.parent && !o.destroyed)
+            if (!o.parent && !o.destroyed && !(engineObjectsOneWayStart && oneWayFirst(o)))
             {
                 o.updatePhysics();
                 engineCollideGrid?.built && engineCollideGridPlace(engineCollideGrid.built, o);
             }
     }
-    finally { engineCollideGrid && (engineCollideGrid = undefined); }
+    finally
+    {
+        engineCollideGrid && (engineCollideGrid = undefined);
+        engineObjectsOneWayStart && (engineObjectsOneWayStart = undefined);
+    }
 
     // recursive object update: the children are walked from a copy on a shared stack, since a child that
     // destroys itself leaves its parent's list on the spot and the next child would slide past the loop
@@ -3796,6 +3817,110 @@ function setDebugTweakables(show=true) { debugTweakables = show; }
  * - Objects sorted by renderOrder for layered rendering
  */
 
+// a one way solid lets a box at from pass, when it was not wholly on the solid's far side, the way it is passed
+// through; both are where they were before this frame's moves, so it does not matter which updated first
+function engineObjectOneWayPass(solid, solidPos, from, fromSize)
+{
+    const way = solid.oneWay, size = solid.size, epsilon = 1e-3;
+    return way.x > .5 ? from.x - fromSize.x/2 < solidPos.x + size.x/2 - epsilon :
+        way.x < -.5 ? from.x + fromSize.x/2 > solidPos.x - size.x/2 + epsilon :
+        way.y > .5 ? from.y - fromSize.y/2 < solidPos.y + size.y/2 - epsilon :
+        from.y + fromSize.y/2 > solidPos.y - size.y/2 + epsilon;
+}
+
+// where a move from start to end goes into the cell at its corner, the first point of it inside the cell's box, and
+// whether it goes in through a side, x, or the top or bottom, the axis whose slab it enters last; one starting on a
+// face is on that face, as its entry there is 0 and the other's is before it
+function engineObjectRayEntry(start, end, cell)
+{
+    const dx = end.x - start.x, dy = end.y - start.y;
+    const tx = dx ? min((cell.x - start.x) / dx, (cell.x + 1 - start.x) / dx) : -Infinity;
+    const ty = dy ? min((cell.y - start.y) / dy, (cell.y + 1 - start.y) / dy) : -Infinity;
+    const t = clamp(max(tx, ty));
+    return {pos: vec2(start.x + dx*t, start.y + dy*t), side: tx >= ty};
+}
+
+// a bullet's move from one point to another through the tiles: the first tile its collideWithTile takes, nearest
+// first across the solid layers, with where the move goes into it, the face's normal and the layer; undefined for none
+// - the cell it starts in, a hair back along its move so one stopped on a tile's face going into it is outside, is not
+//   tested, so it moves out of a tile it is inside, as a box that starts in one does, and a tile after it still stops it
+// - collideWithTile is asked with the bullet where the move goes into the tile
+// - only the stretches of the move near a solid layer are walked, nearest first and joined where they meet, so a long
+//   move through empty space, or between layers far apart, costs nothing; the layers are whole numbers, so the cells
+//   are the same as over the whole move
+/** @param {EngineObject} object
+ *  @param {Vector2} from
+ *  @param {Vector2} to
+ *  @return {{pos: Vector2, normal: Vector2, layer: TileCollisionLayer}|undefined} */
+function engineObjectBulletSweep(object, from, to)
+{
+    const move = to.subtract(from), length = move.length();
+    if (!length) return;
+    const back = from.subtract(move.scale(1e-6 / length)), startX = floor(back.x), startY = floor(back.y);
+
+    /** @type {{pos: Vector2, normal: Vector2, layer: TileCollisionLayer}|undefined} */
+    let hit;
+    const testCell = (cell)=>
+    {
+        // a bullet its collideWithTile destroyed is asked about nothing more
+        if (cell.x === startX && cell.y === startY || object.destroyed) return false;
+        for (const layer of tileCollisionLayers)
+        {
+            if (!layer.isSolid) continue;
+            const x = cell.x - layer.pos.x, y = cell.y - layer.pos.y;
+            if (x < 0 || y < 0 || x >= layer.size.x || y >= layer.size.y) continue;
+            const data = layer.collisionData[y*layer.size.x + x];
+            if (!data || tileCollisionOneWayPass(layer, x, y, from.x, from.y)) continue;
+            const tilePos = vec2(cell.x, cell.y), entry = engineObjectRayEntry(from, to, tilePos);
+            object.pos = entry.pos;
+            if (!object.collideWithTile(data, tilePos))
+            {
+                if (object.destroyed) return false; // nor the other layers' tiles in this cell
+                continue;
+            }
+            const normal = entry.side ? vec2(-sign(move.x), 0) : vec2(0, -sign(move.y));
+            hit = {pos: entry.pos, normal, layer};
+            return true;
+        }
+        return false;
+    };
+
+    const stretches = [];
+    for (const layer of tileCollisionLayers)
+    {
+        if (!layer.isSolid) continue;
+        tileCollisionAssertWhole(layer);
+        let t0 = 0, t1 = 1;
+        for (const [p, d, a, b] of [[from.x, move.x, layer.pos.x - 1, layer.pos.x + layer.size.x + 1],
+            [from.y, move.y, layer.pos.y - 1, layer.pos.y + layer.size.y + 1]])
+        {
+            if (!d)
+            {
+                if (p < a || p > b) t0 = 2;
+                continue;
+            }
+            const u = (a - p) / d, v = (b - p) / d;
+            t0 = max(t0, min(u, v)), t1 = min(t1, max(u, v));
+        }
+        t0 < t1 && stretches.push([t0, t1]);
+    }
+    stretches.sort((a, b)=> a[0] - b[0]);
+    const at = (t)=> t <= 0 ? from : t >= 1 ? to : from.add(move.scale(t));
+    for (let i = 0; i < stretches.length && !hit;)
+    {
+        const [t0] = stretches[i];
+        let t1 = stretches[i][1];
+        while (++i < stretches.length && stretches[i][0] <= t1)
+            t1 = max(t1, stretches[i][1]);
+        lineTest(at(t0), at(t1), testCell);
+    }
+    return hit;
+}
+
+// where an object was before this frame's moves, for a one way test: kept by the update when a one way solid is in
+// it, or where it is when updatePhysics is called on its own
+function engineObjectStartPos(o) { return engineObjectsOneWayStart?.get(o) || o.pos; }
+
 /**
  * LittleJS Object Base Object Class
  * - Top level object class used by the engine
@@ -3907,9 +4032,27 @@ class EngineObject
         this.children = [];
         /** @property {boolean} - Limit object speed along x and y axis */
         this.clampSpeed = true;
+        /** @property {boolean} - Move through the tiles as a point along a ray, so it can not pass through one at
+         *  any speed, for small fast things like bullets: its speed is not held to objectMaxSpeed for the tiles,
+         *  collideWithTile is asked with this.pos where the ray goes into the tile, and on a hit it stops at the
+         *  surface, bounces off it by restitution and goes on with the rest of its move, so it slides along a floor
+         *  - Its collision with solid objects is the usual one, so one with a size that collides with them is still held
+         *    to objectMaxSpeed; one of no size is not, it never collides with them
+         *  - this.pos is set for each tile asked about and put where the move ends after, so a change collideWithTile
+         *    makes to it is not kept; move it after the physics, in update
+         *  - Once destroyed, as by its own collideWithTile, it is asked about no more tiles that frame, where an object
+         *    that is not a bullet still is */
+        this.isBullet = false;
         /** @property {EngineObject|undefined} - Object we are standing on, if any
          *  @type {EngineObject|undefined} */
         this.groundObject = undefined;
+        /** @property {Vector2|undefined} - Makes a solid object one way, like a platform jumped up through: up, down,
+         *  left or right, the way others pass through it; it blocks only what was wholly on its far side before it
+         *  moved, or stood on it, and the rest are not stopped or asked through collideWithObject; with no mass it
+         *  moves before the other objects each frame, so a lift works the same at any render order; tiles are made one
+         *  way by the layer's setOneWay
+         *  @type {Vector2|undefined} */
+        this.oneWay = undefined;
 
         // parent child system
         /** @property {EngineObject|undefined} - Parent of object if in local space
@@ -3997,7 +4140,8 @@ class EngineObject
         // limit max speed to prevent missing collisions, after gravity so no move is past it, only for what collides:
         // with solids, or with tiles while it has a mass, which tile collision needs; anything else moves as fast as
         // it is told
-        if (this.clampSpeed && enablePhysicsSolver && (this.collideSolidObjects || this.collideLevel && this.mass))
+        if (this.clampSpeed && enablePhysicsSolver &&
+            (this.collideSolidObjects && this.size.x && this.size.y || this.collideLevel && this.mass && !this.isBullet))
         {
             this.velocity.x = clamp(this.velocity.x, -objectMaxSpeed, objectMaxSpeed);
             this.velocity.y = clamp(this.velocity.y, -objectMaxSpeed, objectMaxSpeed);
@@ -4012,6 +4156,7 @@ class EngineObject
         // which way is down for this object, a negative gravityScale falls up and lands on ceilings
         const gravityY = this.gravityScale < 0 ? -gravity.y : gravity.y;
         const wasFalling = this.velocity.y < 0 && gravityY < 0 || this.velocity.y > 0 && gravityY > 0;
+        const wasOn = this.groundObject; // a one way solid it stood on still holds it
         if (this.groundObject)
         {
             // apply friction in local space of ground object
@@ -4037,6 +4182,11 @@ class EngineObject
 
                 // check collision
                 if (!this.isOverlappingObject(o)) continue;
+
+                // a one way solid lets through what was not wholly on its far side before it moved, either way round
+                if (o.oneWay && wasOn !== o && engineObjectOneWayPass(o, engineObjectStartPos(o), oldPos, this.size))
+                    continue;
+                if (this.oneWay && engineObjectOneWayPass(this, oldPos, engineObjectStartPos(o), o.size)) continue;
 
                 // each moving object checks its own contacts, so a pair the other one already asked about this frame
                 // is not asked twice: left overlapping, ignored or only nudged apart it is skipped, and one both said
@@ -4172,71 +4322,121 @@ class EngineObject
         }
         if (this.collideLevel)
         {
-            // check collision against tiles
-            const hitLayer = tileCollisionTest(this.pos, this.size, this);
-            if (hitLayer)
+            // check collision against tiles, one way tiles go by where it was; put back after, a callback may throw
+            const fromObject = tileCollisionFromObject, fromPos = tileCollisionFromPos;
+            tileCollisionFromObject = this, tileCollisionFromPos = oldPos;
+            try
             {
-                // if already was stuck in collision, don't do anything
-                // this should not happen unless something starts in collision
-                if (!tileCollisionTest(oldPos, this.size, this))
+                this.isBullet ? this.updatePhysicsBullet(oldPos, gravityY, wasFalling) :
+                    this.updatePhysicsTiles(oldPos, gravityY, wasFalling);
+            }
+            finally { tileCollisionFromObject = fromObject, tileCollisionFromPos = fromPos; }
+        }
+    }
+
+    // a bullet's move from oldPos through the tiles, as a point along a ray, called by updatePhysics
+    /** @private */
+    updatePhysicsBullet(oldPos, gravityY, wasFalling)
+    {
+        // up to three legs: the move, then what is left of it after each hit, along the surface or bounced off it as
+        // its velocity is, so one rolling along the floor under gravity keeps going as a box does
+        let from = oldPos, to = this.pos.copy();
+        for (let leg = 0; leg < 3; ++leg)
+        {
+            const hit = engineObjectBulletSweep(this, from, to);
+            if (!hit)
+            {
+                this.pos = to;
+                break;
+            }
+
+            // stop at the surface, a hair off it, more than a one way tile's margin, so going on along a ceiling a
+            // one way tile it rose through lets it on; bounce off it by the more bouncy of it and the layer
+            const {normal, layer} = hit, restitution = max(this.restitution, layer.restitution);
+            const stop = hit.pos.add(normal.scale(2e-3));
+            const into = this.velocity.dot(normal);
+            if (into < 0)
+                this.velocity = this.velocity.subtract(normal.scale(into * (1 + restitution)));
+            if (normal.y * gravityY < 0 && wasFalling) // landed, against its gravity
+                this.groundObject = layer;
+            this.pos = stop;
+
+            // the rest of the move from there, turned the same way; none once its callback destroyed it
+            const rest = to.subtract(hit.pos), restInto = rest.dot(normal);
+            const next = stop.add(restInto < 0 ? rest.subtract(normal.scale(restInto * (1 + restitution))) : rest);
+            if (this.destroyed || next.distanceSquared(stop) < 1e-12) break;
+            from = stop, to = next;
+        }
+        debugPhysics && debugPoint(this.pos, '#f00', undefined, undefined, false);
+    }
+
+    // resolve the tile collision of a move from oldPos, called by updatePhysics
+    /** @private */
+    updatePhysicsTiles(oldPos, gravityY, wasFalling)
+    {
+        const hitLayer = tileCollisionTest(this.pos, this.size, this);
+        if (hitLayer)
+        {
+            // if already was stuck in collision, don't do anything
+            // this should not happen unless something starts in collision
+            if (!tileCollisionTest(oldPos, this.size, this))
+            {
+                // test which side we bounced off (or both if a corner)
+                const isBlockedX = tileCollisionTest(vec2(this.pos.x, oldPos.y), this.size, this);
+                const isBlockedY = tileCollisionTest(vec2(oldPos.x, this.pos.y), this.size, this);
+                const restitution = max(this.restitution, hitLayer.restitution);
+                if (isBlockedX)
                 {
-                    // test which side we bounced off (or both if a corner)
-                    const isBlockedX = tileCollisionTest(vec2(this.pos.x, oldPos.y), this.size, this);
-                    const isBlockedY = tileCollisionTest(vec2(oldPos.x, this.pos.y), this.size, this);
-                    const restitution = max(this.restitution, hitLayer.restitution);
-                    if (isBlockedX)
+                    // a ledge caught less than maxMove below its top lifts the object onto it instead of stopping it,
+                    // down off a ceiling ledge when gravity points up; zero gravity counts as down
+                    const epsilon = 1e-3;
+                    const maxMove = .1;
+                    const y = gravityY > 0 ?
+                        ceil( oldPos.y+this.size.y/2-1) - this.size.y/2 - epsilon :
+                        floor(oldPos.y-this.size.y/2+1) + this.size.y/2 + epsilon;
+                    if (abs(y - this.pos.y) < maxMove && !tileCollisionTest(vec2(this.pos.x, y), this.size, this))
                     {
-                        // a ledge caught less than maxMove below its top lifts the object onto it instead of stopping it,
-                        // down off a ceiling ledge when gravity points up; zero gravity counts as down
-                        const epsilon = 1e-3;
-                        const maxMove = .1;
-                        const y = gravityY > 0 ?
-                            ceil( oldPos.y+this.size.y/2-1) - this.size.y/2 - epsilon :
-                            floor(oldPos.y-this.size.y/2+1) + this.size.y/2 + epsilon;
-                        if (abs(y - this.pos.y) < maxMove && !tileCollisionTest(vec2(this.pos.x, y), this.size, this))
-                        {
-                            this.pos.y = y;
-                            debugPhysics && debugRect(this.pos, this.size, '#ff0', 0, 0, false, false);
-                            return;
-                        }
-
-                        // move against the wall and bounce, its side on the tile edge it moved toward, rounded in the
-                        // layer's space as its collision test is; back to its previous X when that spot is not clear
-                        const snapEpsilon = .0001, layerX = hitLayer.pos.x, offsetX = this.size.x/2 + snapEpsilon;
-                        // never back past where it was: a leading edge already on a grid line would step back by
-                        // the epsilon and take its trailing edge into the tile behind, which nothing tests, since
-                        // only X is blocked; between there and the wall it covers no column it did not cover before
-                        const movingLeft = this.pos.x < oldPos.x;
-                        const snap = layerX + (movingLeft ?
-                            floor(oldPos.x - layerX - this.size.x/2) + offsetX :
-                            ceil( oldPos.x - layerX + this.size.x/2) - offsetX);
-                        const x = movingLeft ? min(snap, oldPos.x) : max(snap, oldPos.x);
-                        this.pos.x = tileCollisionTest(vec2(x, oldPos.y), this.size, this) ? oldPos.x : x;
-                        this.velocity.x *= -restitution;
+                        this.pos.y = y;
+                        debugPhysics && debugRect(this.pos, this.size, '#ff0', 0, 0, false, false);
+                        return;
                     }
-                    if (isBlockedY || !isBlockedX)
-                    {
-                        // adjust position to slightly away from the nearest tile, the floor or the ceiling it moved
-                        // toward, which prevents a gap between them; rounded in the layer's space as its collision
-                        // test is, or a bottom a hair below a grid line would round to the row under it, inside the
-                        // floor, and fall through; back to its previous Y when that spot is not clear
-                        const epsilon = .0001;
-                        const offset = this.size.y/2 + epsilon;
-                        const layerY = hitLayer.pos.y;
-                        const y = layerY + (this.pos.y < oldPos.y ?
-                            floor(oldPos.y - layerY - this.size.y/2) + offset :
-                            ceil( oldPos.y - layerY + this.size.y/2) - offset);
-                        const isClear = this.pos.y !== oldPos.y && !tileCollisionTest(vec2(this.pos.x, y), this.size, this);
-                        this.pos.y = isClear ? y : oldPos.y;
 
-                        // set ground object for tile collision
-                        this.groundObject = wasFalling ? hitLayer : undefined;
-
-                        // bounce velocity
-                        this.velocity.y *= -restitution;
-                    }
-                    debugPhysics && debugRect(this.pos, this.size, '#f00', 0, 0, false, false);
+                    // move against the wall and bounce, its side on the tile edge it moved toward, rounded in the
+                    // layer's space as its collision test is; back to its previous X when that spot is not clear
+                    const snapEpsilon = .0001, layerX = hitLayer.pos.x, offsetX = this.size.x/2 + snapEpsilon;
+                    // never back past where it was: a leading edge already on a grid line would step back by
+                    // the epsilon and take its trailing edge into the tile behind, which nothing tests, since
+                    // only X is blocked; between there and the wall it covers no column it did not cover before
+                    const movingLeft = this.pos.x < oldPos.x;
+                    const snap = layerX + (movingLeft ?
+                        floor(oldPos.x - layerX - this.size.x/2) + offsetX :
+                        ceil( oldPos.x - layerX + this.size.x/2) - offsetX);
+                    const x = movingLeft ? min(snap, oldPos.x) : max(snap, oldPos.x);
+                    this.pos.x = tileCollisionTest(vec2(x, oldPos.y), this.size, this) ? oldPos.x : x;
+                    this.velocity.x *= -restitution;
                 }
+                if (isBlockedY || !isBlockedX)
+                {
+                    // adjust position to slightly away from the nearest tile, the floor or the ceiling it moved
+                    // toward, which prevents a gap between them; rounded in the layer's space as its collision
+                    // test is, or a bottom a hair below a grid line would round to the row under it, inside the
+                    // floor, and fall through; back to its previous Y when that spot is not clear
+                    const epsilon = .0001;
+                    const offset = this.size.y/2 + epsilon;
+                    const layerY = hitLayer.pos.y;
+                    const y = layerY + (this.pos.y < oldPos.y ?
+                        floor(oldPos.y - layerY - this.size.y/2) + offset :
+                        ceil( oldPos.y - layerY + this.size.y/2) - offset);
+                    const isClear = this.pos.y !== oldPos.y && !tileCollisionTest(vec2(this.pos.x, y), this.size, this);
+                    this.pos.y = isClear ? y : oldPos.y;
+
+                    // set ground object for tile collision
+                    this.groundObject = wasFalling ? hitLayer : undefined;
+
+                    // bounce velocity
+                    this.velocity.y *= -restitution;
+                }
+                debugPhysics && debugRect(this.pos, this.size, '#f00', 0, 0, false, false);
             }
         }
     }
@@ -4304,10 +4504,10 @@ class EngineObject
     /** Called to check if a tile collision should be resolved. Return true for physics to resolve the collision or false to ignore and resolve it manually
      *  - Called for each solid tile the physics tests, which can be several times a frame for the same tile, and for
      *    positions it only tries, so keep it free of side effects or guard them to once a frame
-     *  - this.pos has already moved, so a check on where it came from, like a one way platform, needs the position
-     *    saved in update, as the platformer example does
-     *  - For the point of impact, like sparks where a bullet hit, raycast from where this frame's move started,
-     *    this.pos minus this.velocity, to this.pos with tileCollisionRaycast, as the platformer's Bullet does
+     *  - this.pos has already moved, so a check on where it came from needs the position saved in update; for a one
+     *    way platform the layer's setOneWay does that, and this is not asked about a one way tile it passes through
+     *  - For the point of impact, like sparks where a bullet hit, set isBullet: this.pos is then where it meets the
+     *    tile, as the platformer's Bullet uses it
      *  @param {number}  tileData - the value of the tile at the position
      *  @param {Vector2} pos - the tile's bottom left corner in world space
      *  @return {boolean} - true if the collision should be resolved by modifying it's position and velocity */
@@ -9175,6 +9375,55 @@ const tileCollisionLayers = [];
 function tileCollisionAssertWhole(layer)
 { false&&ASSERT(layer.pos.x % 1 === 0 && layer.pos.y % 1 === 0, 'a tile collision layer must sit at a whole number position', layer.pos); }
 
+// the object the physics is moving and where it was before this frame's move, for one way tiles
+let tileCollisionFromObject, tileCollisionFromPos;
+
+// a one way tile at a layer's cell lets a box at from pass, when the cell draws a tile set one way and the box was not
+// wholly on its solid side, the side it can be passed through toward; the way is turned and mirrored as the tile's
+// art is, mirror first, then its quarter turns clockwise; a point is a box of no size
+function tileCollisionOneWayPass(layer, x, y, fromX, fromY, sizeX=0, sizeY=0)
+{
+    const oneWayTiles = layer.oneWayTiles;
+    if (!oneWayTiles.size) return false;
+    const data = layer.data[y*layer.size.x + x], way = data && oneWayTiles.get(data.tile);
+    if (!way) return false;
+    let wayX = data.mirror ? -way.x : way.x, wayY = way.y;
+    for (let turn = data.direction & 3; turn--;)
+        [wayX, wayY] = [wayY, -wayX];
+    const epsilon = 1e-3, cellX = layer.pos.x + x, cellY = layer.pos.y + y;
+    return wayX > .5 ? fromX - sizeX/2 < cellX + 1 - epsilon :
+        wayX < -.5 ? fromX + sizeX/2 > cellX + epsilon :
+        wayY > .5 ? fromY - sizeY/2 < cellY + 1 - epsilon :
+        fromY + sizeY/2 > cellY + epsilon;
+}
+
+// the layer whose tile tileCollisionGetDataFrom last found solid, undefined for none, the one a particle bounces off
+let tileCollisionDataLayer;
+
+// tileCollisionGetData of the solid layers for particles, which pass a one way tile when they were not on its far
+// side at from: a solid tile's data, else a negative marker, else 0
+function tileCollisionGetDataFrom(pos, fromX, fromY)
+{
+    let found = 0;
+    tileCollisionDataLayer = undefined;
+    for (const layer of tileCollisionLayers)
+        if (layer.isSolid)
+        {
+            const x = pos.x - layer.pos.x, y = pos.y - layer.pos.y, size = layer.size;
+            if (x >= 0 && y >= 0 && x < size.x && y < size.y)
+            {
+                const data = layer.collisionData[(y|0)*size.x + (x|0)];
+                if (data > 0)
+                {
+                    if (!tileCollisionOneWayPass(layer, x|0, y|0, fromX, fromY))
+                        return tileCollisionDataLayer = layer, data;
+                }
+                else if (data && !found) found = data;
+            }
+        }
+    return found;
+}
+
 // the test a tile query applies to a cell's data: the callback, the object's collideWithTile, or solid data
 function tileCollisionTester(callbackObject)
 {
@@ -9949,13 +10198,17 @@ class TileLayer extends CanvasLayer
      *  - This may be slow if not using webgl but only needs to be done once */
     redraw()
     {
+        // the camera, canvas and target are the game's again even when a tile draw or onRedraw throws
         this.redrawStart(true);
-        for (let x = this.size.x; x--;)
-        for (let y = this.size.y; y--;)
-            this.drawTileData(vec2(x,y), false);
-        this.isUsingWebGL && glFlush();
-        this.onRedraw();
-        this.redrawEnd();
+        try
+        {
+            for (let x = this.size.x; x--;)
+            for (let y = this.size.y; y--;)
+                this.drawTileData(vec2(x,y), false);
+            this.isUsingWebGL && glFlush();
+            this.onRedraw();
+        }
+        finally { this.redrawEnd(); }
         this.tilesInWebGL = this.isUsingWebGL;
     }
 
@@ -10068,8 +10321,8 @@ class TileLayer extends CanvasLayer
         false&&ASSERT(drawContext !== this.context, 'redrawStart() should not be active when calling redrawTileData(), instead use drawTileData()');
 
         this.redrawStart();
-        this.drawTileData(layerPos, clear);
-        this.redrawEnd();
+        try { this.drawTileData(layerPos, clear); }
+        finally { this.redrawEnd(); }
     }
 
     /** Draw textured tile in layer space
@@ -10193,6 +10446,31 @@ class TileCollisionLayer extends TileLayer
         /** @property {boolean} - In the light system's shadow pass, cast only from the cells with collision, drawn
          *  as the layer shows them, so a floor in the same layer stays lit; false casts every tile */
         this.shadowSolidOnly = true;
+        /** @property {Map<number, Vector2>} - The tiles set one way, by tile index, and the way each can be passed
+         *  through, see setOneWay
+         *  @type {Map<number, Vector2>} */
+        this.oneWayTiles = new Map;
+    }
+
+    /** Make the cells that draw a tile one way, like a platform jumped up through and landed on: an object, a
+     *  particle or a ray passes through moving that way, and the tile blocks only what was wholly on its far side
+     *  before it moved, the side it is passed toward; turned and mirrored as each cell's tile is, so a platform turned
+     *  a quarter is one way to the side
+     *  - A moving object is not stopped or asked through collideWithTile until the tile would block it, so a
+     *    collideWithTile that returns false lets it drop through
+     *  - tileCollisionTest with an object goes by the object's pos, a raycast by its start, and a test with no object
+     *    or with a callback finds every one way tile solid
+     *  @param {number} tile - The tile index, as tile() and TileLayerData take it
+     *  @param {Vector2} [direction] - Up, down, left or right, the way it can be passed through: vec2(0, 1), the
+     *    default, is a platform landed on from above; layer.oneWayTiles.delete(tile) makes the tile solid again
+     *  @example
+     *  layer.setOneWay(5); // tile 5 is a platform, jumped up through and stood on */
+    setOneWay(tile, direction=vec2(0, 1))
+    {
+        false&&ASSERT(isNumber(tile), 'setOneWay: tile is a tile index, a number', tile);
+        false&&ASSERT(isVector2(direction) && abs(direction.x) + abs(direction.y) === 1 && !(direction.x && direction.y),
+            'setOneWay: direction is up, down, left or right, like vec2(0, 1)', direction);
+        this.oneWayTiles.set(tile, direction.copy());
     }
 
     /** Draw this layer's shadow shape: the cells with collision in the part the shadow map covers, each row of
@@ -10284,6 +10562,10 @@ class TileCollisionLayer extends TileLayer
         tileCollisionAssertWhole(this);
         const collisionTest = tileCollisionTester(callbackObject);
 
+        // a one way tile goes by where an object was before the physics moved it, or where it is now
+        const object = callbackObject instanceof EngineObject && this.oneWayTiles.size ? callbackObject : undefined;
+        const from = object && (object === tileCollisionFromObject ? tileCollisionFromPos : object.pos);
+
         // check any tiles in the area for collision
         const posX = pos.x - this.pos.x;
         const posY = pos.y - this.pos.y;
@@ -10302,7 +10584,8 @@ class TileCollisionLayer extends TileLayer
         {
             // check if the object should collide with this tile, the callback gets its own vector, one it can keep
             const tileData = this.collisionData[y*this.size.x+x];
-            if (tileData && collisionTest(tileData, vec2(x+this.pos.x, y+this.pos.y)))
+            if (tileData && !(from && tileCollisionOneWayPass(this, x, y, from.x, from.y, size.x, size.y)) &&
+                collisionTest(tileData, vec2(x+this.pos.x, y+this.pos.y)))
                 return true;
         }
         return false;
@@ -10322,10 +10605,12 @@ class TileCollisionLayer extends TileLayer
         const collisionTest = tileCollisionTester(callbackObject);
         // the line is walked in the layer's own space, so its cells are the tiles wherever the layer sits
         const offset = this.pos;
+        // a one way tile blocks a ray that starts on its far side
         const testFunction = (pos)=>
         {
             const tileData = this.getCollisionData(pos);
-            return tileData && collisionTest(tileData, vec2(pos.x + offset.x, pos.y + offset.y));
+            return tileData && !tileCollisionOneWayPass(this, pos.x|0, pos.y|0, posStart.x, posStart.y) &&
+                collisionTest(tileData, vec2(pos.x + offset.x, pos.y + offset.y));
         }
         // only the part of the line over the layer, and a cell around it, can meet a tile, so a ray toward a point
         // far beyond is walked across the layer and no farther; the cell around keeps the step into the layer as it was
@@ -10805,10 +11090,13 @@ function particleTileSet(tileInfo)
     }
 }
 
+// where the particle being tested was before its move, which one way tiles go by
+let particleCollideFromX = 0, particleCollideFromY = 0;
+
 // tests if a particle collides with tiles at x, y, through its emitter's collide callback if it has one
 function particleCollideTest(particle, collideCallback, x, y)
 {
-    const data = tileCollisionGetData(particleCollidePos.set(x, y));
+    const data = tileCollisionGetDataFrom(particleCollidePos.set(x, y), particleCollideFromX, particleCollideFromY);
     if (!collideCallback)
         return data > 0;
 
@@ -10940,10 +11228,12 @@ class Particle
 
         // check collision against tiles
         this.groundObject = undefined;
+        particleCollideFromX = oldX, particleCollideFromY = oldY;
         if (particleCollideTest(this, collideCallback, this.pos.x, this.pos.y))
         {
-            // if already was stuck in collision, don't do anything
-            const hitLayer = tileCollisionTest(this.pos);
+            // the layer that stopped it, as the test found it, a one way layer it passes is not; if already was stuck
+            // in collision, don't do anything
+            const hitLayer = tileCollisionDataLayer;
             if (!particleCollideTest(this, collideCallback, oldX, oldY))
             {
                 // test which side we bounced off (or both if a corner)
@@ -11594,15 +11884,15 @@ function glShaderTrack(shader) { glShaderObjects.includes(shader) || glShaderObj
 // let go of a Shader's programs, 2D and 3D, and of its place in the list; a batch drawing with it is drawn first
 function glShaderDispose(shader)
 {
+    // a batch drawing with it is drawn first, the batch holds the Shader; its first draw compiles it and lists it, so
+    // it comes off the list after
+    if (glContext && !headlessMode && glBatchShader === shader)
+        glFlush();
     const i = glShaderObjects.indexOf(shader);
     i < 0 || glShaderObjects.splice(i, 1);
     if (glContext && !headlessMode)
-    {
-        if (glBatchShader === shader) // a batch drawing with it is drawn first, the batch holds the Shader
-            glFlush();
         for (const program of [shader.program, shader.program3D])
             program && glContext.deleteProgram(program);
-    }
     shader.program = shader.program3D = undefined;
 }
 
@@ -12962,6 +13252,8 @@ class NewgroundsPlugin
         /** @property {Array<Object>} - Scoreboards fetched from Newgrounds, empty until ready
          *  @type {Array<Object>} */
         this.scoreboards = [];
+        /** @type {Map<number, 'failed'|'notSave'>} */
+        this.loadFailures = new Map; // why each slot's last load gave undefined, see loadFailure
         /** @property {{id: number, name: string, url: string, supporter: boolean}|null} - The logged in player once ready, null when not logged in
          *  @type {{id: number, name: string, url: string, supporter: boolean}|null} */
         this.user = null;
@@ -13131,6 +13423,96 @@ class NewgroundsPlugin
         return this.call('ScoreBoard.getScores', parameters, session_id);
     }
 
+    /** Save a value to one of the player's cloud save slots, which needs a logged in player
+     *  - Any value JSON can hold; the slots are numbered from 1, as many as the app's Newgrounds settings give it
+     *  @param {number} slot - The slot number
+     *  @param {*} data - The value to save
+     *  @return {Promise<boolean>} - Whether it saved, false when not logged in
+     *  @example
+     *  newgrounds.cloudSave(1, {level, coins}); */
+    async cloudSave(slot, data)
+    {
+        false&&ASSERT(isNumber(slot), 'Newgrounds cloudSave: slot must be a number', slot);
+        if (!this.session_id) return false;
+        let text;
+        try { text = JSON.stringify(data); } catch (error) {}
+        if (text === undefined)
+            return console.warn('Newgrounds cloudSave: slot ' + slot + ' was given a value JSON can not hold'), false;
+        const response = await this.call('CloudSave.setData', {'id':slot, 'data':text});
+        newgroundsSessionLost(response) && this.dropSession();
+        return !!response?.result?.data?.['success'];
+    }
+
+    /** Load the value a cloud save slot holds: null when Newgrounds says it holds none, undefined when it could not be
+     *  loaded or the player is not logged in, said in the console when logged in
+     *  - Do not save over a slot that loaded as undefined, it may hold the player's save; loadFailure(slot) says why
+     *    it did: 'notSave' for a file there that is not a save, where a game may offer to start over, 'failed' otherwise
+     *  - A saved null loads as null, as an empty slot does
+     *  @param {number} slot - The slot number
+     *  @return {Promise<*>} - The value saved, null for none, undefined for a load that failed
+     *  @example
+     *  const save = await newgrounds.cloudLoad(1); */
+    async cloudLoad(slot)
+    {
+        false&&ASSERT(isNumber(slot), 'Newgrounds cloudLoad: slot must be a number', slot);
+        const {value, failure} = await this.loadSlot(slot);
+        failure ? this.loadFailures.set(+slot, failure) : this.loadFailures.delete(+slot);
+        return value;
+    }
+
+    /** Why a slot's last cloudLoad gave undefined: 'notSave' when the slot holds a file that is not a save, where a
+     *  game may offer to start over, 'failed' when it could not be loaded, as when not logged in, where a game must
+     *  not save over it; undefined when it loaded a save or found the slot empty, or was not loaded
+     *  @param {number} slot - The slot number
+     *  @return {'failed'|'notSave'|undefined} */
+    loadFailure(slot) { return this.loadFailures.get(+slot); }
+
+    /** A slot's load, its value and why it failed, if it did
+     *  @param {number} slot
+     *  @return {Promise<{value: *, failure: 'failed'|'notSave'|undefined}>}
+     *  @ignore */
+    async loadSlot(slot)
+    {
+        const failed = (message)=>
+        {
+            message && console.warn('Newgrounds could not load slot ' + slot + message);
+            return {value: undefined, failure: /** @type {'failed'} */ ('failed')};
+        };
+        if (!this.session_id) return failed('');
+        const response = await this.call('CloudSave.loadSlot', {'id':slot});
+        newgroundsSessionLost(response) && this.dropSession();
+        const slotData = response?.result?.data?.['slot'];
+        if (!slotData) return failed('.');
+        const url = slotData['url']; // where the saved text is, none for an empty slot
+        if (!url) return {value: null, failure: undefined};
+        let text;
+        try
+        {
+            const signal = globalThis.AbortSignal?.timeout?.(newgroundsTimeoutMS);
+            const saved = await fetch(url, {'cache':'no-store', 'signal':signal});
+            if (!saved.ok) // an error page is not the save, even one that is JSON
+                return failed(': ' + saved.status);
+            text = await saved.text();
+        }
+        catch(e) { return failed(': ' + e); }
+        if (!text) return failed(', it came back empty'); // a save is never empty
+        try { return {value: JSON.parse(text), failure: undefined}; }
+        catch(e)
+        {
+            console.warn('Newgrounds cloudLoad: slot ' + slot + ' holds a file that is not a save');
+            return {value: undefined, failure: 'notSave'};
+        }
+    }
+
+    /** Count an event of the game's own on its Newgrounds stats page, like a level finished or a button pressed
+     *  @param {string} name - The event's name
+     *  @return {Promise<Object>} - The response JSON object, undefined when the call failed */
+    logEvent(name)
+    {
+        false&&ASSERT(typeof name === 'string' && name !== '', 'Newgrounds logEvent: name must be a string', name);
+        return this.call('Event.logEvent', {'event_name':name, 'host':this.host});
+    }
+
     /** Encrypt text the way the Newgrounds gateway expects, AES-128 CBC with a random iv in front, as Base64
      *  @param {string} text
      *  @return {Promise<string>} */
@@ -13199,7 +13581,8 @@ class NewgroundsPlugin
 
 /**
  * LittleJS Wavedash Plugin
- * - The Wavedash twin of the Newgrounds plugin: achievements and leaderboards, the same shape so a game can switch
+ * - The Wavedash twin of the Newgrounds plugin: achievements, leaderboards and cloud saves, the same shape so a game
+ *   can switch, and stats and presence of Wavedash's own
  * - Wavedash serves the game's page and puts its SDK in window.Wavedash before the game runs, so nothing is bundled;
  *   off Wavedash (local, itch, GitHub Pages) there is none, and every call does nothing
  * - Make the plugin when the game can draw, at the end of gameInit: Wavedash.init is called then, and until it is
@@ -13229,15 +13612,31 @@ const wavedashDisplayTypes = {number: 0, seconds: 1, milliseconds: 2, ticks: 3};
 // the SDK Wavedash put on the page, read at each call, undefined off Wavedash
 const wavedashSDK = ()=> globalThis['Wavedash'];
 
+// the file a cloud save slot is kept in
+const wavedashSavePath = (slot)=> 'saves/slot' + slot + '.json';
+
 // a call's answer, or undefined if it does not come in time or fails, with a warning; the time limit is let go of once
 // the answer is in, so nothing waits on it after
-function wavedashWait(name, answer)
+function wavedashWait(name, answer, quiet=false)
 {
     let timer;
-    const limit = new Promise((resolve)=> timer = setTimeout(resolve, wavedashTimeoutMS));
+    const timedOut = {}; // what the time limit gives, told apart from any answer
+    const limit = new Promise((resolve)=> timer = setTimeout(()=> resolve(timedOut), wavedashTimeoutMS));
     return Promise.race([Promise.resolve(answer), limit])
-        .catch((error)=> { console.warn('Wavedash ' + name + ' failed: ' + error); })
+        .then((value)=> value !== timedOut ? value : quiet ? undefined :
+            void console.warn('Wavedash ' + name + ' took over ' + wavedashTimeoutMS / 1e3 + ' seconds'),
+            (error)=> { console.warn('Wavedash ' + name + ' failed: ' + error); })
         .finally(()=> clearTimeout(timer));
+}
+
+// a value as the text a cloud save keeps, undefined with a warning for one JSON can not hold, as a circular object,
+// a BigInt, a function or undefined
+function wavedashSaveText(slot, data)
+{
+    let text;
+    try { text = JSON.stringify(data); } catch (error) {}
+    text === undefined && console.warn('Wavedash cloudSave: slot ' + slot + ' was given a value JSON can not hold');
+    return text;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -13318,6 +13717,14 @@ class WavedashPlugin
         this.achievementTries = Object.create(null); // how many times each one not taken yet was sent
         /** @type {number|undefined} */
         this.achievementRetry = undefined; // the timer that sends refused ones again
+        /** @type {Promise<boolean>|undefined} */
+        this.stats = undefined; // the player's stats loading, asked for the first time a stat is
+        /** @type {Map<string, Promise<*>>} */
+        this.slotQueues = new Map; // each slot's last save or load, the next waits for it, as they share a file
+        /** @type {Map<string, Set<Promise<*>>>} */
+        this.slotCalls = new Map; // each slot's file calls Wavedash has not answered, a timed out one may still change it
+        /** @type {Map<string, 'failed'|'notSave'>} */
+        this.loadFailures = new Map; // why each slot's last load gave undefined, by its file, see loadFailure
 
         // Wavedash keeps its loading screen until init, which is called once
         wavedashWait('init', this.call('init'));
@@ -13394,6 +13801,212 @@ class WavedashPlugin
         const result = await wavedashWait('getScores',
             this.call('listLeaderboardEntries', id, offset|0, limit|0, !!friendsOnly));
         return result?.['success'] ? result['data'] : undefined;
+    }
+
+    /** Save a value to one of the player's cloud save slots, kept by Wavedash across devices; off Wavedash it does
+     *  nothing
+     *  - Any value JSON can hold, stored as the file saves/slot#.json
+     *  - Wavedash takes at most 30 saves a minute and 300 an hour from a player, so save at checkpoints, the end of a
+     *    level or when asked, not every frame; one over the limit is refused, said in the console
+     *  @param {number} slot - The slot number, any whole number the game picks
+     *  @param {*} data - The value to save
+     *  @return {Promise<boolean>} - Whether it saved
+     *  @example
+     *  wavedash.cloudSave(1, {level, coins}); */
+    async cloudSave(slot, data)
+    {
+        false&&ASSERT(isNumber(slot), 'Wavedash cloudSave: slot must be a number', slot);
+        if (!this.isActive()) return false;
+        const text = wavedashSaveText(slot, data); // as it is now, the save waits its turn
+        if (text === undefined) return false;
+        return this.slotQueue(slot, false, async (track)=>
+        {
+            // written first, and only a write Wavedash says it made is uploaded, never an older file at that path
+            const path = wavedashSavePath(slot);
+            const written = await wavedashWait('cloudSave', track(this.call('writeLocalFile', path,
+                new TextEncoder().encode(text))));
+            if (written !== true && !written?.['success'])
+            {
+                written && console.warn('Wavedash refused writing slot ' + slot + ': ' +
+                    (written['message'] ?? written['error'] ?? 'no reason given'));
+                return false;
+            }
+            const result = await wavedashWait('cloudSave', track(this.call('uploadRemoteFile', path)));
+            result && !result['success'] && console.warn('Wavedash refused cloudSave of slot ' + slot + ': ' +
+                (result['message'] ?? result['error'] ?? 'no reason given'));
+            return !!result?.['success'];
+        });
+    }
+
+    /** Load the value a cloud save slot holds: null when Wavedash says it holds none, undefined when it could not be
+     *  loaded or off Wavedash, said in the console on Wavedash
+     *  - Do not save over a slot that loaded as undefined, it may hold the player's save; loadFailure(slot) says why
+     *    it did: 'notSave' for a file there that is not a save, where a game may offer to start over, 'failed' otherwise
+     *  - A saved null loads as null, as an empty slot does
+     *  @param {number} slot - The slot number
+     *  @return {Promise<*>} - The value saved, null for none, undefined for a load that failed
+     *  @example
+     *  const save = await wavedash.cloudLoad(1); */
+    async cloudLoad(slot)
+    {
+        false&&ASSERT(isNumber(slot), 'Wavedash cloudLoad: slot must be a number', slot);
+        const failed = {value: undefined, failure: /** @type {'failed'} */ ('failed')};
+        const {value, failure} = this.isActive() ?
+            await this.slotQueue(slot, failed, (track)=> this.loadSlot(slot, track)) : failed;
+        const key = wavedashSavePath(slot);
+        failure ? this.loadFailures.set(key, failure) : this.loadFailures.delete(key);
+        return value;
+    }
+
+    /** Why a slot's last cloudLoad gave undefined: 'notSave' when the slot holds a file that is not a save, where a
+     *  game may offer to start over, 'failed' when it could not be loaded, as off Wavedash or on a timeout, where a
+     *  game must not save over it; undefined when it loaded a save or found the slot empty, or was not loaded
+     *  @param {number} slot - The slot number
+     *  @return {'failed'|'notSave'|undefined} */
+    loadFailure(slot) { return this.loadFailures.get(wavedashSavePath(slot)); }
+
+    /** A slot's load, its value and why it failed, if it did
+     *  @param {number} slot
+     *  @param {function(*): *} track
+     *  @return {Promise<{value: *, failure: 'failed'|'notSave'|undefined}>}
+     *  @ignore */
+    async loadSlot(slot, track)
+    {
+        const path = wavedashSavePath(slot);
+        const failed = (message)=>
+        {
+            console.warn('Wavedash ' + message);
+            return {value: undefined, failure: /** @type {'failed'} */ ('failed')};
+        };
+        const downloaded = await wavedashWait('cloudLoad', track(this.call('downloadRemoteFile', path)));
+        if (downloaded !== true && !downloaded?.['success']) // an answer of true or of {success: true}
+        {
+            // a file Wavedash says is not there is an empty slot, anything else a load that failed; it may answer
+            // false or {success: true, data: false}
+            const exists = await wavedashWait('cloudLoad', track(this.call('remoteFileExists', path)));
+            if (exists === false || exists?.['success'] && exists['data'] === false)
+                return {value: null, failure: undefined};
+            return failed('could not load slot ' + slot);
+        }
+
+        // the file's text, its bytes given as they are or in a response's data; none is a read that failed, as a
+        // save is never empty
+        const answer = await wavedashWait('cloudLoad', track(this.call('readLocalFile', path)));
+        const bytes = answer instanceof Uint8Array || answer instanceof ArrayBuffer || typeof answer == 'string' ?
+            answer : answer?.['data'];
+        const text = !bytes ? '' : typeof bytes == 'string' ? bytes : new TextDecoder().decode(bytes);
+        if (!text) return failed('could not read slot ' + slot);
+        try { return {value: JSON.parse(text), failure: undefined}; }
+        catch (error)
+        {
+            console.warn('Wavedash cloudLoad: slot ' + slot + ' holds a file that is not a save');
+            return {value: undefined, failure: 'notSave'};
+        }
+    }
+
+    /** Run a slot's save or load after the one before it, as they share the slot's local file; other slots go on
+     *  at once, and one that fails does not hold up the next
+     *  - A call that timed out may still change the file when Wavedash gets to it, so the next waits for it to be
+     *    answered too, and gives up with failed when it is not, leaving the file alone
+     *  @param {number} slot
+     *  @param {*} failed - What the task gives when it can not run
+     *  @param {function(function(*): *): Promise<*>} task - Given track, which keeps a call's answer until it is in
+     *  @return {Promise<*>}
+     *  @ignore */
+    slotQueue(slot, failed, task)
+    {
+        const key = wavedashSavePath(slot); // by its file, so a slot given as '1' and as 1 share one
+        const calls = this.slotCalls.get(key) || new Set;
+        this.slotCalls.set(key, calls);
+        const track = (answer)=>
+        {
+            if (typeof answer?.then == 'function') // any promise, one made elsewhere too
+            {
+                calls.add(answer);
+                const done = ()=>
+                {
+                    calls.delete(answer);
+                    // the last of them, answered after the slot was let go of, lets go of its calls too
+                    calls.size || this.slotQueues.has(key) || this.slotCalls.get(key) !== calls ||
+                        this.slotCalls.delete(key);
+                };
+                answer.then(done, done);
+            }
+            return answer;
+        };
+        const start = async ()=>
+        {
+            if (calls.size && !await wavedashWait('slot ' + slot, Promise.allSettled([...calls]).then(()=> true), true))
+            {
+                console.warn('Wavedash slot ' + slot + ' is still busy with a call that timed out, not used');
+                return failed;
+            }
+            return task(track);
+        };
+        const run = (this.slotQueues.get(key) || Promise.resolve()).then(start, start);
+        const done = run.catch(()=> {});
+        this.slotQueues.set(key, done);
+        done.then(()=>
+        {
+            // the slot is let go of once nothing waits on it, and its calls with it once all are answered
+            if (this.slotQueues.get(key) !== done) return;
+            this.slotQueues.delete(key);
+            calls.size || this.slotCalls.get(key) !== calls || this.slotCalls.delete(key);
+        });
+        return run;
+    }
+
+    /** Set one of the player's stats, as made for the game in the Wavedash developer portal, which can unlock an
+     *  achievement set to follow it; Wavedash keeps it about a second later, or at once with storeNow; off Wavedash it
+     *  does nothing
+     *  @param {string} name - The stat's identifier
+     *  @param {number} value
+     *  @param {boolean} [storeNow] - Keep it now, as at the end of a game, not a second later
+     *  @return {Promise<boolean>} - Whether Wavedash took it */
+    async setStat(name, value, storeNow=false)
+    {
+        false&&ASSERT(typeof name === 'string' && name !== '', 'Wavedash setStat: name must be a string', name);
+        false&&ASSERT(isNumber(value), 'Wavedash setStat: value must be a number', value);
+        if (!this.isActive() || !await this.statsLoaded()) return false;
+        return this.call('setStat', name, value, !!storeNow) === true;
+    }
+
+    /** Read one of the player's stats, 0 for one never set or off Wavedash
+     *  @param {string} name - The stat's identifier
+     *  @return {Promise<number>} */
+    async getStat(name)
+    {
+        if (!this.isActive() || !await this.statsLoaded()) return 0;
+        const value = this.call('getStat', name);
+        return isNumber(value) ? value : 0;
+    }
+
+    /** The player's stats loaded from Wavedash, which they must be before they are read or set, asked for the first
+     *  time a stat is
+     *  @return {Promise<boolean>} - Whether they loaded
+     *  @ignore */
+    statsLoaded()
+    {
+        return this.stats ||= wavedashWait('requestStats', this.call('requestStats')).then((result)=>
+        {
+            const loaded = !!result?.['success'];
+            loaded || (this.stats = undefined); // asked for again next time
+            return loaded;
+        });
+    }
+
+    /** Set what the player is doing, kept with their presence on Wavedash; off Wavedash it does nothing
+     *  @param {string} [status] - One line of what they are doing, like 'In a race'
+     *  @param {string} [details] - More about it, like 'Lap 2 of 3'; both left out clears it
+     *  @return {Promise<boolean>} - Whether it was set */
+    async setPresence(status, details)
+    {
+        if (!this.isActive()) return false;
+        const presence = {};
+        status === undefined || (presence['status'] = String(status));
+        details === undefined || (presence['details'] = String(details));
+        const result = await wavedashWait('setPresence', this.call('updateUserPresence', presence));
+        return !!result?.['success'];
     }
 
     /** Send every unlocked WavedashMedal's achievement Wavedash has not taken yet, again every two seconds while it
@@ -14283,20 +14896,34 @@ class LightSystemPlugin
                 'uniform vec4 color;'+
                 'uniform sampler2D shadowTexture;'+ // this light's shadow, white where its rays reach
                 'uniform bool useShadow;'+
+                'uniform vec2 forward;'+   // the light's up, the way its cone and gel look
+                'uniform vec2 cone;'+      // the cone's factor and its edge times it, (0, -1) for none
+                'uniform sampler2D gelTexture;'+
+                'uniform vec4 gelRect;'+   // the gel's tile in its texture, corner and size
+                'uniform bool useGel;'+
                 'in vec2 vWorldPos;'+
                 'in vec2 vUV;'+
                 'out vec4 c;'+
                 'void main(){'+
-                'float dist=distance(vWorldPos,lightPos);'+
+                'vec2 d=vWorldPos-lightPos;'+
+                'float dist=length(d);'+
                 'float t=clamp((radius-dist)/max(fadeRange,1e-6),0.,1.);'+
                 'c=vec4(color.rgb*t*color.a,1.);'+
                 'if(useShadow)c.rgb*=texture(shadowTexture,vUV).rgb;'+
+                // the cone: full where its fade starts, nothing at its edge, smooth between, as a 3D spotlight's
+                'float k=clamp(dot(forward,d/max(dist,1e-6))*cone.x-cone.y,0.,1.);'+
+                'c.rgb*=k*k*(3.-2.*k);'+
+                // the gel across the light's square, turned with it, its top the way the light looks
+                'if(useGel){'+
+                'vec2 g=clamp(vec2(dot(d,vec2(forward.y,-forward.x)),dot(d,forward))/(radius*2.)+.5,0.,1.);'+
+                'c.rgb*=texture(gelTexture,gelRect.xy+vec2(g.x,1.-g.y)*gelRect.zw).rgb;}'+
                 '}'
             );
             if (lightSystemShadersFailed(lightSystem.lightShader)) return;
-            // the shadow texture is on unit 1, the engine's tracked texture stays on unit 0
+            // the shadow texture is on unit 1 and the gel on 2, the engine's tracked texture stays on unit 0
             glContext.useProgram(lightSystem.lightShader);
             glContext.uniform1i(glUniformLocation(lightSystem.lightShader, 'shadowTexture'), 1);
+            glContext.uniform1i(glUniformLocation(lightSystem.lightShader, 'gelTexture'), 2);
 
             // composite shader: fullscreen quad, samples the lightmap
             lightSystem.compositeShader = glCreateProgram(
@@ -14869,6 +15496,19 @@ class LightSystemPlugin
                     [drawContext, glCustomShader] = saved;
                 }
             }
+            catch (error)
+            {
+                // a renderLight or renderEmissive threw: what it queued goes to the lightmap, then the screen is the
+                // target again with its viewport and blend, so a game that catches the error draws to the screen; a
+                // flush that throws too is let go of, the first error is the one that counts
+                try { glFlush(); } catch (e) {}
+                glContext.bindFramebuffer(glContext.FRAMEBUFFER, null);
+                glContext.viewport(0, 0, glCanvas.width, glCanvas.height);
+                glActiveTexture && glContext.bindTexture(glContext.TEXTURE_2D, glActiveTexture);
+                glSetInstancedMode(true);
+                setAdditiveBlendMode(prevAdditive);
+                throw error;
+            }
             finally
             {
                 glRenderTargetBase = undefined;
@@ -14982,6 +15622,18 @@ class LightSystemPlugin
         const c = light.color;
         glContext.uniform4f(glUniformLocation(ls, 'color'), c.r, c.g, c.b, c.a);
 
+        // the cone and the gel look along the light's up
+        const forward = light.getUp();
+        glContext.uniform2f(glUniformLocation(ls, 'forward'), forward.x, forward.y);
+        const [coneFactor, coneEdge] = lightSystemCone(light);
+        glContext.uniform2f(glUniformLocation(ls, 'cone'), coneFactor, coneEdge);
+        const gel = lightSystemGel(light);
+        glContext.uniform1i(glUniformLocation(ls, 'useGel'), gel ? 1 : 0);
+        glContext.activeTexture(glContext.TEXTURE2);
+        glContext.bindTexture(glContext.TEXTURE_2D, gel ? gel.texture : null);
+        glContext.activeTexture(glContext.TEXTURE0);
+        gel && glContext.uniform4fv(glUniformLocation(ls, 'gelRect'), gel.rect);
+
         glContext.drawArrays(glContext.TRIANGLE_STRIP, 0, 4);
 
         // restore engine's instanced shader+VAO so subsequent renderLight()
@@ -15059,6 +15711,31 @@ class LightSystemPlugin
 
 ///////////////////////////////////////////////////////////////////////////////
 
+// a light's cone for its shader, the factor and its edge times it: the dot of its up and a direction times the factor,
+// less the edge, is 1 where the fade starts and 0 at the edge; (0, -1) for no cone, which leaves the light as it was
+function lightSystemCone(light)
+{
+    const angle = min(light.coneAngle, PI);
+    if (!(angle > 0)) return [0, -1];
+    const outer = cos(angle), inner = cos(angle * (1 - clamp(light.coneSoftness)));
+    const k = 1 / max(inner - outer, 1e-4);
+    return [k, outer * k];
+}
+
+// a light's gel for its shader, its texture and its tile's corner and size in it, a half texel in so the tiles beside
+// it do not bleed in; undefined for none or one not loaded yet
+function lightSystemGel(light)
+{
+    const gel = light.gel;
+    if (!gel) return;
+    const isTile = gel instanceof TileInfo, textureInfo = isTile ? gel.textureInfo : gel;
+    const texture = textureInfo?.glTexture, size = textureInfo?.size;
+    if (!texture || !(size?.x > 0)) return;
+    const pos = isTile ? gel.pos : vec2(), tileSize = isTile ? gel.size : size;
+    return {texture, rect: [(pos.x + .5) / size.x, (pos.y + .5) / size.y,
+        (tileSize.x - 1) / size.x, (tileSize.y - 1) / size.y]};
+}
+
 /**
  * A Light is an EngineObject that contributes a soft additive blob of color
  * to the LightSystem plugin's lightmap.
@@ -15067,11 +15744,16 @@ class LightSystemPlugin
  * - A light inside a caster is blocked entirely, so the object that holds it, its lamp, a torch, the player
  *   carrying it, needs a shadowCore that reaches past it, castShadow = false, or a renderShadow that leaves
  *   the light's spot out
+ * - A coneAngle makes it a cone along its up, turned by its angle, and a gel is a picture it shines through; both
+ *   are applied over the round light with its shadows, so they cost next to nothing
  * @extends EngineObject
  * @memberof LightSystem
  * @example
  * new Light(vec2(5, 5), 4, rgb(1, 0.5, 0));        // orange light, full soft blob
  * new Light(vec2(0, 0), 8, rgb(1, 1, 1), 2);       // white core with 2-unit soft halo
+ * const flashlight = new Light(vec2(), 10);        // a flashlight looking right, its beam 60 degrees across
+ * flashlight.coneAngle = PI/6;
+ * flashlight.angle = PI/2;
  */
 class Light extends EngineObject
 {
@@ -15104,6 +15786,19 @@ class Light extends EngineObject
         this.glowFalloff = 1;
         /** @type {TileInfo|undefined} */
         this.glowTileInfo = undefined; // the whole glow texture, kept for the falloff it was made for
+        /** @property {number} - Makes it a cone, like a flashlight or headlight: the angle in radians from its up out
+         *  to the edge of the cone, so the beam is twice this across; it looks along getUp(), turned by its angle and
+         *  by what it is attached to; 0 for a light that shines every way */
+        this.coneAngle = 0;
+        /** @property {number} - How much of the cone is its fading edge: 0 a hard edge, .2 by default, the outer
+         *  fifth, 1 fading all the way from the middle of the beam */
+        this.coneSoftness = .2;
+        /** @property {TileInfo|TextureInfo|undefined} - A gel, a picture the light shines through, called a cookie in
+         *  some engines: stretched across the light's square, twice its radius, its top the way the light looks,
+         *  turned with it, and multiplied into its color, so one light can be a car's headlights and tail lights;
+         *  a TileInfo's own tile, or a whole TextureInfo; shadows still fall through it
+         *  @type {TileInfo|TextureInfo|undefined} */
+        this.gel = undefined;
     }
 
     /** Lights are invisible in the main render pass — they only contribute
@@ -21994,7 +22689,9 @@ class ParallaxLayer extends CanvasLayer
      *    and 1 with the screen, a Vector2 to follow x and y by different amounts
      *  @param {number} [renderOrder] - Low to draw behind the game, far layers lowest
      *  @param {function(OffscreenCanvasRenderingContext2D, Vector2, ParallaxLayer): void} [drawFunction] - Draws
-     *    the image, given the canvas context, its size in pixels and the layer; mountains when not given
+     *    the image, given the canvas context, its size in pixels and the layer; mountains when not given; called
+     *    once when the layer is made and on redraw(), not each frame, so it draws with the canvas 2D context, not
+     *    the engine's draws like drawTile
      *  @param {Vector2} [canvasSize] - Size of the image in pixels */
     constructor(pos=vec2(), size=vec2(32, 16), parallax=.5, renderOrder=-1e3, drawFunction=parallaxMountains(),
         canvasSize=vec2(512, 256))
@@ -30941,6 +31638,7 @@ class ParticleEmitter3D extends EngineObject3D
         const out = this.particleData;
         out[k] = view.pos.x, out[k+1] = view.pos.y, out[k+2] = view.pos.z;
         out[k+3] = view.velocity.x, out[k+4] = view.velocity.y, out[k+5] = view.velocity.z;
+        out[k+16] = view.lifeTime, out[k+17] = view.age;
         if (view.destroyed)
             out[k+17] = max(out[k+17], out[k+16]); // its life lived: a step short of it can round to just under
         return result;

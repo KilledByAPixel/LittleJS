@@ -18,7 +18,7 @@ if(location.hash.indexOf('#.')==0)location.replace('#'+location.hash.slice(2))</
 <body>
 <header class="top">
 <button class="menu" aria-label="Menu"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
-<a class="brand" href="index.html"><img src="examples/logo.png" alt="" width="36" height="36"> LittleJS <span class="ver">1.26.0</span></a>
+<a class="brand" href="index.html"><img src="examples/logo.png" alt="" width="36" height="36"> LittleJS <span class="ver">1.27.0</span></a>
 <nav class="links"><a href="https://github.com/KilledByAPixel/LittleJS">GitHub</a><a href="https://killedbyapixel.github.io/LittleJS/examples/">Examples</a><a href="https://github.com/KilledByAPixel/LittleJS/blob/main/REFERENCE.md">Reference</a><a href="https://github.com/KilledByAPixel/LittleJS/blob/main/FAQ.md">FAQ</a></nav>
 <div class="search"><input type="search" placeholder="Search" aria-label="Search"><ul class="results" hidden></ul></div>
 <button class="theme" aria-label="Toggle theme"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M12 3a9 9 0 1 0 9 9c0-.5 0-1-.1-1.4A6 6 0 0 1 12 3z" fill="currentColor"/></svg></button>
@@ -27,7 +27,8 @@ if(location.hash.indexOf('#.')==0)location.replace('#'+location.hash.slice(2))</
 <main class="content">
 <article><h1>Wavedash</h1><div class="desc"><p>LittleJS Wavedash Plugin</p>
 <ul>
-<li>The Wavedash twin of the Newgrounds plugin: achievements and leaderboards, the same shape so a game can switch</li>
+<li>The Wavedash twin of the Newgrounds plugin: achievements, leaderboards and cloud saves, the same shape so a game
+can switch, and stats and presence of Wavedash's own</li>
 <li>Wavedash serves the game's page and puts its SDK in window.Wavedash before the game runs, so nothing is bundled;
 off Wavedash (local, itch, GitHub Pages) there is none, and every call does nothing</li>
 <li>Make the plugin when the game can draw, at the end of gameInit: Wavedash.init is called then, and until it is
@@ -40,7 +41,7 @@ unlocks are sent again every two seconds until it takes them; medals unlocked be
 and they are made at once, so each one exists from the first launch</li>
 <li>The SDK checks its arguments' types and throws on a wrong one, so every call passes real booleans and whole
 numbers and is caught; a game built with its own minifier keeps the SDK's names, see REFERENCE</li>
-</ul></div><section class="index"><h3>Classes</h3><ul><li><a href="Wavedash.WavedashMedal.html">WavedashMedal</a></li><li><a href="Wavedash.WavedashPlugin.html">WavedashPlugin</a></li></ul><h3>Members</h3><ul><li><a href="#wavedash">wavedash</a></li></ul></section><h2 id="members">Members</h2><div class="entry" id="wavedash"><div class="head"><code class="sig"><span class="name">wavedash</span> : <a href="Wavedash.WavedashPlugin.html">WavedashPlugin</a></code><a class="src" href="https://github.com/KilledByAPixel/LittleJS/blob/v1.26.0/plugins/wavedash.js#L24" title="plugins/wavedash.js">wavedash.js:24</a></div><div class="desc"><p>Global Wavedash plugin object</p></div></div><!-- /entry --></article>
+</ul></div><section class="index"><h3>Classes</h3><ul><li><a href="Wavedash.WavedashMedal.html">WavedashMedal</a></li><li><a href="Wavedash.WavedashPlugin.html">WavedashPlugin</a></li></ul><h3>Members</h3><ul><li><a href="#wavedash">wavedash</a></li></ul></section><h2 id="members">Members</h2><div class="entry" id="wavedash"><div class="head"><code class="sig"><span class="name">wavedash</span> : <a href="Wavedash.WavedashPlugin.html">WavedashPlugin</a></code><a class="src" href="https://github.com/KilledByAPixel/LittleJS/blob/v1.27.0/plugins/wavedash.js#L25" title="plugins/wavedash.js">wavedash.js:25</a></div><div class="desc"><p>Global Wavedash plugin object</p></div></div><!-- /entry --></article>
 <footer><a href="https://github.com/KilledByAPixel/LittleJS">LittleJS - MIT License - Copyright 2021 Frank Force</a></footer>
 </main>
 <aside class="outline"><h3>On this page</h3><ul><li class="d0"><a href="#members">Members</a></li><li class="d1"><a href="#wavedash">wavedash</a></li></ul></aside>

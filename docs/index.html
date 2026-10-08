@@ -18,7 +18,7 @@ if(location.hash.indexOf('#.')==0)location.replace('#'+location.hash.slice(2))</
 <body>
 <header class="top">
 <button class="menu" aria-label="Menu"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
-<a class="brand" href="index.html"><img src="examples/logo.png" alt="" width="36" height="36"> LittleJS <span class="ver">1.26.0</span></a>
+<a class="brand" href="index.html"><img src="examples/logo.png" alt="" width="36" height="36"> LittleJS <span class="ver">1.27.0</span></a>
 <nav class="links"><a href="https://github.com/KilledByAPixel/LittleJS">GitHub</a><a href="https://killedbyapixel.github.io/LittleJS/examples/">Examples</a><a href="https://github.com/KilledByAPixel/LittleJS/blob/main/REFERENCE.md">Reference</a><a href="https://github.com/KilledByAPixel/LittleJS/blob/main/FAQ.md">FAQ</a></nav>
 <div class="search"><input type="search" placeholder="Search" aria-label="Search"><ul class="results" hidden></ul></div>
 <button class="theme" aria-label="Toggle theme"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M12 3a9 9 0 1 0 9 9c0-.5 0-1-.1-1.4A6 6 0 0 1 12 3z" fill="currentColor"/></svg></button>
@@ -51,7 +51,7 @@ The code is very clean and well documented with many examples to get you started
 <ul>
 <li>Blazing fast WebGL2 + Canvas2D hybrid rendering system</li>
 <li>Apply <a href="https://www.shadertoy.com">Shadertoy</a> style shaders for post-processing effects, or on any object or draw</li>
-<li>2D lights with soft shadows, tinted glass and emissive objects</li>
+<li>2D lights with soft shadows, tinted glass and emissive objects, a sun with long shadows, and spotlight cones and gels</li>
 <li>Robust particle effect system with a library of ready made effects and an <a href="https://killedbyapixel.github.io/LittleJS/examples/particles/">effect design tool</a></li>
 <li>Parallax background layers that repeat across a level of any size</li>
 <li>Load sprites and animations into texture sheets at runtime, or import <a href="https://www.codeandweb.com/texturepacker">TexturePacker</a> and <a href="https://www.aseprite.org">Aseprite</a> atlases</li>
@@ -86,7 +86,8 @@ The code is very clean and well documented with many examples to get you started
 <h3 id="%F0%9F%92%A5-physics">💥 Physics</h3>
 <ul>
 <li>Robust arcade physics system with collision handling</li>
-<li>Fast tilemap collision and raycasting</li>
+<li>Fast tilemap collision and raycasting, with one-way platforms that turn with their tiles</li>
+<li>Swept bullet collision, so small fast objects never pass through a wall</li>
 <li>Object collision that stays fast with thousands of objects</li>
 <li>Full Box2D integration for realistic physics using <a href="https://github.com/kripken/box2d.js">Box2D v2.3.1 wasm</a></li>
 <li>Grid-based A* pathfinding plugin with optional path smoothing</li>
@@ -108,7 +109,7 @@ The code is very clean and well documented with many examples to get you started
 <li>UI system with buttons, sliders, text input and nine-slice skins</li>
 <li>Tween system with easing curves, and a scene system for titles, menus and game states</li>
 <li>Debug overlay and primitive rendering system</li>
-<li>Medal tracking system with <a href="https://www.newgrounds.com/">Newgrounds</a> support</li>
+<li>Medals, leaderboards and cloud saves on <a href="https://www.newgrounds.com/">Newgrounds</a> and <a href="https://wavedash.com/">Wavedash</a></li>
 <li>Node.js build system</li>
 </ul>
 <h3 id="%F0%9F%A4%96-ai-friendly">🤖 AI Friendly</h3>

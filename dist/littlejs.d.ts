@@ -4111,16 +4111,6 @@ declare module "littlejsengine" {
      *  @memberof Audio */
     export function zzfxG(volume?: number, randomness?: number, frequency?: number, attack?: number, sustain?: number, release?: number, shape?: number, shapeCurve?: number, slide?: number, deltaSlide?: number, pitchJump?: number, pitchJumpTime?: number, repeatTime?: number, noise?: number, modulation?: number, bitCrush?: number, delay?: number, sustainVolume?: number, decay?: number, tremolo?: number, filter?: number): Float32Array;
     /**
-     * LittleJS Object System
-     * - EngineObject is the base class for all game objects
-     * - Handles automatic updating, rendering, physics, and collision
-     * - Supports parent-child hierarchies with transform inheritance
-     * - 2D physics with velocity, acceleration, damping, and gravity
-     * - Collision system with tiles and other objects
-     * - Renders sprites from tile sheets with color and rotation
-     * - Objects sorted by renderOrder for layered rendering
-     */
-    /**
      * LittleJS Object Base Object Class
      * - Top level object class used by the engine
      * - Automatically adds self to object list
@@ -4219,9 +4209,27 @@ declare module "littlejsengine" {
         children: Array<EngineObject>;
         /** @property {boolean} - Limit object speed along x and y axis */
         clampSpeed: boolean;
+        /** @property {boolean} - Move through the tiles as a point along a ray, so it can not pass through one at
+         *  any speed, for small fast things like bullets: its speed is not held to objectMaxSpeed for the tiles,
+         *  collideWithTile is asked with this.pos where the ray goes into the tile, and on a hit it stops at the
+         *  surface, bounces off it by restitution and goes on with the rest of its move, so it slides along a floor
+         *  - Its collision with solid objects is the usual one, so one with a size that collides with them is still held
+         *    to objectMaxSpeed; one of no size is not, it never collides with them
+         *  - this.pos is set for each tile asked about and put where the move ends after, so a change collideWithTile
+         *    makes to it is not kept; move it after the physics, in update
+         *  - Once destroyed, as by its own collideWithTile, it is asked about no more tiles that frame, where an object
+         *    that is not a bullet still is */
+        isBullet: boolean;
         /** @property {EngineObject|undefined} - Object we are standing on, if any
          *  @type {EngineObject|undefined} */
         groundObject: EngineObject | undefined;
+        /** @property {Vector2|undefined} - Makes a solid object one way, like a platform jumped up through: up, down,
+         *  left or right, the way others pass through it; it blocks only what was wholly on its far side before it
+         *  moved, or stood on it, and the rest are not stopped or asked through collideWithObject; with no mass it
+         *  moves before the other objects each frame, so a lift works the same at any render order; tiles are made one
+         *  way by the layer's setOneWay
+         *  @type {Vector2|undefined} */
+        oneWay: Vector2 | undefined;
         /** @property {EngineObject|undefined} - Parent of object if in local space
          *  @type {EngineObject|undefined} */
         parent: EngineObject | undefined;
@@ -4250,6 +4258,10 @@ declare module "littlejsengine" {
          *    update: a solid an override moves for another object, a lift carrying a crate, is found there from the next
          *    update on */
         updatePhysics(): void;
+        /** @private */
+        private updatePhysicsBullet;
+        /** @private */
+        private updatePhysicsTiles;
         /** Update the object, called automatically by engine once each frame. Does nothing by default */
         update(): void;
         /** Render the object, draws a tile by default, automatically called each frame, sorted by renderOrder */
@@ -4287,10 +4299,10 @@ declare module "littlejsengine" {
         /** Called to check if a tile collision should be resolved. Return true for physics to resolve the collision or false to ignore and resolve it manually
          *  - Called for each solid tile the physics tests, which can be several times a frame for the same tile, and for
          *    positions it only tries, so keep it free of side effects or guard them to once a frame
-         *  - this.pos has already moved, so a check on where it came from, like a one way platform, needs the position
-         *    saved in update, as the platformer example does
-         *  - For the point of impact, like sparks where a bullet hit, raycast from where this frame's move started,
-         *    this.pos minus this.velocity, to this.pos with tileCollisionRaycast, as the platformer's Bullet does
+         *  - this.pos has already moved, so a check on where it came from needs the position saved in update; for a one
+         *    way platform the layer's setOneWay does that, and this is not asked about a one way tile it passes through
+         *  - For the point of impact, like sparks where a bullet hit, set isBullet: this.pos is then where it meets the
+         *    tile, as the platformer's Bullet uses it
          *  @param {number}  tileData - the value of the tile at the position
          *  @param {Vector2} pos - the tile's bottom left corner in world space
          *  @return {boolean} - true if the collision should be resolved by modifying it's position and velocity */
@@ -4712,6 +4724,24 @@ declare module "littlejsengine" {
         /** @property {boolean} - In the light system's shadow pass, cast only from the cells with collision, drawn
          *  as the layer shows them, so a floor in the same layer stays lit; false casts every tile */
         shadowSolidOnly: boolean;
+        /** @property {Map<number, Vector2>} - The tiles set one way, by tile index, and the way each can be passed
+         *  through, see setOneWay
+         *  @type {Map<number, Vector2>} */
+        oneWayTiles: Map<number, Vector2>;
+        /** Make the cells that draw a tile one way, like a platform jumped up through and landed on: an object, a
+         *  particle or a ray passes through moving that way, and the tile blocks only what was wholly on its far side
+         *  before it moved, the side it is passed toward; turned and mirrored as each cell's tile is, so a platform turned
+         *  a quarter is one way to the side
+         *  - A moving object is not stopped or asked through collideWithTile until the tile would block it, so a
+         *    collideWithTile that returns false lets it drop through
+         *  - tileCollisionTest with an object goes by the object's pos, a raycast by its start, and a test with no object
+         *    or with a callback finds every one way tile solid
+         *  @param {number} tile - The tile index, as tile() and TileLayerData take it
+         *  @param {Vector2} [direction] - Up, down, left or right, the way it can be passed through: vec2(0, 1), the
+         *    default, is a platform landed on from above; layer.oneWayTiles.delete(tile) makes the tile solid again
+         *  @example
+         *  layer.setOneWay(5); // tile 5 is a platform, jumped up through and stood on */
+        setOneWay(tile: number, direction?: Vector2): void;
         /** Clear and initialize tile collision, the size is the layer's own, the tile data and canvas keep it
         *  @param {Vector2} size - width and height of tile collision 2d grid */
         initCollision(size: Vector2): void;
@@ -5133,6 +5163,8 @@ declare module "littlejsengine" {
         /** @property {Array<Object>} - Scoreboards fetched from Newgrounds, empty until ready
          *  @type {Array<Object>} */
         scoreboards: Array<any>;
+        /** @type {Map<number, 'failed'|'notSave'>} */
+        loadFailures: Map<number, 'failed' | 'notSave'>;
         /** @property {{id: number, name: string, url: string, supporter: boolean}|null} - The logged in player once ready, null when not logged in
          *  @type {{id: number, name: string, url: string, supporter: boolean}|null} */
         user: {
@@ -5182,6 +5214,42 @@ declare module "littlejsengine" {
          *    result.data.scores, each with user.name, value and formatted_value; without a user or social it is the whole board
          */
         getScores(id: number, user?: string | number, social?: boolean, skip?: number, limit?: number, period?: string): Promise<any>;
+        /** Save a value to one of the player's cloud save slots, which needs a logged in player
+         *  - Any value JSON can hold; the slots are numbered from 1, as many as the app's Newgrounds settings give it
+         *  @param {number} slot - The slot number
+         *  @param {*} data - The value to save
+         *  @return {Promise<boolean>} - Whether it saved, false when not logged in
+         *  @example
+         *  newgrounds.cloudSave(1, {level, coins}); */
+        cloudSave(slot: number, data: any): Promise<boolean>;
+        /** Load the value a cloud save slot holds: null when Newgrounds says it holds none, undefined when it could not be
+         *  loaded or the player is not logged in, said in the console when logged in
+         *  - Do not save over a slot that loaded as undefined, it may hold the player's save; loadFailure(slot) says why
+         *    it did: 'notSave' for a file there that is not a save, where a game may offer to start over, 'failed' otherwise
+         *  - A saved null loads as null, as an empty slot does
+         *  @param {number} slot - The slot number
+         *  @return {Promise<*>} - The value saved, null for none, undefined for a load that failed
+         *  @example
+         *  const save = await newgrounds.cloudLoad(1); */
+        cloudLoad(slot: number): Promise<any>;
+        /** Why a slot's last cloudLoad gave undefined: 'notSave' when the slot holds a file that is not a save, where a
+         *  game may offer to start over, 'failed' when it could not be loaded, as when not logged in, where a game must
+         *  not save over it; undefined when it loaded a save or found the slot empty, or was not loaded
+         *  @param {number} slot - The slot number
+         *  @return {'failed'|'notSave'|undefined} */
+        loadFailure(slot: number): 'failed' | 'notSave' | undefined;
+        /** A slot's load, its value and why it failed, if it did
+         *  @param {number} slot
+         *  @return {Promise<{value: *, failure: 'failed'|'notSave'|undefined}>}
+         *  @ignore */
+        loadSlot(slot: number): Promise<{
+            value: any;
+            failure: 'failed' | 'notSave' | undefined;
+        }>;
+        /** Count an event of the game's own on its Newgrounds stats page, like a level finished or a button pressed
+         *  @param {string} name - The event's name
+         *  @return {Promise<Object>} - The response JSON object, undefined when the call failed */
+        logEvent(name: string): Promise<any>;
         /** Encrypt text the way the Newgrounds gateway expects, AES-128 CBC with a random iv in front, as Base64
          *  @param {string} text
          *  @return {Promise<string>} */
@@ -5210,7 +5278,8 @@ declare module "littlejsengine" {
     }
     /**
      * LittleJS Wavedash Plugin
-     * - The Wavedash twin of the Newgrounds plugin: achievements and leaderboards, the same shape so a game can switch
+     * - The Wavedash twin of the Newgrounds plugin: achievements, leaderboards and cloud saves, the same shape so a game
+     *   can switch, and stats and presence of Wavedash's own
      * - Wavedash serves the game's page and puts its SDK in window.Wavedash before the game runs, so nothing is bundled;
      *   off Wavedash (local, itch, GitHub Pages) there is none, and every call does nothing
      * - Make the plugin when the game can draw, at the end of gameInit: Wavedash.init is called then, and until it is
@@ -5270,6 +5339,14 @@ declare module "littlejsengine" {
         };
         /** @type {number|undefined} */
         achievementRetry: number | undefined;
+        /** @type {Promise<boolean>|undefined} */
+        stats: Promise<boolean> | undefined;
+        /** @type {Map<string, Promise<*>>} */
+        slotQueues: Map<string, Promise<any>>;
+        /** @type {Map<string, Set<Promise<*>>>} */
+        slotCalls: Map<string, Set<Promise<any>>>;
+        /** @type {Map<string, 'failed'|'notSave'>} */
+        loadFailures: Map<string, 'failed' | 'notSave'>;
         /** Whether the game is on Wavedash, its SDK on the page
          *  @return {boolean} */
         isActive(): boolean;
@@ -5298,6 +5375,74 @@ declare module "littlejsengine" {
          *  @param {boolean} [friendsOnly] - Only the player and their friends
          *  @return {Promise<Array<Object>|undefined>} - The entries, as Wavedash gives them */
         getScores(name: string, offset?: number, limit?: number, friendsOnly?: boolean): Promise<Array<any> | undefined>;
+        /** Save a value to one of the player's cloud save slots, kept by Wavedash across devices; off Wavedash it does
+         *  nothing
+         *  - Any value JSON can hold, stored as the file saves/slot#.json
+         *  - Wavedash takes at most 30 saves a minute and 300 an hour from a player, so save at checkpoints, the end of a
+         *    level or when asked, not every frame; one over the limit is refused, said in the console
+         *  @param {number} slot - The slot number, any whole number the game picks
+         *  @param {*} data - The value to save
+         *  @return {Promise<boolean>} - Whether it saved
+         *  @example
+         *  wavedash.cloudSave(1, {level, coins}); */
+        cloudSave(slot: number, data: any): Promise<boolean>;
+        /** Load the value a cloud save slot holds: null when Wavedash says it holds none, undefined when it could not be
+         *  loaded or off Wavedash, said in the console on Wavedash
+         *  - Do not save over a slot that loaded as undefined, it may hold the player's save; loadFailure(slot) says why
+         *    it did: 'notSave' for a file there that is not a save, where a game may offer to start over, 'failed' otherwise
+         *  - A saved null loads as null, as an empty slot does
+         *  @param {number} slot - The slot number
+         *  @return {Promise<*>} - The value saved, null for none, undefined for a load that failed
+         *  @example
+         *  const save = await wavedash.cloudLoad(1); */
+        cloudLoad(slot: number): Promise<any>;
+        /** Why a slot's last cloudLoad gave undefined: 'notSave' when the slot holds a file that is not a save, where a
+         *  game may offer to start over, 'failed' when it could not be loaded, as off Wavedash or on a timeout, where a
+         *  game must not save over it; undefined when it loaded a save or found the slot empty, or was not loaded
+         *  @param {number} slot - The slot number
+         *  @return {'failed'|'notSave'|undefined} */
+        loadFailure(slot: number): 'failed' | 'notSave' | undefined;
+        /** A slot's load, its value and why it failed, if it did
+         *  @param {number} slot
+         *  @param {function(*): *} track
+         *  @return {Promise<{value: *, failure: 'failed'|'notSave'|undefined}>}
+         *  @ignore */
+        loadSlot(slot: number, track: (arg0: any) => any): Promise<{
+            value: any;
+            failure: 'failed' | 'notSave' | undefined;
+        }>;
+        /** Run a slot's save or load after the one before it, as they share the slot's local file; other slots go on
+         *  at once, and one that fails does not hold up the next
+         *  - A call that timed out may still change the file when Wavedash gets to it, so the next waits for it to be
+         *    answered too, and gives up with failed when it is not, leaving the file alone
+         *  @param {number} slot
+         *  @param {*} failed - What the task gives when it can not run
+         *  @param {function(function(*): *): Promise<*>} task - Given track, which keeps a call's answer until it is in
+         *  @return {Promise<*>}
+         *  @ignore */
+        slotQueue(slot: number, failed: any, task: (arg0: (arg0: any) => any) => Promise<any>): Promise<any>;
+        /** Set one of the player's stats, as made for the game in the Wavedash developer portal, which can unlock an
+         *  achievement set to follow it; Wavedash keeps it about a second later, or at once with storeNow; off Wavedash it
+         *  does nothing
+         *  @param {string} name - The stat's identifier
+         *  @param {number} value
+         *  @param {boolean} [storeNow] - Keep it now, as at the end of a game, not a second later
+         *  @return {Promise<boolean>} - Whether Wavedash took it */
+        setStat(name: string, value: number, storeNow?: boolean): Promise<boolean>;
+        /** Read one of the player's stats, 0 for one never set or off Wavedash
+         *  @param {string} name - The stat's identifier
+         *  @return {Promise<number>} */
+        getStat(name: string): Promise<number>;
+        /** The player's stats loaded from Wavedash, which they must be before they are read or set, asked for the first
+         *  time a stat is
+         *  @return {Promise<boolean>} - Whether they loaded
+         *  @ignore */
+        statsLoaded(): Promise<boolean>;
+        /** Set what the player is doing, kept with their presence on Wavedash; off Wavedash it does nothing
+         *  @param {string} [status] - One line of what they are doing, like 'In a race'
+         *  @param {string} [details] - More about it, like 'Lap 2 of 3'; both left out clears it
+         *  @return {Promise<boolean>} - Whether it was set */
+        setPresence(status?: string, details?: string): Promise<boolean>;
         /** Send every unlocked WavedashMedal's achievement Wavedash has not taken yet, again every two seconds while it
          *  refuses some, as it does until it has loaded the player's achievements; one refused for about a minute is
          *  taken as an identifier Wavedash does not have, said once in the console, and not sent again this visit
@@ -5713,11 +5858,16 @@ declare module "littlejsengine" {
      * - A light inside a caster is blocked entirely, so the object that holds it, its lamp, a torch, the player
      *   carrying it, needs a shadowCore that reaches past it, castShadow = false, or a renderShadow that leaves
      *   the light's spot out
+     * - A coneAngle makes it a cone along its up, turned by its angle, and a gel is a picture it shines through; both
+     *   are applied over the round light with its shadows, so they cost next to nothing
      * @extends EngineObject
      * @memberof LightSystem
      * @example
      * new Light(vec2(5, 5), 4, rgb(1, 0.5, 0));        // orange light, full soft blob
      * new Light(vec2(0, 0), 8, rgb(1, 1, 1), 2);       // white core with 2-unit soft halo
+     * const flashlight = new Light(vec2(), 10);        // a flashlight looking right, its beam 60 degrees across
+     * flashlight.coneAngle = PI/6;
+     * flashlight.angle = PI/2;
      */
     export class Light extends EngineObject {
         /** Create a light object and add it to the engine object list
@@ -5742,6 +5892,19 @@ declare module "littlejsengine" {
         glowFalloff: number;
         /** @type {TileInfo|undefined} */
         glowTileInfo: TileInfo | undefined;
+        /** @property {number} - Makes it a cone, like a flashlight or headlight: the angle in radians from its up out
+         *  to the edge of the cone, so the beam is twice this across; it looks along getUp(), turned by its angle and
+         *  by what it is attached to; 0 for a light that shines every way */
+        coneAngle: number;
+        /** @property {number} - How much of the cone is its fading edge: 0 a hard edge, .2 by default, the outer
+         *  fifth, 1 fading all the way from the middle of the beam */
+        coneSoftness: number;
+        /** @property {TileInfo|TextureInfo|undefined} - A gel, a picture the light shines through, called a cookie in
+         *  some engines: stretched across the light's square, twice its radius, its top the way the light looks,
+         *  turned with it, and multiplied into its color, so one light can be a car's headlights and tail lights;
+         *  a TileInfo's own tile, or a whole TextureInfo; shadows still fall through it
+         *  @type {TileInfo|TextureInfo|undefined} */
+        gel: TileInfo | TextureInfo | undefined;
         /** Draw this light's glow, soft and round, its glow size across and in its color, added over the lit scene;
          *  called by LightSystemPlugin after the lightmap is applied */
         renderGlow(): void;
@@ -8068,7 +8231,9 @@ declare module "littlejsengine" {
          *    and 1 with the screen, a Vector2 to follow x and y by different amounts
          *  @param {number} [renderOrder] - Low to draw behind the game, far layers lowest
          *  @param {function(OffscreenCanvasRenderingContext2D, Vector2, ParallaxLayer): void} [drawFunction] - Draws
-         *    the image, given the canvas context, its size in pixels and the layer; mountains when not given
+         *    the image, given the canvas context, its size in pixels and the layer; mountains when not given; called
+         *    once when the layer is made and on redraw(), not each frame, so it draws with the canvas 2D context, not
+         *    the engine's draws like drawTile
          *  @param {Vector2} [canvasSize] - Size of the image in pixels */
         constructor(pos?: Vector2, size?: Vector2, parallax?: number | Vector2, renderOrder?: number, drawFunction?: (arg0: OffscreenCanvasRenderingContext2D, arg1: Vector2, arg2: ParallaxLayer) => void, canvasSize?: Vector2);
         /** @property {Vector2} - How much of the camera's movement it follows on each axis, 0 stays with the world
