@@ -1,4 +1,4 @@
-let mouseLight;
+let mouseLight, greenLight;
 
 function gameInit()
 {
@@ -9,8 +9,12 @@ function gameInit()
 
     // stationary Lights, each with a soft glow over it like a lamp
     new Light(vec2(-6, 0), 6, RED).glow = 3;
-    new Light(vec2( 0, 4), 4, GREEN).glow = 3;
     new Light(vec2( 6, 0), 8, BLUE).glow = 3;
+
+    // a cone of light, like a searchlight, swinging in gameUpdate
+    greenLight = new Light(vec2(0, 7), 14, GREEN);
+    greenLight.coneAngle = .3;
+    greenLight.glow = 3;
 
     // a glowing object: renderLight adds light around it to the
     // lightmap, where obj.emissive would only show its own colors
@@ -38,6 +42,9 @@ function gameUpdate()
 {
     mouseLight.pos = mousePos;
 
+    // the cone looks along the light's up, so PI looks down
+    greenLight.angle = PI + sin(time)*.6;
+
     // mouse wheel adjusts radius of the mouse light
     mouseLight.radius -= mouseWheel*0.5;
     mouseLight.radius = clamp(mouseLight.radius, 1, 20);
@@ -45,9 +52,10 @@ function gameUpdate()
 }
 
 /* info
-Colored lights in the dark: a red, a green and a blue lamp over a grid
-of gray squares, a square of lava that glows, and a white light that
-follows the mouse. The mouse wheel changes the size of the mouse light.
+Colored lights in the dark: a red and a blue lamp over a grid of gray
+squares, a green searchlight that swings, a square of lava that glows,
+and a white light that follows the mouse. The mouse wheel changes the
+size of the mouse light.
 
 ## How it works
 ### The lightmap
@@ -79,6 +87,15 @@ drawn over the lit scene at the light, in its color. The lightmap can
 only show what is already in the scene, so a light over empty black
 shows nothing. The glow is added on top, like a lamp seen at night.
 
+### The cone
+A light's `coneAngle` makes it a cone, like a searchlight or a car's
+headlights. It is the angle in radians from the middle of the beam out
+to its edge, so `.3` is a beam about 34 degrees across. The cone looks
+along the light's up, turned by its `angle`, clockwise in radians:
+`gameUpdate` sets the green light's angle to `PI`, looking down, plus
+`sin(time)*.6`, which swings it from side to side. A cone's edge fades
+over the outer part of it that `coneSoftness` says, .2 by default.
+
 ### The lava
 Any object can add light of its own shape by having a `renderLight`
 function. The plugin calls it while the lightmap is being built, and
@@ -101,8 +118,15 @@ it was made with, so that is set to the new radius as well.
 - Let the lava light the floor around it: in its `renderLight`, change
   `vec2(2)` to `vec2(6)`.
 - Set the mouse light's `glow` to 8.
+- Widen the searchlight: change `coneAngle = .3` to `coneAngle = 1`.
+- Give it a soft beam: add `greenLight.coneSoftness = 1;` after its
+  `coneAngle`.
+- Make the mouse light a flashlight that looks right: add
+  `mouseLight.coneAngle = .5;` and `mouseLight.angle = PI/2;` in
+  `gameInit`.
 
 ## See also
-Light Shadows has walls that block these lights and glass that tints
-them. Blending shows additive drawing on its own.
+Light Shadows has walls that block these lights, glass that tints
+them, and a light shining through a gel. Blending shows additive
+drawing on its own.
 */

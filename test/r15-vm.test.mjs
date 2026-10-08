@@ -217,9 +217,10 @@ test('drawLight builds a shadow casting light its shadow texture, and draws hard
     const { run } = loadEngine();
     const result = run(`
         glEnable = true; mainCanvasSize = vec2(800, 600);
-        const ints = [];
-        glContext = new Proxy({}, { get: (target, key)=> key === 'uniform1i' ? (location, value)=> ints.push(value) :
-            ()=> ({}) });
+        const ints = []; // the useShadow values, the uniforms are found by name
+        glContext = new Proxy({}, { get: (target, key)=>
+            key === 'getUniformLocation' ? (program, name)=> name :
+            key === 'uniform1i' ? (location, value)=> location === 'useShadow' && ints.push(value) : ()=> ({}) });
         let shadowBuilds = 0;
         const system = { lightShader: {}, shadows: true, shadowMap: {}, renderLightShadow: ()=> ++shadowBuilds };
         const drawLight = (light)=> LightSystemPlugin.prototype.drawLight.call(system, light);

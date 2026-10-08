@@ -52,6 +52,17 @@ function gameInit()
     new Light(vec2(0, -4), 8, hsl(.55,.8,.9));
     mouseLight = new Light(vec2(), 10, WHITE);
 
+    // a gel, a picture the light shines through: four colored panes
+    // with dark lines between, drawn on a tiny canvas
+    const canvas = new OffscreenCanvas(5, 5);
+    const context = canvas.getContext('2d');
+    for (let i = 4; i--;)
+    {
+        context.fillStyle = hsl(i/4, 1, .5).toString();
+        context.fillRect(i%2*3, (i>>1)*3, 2, 2);
+    }
+    mouseLight.gel = new TextureInfo(canvas, true, false, true);
+
     // a low sun from the upper left, S turns it
     sun = new DirectionalLight(vec2(-1, .6), hsl(.12, .5, .6));
     sun.shadowLength = 8;
@@ -60,6 +71,7 @@ function gameInit()
 function gameUpdate()
 {
     mouseLight.pos = mousePos;
+    mouseLight.angle = time/4; // the gel turns with the light
     if (keyWasPressed('KeyS'))
         sun.sunDirection = sun.sunDirection.rotate(PI / 8);
 }
@@ -76,7 +88,8 @@ function gameRender()
 /* info
 Lights that cast shadows: a room with a row of pillars, two panes of
 colored glass, a sprite, a coin and a lava brick, lit by two lamps and
-by a white light that follows the mouse.
+by a light that follows the mouse, turning as it shines through a
+window of colored panes. Move it into the shadows to see the panes.
 
 ## How it works
 `new LightSystemPlugin()` makes the lights work, as in Light System: the
@@ -119,6 +132,24 @@ has `castShadow` too, where it means the light's rays stop at casters.
 A light inside a caster is blocked completely, which is what happens
 to the mouse light when the mouse is inside a pillar.
 
+### The gel
+A light's `gel` is a picture it shines through, like a stage light's
+colored filter. The picture is stretched across the light's square,
+twice its radius each way, and multiplied into its light, so a pane of
+red lets only red through and black lets nothing through. Its top is
+the way the light looks, its up, and it turns with the light's
+`angle`, which `gameUpdate` sets from `time`. Shadows still fall
+through it. Where the sun already lights the floor fully, the lightmap
+can not get brighter, which is why the panes show best in shadow.
+
+Here the picture is drawn on a 5 by 5 `OffscreenCanvas`: four 2 by 2
+panes, red, yellow green, cyan and purple from `hsl(i/4, 1, .5)`, with the
+middle row and column left empty, which is black. A `TextureInfo`
+makes it a texture, and its last argument, `true`, keeps it
+pixelated, so the panes have hard edges. A gel can also be a tile, like
+`tile(3)`, which is read alone from its sheet. A cone, `coneAngle`,
+works with a gel too, as Light System shows.
+
 ### The sun
 `new DirectionalLight(sunDirection, color)` is a sun: it lights the
 whole scene from one side. `sunDirection` points toward the sun, here
@@ -135,12 +166,16 @@ fading in by `backgroundDepth`.
   it.
 - Make the red glass green: its `hsl(0, 1, .5)` to `hsl(.3, 1, .5)`.
 - Set `sun.shadowLength = 20;`, the default: longer shadows.
+- Shine the light through a sprite: change
+  `new TextureInfo(canvas, true, false, true)` to `tile(3)`.
+- Make the mouse light a cone: add `mouseLight.coneAngle = .8;` after
+  its gel.
 - Add `lightSystem.shadowSoftness = 0;` after the `shadows` line. It is
   how much light bleeds into the side of a caster that faces the light,
   `.5` by default.
 
 ## See also
-Light System covers the lightmap, `glow` and `renderLight`. The plugin
+Light System covers the lightmap, `glow`, `renderLight` and cones. The plugin
 has more settings on `lightSystem`, like `shadowMapSize` and
 `ambientColor`.
 */

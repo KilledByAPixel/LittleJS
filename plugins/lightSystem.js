@@ -228,20 +228,34 @@ class LightSystemPlugin
                 'uniform vec4 color;'+
                 'uniform sampler2D shadowTexture;'+ // this light's shadow, white where its rays reach
                 'uniform bool useShadow;'+
+                'uniform vec2 forward;'+   // the light's up, the way its cone and gel look
+                'uniform vec2 cone;'+      // the cone's factor and its edge times it, (0, -1) for none
+                'uniform sampler2D gelTexture;'+
+                'uniform vec4 gelRect;'+   // the gel's tile in its texture, corner and size
+                'uniform bool useGel;'+
                 'in vec2 vWorldPos;'+
                 'in vec2 vUV;'+
                 'out vec4 c;'+
                 'void main(){'+
-                'float dist=distance(vWorldPos,lightPos);'+
+                'vec2 d=vWorldPos-lightPos;'+
+                'float dist=length(d);'+
                 'float t=clamp((radius-dist)/max(fadeRange,1e-6),0.,1.);'+
                 'c=vec4(color.rgb*t*color.a,1.);'+
                 'if(useShadow)c.rgb*=texture(shadowTexture,vUV).rgb;'+
+                // the cone: full where its fade starts, nothing at its edge, smooth between, as a 3D spotlight's
+                'float k=clamp(dot(forward,d/max(dist,1e-6))*cone.x-cone.y,0.,1.);'+
+                'c.rgb*=k*k*(3.-2.*k);'+
+                // the gel across the light's square, turned with it, its top the way the light looks
+                'if(useGel){'+
+                'vec2 g=clamp(vec2(dot(d,vec2(forward.y,-forward.x)),dot(d,forward))/(radius*2.)+.5,0.,1.);'+
+                'c.rgb*=texture(gelTexture,gelRect.xy+vec2(g.x,1.-g.y)*gelRect.zw).rgb;}'+
                 '}'
             );
             if (lightSystemShadersFailed(lightSystem.lightShader)) return;
-            // the shadow texture is on unit 1, the engine's tracked texture stays on unit 0
+            // the shadow texture is on unit 1 and the gel on 2, the engine's tracked texture stays on unit 0
             glContext.useProgram(lightSystem.lightShader);
             glContext.uniform1i(glUniformLocation(lightSystem.lightShader, 'shadowTexture'), 1);
+            glContext.uniform1i(glUniformLocation(lightSystem.lightShader, 'gelTexture'), 2);
 
             // composite shader: fullscreen quad, samples the lightmap
             lightSystem.compositeShader = glCreateProgram(
@@ -927,6 +941,18 @@ class LightSystemPlugin
         const c = light.color;
         glContext.uniform4f(glUniformLocation(ls, 'color'), c.r, c.g, c.b, c.a);
 
+        // the cone and the gel look along the light's up
+        const forward = light.getUp();
+        glContext.uniform2f(glUniformLocation(ls, 'forward'), forward.x, forward.y);
+        const [coneFactor, coneEdge] = lightSystemCone(light);
+        glContext.uniform2f(glUniformLocation(ls, 'cone'), coneFactor, coneEdge);
+        const gel = lightSystemGel(light);
+        glContext.uniform1i(glUniformLocation(ls, 'useGel'), gel ? 1 : 0);
+        glContext.activeTexture(glContext.TEXTURE2);
+        glContext.bindTexture(glContext.TEXTURE_2D, gel ? gel.texture : null);
+        glContext.activeTexture(glContext.TEXTURE0);
+        gel && glContext.uniform4fv(glUniformLocation(ls, 'gelRect'), gel.rect);
+
         glContext.drawArrays(glContext.TRIANGLE_STRIP, 0, 4);
 
         // restore engine's instanced shader+VAO so subsequent renderLight()
@@ -1004,6 +1030,31 @@ class LightSystemPlugin
 
 ///////////////////////////////////////////////////////////////////////////////
 
+// a light's cone for its shader, the factor and its edge times it: the dot of its up and a direction times the factor,
+// less the edge, is 1 where the fade starts and 0 at the edge; (0, -1) for no cone, which leaves the light as it was
+function lightSystemCone(light)
+{
+    const angle = min(light.coneAngle, PI);
+    if (!(angle > 0)) return [0, -1];
+    const outer = cos(angle), inner = cos(angle * (1 - clamp(light.coneSoftness)));
+    const k = 1 / max(inner - outer, 1e-4);
+    return [k, outer * k];
+}
+
+// a light's gel for its shader, its texture and its tile's corner and size in it, a half texel in so the tiles beside
+// it do not bleed in; undefined for none or one not loaded yet
+function lightSystemGel(light)
+{
+    const gel = light.gel;
+    if (!gel) return;
+    const isTile = gel instanceof TileInfo, textureInfo = isTile ? gel.textureInfo : gel;
+    const texture = textureInfo?.glTexture, size = textureInfo?.size;
+    if (!texture || !(size?.x > 0)) return;
+    const pos = isTile ? gel.pos : vec2(), tileSize = isTile ? gel.size : size;
+    return {texture, rect: [(pos.x + .5) / size.x, (pos.y + .5) / size.y,
+        (tileSize.x - 1) / size.x, (tileSize.y - 1) / size.y]};
+}
+
 /**
  * A Light is an EngineObject that contributes a soft additive blob of color
  * to the LightSystem plugin's lightmap.
@@ -1012,11 +1063,16 @@ class LightSystemPlugin
  * - A light inside a caster is blocked entirely, so the object that holds it, its lamp, a torch, the player
  *   carrying it, needs a shadowCore that reaches past it, castShadow = false, or a renderShadow that leaves
  *   the light's spot out
+ * - A coneAngle makes it a cone along its up, turned by its angle, and a gel is a picture it shines through; both
+ *   are applied over the round light with its shadows, so they cost next to nothing
  * @extends EngineObject
  * @memberof LightSystem
  * @example
  * new Light(vec2(5, 5), 4, rgb(1, 0.5, 0));        // orange light, full soft blob
  * new Light(vec2(0, 0), 8, rgb(1, 1, 1), 2);       // white core with 2-unit soft halo
+ * const flashlight = new Light(vec2(), 10);        // a flashlight looking right, its beam 60 degrees across
+ * flashlight.coneAngle = PI/6;
+ * flashlight.angle = PI/2;
  */
 class Light extends EngineObject
 {
@@ -1049,6 +1105,19 @@ class Light extends EngineObject
         this.glowFalloff = 1;
         /** @type {TileInfo|undefined} */
         this.glowTileInfo = undefined; // the whole glow texture, kept for the falloff it was made for
+        /** @property {number} - Makes it a cone, like a flashlight or headlight: the angle in radians from its up out
+         *  to the edge of the cone, so the beam is twice this across; it looks along getUp(), turned by its angle and
+         *  by what it is attached to; 0 for a light that shines every way */
+        this.coneAngle = 0;
+        /** @property {number} - How much of the cone is its fading edge: 0 a hard edge, .2 by default, the outer
+         *  fifth, 1 fading all the way from the middle of the beam */
+        this.coneSoftness = .2;
+        /** @property {TileInfo|TextureInfo|undefined} - A gel, a picture the light shines through, called a cookie in
+         *  some engines: stretched across the light's square, twice its radius, its top the way the light looks,
+         *  turned with it, and multiplied into its color, so one light can be a car's headlights and tail lights;
+         *  a TileInfo's own tile, or a whole TextureInfo; shadows still fall through it
+         *  @type {TileInfo|TextureInfo|undefined} */
+        this.gel = undefined;
     }
 
     /** Lights are invisible in the main render pass — they only contribute

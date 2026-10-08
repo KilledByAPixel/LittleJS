@@ -9,7 +9,7 @@
 // the 2D light system lights a white scene around a light and leaves the rest dark, and with shadows on an object
 // in the way casts one
 // the view is 8 units across, so a place (x, y) is at (.5 + x / 8, .5 + y / 8) of the canvas; the light is at
-// (-2, 0), an object at (-.5, 0) between it and (1, 0)
+// (-2, 0), an object at (-.5, 0) between it and (1, 0); then the light turns to look right, a cone and a gel on it
 smokeRun(async ()=>
 {
     setShowSplashScreen(false);
@@ -17,7 +17,8 @@ smokeRun(async ()=>
     setEngineManualStep(true);
     setCanvasFixedSize(vec2(128));
     setCanvasClearColor(rgb(0, 0, 0));
-    const bright = (x, y)=> smokePixel(.5 + x / 8, .5 + y / 8)[0];
+    const pixel = (x, y)=> smokePixel(.5 + x / 8, .5 + y / 8);
+    const bright = (x, y)=> pixel(x, y)[0];
     let light;
     await engineInit(()=>
     {
@@ -29,7 +30,7 @@ smokeRun(async ()=>
     }, ()=> {}, ()=> {}, ()=>
     {
         drawTile(vec2(), vec2(8), tile(1, 16)); // a white floor over the whole view
-    }, ()=> {}, [smokeSheet('#888', '#fff')]);
+    }, ()=> {}, [smokeSheet('#888', '#fff', '#f00')]);
 
     engineStep(3);
     check('the floor is lit near the light', bright(-2, 1) > 120, bright(-2, 1));
@@ -42,6 +43,35 @@ smokeRun(async ()=>
     const shadowed = bright(1, 0), beside = bright(-2, 3);
     check('with shadows on the object casts one', shadowed < open - 25, [shadowed, open]);
     check('as far from the light the other way it is still lit', beside > shadowed + 25, [beside, shadowed]);
+
+    // a cone looking right, along the light's up turned a quarter clockwise, still with its shadow
+    light.angle = PI/2;
+    light.coneAngle = PI/3; // fading from 48 degrees out to 60
+    engineStep(3);
+    const ahead = bright(-1, 1), behind = bright(-3.5, 0), side = bright(-2, 2);
+    check('a cone lights ahead of the light', ahead > 80, ahead);
+    check('and not behind it or to its side', behind < 20 && side < 20, [behind, side]);
+    check('its shadow still falls', bright(1, 0) < 20, bright(1, 0));
+    light.coneAngle = 0;
+    lightSystem.shadows = false;
+
+    // a gel: a texture of four colors, its top the way the light looks, its right the light's right, which is down
+    const canvas = document.createElement('canvas'), context = canvas.getContext('2d');
+    canvas.width = canvas.height = 2;
+    for (const [x, y, color] of [[0, 0, '#f00'], [1, 0, '#0f0'], [0, 1, '#00f'], [1, 1, '#00f']])
+        context.fillStyle = color, context.fillRect(x, y, 1, 1);
+    light.gel = new TextureInfo(canvas, true, false, true);
+    engineStep(3);
+    const [left, right, back] = [pixel(-.5, 1.5), pixel(-.5, -1.5), pixel(-3.5, .5)];
+    check('a gel colors the light, its top left ahead and to the left', left[0] > 80 && left[1] < 20, left);
+    check('its top right ahead and to the right', right[1] > 80 && right[0] < 20, right);
+    check('its bottom behind', back[2] > 80 && back[0] < 20 && back[1] < 20, back);
+
+    // a tile of a sheet is read alone, the white tile beside it does not bleed in
+    light.gel = tile(2, 16);
+    engineStep(3);
+    const red = pixel(-2, 1.5);
+    check('a gel tile is that tile alone', red[0] > 80 && red[1] < 10 && red[2] < 10, red);
     checkGLError();
 });
 </script>

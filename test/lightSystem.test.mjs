@@ -199,3 +199,27 @@ test('objects are not emissive by default, and renderEmissive draws render()', a
     assert.equal(lightSystem.emissivePass, false);
     o.destroy();
 });
+
+test('a Light has no cone and no gel by default, and its cone is the 3D spotlight\'s', async () =>
+{
+    const l = new Light(vec2(), 5);
+    assert.equal(l.coneAngle, 0);
+    assert.equal(l.coneSoftness, .2);
+    assert.equal(l.gel, undefined);
+
+    // the shader takes the dot of its up and a direction times the factor, less the edge, smoothed from 0 to 1
+    const { loadEngine } = await import('./vmEngine.mjs');
+    const { run } = loadEngine();
+    const cone = (angle, softness, degrees)=> run(`(()=>
+    {
+        const [k, edge] = lightSystemCone({coneAngle: ${angle}, coneSoftness: ${softness}});
+        return clamp(cos(${degrees} * PI / 180) * k - edge);
+    })()`);
+    assert.equal(run('JSON.stringify(lightSystemCone({coneAngle: 0, coneSoftness: .2}))'), '[0,-1]'); // a factor of 1
+    assert.equal(cone('PI/3', .2, 0), 1);  // full along its up
+    assert.equal(cone('PI/3', .2, 47), 1); // and to where its fade starts, 48 degrees
+    assert.equal(cone('PI/3', .2, 61), 0); // nothing past its edge
+    const middle = cone('PI/3', .2, 54);
+    assert.ok(middle > 0 && middle < 1, middle);
+    assert.equal(cone('PI/3', 0, 59), 1); // a hard edge
+});

@@ -5,7 +5,8 @@ What changed in each release, newest first. Releases before 1.20.0 are on the
 
 ## Unreleased
 
-Nothing yet.
+### New Changes
+- 2D lights have cones and gels, as 3D spotlights do: `light.coneAngle` makes a light a cone, like a flashlight or a car's headlights, looking along its up and turned by its `angle`, its edge fading by `coneSoftness`; `light.gel` is a picture the light shines through, a tile or a texture across its square that turns with it, so one light can be a car's headlights and tail lights. Shadows still fall through both, and a light with neither draws as before. The Light System short has a swinging searchlight, and Light Shadows a mouse light shining through colored panes
 
 ## 1.26.1 - 2026-10-08
 

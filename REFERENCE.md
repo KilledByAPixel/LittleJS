@@ -1137,6 +1137,11 @@ new Light(pos, radius, color=WHITE, fadeRange=radius)
 light.glow = 0          // size across of a soft hazy glow over the light, like a lamp at night, 0 for none; added
                         // over the lit scene after the lightmap, so it shows in the dark, in front of everything
 light.glowFalloff = 1   // how fast the glow fades from its middle, .5 a wide haze, 2 a tight bright core
+light.coneAngle = 0     // a cone, like a flashlight or headlight: radians from its up to the cone's edge, the beam
+                        // twice this across; it looks along getUp(), turned by its angle; 0 shines every way
+light.coneSoftness = .2 // how much of the cone is its fading edge: 0 a hard edge, 1 fading from the middle
+light.gel = tileInfo    // or a whole TextureInfo: a picture the light shines through, across its square, its top
+                        // the way it looks, turned with it, multiplied into its color; shadows still fall
 
 // One directional light, a sun: lights the whole scene from one direction, added with the point lights
 new DirectionalLight(sunDirection=vec2(-1,1), color=WHITE) // toward the sun, as render3D.sunDirection; its color
