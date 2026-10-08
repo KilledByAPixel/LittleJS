@@ -2289,7 +2289,7 @@ await newgrounds.getScores(id, user, social, skip, limit, period) // the scores 
 await newgrounds.cloudSave(slot, data) // any value JSON can hold, to a slot numbered from 1, as many as the app's
                                      // settings give; needs a logged in player; true once saved
 await newgrounds.cloudLoad(slot)     // the value saved there, undefined for none or when not logged in
-newgrounds.logEvent(name)            // count an event made in the app's settings on its stats page
+newgrounds.logEvent(name)            // count an event of the game's own, by name, on its stats page
 newgrounds.unlockMedal(id)           // low level request only, the medal is not changed; games call medal.unlock()
 newgrounds.pendingUnlocks            // advanced: the unlocks in flight or waiting to be resent, with their promises
 newgrounds.resendUnlocks()           // advanced: send the ones whose request did not reach the server again now, as

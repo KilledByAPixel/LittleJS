@@ -370,7 +370,7 @@ class NewgroundsPlugin
     }
 
     /** Count an event of the game's own on its Newgrounds stats page, like a level finished or a button pressed
-     *  @param {string} name - The event's name, as made in the app's Newgrounds settings
+     *  @param {string} name - The event's name
      *  @return {Promise<Object>} - The response JSON object, undefined when the call failed */
     logEvent(name)
     {
