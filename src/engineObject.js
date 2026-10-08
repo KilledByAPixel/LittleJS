@@ -12,15 +12,19 @@
 'use strict';
 
 // a one way solid lets a box at from pass, when it was not wholly on the solid's far side, the way it is passed
-// through; a solid moving that way this frame reaches back by its move, so a rider on a rising platform stays on it
+// through; both are where they were before this frame's moves, so it does not matter which updated first
 function engineObjectOneWayPass(solid, solidPos, from, fromSize)
 {
-    const way = solid.oneWay, size = solid.size, velocity = solid.velocity, epsilon = 1e-3;
-    return way.x > .5 ? from.x - fromSize.x/2 < solidPos.x + size.x/2 - abs(velocity.x) - epsilon :
-        way.x < -.5 ? from.x + fromSize.x/2 > solidPos.x - size.x/2 + abs(velocity.x) + epsilon :
-        way.y > .5 ? from.y - fromSize.y/2 < solidPos.y + size.y/2 - abs(velocity.y) - epsilon :
-        from.y + fromSize.y/2 > solidPos.y - size.y/2 + abs(velocity.y) + epsilon;
+    const way = solid.oneWay, size = solid.size, epsilon = 1e-3;
+    return way.x > .5 ? from.x - fromSize.x/2 < solidPos.x + size.x/2 - epsilon :
+        way.x < -.5 ? from.x + fromSize.x/2 > solidPos.x - size.x/2 + epsilon :
+        way.y > .5 ? from.y - fromSize.y/2 < solidPos.y + size.y/2 - epsilon :
+        from.y + fromSize.y/2 > solidPos.y - size.y/2 + epsilon;
 }
+
+// where an object was before this frame's moves, for a one way test: kept by the update when a one way solid is in
+// it, or where it is when updatePhysics is called on its own
+function engineObjectStartPos(o) { return engineObjectsOneWayStart?.get(o) || o.pos; }
 
 /**
  * LittleJS Object Base Object Class
@@ -138,7 +142,8 @@ class EngineObject
         this.groundObject = undefined;
         /** @property {Vector2|undefined} - Makes a solid object one way, like a platform jumped up through: up, down,
          *  left or right, the way others pass through it; it blocks only what was wholly on its far side before it
-         *  moved, or stood on it, and the rest are not stopped or asked through collideWithObject; tiles are made one
+         *  moved, or stood on it, and the rest are not stopped or asked through collideWithObject; with no mass it
+         *  moves before the other objects each frame, so a lift works the same at any render order; tiles are made one
          *  way by the layer's setOneWay
          *  @type {Vector2|undefined} */
         this.oneWay = undefined;
@@ -272,8 +277,9 @@ class EngineObject
                 if (!this.isOverlappingObject(o)) continue;
 
                 // a one way solid lets through what was not wholly on its far side before it moved, either way round
-                if (o.oneWay && wasOn !== o && engineObjectOneWayPass(o, o.pos, oldPos, this.size)) continue;
-                if (this.oneWay && engineObjectOneWayPass(this, oldPos, o.pos, o.size)) continue;
+                if (o.oneWay && wasOn !== o && engineObjectOneWayPass(o, engineObjectStartPos(o), oldPos, this.size))
+                    continue;
+                if (this.oneWay && engineObjectOneWayPass(this, oldPos, engineObjectStartPos(o), o.size)) continue;
 
                 // each moving object checks its own contacts, so a pair the other one already asked about this frame
                 // is not asked twice: left overlapping, ignored or only nudged apart it is skipped, and one both said
@@ -409,75 +415,82 @@ class EngineObject
         }
         if (this.collideLevel)
         {
-            // check collision against tiles, one way tiles go by where it was
+            // check collision against tiles, one way tiles go by where it was; put back after, a callback may throw
+            const fromObject = tileCollisionFromObject, fromPos = tileCollisionFromPos;
             tileCollisionFromObject = this, tileCollisionFromPos = oldPos;
-            const hitLayer = tileCollisionTest(this.pos, this.size, this);
-            if (hitLayer)
+            try { this.updatePhysicsTiles(oldPos, gravityY, wasFalling); }
+            finally { tileCollisionFromObject = fromObject, tileCollisionFromPos = fromPos; }
+        }
+    }
+
+    // resolve the tile collision of a move from oldPos, called by updatePhysics
+    /** @private */
+    updatePhysicsTiles(oldPos, gravityY, wasFalling)
+    {
+        const hitLayer = tileCollisionTest(this.pos, this.size, this);
+        if (hitLayer)
+        {
+            // if already was stuck in collision, don't do anything
+            // this should not happen unless something starts in collision
+            if (!tileCollisionTest(oldPos, this.size, this))
             {
-                // if already was stuck in collision, don't do anything
-                // this should not happen unless something starts in collision
-                if (!tileCollisionTest(oldPos, this.size, this))
+                // test which side we bounced off (or both if a corner)
+                const isBlockedX = tileCollisionTest(vec2(this.pos.x, oldPos.y), this.size, this);
+                const isBlockedY = tileCollisionTest(vec2(oldPos.x, this.pos.y), this.size, this);
+                const restitution = max(this.restitution, hitLayer.restitution);
+                if (isBlockedX)
                 {
-                    // test which side we bounced off (or both if a corner)
-                    const isBlockedX = tileCollisionTest(vec2(this.pos.x, oldPos.y), this.size, this);
-                    const isBlockedY = tileCollisionTest(vec2(oldPos.x, this.pos.y), this.size, this);
-                    const restitution = max(this.restitution, hitLayer.restitution);
-                    if (isBlockedX)
+                    // a ledge caught less than maxMove below its top lifts the object onto it instead of stopping it,
+                    // down off a ceiling ledge when gravity points up; zero gravity counts as down
+                    const epsilon = 1e-3;
+                    const maxMove = .1;
+                    const y = gravityY > 0 ?
+                        ceil( oldPos.y+this.size.y/2-1) - this.size.y/2 - epsilon :
+                        floor(oldPos.y-this.size.y/2+1) + this.size.y/2 + epsilon;
+                    if (abs(y - this.pos.y) < maxMove && !tileCollisionTest(vec2(this.pos.x, y), this.size, this))
                     {
-                        // a ledge caught less than maxMove below its top lifts the object onto it instead of stopping it,
-                        // down off a ceiling ledge when gravity points up; zero gravity counts as down
-                        const epsilon = 1e-3;
-                        const maxMove = .1;
-                        const y = gravityY > 0 ?
-                            ceil( oldPos.y+this.size.y/2-1) - this.size.y/2 - epsilon :
-                            floor(oldPos.y-this.size.y/2+1) + this.size.y/2 + epsilon;
-                        if (abs(y - this.pos.y) < maxMove && !tileCollisionTest(vec2(this.pos.x, y), this.size, this))
-                        {
-                            this.pos.y = y;
-                            debugPhysics && debugRect(this.pos, this.size, '#ff0', 0, 0, false, false);
-                            tileCollisionFromObject = undefined;
-                            return;
-                        }
-
-                        // move against the wall and bounce, its side on the tile edge it moved toward, rounded in the
-                        // layer's space as its collision test is; back to its previous X when that spot is not clear
-                        const snapEpsilon = .0001, layerX = hitLayer.pos.x, offsetX = this.size.x/2 + snapEpsilon;
-                        // never back past where it was: a leading edge already on a grid line would step back by
-                        // the epsilon and take its trailing edge into the tile behind, which nothing tests, since
-                        // only X is blocked; between there and the wall it covers no column it did not cover before
-                        const movingLeft = this.pos.x < oldPos.x;
-                        const snap = layerX + (movingLeft ?
-                            floor(oldPos.x - layerX - this.size.x/2) + offsetX :
-                            ceil( oldPos.x - layerX + this.size.x/2) - offsetX);
-                        const x = movingLeft ? min(snap, oldPos.x) : max(snap, oldPos.x);
-                        this.pos.x = tileCollisionTest(vec2(x, oldPos.y), this.size, this) ? oldPos.x : x;
-                        this.velocity.x *= -restitution;
+                        this.pos.y = y;
+                        debugPhysics && debugRect(this.pos, this.size, '#ff0', 0, 0, false, false);
+                        return;
                     }
-                    if (isBlockedY || !isBlockedX)
-                    {
-                        // adjust position to slightly away from the nearest tile, the floor or the ceiling it moved
-                        // toward, which prevents a gap between them; rounded in the layer's space as its collision
-                        // test is, or a bottom a hair below a grid line would round to the row under it, inside the
-                        // floor, and fall through; back to its previous Y when that spot is not clear
-                        const epsilon = .0001;
-                        const offset = this.size.y/2 + epsilon;
-                        const layerY = hitLayer.pos.y;
-                        const y = layerY + (this.pos.y < oldPos.y ?
-                            floor(oldPos.y - layerY - this.size.y/2) + offset :
-                            ceil( oldPos.y - layerY + this.size.y/2) - offset);
-                        const isClear = this.pos.y !== oldPos.y && !tileCollisionTest(vec2(this.pos.x, y), this.size, this);
-                        this.pos.y = isClear ? y : oldPos.y;
 
-                        // set ground object for tile collision
-                        this.groundObject = wasFalling ? hitLayer : undefined;
-
-                        // bounce velocity
-                        this.velocity.y *= -restitution;
-                    }
-                    debugPhysics && debugRect(this.pos, this.size, '#f00', 0, 0, false, false);
+                    // move against the wall and bounce, its side on the tile edge it moved toward, rounded in the
+                    // layer's space as its collision test is; back to its previous X when that spot is not clear
+                    const snapEpsilon = .0001, layerX = hitLayer.pos.x, offsetX = this.size.x/2 + snapEpsilon;
+                    // never back past where it was: a leading edge already on a grid line would step back by
+                    // the epsilon and take its trailing edge into the tile behind, which nothing tests, since
+                    // only X is blocked; between there and the wall it covers no column it did not cover before
+                    const movingLeft = this.pos.x < oldPos.x;
+                    const snap = layerX + (movingLeft ?
+                        floor(oldPos.x - layerX - this.size.x/2) + offsetX :
+                        ceil( oldPos.x - layerX + this.size.x/2) - offsetX);
+                    const x = movingLeft ? min(snap, oldPos.x) : max(snap, oldPos.x);
+                    this.pos.x = tileCollisionTest(vec2(x, oldPos.y), this.size, this) ? oldPos.x : x;
+                    this.velocity.x *= -restitution;
                 }
+                if (isBlockedY || !isBlockedX)
+                {
+                    // adjust position to slightly away from the nearest tile, the floor or the ceiling it moved
+                    // toward, which prevents a gap between them; rounded in the layer's space as its collision
+                    // test is, or a bottom a hair below a grid line would round to the row under it, inside the
+                    // floor, and fall through; back to its previous Y when that spot is not clear
+                    const epsilon = .0001;
+                    const offset = this.size.y/2 + epsilon;
+                    const layerY = hitLayer.pos.y;
+                    const y = layerY + (this.pos.y < oldPos.y ?
+                        floor(oldPos.y - layerY - this.size.y/2) + offset :
+                        ceil( oldPos.y - layerY + this.size.y/2) - offset);
+                    const isClear = this.pos.y !== oldPos.y && !tileCollisionTest(vec2(this.pos.x, y), this.size, this);
+                    this.pos.y = isClear ? y : oldPos.y;
+
+                    // set ground object for tile collision
+                    this.groundObject = wasFalling ? hitLayer : undefined;
+
+                    // bounce velocity
+                    this.velocity.y *= -restitution;
+                }
+                debugPhysics && debugRect(this.pos, this.size, '#f00', 0, 0, false, false);
             }
-            tileCollisionFromObject = undefined;
         }
     }
 

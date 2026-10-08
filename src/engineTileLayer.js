@@ -69,11 +69,15 @@ function tileCollisionOneWayPass(layer, x, y, fromX, fromY, sizeX=0, sizeY=0)
         fromY + sizeY/2 > cellY + epsilon;
 }
 
+// the layer whose tile tileCollisionGetDataFrom last found solid, undefined for none, the one a particle bounces off
+let tileCollisionDataLayer;
+
 // tileCollisionGetData of the solid layers for particles, which pass a one way tile when they were not on its far
 // side at from: a solid tile's data, else a negative marker, else 0
 function tileCollisionGetDataFrom(pos, fromX, fromY)
 {
     let found = 0;
+    tileCollisionDataLayer = undefined;
     for (const layer of tileCollisionLayers)
         if (layer.isSolid)
         {
@@ -83,7 +87,8 @@ function tileCollisionGetDataFrom(pos, fromX, fromY)
                 const data = layer.collisionData[(y|0)*size.x + (x|0)];
                 if (data > 0)
                 {
-                    if (!tileCollisionOneWayPass(layer, x|0, y|0, fromX, fromY)) return data;
+                    if (!tileCollisionOneWayPass(layer, x|0, y|0, fromX, fromY))
+                        return tileCollisionDataLayer = layer, data;
                 }
                 else if (data && !found) found = data;
             }

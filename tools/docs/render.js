@@ -426,8 +426,9 @@ function entryHtml(entry, model, options)
         html += `<dl class="params"><dt>Returns</dt><dd class="returns">${returns.description}</dd></dl>`;
     if (d.properties && !unnamed)
         html += paramsHtml(d.properties, d, model);
-    for (const example of d.examples || [])
+    for (const rawExample of d.examples || [])
     {
+        const example = rawExample.replace(/\r\n?/g, '\n'); // a CRLF checkout, before the caption and the indent
         const m = example.match(/^\s*<caption>([\s\S]+?)<\/caption>\s*\n([\s\S]+)$/i);
         const code = dedent(m ? m[2] : example);
         html += (m ? `<p class="caption">${m[1]}</p>` : '') + `<pre><code>${highlight(code)}</code></pre>`;

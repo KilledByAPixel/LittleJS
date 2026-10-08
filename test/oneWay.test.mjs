@@ -206,3 +206,94 @@ test('a one way object is landed on, jumped through, and carries a rider as it r
     assert.ok(jumped, 'it jumped up through it and landed back on top');
     assert.ok(abs(riding - 1) < .01, 'it rode the platform up, ' + riding);
 });
+
+// a rising one way platform and a body passing up through it, the same whichever of the two updates first
+const crossing = (platformFirst, bodyY, bodyVelocity, frames=1)=> `
+    setHeadlessMode(true);
+    setGravity(vec2());
+    const platform = new EngineObject(vec2(0, 2), vec2(4, 1));
+    platform.setCollision(); platform.mass = 0; platform.damping = 1;
+    platform.oneWay = vec2(0, 1); platform.velocity.y = .4;
+    platform.renderOrder = ${platformFirst ? -1 : 1};
+    const body = new EngineObject(vec2(0, ${bodyY}), vec2(1));
+    body.setCollision(); body.damping = 1; body.velocity.y = ${bodyVelocity};
+    let calls = 0;
+    body.collideWithObject = ()=> (++calls, true);
+    for (let i = ${frames}; i--;)
+        engineObjectsUpdate();
+    JSON.stringify([body.pos.y, calls]);`;
+
+test('a body passing up through a rising one way platform goes on, whichever updates first', () =>
+{
+    // its bottom starts at 2.2, under the platform's top at 2.5
+    for (const platformFirst of [false, true])
+    {
+        const { run } = loadEngine();
+        const [y, calls] = JSON.parse(run(crossing(platformFirst, 2.7, .1)));
+        assert.ok(abs(y - 2.8) < 1e-9, `platform first ${platformFirst}: it moved on to 2.8, ${y}`);
+        assert.equal(calls, 0, `platform first ${platformFirst}: and touched nothing`);
+    }
+});
+
+test('a body landing on a rising one way platform from above lands, whichever updates first', () =>
+{
+    // its bottom starts at 2.6, over the platform's top at 2.5, and the platform rises into it
+    for (const platformFirst of [false, true])
+    {
+        const { run } = loadEngine();
+        const [y, calls] = JSON.parse(run(crossing(platformFirst, 3.1, 0)));
+        assert.ok(abs(y - 3.401) < 1e-6, `platform first ${platformFirst}: it is on the platform's new top, ${y}`);
+        assert.ok(calls > 0, `platform first ${platformFirst}: it touched the platform`);
+    }
+});
+
+test('a particle bounces off the layer that stopped it, not a one way layer it passed through', () =>
+{
+    // two layers over the same cell: a one way one it rises through, with no bounce, and a solid one that bounces
+    for (const oneWayFirst of [true, false])
+    {
+        const { run } = loadEngine();
+        const velocity = run(`
+            setHeadlessMode(true);
+            setGravity(vec2());
+            const make = ()=> new TileCollisionLayer(vec2(), vec2(4), tile(), 0, false);
+            const [first, second] = [make(), make()];
+            const [pass, wall] = ${oneWayFirst} ? [first, second] : [second, first];
+            pass.setData(vec2(1), new TileLayerData(5));
+            pass.setCollisionData(vec2(1));
+            pass.setOneWay(5);
+            pass.restitution = 0;
+            wall.setData(vec2(1), new TileLayerData(1));
+            wall.setCollisionData(vec2(1));
+            wall.restitution = 1;
+            const emitter = new ParticleEmitter(vec2());
+            emitter.emitRate = 0, emitter.gravityScale = 0, emitter.damping = 1;
+            emitter.collideLevel = true, emitter.restitution = 0;
+            const p = new Particle(emitter, vec2(1.5, .9), 0, WHITE, WHITE, 10, .1, .1, vec2(0, .2));
+            p.update();
+            p.velocity.y`);
+        assert.ok(abs(velocity + .2) < 1e-9, `one way layer first ${oneWayFirst}: it bounced, ${velocity}`);
+    }
+});
+
+test('a collideWithTile that throws does not leave one way tiles going by where the object was', () =>
+{
+    const { run } = loadEngine();
+    const [hit, from] = JSON.parse(run(`
+        setHeadlessMode(true);
+        setGravity(vec2());
+        const layer = new TileCollisionLayer(vec2(), vec2(4), tile(), 0, false);
+        layer.setData(vec2(1), new TileLayerData(5));
+        layer.setCollisionData(vec2(1));
+        layer.setOneWay(5);
+        const body = new EngineObject(vec2(1.5, 2.6), vec2(1));
+        body.setCollision();
+        body.velocity.y = -.2;
+        body.collideWithTile = ()=> { throw Error('on purpose'); };
+        try { engineObjectsUpdate(); } catch (e) {}
+        body.collideWithTile = ()=> true;
+        body.pos = vec2(1.5, .5); // under the tile now
+        JSON.stringify([!!tileCollisionTest(vec2(1.5, 1.5), vec2(1), body), tileCollisionFromObject === body])`));
+    assert.equal(hit, false, 'from under it, the tile is passed');
+    assert.equal(from, false, 'nothing is left set');
+});

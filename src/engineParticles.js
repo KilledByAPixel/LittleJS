@@ -581,8 +581,9 @@ class Particle
         particleCollideFromX = oldX, particleCollideFromY = oldY;
         if (particleCollideTest(this, collideCallback, this.pos.x, this.pos.y))
         {
-            // if already was stuck in collision, don't do anything
-            const hitLayer = tileCollisionTest(this.pos);
+            // the layer that stopped it, as the test found it, a one way layer it passes is not; if already was stuck
+            // in collision, don't do anything
+            const hitLayer = tileCollisionDataLayer;
             if (!particleCollideTest(this, collideCallback, oldX, oldY))
             {
                 // test which side we bounced off (or both if a corner)

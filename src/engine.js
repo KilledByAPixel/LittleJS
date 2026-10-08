@@ -197,6 +197,10 @@ let engineCollideGridMin = 64;
 // everything
 let engineCollideGrid;
 
+// where each object that collides with solids was before this frame's moves, kept only when a one way solid is among
+// them, so a one way test goes by where both were whichever of the two updates first
+let engineObjectsOneWayStart;
+
 // the grid of a list of solids, its cells about twice a typical solid so most are in one to four
 function engineCollideGridBuild(list)
 {
@@ -957,19 +961,36 @@ function engineObjectsUpdate()
     // every frame makes this function deoptimize again and again in a game with no grid
     if (engineObjectsCollideStaticLast.length >= engineCollideGridMin)
         engineCollideGrid = {list: engineObjectsCollideStaticLast, built: undefined};
+    // written only when there is a one way solid, as the grid is
+    if (engineObjectsCollide.some((o)=> o.oneWay))
+        engineObjectsOneWayStart = new Map(engineObjectsCollide.map((o)=> [o, o.pos.copy()]));
 
     // update physics before object update, each solid put where it moved to in the grid, for the movers after it;
     // the grid is let go even when a callback throws, so an updatePhysics called before the next update checks all
+    // a one way solid with no mass moves first, nothing pushes it, so what lands on it or passes up through it sees it
+    // where it is now and where it was, whatever the render order
+    const oneWayFirst = (o)=> o.oneWay && !o.mass;
     try
     {
+        if (engineObjectsOneWayStart)
+            for (const o of engineObjects)
+                if (!o.parent && !o.destroyed && oneWayFirst(o))
+                {
+                    o.updatePhysics();
+                    engineCollideGrid?.built && engineCollideGridPlace(engineCollideGrid.built, o);
+                }
         for (const o of engineObjects)
-            if (!o.parent && !o.destroyed)
+            if (!o.parent && !o.destroyed && !(engineObjectsOneWayStart && oneWayFirst(o)))
             {
                 o.updatePhysics();
                 engineCollideGrid?.built && engineCollideGridPlace(engineCollideGrid.built, o);
             }
     }
-    finally { engineCollideGrid && (engineCollideGrid = undefined); }
+    finally
+    {
+        engineCollideGrid && (engineCollideGrid = undefined);
+        engineObjectsOneWayStart && (engineObjectsOneWayStart = undefined);
+    }
 
     // recursive object update: the children are walked from a copy on a shared stack, since a child that
     // destroys itself leaves its parent's list on the spot and the next child would slide past the loop
