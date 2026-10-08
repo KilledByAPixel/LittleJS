@@ -23,15 +23,6 @@ let audioContext = typeof AudioContext == 'undefined' ? undefined : new AudioCon
 // resume the audio, a refusal caught so it is not an uncaught error in the console, the next gesture tries again
 function audioResume() { audioContext?.resume()?.catch?.(()=> {}); }
 
-// the time of the last press that tried to start the audio, which the browser may allow
-let audioPressTime = -Infinity;
-function audioResumeFromPress()
-{
-    if (!soundEnable || headlessMode || !audioContext || audioIsRunning()) return;
-    audioPressTime = performance.now();
-    audioResume();
-}
-
 /** Master gain node for all audio to pass through, made at load so effects can connect to it any time
  *  @type {GainNode}
  *  @memberof Audio */
@@ -105,17 +96,14 @@ function audioVisibilityChange()
 
 // sound instances whose start failed only because the context was not running, like music started in gameInit
 // before the first input, each with the time it tried; they start once the context runs unless paused or stopped
-// first, and a one shot drops out once it would have ended anyway, so a backlog of sounds can't all play at once;
-// one played around a press that tried to start the audio, from a second before it on, counts from the press and
-// has a second more, the time a phone may take to start, so the first press's sound is heard
+// first, and a one shot drops out once it would have ended anyway, so a backlog of sounds can't all play at once
 const audioWaitingInstances = new Map;
 function audioWaitingPrune(now=performance.now())
 {
     for (const [instance, startTime] of audioWaitingInstances)
     {
         const remaining = (instance.getDuration() - instance.pausedTime) / instance.rate;
-        const from = startTime > audioPressTime - 1e3 ? max(startTime, audioPressTime) + 1e3 : startTime;
-        if (!instance.loop && now - from > remaining * 1e3)
+        if (!instance.loop && now - startTime > remaining * 1e3)
             audioWaitingInstances.delete(instance);
     }
 }

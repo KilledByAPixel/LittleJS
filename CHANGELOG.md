@@ -13,7 +13,6 @@ What changed in each release, newest first. Releases before 1.20.0 are on the
 - The right click menu is left on links, as it is on text fields
 
 ### Fixes
-- The first press's sound plays: a one shot played around the press that starts the audio waits for it to start, where it dropped out once its own length had passed, which a phone starting its audio can take longer than
 - A tap starts the audio with touch input off too
 
 ## 1.26.0 - 2026-10-07

@@ -500,7 +500,8 @@ function inputInit()
     function onKeyDown(e)
     {
         // fix stalled audio requiring user interaction, a keyboard only game has no other gesture
-        audioResumeFromPress();
+        if (soundEnable && !headlessMode && audioContext && !audioIsRunning())
+            audioResume();
 
         // keys typed into an html text field are the player's typing, not game input;
         // a key already down still releases on keyup, which only lets go of keys that are down
@@ -588,7 +589,8 @@ function inputInit()
         if (touchInputEnable && inputIsTouchMouseEvent(e)) return;
 
         // fix stalled audio requiring user interaction
-        audioResumeFromPress();
+        if (soundEnable && !headlessMode && audioContext && !audioIsRunning())
+            audioResume();
 
         // a press in the bars around a letterboxed canvas is not one on its edge; a drag out of it still moves; under
         // pointer lock the mouse stays where the lock began, which may be in a bar, and every click is the game's
@@ -677,9 +679,9 @@ function inputInit()
         // handle all touch events the same way
         function handleTouch(e)
         {
-            // fix stalled audio requiring user interaction, with touch input off too since the page's sound needs
-            // it; browsers start audio on the end of a tap, not on its start or a move
-            e.type == 'touchmove' || audioResumeFromPress();
+            // fix stalled audio requiring user interaction, with touch input off too since the page's sound needs it
+            if (soundEnable && !headlessMode && audioContext && !audioIsRunning())
+                audioResume();
 
             if (!touchInputEnable)
             {
@@ -1453,7 +1455,8 @@ function touchGamepadPointerDown(e, zone)
     touchGamepadTimer.set();
 
     // resume audio on first interaction
-    audioResumeFromPress();
+    if (soundEnable && !headlessMode && audioContext && !audioIsRunning())
+        audioResume();
 
     // while paused, any touch is the start button; a control belongs to the first finger on it until that
     // finger lifts, so a second finger landing on the same one neither takes it over nor lets it go
