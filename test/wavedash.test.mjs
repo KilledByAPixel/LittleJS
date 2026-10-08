@@ -400,3 +400,14 @@ test('a slot whose timed out call never comes back is not used, other slots are'
     runTimers(); // the save's wait for the busy slot runs out
     assert.equal(await saving, false, 'the busy slot is not written');
 });
+
+test('a slot let go of keeps nothing for it, its calls all answered', async ()=>
+{
+    const log = [];
+    const { run } = game(filesSDK(log));
+    run('new WavedashPlugin()');
+    for (let slot = 1; slot <= 20; ++slot)
+        await run(`wavedash.cloudSave(${slot}, ${slot})`);
+    await new Promise((r)=> setImmediate(r));
+    assert.equal(run('wavedash.slotQueues.size + wavedash.slotCalls.size'), 0);
+});

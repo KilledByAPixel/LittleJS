@@ -72,6 +72,17 @@ smokeRun(async ()=>
     engineStep(3);
     const red = pixel(-2, 1.5);
     check('a gel tile is that tile alone', red[0] > 80 && red[1] < 10 && red[2] < 10, red);
+
+    // a renderLight that throws hands the screen back: its framebuffer, its viewport and the blend
+    const gl = glContext, thrower = new EngineObject(vec2(5));
+    thrower.renderLight = ()=> { throw Error('on purpose'); };
+    let thrown;
+    try { engineStep(); } catch (e) { thrown = e.message; }
+    const viewport = [...gl.getParameter(gl.VIEWPORT)];
+    check('a throwing renderLight leaves the screen the target', thrown == 'on purpose' &&
+        gl.getParameter(gl.FRAMEBUFFER_BINDING) === null && viewport[2] == glCanvas.width &&
+        viewport[3] == glCanvas.height && !glAdditive, [thrown, viewport]);
+    thrower.destroy();
     checkGLError();
 });
 </script>

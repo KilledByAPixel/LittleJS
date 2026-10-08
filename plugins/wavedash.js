@@ -303,7 +303,13 @@ class WavedashPlugin
         const run = (this.slotQueues.get(slot) || Promise.resolve()).then(start, start);
         const done = run.catch(()=> {});
         this.slotQueues.set(slot, done);
-        done.then(()=> this.slotQueues.get(slot) === done && this.slotQueues.delete(slot));
+        done.then(()=>
+        {
+            // the slot is let go of once nothing waits on it, and its calls with it once all are answered
+            if (this.slotQueues.get(slot) !== done) return;
+            this.slotQueues.delete(slot);
+            calls.size || this.slotCalls.get(slot) !== calls || this.slotCalls.delete(slot);
+        });
         return run;
     }
 
