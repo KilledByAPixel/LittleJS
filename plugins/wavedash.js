@@ -127,6 +127,8 @@ class WavedashPlugin
         this.achievementRetry = undefined; // the timer that sends refused ones again
         /** @type {Promise<boolean>|undefined} */
         this.stats = undefined; // the player's stats loading, asked for the first time a stat is
+        /** @type {Map<number, Promise<*>>} */
+        this.slotQueues = new Map; // each slot's last save or load, the next waits for it, as they share a file
 
         // Wavedash keeps its loading screen until init, which is called once
         wavedashWait('init', this.call('init'));
@@ -219,14 +221,19 @@ class WavedashPlugin
     {
         ASSERT(isNumber(slot), 'Wavedash cloudSave: slot must be a number', slot);
         if (!this.isActive()) return false;
-        const path = wavedashSavePath(slot);
-        const written = await wavedashWait('cloudSave', this.call('writeLocalFile', path,
-            new TextEncoder().encode(JSON.stringify(data))));
-        if (written?.['success'] === false) return false;
-        const result = await wavedashWait('cloudSave', this.call('uploadRemoteFile', path));
-        result && !result['success'] && console.warn('Wavedash refused cloudSave of slot ' + slot + ': ' +
-            (result['message'] ?? result['error'] ?? 'no reason given'));
-        return !!result?.['success'];
+        const text = JSON.stringify(data); // as it is now, the save waits its turn
+        return this.slotQueue(slot, async ()=>
+        {
+            // written first, and only a write Wavedash says it made is uploaded, never an older file at that path
+            const path = wavedashSavePath(slot);
+            const written = await wavedashWait('cloudSave', this.call('writeLocalFile', path,
+                new TextEncoder().encode(text)));
+            if (!written?.['success']) return false;
+            const result = await wavedashWait('cloudSave', this.call('uploadRemoteFile', path));
+            result && !result['success'] && console.warn('Wavedash refused cloudSave of slot ' + slot + ': ' +
+                (result['message'] ?? result['error'] ?? 'no reason given'));
+            return !!result?.['success'];
+        });
     }
 
     /** Load the value a cloud save slot holds, undefined when it holds none or off Wavedash
@@ -238,17 +245,35 @@ class WavedashPlugin
     {
         ASSERT(isNumber(slot), 'Wavedash cloudLoad: slot must be a number', slot);
         if (!this.isActive()) return;
-        const path = wavedashSavePath(slot);
-        const downloaded = await wavedashWait('cloudLoad', this.call('downloadRemoteFile', path));
-        if (!downloaded?.['success']) return;
+        return this.slotQueue(slot, async ()=>
+        {
+            const path = wavedashSavePath(slot);
+            const downloaded = await wavedashWait('cloudLoad', this.call('downloadRemoteFile', path));
+            if (!downloaded?.['success']) return;
 
-        // the file's bytes, given as they are or in a response's data
-        const read = await wavedashWait('cloudLoad', this.call('readLocalFile', path));
-        const bytes = read instanceof Uint8Array || read instanceof ArrayBuffer || typeof read == 'string' ?
-            read : read?.['data'];
-        if (!bytes) return;
-        try { return JSON.parse(typeof bytes == 'string' ? bytes : new TextDecoder().decode(bytes)); }
-        catch (error) { console.warn('Wavedash cloudLoad: slot ' + slot + ' does not hold a save'); }
+            // the file's bytes, given as they are or in a response's data
+            const read = await wavedashWait('cloudLoad', this.call('readLocalFile', path));
+            const bytes = read instanceof Uint8Array || read instanceof ArrayBuffer || typeof read == 'string' ?
+                read : read?.['data'];
+            if (!bytes) return;
+            try { return JSON.parse(typeof bytes == 'string' ? bytes : new TextDecoder().decode(bytes)); }
+            catch (error) { console.warn('Wavedash cloudLoad: slot ' + slot + ' does not hold a save'); }
+        });
+    }
+
+    /** Run a slot's save or load after the one before it, as they share the slot's local file; other slots go on
+     *  at once, and one that fails does not hold up the next
+     *  @param {number} slot
+     *  @param {function(): Promise<*>} task
+     *  @return {Promise<*>}
+     *  @ignore */
+    slotQueue(slot, task)
+    {
+        const run = (this.slotQueues.get(slot) || Promise.resolve()).then(task, task);
+        const done = run.catch(()=> {});
+        this.slotQueues.set(slot, done);
+        done.then(()=> this.slotQueues.get(slot) === done && this.slotQueues.delete(slot));
+        return run;
     }
 
     /** Set one of the player's stats, as made for the game in the Wavedash developer portal, which can unlock an

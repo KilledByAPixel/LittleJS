@@ -185,3 +185,20 @@ test('a bullet\'s collideWithTile is asked about the nearest tile first, across 
         bullet.velocity = vec2(10, 0);`));
     assert.ok(abs(run(`frames(1); bullet.pos.x`) - 8) < .01, 'through the near wall to the far one');
 });
+
+test('a long move through empty space walks only the cells near the layers, and still hits a wall far off', () =>
+{
+    const { run } = loadEngine();
+    run(layers(`
+        make([[3, 1]]); // near the start
+        var far = new TileCollisionLayer(vec2(5000, 0), vec2(4, 4), tile(), 0, false);
+        far.setCollisionData(vec2(1, 1));
+        var visits = 0;
+        const walk = lineTest;
+        lineTest = (a, b, test, normal)=> walk(a, b, (cell)=> (++visits, test(cell)), normal);
+        bullet.collideWithTile = (data, pos)=> pos.x > 100; // through the near wall
+        bullet.velocity = vec2(10000, 0);`));
+    const [x, visits] = JSON.parse(run(`frames(1); JSON.stringify([bullet.pos.x, visits])`));
+    assert.ok(abs(x - 5001) < .01, 'stopped by the far wall, ' + x);
+    assert.ok(visits < 40, 'the cells near the two layers, not the 5000 between, ' + visits);
+});

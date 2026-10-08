@@ -316,3 +316,42 @@ test('off Wavedash cloud saves, stats and presence do nothing', async ()=>
     assert.equal(await run(`wavedash.getStat('x')`), 0);
     assert.equal(await run(`wavedash.setPresence('x')`), false);
 });
+
+test('a local write that fails or is refused uploads nothing, never an older file at that path', async ()=>
+{
+    for (const failure of ['reject', 'throw', 'refuse'])
+    {
+        const log = [], sdk = filesSDK(log);
+        const { run } = game(sdk);
+        run('new WavedashPlugin()');
+        await run(`wavedash.cloudSave(1, {level: 1})`); // an older file at the path, saved
+        let uploads = 0;
+        const upload = sdk.uploadRemoteFile;
+        sdk.uploadRemoteFile = (path)=> (++uploads, upload(path));
+        sdk.writeLocalFile = failure == 'reject' ? ()=> Promise.reject(Error('disk full')) :
+            failure == 'throw' ? ()=> { throw Error('disk full'); } : ()=> Promise.resolve({success: false});
+        assert.equal(await run(`wavedash.cloudSave(1, {level: 9})`), false, failure);
+        assert.equal(uploads, 0, failure + ': nothing uploaded');
+        assert.equal(await run(`wavedash.cloudLoad(1).then((save)=> save.level)`), 1, failure + ': the cloud keeps its save');
+    }
+});
+
+test('a save and a load of one slot at once go one after the other, other slots do not wait', async ()=>
+{
+    const log = [], sdk = filesSDK(log);
+    const { run } = game(sdk);
+    run('new WavedashPlugin()');
+    await run(`wavedash.cloudSave(1, {level: 1})`);
+    assert.equal(await run(`Promise.all([wavedash.cloudSave(1, {level: 9}), wavedash.cloudLoad(1)])
+        .then(([saved, loaded])=> JSON.stringify([saved, loaded]))`), '[true,{"level":9}]', 'the load reads the save');
+    assert.equal(await run(`wavedash.cloudLoad(1).then((save)=> save.level)`), 9);
+
+    // a save that fails does not hold up the next
+    const write = sdk.writeLocalFile;
+    sdk.writeLocalFile = ()=> (sdk.writeLocalFile = write, Promise.reject(Error('once')));
+    const failed = run(`wavedash.cloudSave(1, {level: 10})`);
+    assert.equal(await failed, false);
+    assert.equal(await run(`wavedash.cloudSave(1, {level: 11})`), true);
+    assert.equal(await run(`wavedash.cloudLoad(1).then((save)=> save.level)`), 11);
+    assert.equal(await run(`wavedash.slotQueues.size`), 0, 'nothing left waiting');
+});

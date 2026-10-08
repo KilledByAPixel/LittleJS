@@ -462,7 +462,8 @@ class EngineObject
         // takes is the hit, and its layer is what it hit; it is asked with the bullet where the ray goes into the tile
         /** @type {TileCollisionLayer|undefined} */
         let layer;
-        const hit = lineTest(oldPos, end, (cell)=>
+
+        const testCell = (cell)=>
         {
             if (cell.x === startX && cell.y === startY) return false;
             for (const l of tileCollisionLayers)
@@ -478,7 +479,40 @@ class EngineObject
                     return layer = l, true;
             }
             return false;
-        }, normal);
+        };
+
+        // walked only over the stretches of the move that cross a solid layer and a cell around it, nearest first and
+        // joined where they meet, so a long move through empty space, or between layers far apart, costs nothing;
+        // the layers are whole numbers, so the cells walked are the same as over the whole move
+        const stretches = [];
+        for (const l of tileCollisionLayers)
+        {
+            if (!l.isSolid) continue;
+            let t0 = 0, t1 = 1;
+            for (const [p, d, a, b] of [[oldPos.x, move.x, l.pos.x - 1, l.pos.x + l.size.x + 1],
+                [oldPos.y, move.y, l.pos.y - 1, l.pos.y + l.size.y + 1]])
+            {
+                if (!d)
+                {
+                    if (p < a || p > b) t0 = 2;
+                    continue;
+                }
+                const u = (a - p) / d, v = (b - p) / d;
+                t0 = max(t0, min(u, v)), t1 = min(t1, max(u, v));
+            }
+            t0 < t1 && stretches.push([t0, t1]);
+        }
+        stretches.sort((a, b)=> a[0] - b[0]);
+        const at = (t)=> t <= 0 ? oldPos : t >= 1 ? end : oldPos.add(move.scale(t));
+        let hit;
+        for (let i = 0; i < stretches.length && !hit;)
+        {
+            const [t0] = stretches[i];
+            let t1 = stretches[i][1];
+            while (++i < stretches.length && stretches[i][0] <= t1)
+                t1 = max(t1, stretches[i][1]);
+            hit = lineTest(at(t0), at(t1), testCell, normal);
+        }
         if (!hit)
         {
             this.pos = end;
