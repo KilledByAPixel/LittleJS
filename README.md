@@ -39,7 +39,7 @@ The code is very clean and well documented with many examples to get you started
 
 - Blazing fast WebGL2 + Canvas2D hybrid rendering system
 - Apply [Shadertoy](https://www.shadertoy.com) style shaders for post-processing effects, or on any object or draw
-- 2D lights with soft shadows, tinted glass and emissive objects
+- 2D lights with soft shadows, tinted glass and emissive objects, a sun with long shadows, and spotlight cones and gels
 - Robust particle effect system with a library of ready made effects and an [effect design tool](https://killedbyapixel.github.io/LittleJS/examples/particles/)
 - Parallax background layers that repeat across a level of any size
 - Load sprites and animations into texture sheets at runtime, or import [TexturePacker](https://www.codeandweb.com/texturepacker) and [Aseprite](https://www.aseprite.org) atlases
@@ -74,7 +74,8 @@ The code is very clean and well documented with many examples to get you started
 ### 💥 Physics
 
 - Robust arcade physics system with collision handling
-- Fast tilemap collision and raycasting
+- Fast tilemap collision and raycasting, with one-way platforms that turn with their tiles
+- Swept bullet collision, so small fast objects never pass through a wall
 - Object collision that stays fast with thousands of objects
 - Full Box2D integration for realistic physics using [Box2D v2.3.1 wasm](https://github.com/kripken/box2d.js)
 - Grid-based A* pathfinding plugin with optional path smoothing
@@ -96,7 +97,7 @@ The code is very clean and well documented with many examples to get you started
 - UI system with buttons, sliders, text input and nine-slice skins
 - Tween system with easing curves, and a scene system for titles, menus and game states
 - Debug overlay and primitive rendering system
-- Medal tracking system with [Newgrounds](https://www.newgrounds.com/) support
+- Medals, leaderboards and cloud saves on [Newgrounds](https://www.newgrounds.com/) and [Wavedash](https://wavedash.com/)
 - Node.js build system
 
 ### 🤖 AI Friendly

@@ -129,6 +129,8 @@ class WavedashPlugin
         this.stats = undefined; // the player's stats loading, asked for the first time a stat is
         /** @type {Map<number, Promise<*>>} */
         this.slotQueues = new Map; // each slot's last save or load, the next waits for it, as they share a file
+        /** @type {Map<number, Set<Promise<*>>>} */
+        this.slotCalls = new Map; // each slot's file calls Wavedash has not answered, a timed out one may still change it
 
         // Wavedash keeps its loading screen until init, which is called once
         wavedashWait('init', this.call('init'));
@@ -222,14 +224,19 @@ class WavedashPlugin
         ASSERT(isNumber(slot), 'Wavedash cloudSave: slot must be a number', slot);
         if (!this.isActive()) return false;
         const text = JSON.stringify(data); // as it is now, the save waits its turn
-        return this.slotQueue(slot, async ()=>
+        return this.slotQueue(slot, false, async (track)=>
         {
             // written first, and only a write Wavedash says it made is uploaded, never an older file at that path
             const path = wavedashSavePath(slot);
-            const written = await wavedashWait('cloudSave', this.call('writeLocalFile', path,
-                new TextEncoder().encode(text)));
-            if (!written?.['success']) return false;
-            const result = await wavedashWait('cloudSave', this.call('uploadRemoteFile', path));
+            const written = await wavedashWait('cloudSave', track(this.call('writeLocalFile', path,
+                new TextEncoder().encode(text))));
+            if (written !== true && !written?.['success'])
+            {
+                written && console.warn('Wavedash refused writing slot ' + slot + ': ' +
+                    (written['message'] ?? written['error'] ?? 'no reason given'));
+                return false;
+            }
+            const result = await wavedashWait('cloudSave', track(this.call('uploadRemoteFile', path)));
             result && !result['success'] && console.warn('Wavedash refused cloudSave of slot ' + slot + ': ' +
                 (result['message'] ?? result['error'] ?? 'no reason given'));
             return !!result?.['success'];
@@ -245,14 +252,14 @@ class WavedashPlugin
     {
         ASSERT(isNumber(slot), 'Wavedash cloudLoad: slot must be a number', slot);
         if (!this.isActive()) return;
-        return this.slotQueue(slot, async ()=>
+        return this.slotQueue(slot, undefined, async (track)=>
         {
             const path = wavedashSavePath(slot);
-            const downloaded = await wavedashWait('cloudLoad', this.call('downloadRemoteFile', path));
+            const downloaded = await wavedashWait('cloudLoad', track(this.call('downloadRemoteFile', path)));
             if (!downloaded?.['success']) return;
 
             // the file's bytes, given as they are or in a response's data
-            const read = await wavedashWait('cloudLoad', this.call('readLocalFile', path));
+            const read = await wavedashWait('cloudLoad', track(this.call('readLocalFile', path)));
             const bytes = read instanceof Uint8Array || read instanceof ArrayBuffer || typeof read == 'string' ?
                 read : read?.['data'];
             if (!bytes) return;
@@ -263,13 +270,37 @@ class WavedashPlugin
 
     /** Run a slot's save or load after the one before it, as they share the slot's local file; other slots go on
      *  at once, and one that fails does not hold up the next
+     *  - A call that timed out may still change the file when Wavedash gets to it, so the next waits for it to be
+     *    answered too, and gives up with failed when it is not, leaving the file alone
      *  @param {number} slot
-     *  @param {function(): Promise<*>} task
+     *  @param {*} failed - What the task gives when it can not run
+     *  @param {function(function(*): *): Promise<*>} task - Given track, which keeps a call's answer until it is in
      *  @return {Promise<*>}
      *  @ignore */
-    slotQueue(slot, task)
+    slotQueue(slot, failed, task)
     {
-        const run = (this.slotQueues.get(slot) || Promise.resolve()).then(task, task);
+        const calls = this.slotCalls.get(slot) || new Set;
+        this.slotCalls.set(slot, calls);
+        const track = (answer)=>
+        {
+            if (typeof answer?.then == 'function') // any promise, one made elsewhere too
+            {
+                calls.add(answer);
+                const done = ()=> { calls.delete(answer); };
+                answer.then(done, done);
+            }
+            return answer;
+        };
+        const start = async ()=>
+        {
+            if (calls.size && !await wavedashWait('slot ' + slot, Promise.allSettled([...calls]).then(()=> true)))
+            {
+                console.warn('Wavedash slot ' + slot + ' is still busy with a call that timed out, not used');
+                return failed;
+            }
+            return task(track);
+        };
+        const run = (this.slotQueues.get(slot) || Promise.resolve()).then(start, start);
         const done = run.catch(()=> {});
         this.slotQueues.set(slot, done);
         done.then(()=> this.slotQueues.get(slot) === done && this.slotQueues.delete(slot));

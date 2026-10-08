@@ -355,3 +355,48 @@ test('a save and a load of one slot at once go one after the other, other slots 
     assert.equal(await run(`wavedash.cloudLoad(1).then((save)=> save.level)`), 11);
     assert.equal(await run(`wavedash.slotQueues.size`), 0, 'nothing left waiting');
 });
+
+test('a load that timed out holds its slot until Wavedash answers it, and a save after it saves its own value', async ()=>
+{
+    const log = [], sdk = filesSDK(log);
+    const { run, runTimers } = game(sdk);
+    run('new WavedashPlugin()');
+    await run(`wavedash.cloudSave(1, {level: 1})`);
+
+    // a download Wavedash answers late, after the plugin stopped waiting for it
+    const download = sdk.downloadRemoteFile;
+    let finish;
+    sdk.downloadRemoteFile = (path)=> new Promise((resolve)=> finish = ()=> resolve(download(path)));
+    const loading = run(`wavedash.cloudLoad(1)`);
+    await new Promise((r)=> setImmediate(r));
+    runTimers(); // the timeout
+    assert.equal(await loading, undefined, 'the load gave up');
+    sdk.downloadRemoteFile = download;
+
+    // a save waits for that download before it writes, so the late download can not overwrite it
+    const saving = run(`wavedash.cloudSave(1, {level: 9})`);
+    await new Promise((r)=> setImmediate(r));
+    finish();
+    assert.equal(await saving, true);
+    assert.equal(await run(`wavedash.cloudLoad(1).then((save)=> save.level)`), 9);
+});
+
+test('a slot whose timed out call never comes back is not used, other slots are', async ()=>
+{
+    const log = [], sdk = filesSDK(log);
+    const { run, runTimers } = game(sdk);
+    run('new WavedashPlugin()');
+    const download = sdk.downloadRemoteFile;
+    sdk.downloadRemoteFile = ()=> new Promise(()=> {}); // never answered
+    const loading = run(`wavedash.cloudLoad(1)`);
+    await new Promise((r)=> setImmediate(r));
+    runTimers();
+    await loading;
+    sdk.downloadRemoteFile = download;
+
+    const saving = run(`wavedash.cloudSave(1, {level: 9})`);
+    assert.equal(await run(`wavedash.cloudSave(2, {level: 5})`), true, 'another slot goes on');
+    await new Promise((r)=> setImmediate(r));
+    runTimers(); // the save's wait for the busy slot runs out
+    assert.equal(await saving, false, 'the busy slot is not written');
+});

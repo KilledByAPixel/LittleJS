@@ -282,7 +282,8 @@ Plugins are self-contained features that live alongside the engine but aren't pa
 | `pathFinder.js` | Grid-based A* pathfinding with optional path smoothing |
 | `tweakables.js` | A debug panel to change values live while the game runs, press 9 with the debug overlay open |
 | `medalSystem.js` | Achievement / medal tracking with popup notifications |
-| `newgrounds.js` | Newgrounds.io integration (medals held on the server, scoreboards) |
+| `newgrounds.js` | Newgrounds.io integration (medals held on the server, scoreboards, cloud saves, events) |
+| `wavedash.js` | Wavedash integration (achievements, leaderboards, cloud saves, stats, presence), the same shape as the Newgrounds one |
 | `audioEffects.js` | Web Audio effects like filter, reverb, delay, distortion and compressor, for a group of sounds or everything |
 | `drawUtilities.js` | Higher-level drawing helpers like nine-slice and three-slice |
 | `render3dVoxels.js` | `VoxelMap`, a 3D grid of blocks that draws itself and that objects collide with |
@@ -826,7 +827,7 @@ medal_firstWin.unlock();
 
 You can pass an image URL as the fifth argument to `Medal` instead of an emoji icon. The `saveName` you pass to `medalsInit` is used to track which medals have been unlocked in localStorage, so unlocks persist across visits. Give it a name of its own, not the one you pass to `readSaveData` and `writeSaveData`, or the medals and your save data overwrite each other.
 
-The plugin also supports [Newgrounds](https://www.newgrounds.com) scoreboards and medals held on the server through [plugins/newgrounds.js](plugins/newgrounds.js): create each medal as a `NewgroundsMedal` with the id Newgrounds gave it, call `medalsInit` as usual, then `new NewgroundsPlugin(app_id, cipher)`. The "LittleJS Medals & Newgrounds" section of REFERENCE.md has a short example.
+The plugin also supports [Newgrounds](https://www.newgrounds.com) scoreboards and medals held on the server through [plugins/newgrounds.js](plugins/newgrounds.js): create each medal as a `NewgroundsMedal` with the id Newgrounds gave it, call `medalsInit` as usual, then `new NewgroundsPlugin(app_id, cipher)`. The "LittleJS Medals & Newgrounds" section of REFERENCE.md has a short example. [plugins/wavedash.js](plugins/wavedash.js) does the same for [Wavedash](https://wavedash.com/) with `WavedashMedal` and `WavedashPlugin`, and both have `cloudSave(slot, data)` and `cloudLoad(slot)` to keep a player's save on the platform.
 
 ---
 

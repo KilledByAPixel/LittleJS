@@ -690,8 +690,9 @@ EngineObject.clampSpeed    // Hold each axis of velocity to objectMaxSpeed while
                            // a fast bullet that collides; what does not collide moves as fast as it is told
 EngineObject.parent / children // Set by addChild, a child is placed by its parent and sits out solid collision
 EngineObject.isBullet      // Moves through the tiles as a point along a ray, never passing one at any speed and not held
-                           // to objectMaxSpeed for them; collideWithTile sees it where it meets the tile, and it stops
-                           // at the surface and bounces by restitution; its collision with solid objects is the usual one
+                           // to objectMaxSpeed for them; collideWithTile sees it where it meets the tile; on a hit it
+                           // bounces by restitution and goes on with the rest of its move, so it rolls along a floor;
+                           // its collision with solid objects is the usual one, so one with a size is still clamped
 EngineObject.oneWay        // Up, down, left or right, like vec2(0, 1): a solid passed through that way, a platform
                            // jumped up through; it blocks only what was wholly on its far side or stood on it
 

@@ -537,9 +537,10 @@ class EngineObject
                 break;
             }
 
-            // stop at the surface, a hair off it, and bounce off it by the more bouncy of it and the layer
+            // stop at the surface, a hair off it, more than a one way tile's margin, so going on along a ceiling a
+            // one way tile it rose through lets it on; bounce off it by the more bouncy of it and the layer
             const {normal, layer} = hit, restitution = max(this.restitution, layer.restitution);
-            const stop = hit.pos.add(normal.scale(1e-3));
+            const stop = hit.pos.add(normal.scale(2e-3));
             const into = this.velocity.dot(normal);
             if (into < 0)
                 this.velocity = this.velocity.subtract(normal.scale(into * (1 + restitution)));
