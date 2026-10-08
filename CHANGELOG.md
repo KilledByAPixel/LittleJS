@@ -55,7 +55,7 @@ Nothing yet.
 - A lens flare made while the game is paused shows, as the 3D editor's Scene box makes one, where it waited for an update that never came, and follows the camera while the game stays paused
 - A release build goes on past an error in its first frame, as it does in any later one, where it stopped the game
 - The 3D settle of a shoved object sees a wall that blocks solids without being solid itself; a see-through part of an additive owner passes the fade assert
-- Examples: the platformer's bullets spark where they hit the wall; the Light Shadows short has a sun and a background block lit at its edges
+- Examples: the platformer's bullets spark where they hit the wall; the Light Shadows short has a sun
 - setEnablePhysicsSolver(false) stops 3D collision too, solids, the level, the speed cap and 3D particles hitting the level, as it does in 2D, where 3D objects still collided
 - Shader.dispose() frees a shader's programs and takes it off the engine's list, which kept every Shader made for the life of the page; a scene that makes its shaders each time it starts can let them go
 - Wavedash: a board or achievement named like a built-in property, as constructor or toString, is one like any other

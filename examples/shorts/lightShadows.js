@@ -52,8 +52,7 @@ function gameInit()
     new Light(vec2(0, -4), 8, hsl(.55,.8,.9));
     mouseLight = new Light(vec2(), 10, WHITE);
 
-    // a low sun from the upper left, and a background wall it lights from
-    // its edges; S turns the sun
+    // a low sun from the upper left, S turns it
     sun = new DirectionalLight(vec2(-1, .6), hsl(.12, .5, .6));
     sun.shadowLength = 8;
 }
@@ -125,10 +124,10 @@ to the mouse light when the mouse is inside a pillar.
 whole scene from one side. `sunDirection` points toward the sun, here
 up and to the left, so it shines down and to the right; S turns it.
 Objects that cast shadows throw long ones across the floor, fading
-out by the light's `shadowLength`, 8 here. The gray block at the left sets
-`castShadow = false` and `castBackgroundShadow = true`, which makes it
-a background: the sun lights it only at the edges that face the
-light, fading in by `backgroundDepth`.
+out by the light's `shadowLength`, 8 here. An object that sets
+`castShadow = false` and `castBackgroundShadow = true` is a
+background: the sun lights it only at the edges that face the light,
+fading in by `backgroundDepth`.
 
 ## Try it
 - Set `coin.castShadow` to `true` and the coin casts a shadow.
