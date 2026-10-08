@@ -22,15 +22,88 @@ function engineObjectOneWayPass(solid, solidPos, from, fromSize)
         from.y + fromSize.y/2 > solidPos.y - size.y/2 + epsilon;
 }
 
-// where a move from start to end goes into the cell at its corner, the first point of it inside the cell's box
+// where a move from start to end goes into the cell at its corner, the first point of it inside the cell's box, and
+// whether it goes in through a side, x, or the top or bottom, the axis whose slab it enters last; one starting on a
+// face is on that face, as its entry there is 0 and the other's is before it
 function engineObjectRayEntry(start, end, cell)
 {
     const dx = end.x - start.x, dy = end.y - start.y;
-    let t = 0;
-    if (dx) t = max(t, min((cell.x - start.x) / dx, (cell.x + 1 - start.x) / dx));
-    if (dy) t = max(t, min((cell.y - start.y) / dy, (cell.y + 1 - start.y) / dy));
-    t = clamp(t);
-    return vec2(start.x + dx*t, start.y + dy*t);
+    const tx = dx ? min((cell.x - start.x) / dx, (cell.x + 1 - start.x) / dx) : -Infinity;
+    const ty = dy ? min((cell.y - start.y) / dy, (cell.y + 1 - start.y) / dy) : -Infinity;
+    const t = clamp(max(tx, ty));
+    return {pos: vec2(start.x + dx*t, start.y + dy*t), side: tx >= ty};
+}
+
+// a bullet's move from one point to another through the tiles: the first tile its collideWithTile takes, nearest
+// first across the solid layers, with where the move goes into it, the face's normal and the layer; undefined for none
+// - the cell it starts in, a hair back along its move so one stopped on a tile's face going into it is outside, is not
+//   tested, so it moves out of a tile it is inside, as a box that starts in one does, and a tile after it still stops it
+// - collideWithTile is asked with the bullet where the move goes into the tile
+// - only the stretches of the move near a solid layer are walked, nearest first and joined where they meet, so a long
+//   move through empty space, or between layers far apart, costs nothing; the layers are whole numbers, so the cells
+//   are the same as over the whole move
+/** @param {EngineObject} object
+ *  @param {Vector2} from
+ *  @param {Vector2} to
+ *  @return {{pos: Vector2, normal: Vector2, layer: TileCollisionLayer}|undefined} */
+function engineObjectBulletSweep(object, from, to)
+{
+    const move = to.subtract(from), length = move.length();
+    if (!length) return;
+    const back = from.subtract(move.scale(1e-6 / length)), startX = floor(back.x), startY = floor(back.y);
+
+    /** @type {{pos: Vector2, normal: Vector2, layer: TileCollisionLayer}|undefined} */
+    let hit;
+    const testCell = (cell)=>
+    {
+        if (cell.x === startX && cell.y === startY) return false;
+        for (const layer of tileCollisionLayers)
+        {
+            if (!layer.isSolid) continue;
+            const x = cell.x - layer.pos.x, y = cell.y - layer.pos.y;
+            if (x < 0 || y < 0 || x >= layer.size.x || y >= layer.size.y) continue;
+            const data = layer.collisionData[y*layer.size.x + x];
+            if (!data || tileCollisionOneWayPass(layer, x, y, from.x, from.y)) continue;
+            const tilePos = vec2(cell.x, cell.y), entry = engineObjectRayEntry(from, to, tilePos);
+            object.pos = entry.pos;
+            if (!object.collideWithTile(data, tilePos)) continue;
+            const normal = entry.side ? vec2(-sign(move.x), 0) : vec2(0, -sign(move.y));
+            hit = {pos: entry.pos, normal, layer};
+            return true;
+        }
+        return false;
+    };
+
+    const stretches = [];
+    for (const layer of tileCollisionLayers)
+    {
+        if (!layer.isSolid) continue;
+        tileCollisionAssertWhole(layer);
+        let t0 = 0, t1 = 1;
+        for (const [p, d, a, b] of [[from.x, move.x, layer.pos.x - 1, layer.pos.x + layer.size.x + 1],
+            [from.y, move.y, layer.pos.y - 1, layer.pos.y + layer.size.y + 1]])
+        {
+            if (!d)
+            {
+                if (p < a || p > b) t0 = 2;
+                continue;
+            }
+            const u = (a - p) / d, v = (b - p) / d;
+            t0 = max(t0, min(u, v)), t1 = min(t1, max(u, v));
+        }
+        t0 < t1 && stretches.push([t0, t1]);
+    }
+    stretches.sort((a, b)=> a[0] - b[0]);
+    const at = (t)=> t <= 0 ? from : t >= 1 ? to : from.add(move.scale(t));
+    for (let i = 0; i < stretches.length && !hit;)
+    {
+        const [t0] = stretches[i];
+        let t1 = stretches[i][1];
+        while (++i < stretches.length && stretches[i][0] <= t1)
+            t1 = max(t1, stretches[i][1]);
+        lineTest(at(t0), at(t1), testCell);
+    }
+    return hit;
 }
 
 // where an object was before this frame's moves, for a one way test: kept by the update when a one way solid is in
@@ -151,7 +224,11 @@ class EngineObject
         /** @property {boolean} - Move through the tiles as a point along a ray, so it can not pass through one at
          *  any speed, for small fast things like bullets: its speed is not held to objectMaxSpeed for the tiles,
          *  collideWithTile is asked with this.pos where the ray goes into the tile, and on a hit it stops at the
-         *  surface and bounces off it by restitution; its collision with solid objects is the usual one */
+         *  surface, bounces off it by restitution and goes on with the rest of its move, so it slides along a floor
+         *  - Its collision with solid objects is the usual one, so one with a size that collides with them is still held
+         *    to objectMaxSpeed; one of no size is not, it never collides with them
+         *  - this.pos is set for each tile asked about and put where the move ends after, so a change collideWithTile
+         *    makes to it is not kept; move it after the physics, in update */
         this.isBullet = false;
         /** @property {EngineObject|undefined} - Object we are standing on, if any
          *  @type {EngineObject|undefined} */
@@ -251,7 +328,7 @@ class EngineObject
         // with solids, or with tiles while it has a mass, which tile collision needs; anything else moves as fast as
         // it is told
         if (this.clampSpeed && enablePhysicsSolver &&
-            (this.collideSolidObjects || this.collideLevel && this.mass && !this.isBullet))
+            (this.collideSolidObjects && this.size.x && this.size.y || this.collideLevel && this.mass && !this.isBullet))
         {
             this.velocity.x = clamp(this.velocity.x, -objectMaxSpeed, objectMaxSpeed);
             this.velocity.y = clamp(this.velocity.y, -objectMaxSpeed, objectMaxSpeed);
@@ -448,85 +525,34 @@ class EngineObject
     /** @private */
     updatePhysicsBullet(oldPos, gravityY, wasFalling)
     {
-        const end = this.pos.copy(), move = end.subtract(oldPos), normal = vec2();
-        const length = move.length();
-        if (!length) return;
-
-        // the cell it starts in, a hair back along its move so one stopped on a tile's face going into it is outside;
-        // the tile there is not tested, so it moves out of one it is inside, as a box that starts in one does, and
-        // a tile after it still stops it
-        const back = oldPos.subtract(move.scale(1e-6 / length)), startX = floor(back.x), startY = floor(back.y);
-
-        // one walk along the ray over the world grid all collision layers share, each cell tested in every solid
-        // layer, so the tiles are asked about nearest first whatever the layers' order; the first that collideWithTile
-        // takes is the hit, and its layer is what it hit; it is asked with the bullet where the ray goes into the tile
-        /** @type {TileCollisionLayer|undefined} */
-        let layer;
-
-        const testCell = (cell)=>
+        // up to three legs: the move, then what is left of it after each hit, along the surface or bounced off it as
+        // its velocity is, so one rolling along the floor under gravity keeps going as a box does
+        let from = oldPos, to = this.pos.copy();
+        for (let leg = 0; leg < 3; ++leg)
         {
-            if (cell.x === startX && cell.y === startY) return false;
-            for (const l of tileCollisionLayers)
+            const hit = engineObjectBulletSweep(this, from, to);
+            if (!hit)
             {
-                if (!l.isSolid) continue;
-                const x = cell.x - l.pos.x, y = cell.y - l.pos.y;
-                if (x < 0 || y < 0 || x >= l.size.x || y >= l.size.y) continue;
-                const data = l.collisionData[y*l.size.x + x];
-                if (!data || tileCollisionOneWayPass(l, x, y, oldPos.x, oldPos.y)) continue;
-                const tilePos = vec2(cell.x, cell.y);
-                this.pos = engineObjectRayEntry(oldPos, end, tilePos);
-                if (this.collideWithTile(data, tilePos))
-                    return layer = l, true;
+                this.pos = to;
+                break;
             }
-            return false;
-        };
 
-        // walked only over the stretches of the move that cross a solid layer and a cell around it, nearest first and
-        // joined where they meet, so a long move through empty space, or between layers far apart, costs nothing;
-        // the layers are whole numbers, so the cells walked are the same as over the whole move
-        const stretches = [];
-        for (const l of tileCollisionLayers)
-        {
-            if (!l.isSolid) continue;
-            let t0 = 0, t1 = 1;
-            for (const [p, d, a, b] of [[oldPos.x, move.x, l.pos.x - 1, l.pos.x + l.size.x + 1],
-                [oldPos.y, move.y, l.pos.y - 1, l.pos.y + l.size.y + 1]])
-            {
-                if (!d)
-                {
-                    if (p < a || p > b) t0 = 2;
-                    continue;
-                }
-                const u = (a - p) / d, v = (b - p) / d;
-                t0 = max(t0, min(u, v)), t1 = min(t1, max(u, v));
-            }
-            t0 < t1 && stretches.push([t0, t1]);
-        }
-        stretches.sort((a, b)=> a[0] - b[0]);
-        const at = (t)=> t <= 0 ? oldPos : t >= 1 ? end : oldPos.add(move.scale(t));
-        let hit;
-        for (let i = 0; i < stretches.length && !hit;)
-        {
-            const [t0] = stretches[i];
-            let t1 = stretches[i][1];
-            while (++i < stretches.length && stretches[i][0] <= t1)
-                t1 = max(t1, stretches[i][1]);
-            hit = lineTest(at(t0), at(t1), testCell, normal);
-        }
-        if (!hit)
-        {
-            this.pos = end;
-            return;
-        }
+            // stop at the surface, a hair off it, and bounce off it by the more bouncy of it and the layer
+            const {normal, layer} = hit, restitution = max(this.restitution, layer.restitution);
+            const stop = hit.pos.add(normal.scale(1e-3));
+            const into = this.velocity.dot(normal);
+            if (into < 0)
+                this.velocity = this.velocity.subtract(normal.scale(into * (1 + restitution)));
+            if (normal.y * gravityY < 0 && wasFalling) // landed, against its gravity
+                this.groundObject = layer;
+            this.pos = stop;
 
-        // stop at the surface, a hair off it, and bounce off it by the more bouncy of it and the layer
-        this.pos = hit.add(normal.scale(1e-3));
-        const restitution = max(this.restitution, layer ? layer.restitution : 0); // set with every hit
-        const into = this.velocity.dot(normal);
-        if (into < 0)
-            this.velocity = this.velocity.subtract(normal.scale(into * (1 + restitution)));
-        if (normal.y * gravityY < 0 && wasFalling) // landed, against its gravity
-            this.groundObject = layer;
+            // the rest of the move from there, turned the same way; none once its callback destroyed it
+            const rest = to.subtract(hit.pos), restInto = rest.dot(normal);
+            const next = stop.add(restInto < 0 ? rest.subtract(normal.scale(restInto * (1 + restitution))) : rest);
+            if (this.destroyed || next.distanceSquared(stop) < 1e-12) break;
+            from = stop, to = next;
+        }
         debugPhysics && debugPoint(this.pos, '#f00', undefined, undefined, false);
     }
 

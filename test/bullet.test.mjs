@@ -202,3 +202,37 @@ test('a long move through empty space walks only the cells near the layers, and 
     assert.ok(abs(x - 5001) < .01, 'stopped by the far wall, ' + x);
     assert.ok(visits < 40, 'the cells near the two layers, not the 5000 between, ' + visits);
 });
+
+test('a steep shot that starts on a tile\'s face bounces off that face, not off the one its slope suggests', () =>
+{
+    // on the wall's face at x 10, going right and steeply up
+    const { run } = loadEngine();
+    run(level(`bullet.pos = vec2(10, 5.5); bullet.velocity = vec2(1, 2); bullet.restitution = 1;`));
+    const [vx, vy] = JSON.parse(run(`frames(1); JSON.stringify([bullet.velocity.x, bullet.velocity.y])`));
+    assert.deepEqual([vx, vy], [-1, 2], 'turned back off the side, its climb kept');
+    assert.ok(run(`frames(5); bullet.pos.x`) < 6, 'and it left the wall');
+
+    // the same going left from a whole number position, onto a tile's right face
+    const left = loadEngine();
+    left.run(level(`bullet.pos = vec2(11, 5.5); bullet.velocity = vec2(-1, -2); bullet.restitution = 1;`));
+    assert.deepEqual(JSON.parse(left.run(`frames(1); JSON.stringify([bullet.velocity.x, bullet.velocity.y])`)), [1, -2]);
+});
+
+test('a bullet rolling along the floor under gravity goes as far as a box does', () =>
+{
+    const { run } = loadEngine();
+    run(level(`setGravity(vec2(0, -.01)); bullet.pos = vec2(2, 1.1); bullet.friction = 1;
+        bullet.velocity = vec2(.1, 0);`));
+    const x = run(`frames(30); bullet.pos.x`);
+    assert.ok(abs(x - 5) < .05, 'about 30 times .1 along, ' + x);
+});
+
+test('a bullet of no size is not held to objectMaxSpeed with solid collision on, one with a size is', () =>
+{
+    const { run } = loadEngine();
+    run(level(`bullet.size = vec2(); bullet.setCollision(); bullet.isBullet = true; bullet.velocity = vec2(3, 0);`));
+    assert.equal(run(`frames(1); bullet.velocity.x`), 3);
+    const sized = loadEngine();
+    sized.run(level(`bullet.setCollision(); bullet.isBullet = true; bullet.velocity = vec2(3, 0);`));
+    assert.equal(sized.run(`frames(1); bullet.velocity.x`), 1);
+});
