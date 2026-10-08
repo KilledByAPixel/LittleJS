@@ -39,7 +39,9 @@ class ParallaxLayer extends CanvasLayer
      *    and 1 with the screen, a Vector2 to follow x and y by different amounts
      *  @param {number} [renderOrder] - Low to draw behind the game, far layers lowest
      *  @param {function(OffscreenCanvasRenderingContext2D, Vector2, ParallaxLayer): void} [drawFunction] - Draws
-     *    the image, given the canvas context, its size in pixels and the layer; mountains when not given
+     *    the image, given the canvas context, its size in pixels and the layer; mountains when not given; called
+     *    once when the layer is made and on redraw(), not each frame, so it draws with the canvas 2D context, not
+     *    the engine's draws like drawTile
      *  @param {Vector2} [canvasSize] - Size of the image in pixels */
     constructor(pos=vec2(), size=vec2(32, 16), parallax=.5, renderOrder=-1e3, drawFunction=parallaxMountains(),
         canvasSize=vec2(512, 256))

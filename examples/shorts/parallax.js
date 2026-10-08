@@ -11,6 +11,8 @@ function gameInit()
         const far = i/2;
         const top = hsl(hue, .4, .35 + far*.3);
         const bottom = hsl(hue, .5, .15 + far*.2);
+        // the last argument is a draw function, called once right here to
+        // paint the layer's image on a canvas 2D context, not every frame
         new ParallaxLayer(vec2(0, far*4 - 4), vec2(40, 20), .3 + far*.5,
             -1 - i, parallaxMountains(top, bottom));
     }
@@ -56,7 +58,12 @@ makes a layer, and from then on the engine draws it.
   stays with the world, like any object, and 1 stays with the screen.
 - `renderOrder` is the drawing order. Lower numbers are drawn first,
   and so end up behind.
-- `drawFunction` draws the image, once, when the layer is made.
+- `drawFunction` draws the image, once, when the layer is made. It is
+  given a canvas 2D context and the image's size in pixels, so it draws
+  with the canvas's own calls, like this for a loaded image:
+  `context.drawImage(image, 0, 0, size.x, size.y)`. The engine's draws,
+  like `drawTile`, do not work there: they only draw while the game
+  renders.
 
 The loop counts `i` from 2 down to 0, and `far` is 1, .5 and 0. The
 farthest layer is the highest, follows the camera most, at .8 against
