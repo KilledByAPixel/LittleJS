@@ -587,9 +587,9 @@ class Render3DPlugin
          *  @type {Vector3|undefined} */
         this.shadowCenter = undefined;
         /** @property {number} - Stops surfaces shadowing themselves, raise for speckles, lower if shadows drift off;
-         *  in world units, how far a shadow may start from what casts it, the same for the sun at any shadowRange and
-         *  for a spotlight */
-        this.shadowBias = .24;
+         *  a share of the shadow map's depth, twice shadowRange for the sun and a spotlight's radius, so the gap behind
+         *  a caster grows with the range as the map's texels do, and the speckles they make stay away */
+        this.shadowBias = .003;
         /** @property {number} - How much to blur the shadow edges */
         this.shadowSoftness = 1;
 
@@ -1302,12 +1302,12 @@ class Render3DPlugin
             this.shadowPlanes = render3DFrustumPlanes(this.shadowMatrix);
             // depth is not even with perspective: the lookup divides this by the distance squared, which makes
             // the bias the same distance in the world near the light and far from it
-            this.shadowDepthBias = this.shadowBias * far * near / (far - near);
+            this.shadowDepthBias = this.shadowBias * far * far * near / (far - near);
             return;
         }
+        this.shadowDepthBias = this.shadowBias; // the sun's map is flat, its depth even
         ASSERT(this.shadowRange > 0, 'shadowRange must be positive');
         const range = this.shadowRange > 0 ? this.shadowRange : 1, half = range / 2;
-        this.shadowDepthBias = this.shadowBias / (range * 2); // the sun's map is flat, its depth even over twice the range
         const toSun = this.sunDirection.normalize();
         const center = this.shadowCenter || this.camera.pos.add(this.cameraForward.scale(half * .8));
         const view = Matrix4.lookAt(center.add(toSun.scale(range)), center).invert();

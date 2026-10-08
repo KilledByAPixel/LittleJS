@@ -1413,7 +1413,8 @@ render3D.shadowLight = flashlight     // a spotlight, a Light3D with a coneAngle
 render3D.shadowRange = 40             // world size the map covers around shadowCenter, smaller is sharper
                                       // it is a square facing the light, so ~1.5x an area's width covers it
 render3D.shadowCenter = undefined // Vector3 center of the shadowed area, read each frame; undefined follows the camera
-render3D.shadowBias = .24  // world units, raise if lit surfaces get speckled with their own shadow, lower if shadows float away
+render3D.shadowBias = .003 // raise if lit surfaces get speckled with their own shadow, lower if shadows float away;
+                           // a share of the map's depth (2 * shadowRange for the sun), so the gap grows with the range
                            // from their casters
 render3D.shadowSoftness = 1           // how far to blur the shadow edge, in shadow map pixels
 

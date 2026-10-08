@@ -1462,7 +1462,7 @@ test('shadow settings default off and objects cast by default', () =>
     assert.equal(render3D.shadowMapSize, 1024);
     assert.equal(render3D.shadowRange, 40);
     assert.equal(render3D.shadowCenter, undefined);
-    near(render3D.shadowBias, .24);
+    near(render3D.shadowBias, .003);
     assert.equal(render3D.shadowPass, false);
     const o = new EngineObject3D;
     assert.equal(o.castShadow, true);
@@ -1496,23 +1496,6 @@ test('updateShadowMatrix fits an orthographic box around the center, snapped to 
     render3D.updateMatrices(1);
     render3D.updateShadowMatrix();
     near(Math.abs(render3D.shadowMatrix.transformPoint(vec3(100, 0, -16)).x), 0);
-    render3D.sunDirection = vec3(-.3, 1, .5);
-});
-
-test('the sun shadow bias is world units at any shadowRange', () =>
-{
-    render3D.sunDirection = vec3(0, 1, 0);
-    render3D.shadowCenter = vec3();
-    for (const range of [40, 80, 300])
-    {
-        render3D.shadowRange = range;
-        render3D.updateShadowMatrix();
-        // the lookup takes depth from 0 to 1, half of the clip depth, and moves it by shadowDepthBias
-        const depth = (y)=> render3D.shadowMatrix.transformPoint(vec3(0, y, 0)).z * .5;
-        near(depth(0) - depth(render3D.shadowBias), render3D.shadowDepthBias);
-    }
-    render3D.shadowRange = 40;
-    render3D.shadowCenter = undefined;
     render3D.sunDirection = vec3(-.3, 1, .5);
 });
 
