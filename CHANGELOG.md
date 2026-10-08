@@ -5,7 +5,19 @@ What changed in each release, newest first. Releases before 1.20.0 are on the
 
 ## Unreleased
 
-Nothing yet.
+### New Changes
+- A 3D Shader may define `void mainNormal(inout vec3 n)`, given the world normal after the normal map, to bend it per pixel for waves, ripples or a flag; the lighting, shadows, specular, Fresnel, environment reflection and fog all use it
+- `postProcess.enabled`: false skips the post process pass, so an effect turns off and on without taking the plugin apart
+- `averageFPS` is public and kept in release builds, where it read 0 unless debug or the watermark was on; it starts at the first frame's rate rather than climbing from 0
+- `camera.align2DZ`: the z of the plane an align2D camera lines up with the 2D view, 0 as before
+- The right click menu is left on links, as it is on text fields
+
+### Breaking Changes
+- `render3D.shadowBias` is in world units, how far a shadow may start from what casts it, the same at any `shadowRange` and for a spotlight; the default .24 looks as before for the sun at the default range of 40, a game that set its own divides it by 2 * shadowRange for the sun, or by a spotlight's radius
+
+### Fixes
+- The first press's sound plays: a one shot played around the press that starts the audio waits for it to start, where it dropped out once its own length had passed, which a phone starting its audio can take longer than
+- A tap starts the audio with touch input off too
 
 ## 1.26.0 - 2026-10-07
 

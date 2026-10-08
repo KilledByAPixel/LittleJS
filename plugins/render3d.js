@@ -5,7 +5,8 @@
  * - EngineObject3D is an EngineObject with a 3D position, rotation and mesh
  * - The 3D scene draws under the 2D sprites, so HUD and text land on top
  * - Lighting is the sun plus ambient, with optional extra lights, fog and shadows
- * - Any object or draw can bring its own Shader, a mainImage snippet the lighting then applies to
+ * - Any object or draw can bring its own Shader, a mainImage snippet the lighting then applies to, and a
+ *   mainNormal in it bends the normal the lighting uses
  * - Meshes and the basic builders are in render3dMesh.js, EngineObject3D, instancing and lights in
  *   render3dObject.js, both right after this one; the other builders, terrain, particles, camera controls and the
  *   OBJ loader are in the Render3D Extras plugin, which goes after those
@@ -585,8 +586,10 @@ class Render3DPlugin
         /** @property {Vector3|undefined} - Center of the shadowed area, read each frame, undefined follows the camera
          *  @type {Vector3|undefined} */
         this.shadowCenter = undefined;
-        /** @property {number} - Stops surfaces shadowing themselves, raise for speckles, lower if shadows drift off */
-        this.shadowBias = .003;
+        /** @property {number} - Stops surfaces shadowing themselves, raise for speckles, lower if shadows drift off;
+         *  in world units, how far a shadow may start from what casts it, the same for the sun at any shadowRange and
+         *  for a spotlight */
+        this.shadowBias = .24;
         /** @property {number} - How much to blur the shadow edges */
         this.shadowSoftness = 1;
 
@@ -1299,12 +1302,12 @@ class Render3DPlugin
             this.shadowPlanes = render3DFrustumPlanes(this.shadowMatrix);
             // depth is not even with perspective: the lookup divides this by the distance squared, which makes
             // the bias the same distance in the world near the light and far from it
-            this.shadowDepthBias = this.shadowBias * far * far * near / (far - near);
+            this.shadowDepthBias = this.shadowBias * far * near / (far - near);
             return;
         }
-        this.shadowDepthBias = this.shadowBias; // the sun's map is flat, its depth even
         ASSERT(this.shadowRange > 0, 'shadowRange must be positive');
         const range = this.shadowRange > 0 ? this.shadowRange : 1, half = range / 2;
+        this.shadowDepthBias = this.shadowBias / (range * 2); // the sun's map is flat, its depth even over twice the range
         const toSun = this.sunDirection.normalize();
         const center = this.shadowCenter || this.camera.pos.add(this.cameraForward.scale(half * .8));
         const view = Matrix4.lookAt(center.add(toSun.scale(range)), center).invert();
@@ -1619,6 +1622,9 @@ class Camera3D
         /** @property {boolean} - Line the 3D camera up with the 2D camera, so 3D things at z=0 sit on the 2D sprites;
          *  it lines up with the 2D view of the main canvas, whatever canvas size a screenToRay is given */
         this.align2D = false;
+        /** @property {number} - The z of the plane align2D lines up with the 2D view, the camera sitting its
+         *  distance in front of it */
+        this.align2DZ = 0;
     }
 
     /** Returns the camera's world transform
@@ -1689,7 +1695,7 @@ class Camera3D
         ASSERT(!canvasHeight || distance < this.far,
             'align2D needs this camera distance to match the 2D view, raise camera.far past it', distance);
         this.orthographic &&= halfHeight * 2; // an orthographic camera stays orthographic and shows the same height
-        this.pos = vec3(cameraPos.x, cameraPos.y, distance);
+        this.pos = vec3(cameraPos.x, cameraPos.y, this.align2DZ + distance);
         this.rotation = vec3(0, 0, -cameraAngle); // 2D angles turn the other way
     }
 }
@@ -1741,7 +1747,8 @@ const RENDER3D_SNIPPET_NAMES =
     '#define lights extraLights\n' +
     '#define lightColors extraLightColors\n';
 
-// the fragment shader; given a Shader's snippet, its mainImage replaces the texture sample and all else is the same
+// the fragment shader; given a Shader's snippet, its mainImage replaces the texture sample and all else is the same,
+// and a mainNormal in it bends the normal after the normal map, before all the lighting reads it
 // uniforms: lightDir (xyz the way the sunlight travels, w = emissive, 1 or more skips the lighting),
 //   lightColor (the sun's rgb, a = specular), ambientFog (rgb, a = fogEnd), fogColor (rgb, a = fogStart),
 //   cameraPos, tex, shadowMap, shadowParams (x = shadows on, y = bias, z = blur step in texture space,
@@ -1750,6 +1757,7 @@ const RENDER3D_SNIPPET_NAMES =
 //   emissive map is on), skyTop, skyHorizon, skyBottom (what a reflection shows), normalTex, emissiveTex
 function render3DFragmentSource(fragmentCode)
 {
+    const hasNormal = /\bmainNormal\s*\(/.test(fragmentCode || '');
     return '#version 300 es\n' +
         'precision highp float;' +
         'uniform vec4 lightDir,lightColor,ambientFog,ambientGround,fogColor,shadowParams;' +
@@ -1797,6 +1805,7 @@ function render3DFragmentSource(fragmentCode)
         'return normalize((u*m.x-v*m.y)*inversesqrt(k)+n*m.z);}' +
         // a snippet's mainImage is declared here and written after main, so a define in it can not reach main
         (fragmentCode ? 'void mainImage(out vec4,vec2);' : '') +
+        (hasNormal ? 'void mainNormal(inout vec3);' : '') +
         'void main(){' +
         (fragmentCode ? 'vec4 t;mainImage(t,T);' : 'vec4 t=texture(tex,T);') +
         'if(premultipliedTexture&&t.a>0.)t.rgb/=t.a;' + // back to straight color, what the lighting and blend expect
@@ -1806,6 +1815,7 @@ function render3DFragmentSource(fragmentCode)
         'vec3 n=dot(N,N)>0.?normalize(N):vec3(0,1,0);' +
         'if(!gl_FrontFacing)n=-n;' + // only a double sided mesh shows a back face, light it on the side that is seen
         'if(materialParams.x!=0.)n=normalMapNormal(n);' +
+        (hasNormal ? 'mainNormal(n);n=normalize(n);' : '') +
         'float nl=dot(n,-lightDir.xyz);' +
         // the shadow is the sun's, or one spotlight's: shadowParams.x is 1 for the sun, 2 and up for that Light3D
         'float sh=shadow(),s=shadowParams.x<1.5?sh:1.;' +

@@ -137,6 +137,25 @@ test('a spotlight that casts the shadows lights no wider than its shadow map cov
     near(run('along(70)'), 1);
 });
 
+test('a spotlight shadow bias is world units at any radius and distance', ()=>
+{
+    const run = load();
+    for (const radius of [5, 25, 200])
+    {
+        run(`render3D.shadowLight?.destroy(); var lamp = new Light3D(vec3(), ${radius}); lamp.coneAngle = .5;
+            render3D.shadowLight = lamp; render3D.updateShadowMatrix();
+            var depth = (z)=> { const m = render3D.shadowMatrix.m, w = -m[11] * z + m[15];
+                return (-m[10] * z + m[14]) / w * .5; };`);
+        // the lookup moves the depth by shadowDepthBias over the distance squared, as much as shadowBias moves it
+        for (const z of [radius * .1, radius * .7])
+        {
+            const e = z * 1e-4, slope = run(`(depth(${z + e}) - depth(${z})) / ${e}`);
+            const step = slope * run('render3D.shadowBias'), lookup = run('render3D.shadowDepthBias') / (z * z);
+            assert.ok(Math.abs(step / lookup - 1) < .05, `radius ${radius} at ${z}: ${step} vs ${lookup}`);
+        }
+    }
+});
+
 test('a shadow light with a tiny radius still has a shadow map that works', ()=>
 {
     const run = load();

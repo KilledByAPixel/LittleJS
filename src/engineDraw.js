@@ -548,6 +548,9 @@ class SpriteAnimator
  *   across the sprite or the mesh's own uv
  * - Names in 3D only: worldPos, worldNormal, cameraPos, sunDirection, sunColor, ambientColor, ambientGroundColor,
  *   lightCount, lights[i], lightColors[i] and shadow()
+ * - In 3D the snippet may also define void mainNormal(inout vec3 n), given the normal facing the camera after the
+ *   normal map, in world space, to bend it per pixel for waves or ripples; the lighting, specular, reflection and
+ *   fog then all use it, as they use a normal map
  * - In 3D the shadow map is drawn without the Shader, cut only by the texture's alpha, so a snippet that removes
  *   parts of a surface still shadows with the whole of it
  * @example

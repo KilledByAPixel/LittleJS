@@ -500,8 +500,7 @@ function inputInit()
     function onKeyDown(e)
     {
         // fix stalled audio requiring user interaction, a keyboard only game has no other gesture
-        if (soundEnable && !headlessMode && audioContext && !audioIsRunning())
-            audioResume();
+        audioResumeFromPress();
 
         // keys typed into an html text field are the player's typing, not game input;
         // a key already down still releases on keyup, which only lets go of keys that are down
@@ -589,8 +588,7 @@ function inputInit()
         if (touchInputEnable && inputIsTouchMouseEvent(e)) return;
 
         // fix stalled audio requiring user interaction
-        if (soundEnable && !headlessMode && audioContext && !audioIsRunning())
-            audioResume();
+        audioResumeFromPress();
 
         // a press in the bars around a letterboxed canvas is not one on its edge; a drag out of it still moves; under
         // pointer lock the mouse stays where the lock began, which may be in a bar, and every click is the game's
@@ -656,8 +654,9 @@ function inputInit()
     }
     function onContextMenu(e)
     {
-        // prevent right click menu, but a text field keeps its copy and paste menu
-        if (inputPreventDefault && !isTextInput(e.target))
+        // prevent right click menu, but a text field keeps its copy and paste menu and a link its open in new tab
+        const target = /** @type {HTMLElement} */ (e.target);
+        if (inputPreventDefault && !isTextInput(target) && !target?.closest?.('a[href]'))
             e.preventDefault();
     }
     function onBlur()
@@ -678,6 +677,10 @@ function inputInit()
         // handle all touch events the same way
         function handleTouch(e)
         {
+            // fix stalled audio requiring user interaction, with touch input off too since the page's sound needs
+            // it; browsers start audio on the end of a tap, not on its start or a move
+            e.type == 'touchmove' || audioResumeFromPress();
+
             if (!touchInputEnable)
             {
                 // turned off mid touch, the finger that drove the mouse lets go of it
@@ -687,10 +690,6 @@ function inputInit()
                 return;
             }
             inputLastTouchTime = performance.now();
-
-            // fix stalled audio requiring user interaction
-            if (soundEnable && !headlessMode && audioContext && !audioIsRunning())
-                audioResume();
 
             // when the touch gamepad is enabled it owns touch input: suppress the
             // touch->mouse passthrough entirely unless touchGamepadPassthrough is set
@@ -1454,8 +1453,7 @@ function touchGamepadPointerDown(e, zone)
     touchGamepadTimer.set();
 
     // resume audio on first interaction
-    if (soundEnable && !headlessMode && audioContext && !audioIsRunning())
-        audioResume();
+    audioResumeFromPress();
 
     // while paused, any touch is the start button; a control belongs to the first finger on it until that
     // finger lifts, so a second finger landing on the same one neither takes it over nor lets it go

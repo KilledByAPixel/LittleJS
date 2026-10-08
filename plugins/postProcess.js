@@ -49,6 +49,10 @@ class PostProcessPlugin
         /** @property {string} - The shadertoy style mainImage code it shades with, see setShaderCode */
         this.shaderCode = shaderCode || postProcessEffects(); // no code passes the frame through
 
+        /** @property {boolean} - Is the pass on? Off, the frame shows as the engine drew it, the shader is kept,
+         *  and the feedback texture holds the last frame drawn with it on */
+        this.enabled = true;
+
         /** @property {Object<string, number|Array<number>>} - The game's own values for the shader, a uniform each
          *  by its name, a number a float and a list of 2 to 4 numbers a vector, set every frame as they are; an
          *  effect setting can be one of these names, so it changes every frame without making the shader again, all
@@ -134,7 +138,7 @@ class PostProcessPlugin
         }
         function postProcessRender()
         {
-            if (headlessMode || !glEnable) return;
+            if (headlessMode || !glEnable || !postProcess.enabled) return;
 
             // clear out the buffer, before anything here binds its own
             glFlush();

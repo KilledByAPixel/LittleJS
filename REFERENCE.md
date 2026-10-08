@@ -25,8 +25,9 @@ engineName            // Name of the engine: 'LittleJS'
 engineVersion         // Version of the engine
 frameRate             // Fixed frame rate for updates (60)
 frame                 // Current update frame
-time                  // Game time since start in seconds (stops when paused)
+time                  // Game time since start in seconds (stops when paused, falls behind the clock below 20 FPS)
 timeReal              // Real time since start in seconds (keeps running when paused; the debug speed keys scale it)
+averageFPS            // Frames drawn per second, smoothed
 timeDelta             // Seconds the update covers: 1/60, or the display frame's time with engineVariableStep
 timeScale = 1         // Game speed, more or fewer fixed updates per second; with engineVariableStep it scales timeDelta
 paused                // Is the game paused? (set with setPaused)
@@ -325,7 +326,9 @@ toggleFullscreen()
 // Shader Object - a custom fragment shader for objects and draws, 2D or 3D
 new Shader(fragmentCode)          // fragmentCode defines void mainImage(out vec4 c, vec2 uv) in the post processing
                                   // style; it gives the surface color, then the object's color and additive color
-                                  // apply in 2D, and the lighting, shadows and fog in 3D
+                                  // apply in 2D, and the lighting, shadows and fog in 3D; in 3D it may also define
+                                  // void mainNormal(inout vec3 n), the world normal after the normal map, to bend
+                                  // it per pixel (waves, ripples) for the lighting, specular and reflection
 obj.shader = shader               // any EngineObject or EngineObject3D; draws that share a Shader share a batch
 shader.dispose()                  // frees its programs and takes it off the engine's list, which keeps every Shader
                                   // for a lost context; for one made each time a scene starts; drawn again it
@@ -1179,6 +1182,7 @@ postProcessBloom(threshold=.6, strength=1, size=6, includeMainCanvas=false) // s
                                // and past a size of 32 it would take hundreds, so that is as wide as it goes
 postProcessBloomShader(threshold, strength, size) // its shader code, to pass to PostProcessPlugin or build on
 postProcess.setShaderCode(shaderCode) // shade with new code from the next frame, to switch effects while running
+postProcess.enabled = true     // false skips the pass, the frame showing as drawn, to turn an effect off and back on
 
 // Built in effects: each is a piece of shader code with its settings written in, working on c, the pixel's color,
 // and uv, where it is on the screen from 0 to 1; postProcessEffects joins pieces in order into one shader, and your
@@ -1333,6 +1337,7 @@ render3D.camera.follow(target, offset, percent=1) // chase camera: ease toward t
                                                   // is how far it moves each call, so call it every frame, from
                                                   // gameUpdatePost once the target has moved
 render3D.camera.align2D = true        // lock to the 2D camera so the z=0 plane matches world space, false by default
+render3D.camera.align2DZ = 0          // the z of the plane align2D lines up, the camera its distance in front
 render3D.camera.getForward() .getRight() .getUp() // the camera's axes as it is right now; render3D.cameraRight
                                                   // .cameraUp .cameraForward are this frame's, read only
 render3D.viewMatrix .projectionMatrix .viewProjection .shadowMatrix // this frame's, rebuilt by updateMatrices()
@@ -1408,7 +1413,7 @@ render3D.shadowLight = flashlight     // a spotlight, a Light3D with a coneAngle
 render3D.shadowRange = 40             // world size the map covers around shadowCenter, smaller is sharper
                                       // it is a square facing the light, so ~1.5x an area's width covers it
 render3D.shadowCenter = undefined // Vector3 center of the shadowed area, read each frame; undefined follows the camera
-render3D.shadowBias = .003 // raise if lit surfaces get speckled with their own shadow, lower if shadows float away
+render3D.shadowBias = .24  // world units, raise if lit surfaces get speckled with their own shadow, lower if shadows float away
                            // from their casters
 render3D.shadowSoftness = 1           // how far to blur the shadow edge, in shadow map pixels
 

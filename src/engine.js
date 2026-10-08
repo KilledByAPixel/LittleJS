@@ -66,6 +66,8 @@ let engineObjectsCollideStaticLast = [];
 let frame = 0;
 
 /** Current engine time since start in seconds
+ *  - Below 20 FPS it falls behind the clock, since a frame catches up at most 50 ms of updates, so a timer in
+ *    real seconds, one that must keep up on a slow device, goes by timeReal
  *  @type {number}
  *  @memberof Engine */
 let time = 0;
@@ -91,8 +93,13 @@ function getPaused() { return paused; }
  *  @memberof Engine */
 function setPaused(isPaused=true) { paused = isPaused; }
 
+/** Frames drawn per second, smoothed over the last few seconds, in release builds too
+ *  @type {number}
+ *  @memberof Engine */
+let averageFPS = 0;
+
 // Engine internal variables
-let frameTimeLastMS = 0, frameTimeBufferMS = 0, averageFPS = 0;
+let frameTimeLastMS = 0, frameTimeBufferMS = 0;
 
 // delta smoothing, after Time Delta Smoothing by Frank Force (2013): a frame is on screen for whole display frames,
 // so each delta is rounded to them and the rest is carried to the next, keeping the total real time; the frame
@@ -433,7 +440,9 @@ function engineLoadingScreenDraw(elapsed)
  *  @param {GameCallback} [gameRender] - Called before objects are rendered, use for drawing backgrounds/world elements
  *  @param {GameCallback} [gameRenderPost] - Called after objects are rendered, use for drawing UI/overlays
  *  @param {Array<string>|string} [imageSources=[]] - List of image file paths to preload (e.g., ['player.png', 'tiles.png']), or one path
- *  @param {HTMLElement} [rootElement] - Root DOM element to attach canvas to, defaults to document.body
+ *  @param {HTMLElement} [rootElement] - Root DOM element to attach canvas to, defaults to document.body; it is
+ *                                       styled for a game (no scroll bars or selection, touch-action none),
+ *                                       where its own inline style does not say otherwise
  *    It keeps its own inline styles and the canvas centers inside it, but the canvas is still sized from the window,
  *    so set canvasFixedSize or canvasMaxSize to fit a smaller element
  *  @example
@@ -496,8 +505,10 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
         // by ~page-load-time when RAF starts handing real timestamps
         if (!frameTimeLastMS) frameTimeDeltaMS = 0;
         frameTimeLastMS = frameTimeMS;
-        if (debug || debugWatermark)
-            averageFPS = lerp(averageFPS, 1e3/(frameTimeDeltaMS||1), .05);
+        // the first frame's rate seeds the average, so it does not start out climbing from 0; a gap of over a
+        // second, a hidden tab coming back, is not a frame
+        if (frameTimeDeltaMS && frameTimeDeltaMS < 1e3)
+            averageFPS = averageFPS ? lerp(averageFPS, 1e3/frameTimeDeltaMS, .05) : 1e3/frameTimeDeltaMS;
         // the time the frame will be on screen, in whole display frames; engineStep's steps are exact already
         if (!manualStepAtStart)
             frameTimeDeltaMS = engineSmoothDelta(frameTimeDeltaMS);

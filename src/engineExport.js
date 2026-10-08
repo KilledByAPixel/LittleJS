@@ -15,6 +15,7 @@ export
     frame,
     time,
     timeReal,
+    averageFPS,
     paused,
     getPaused,
     setPaused,
