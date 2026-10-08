@@ -101,3 +101,87 @@ test('a bullet that starts inside a tile moves out of it freely', () =>
     run(level(`bullet.pos = vec2(10.5, 5); bullet.velocity = vec2(1, 0);`));
     assert.ok(abs(run(`frames(1); bullet.pos.x`) - 11.5) < 1e-9);
 });
+
+// a bullet over several layers: one of its own setup, with no wall at x 10
+const layers = (setup)=> `
+    setHeadlessMode(true);
+    setGravity(vec2());
+    var make = (cells, data=1, restitution=0)=>
+    {
+        const l = new TileCollisionLayer(vec2(), vec2(20, 10), tile(), 0, false);
+        for (const [x, y] of cells)
+        {
+            l.setData(vec2(x, y), new TileLayerData(data));
+            l.setCollisionData(vec2(x, y), data);
+        }
+        l.restitution = restitution;
+        return l;
+    };
+    var bullet = new EngineObject(vec2(2, 1.5), vec2(.2));
+    bullet.setCollision(false, false);
+    bullet.isBullet = true;
+    bullet.damping = 1;
+    bullet.clampSpeed = false;
+    var frames = (count)=> { for (let i = count; i--;) engineObjectsUpdate(); };
+    ${setup}`;
+
+test('a bullet that went into a one way tile it passes is still stopped by the wall after it', () =>
+{
+    const { run } = loadEngine();
+    run(layers(`
+        const pass = make([[1, 1]], 5);
+        pass.setOneWay(5, vec2(1, 0));
+        make([[2, 1]]);
+        bullet.pos = vec2(.5, 1.5);
+        bullet.velocity = vec2(.6, 0);`));
+    const x = run(`frames(4); bullet.pos.x`);
+    assert.ok(abs(x - 2) < .01, 'stopped at the wall at x 2, ' + x);
+
+    // and one that starts inside a solid tile moves out of it, then is stopped by the next
+    const { run: run2 } = loadEngine();
+    run2(layers(`make([[1, 1], [5, 1]]); bullet.pos = vec2(1.5, 1.5); bullet.velocity = vec2(10, 0);`));
+    assert.ok(abs(run2(`frames(1); bullet.pos.x`) - 5) < .01, 'out of the tile it was in, stopped by the next');
+});
+
+test('a bullet bounces by the layer it hit, not one its collideWithTile let through', () =>
+{
+    for (const ignoredFirst of [true, false])
+    {
+        const { run } = loadEngine();
+        run(layers(`
+            const ignored = () => make([[5, 1]], 1, 1);
+            const blocking = () => make([[5, 1]], 2, 0);
+            ${ignoredFirst} ? (ignored(), blocking()) : (blocking(), ignored());
+            bullet.collideWithTile = (data)=> data === 2;
+            bullet.velocity = vec2(10, 0);`));
+        const [x, vx] = JSON.parse(run(`frames(1); JSON.stringify([bullet.pos.x, bullet.velocity.x])`));
+        assert.ok(abs(x - 5) < .01, `ignored layer first ${ignoredFirst}: at the wall, ${x}`);
+        assert.equal(vx, 0, `ignored layer first ${ignoredFirst}: no bounce, the layer it hit has none`);
+    }
+});
+
+test('a bullet\'s collideWithTile is asked about the nearest tile first, across layers', () =>
+{
+    for (const farFirst of [true, false])
+    {
+        const { run } = loadEngine();
+        run(layers(`
+            ${farFirst} ? (make([[8, 1]]), make([[4, 1]])) : (make([[4, 1]]), make([[8, 1]]));
+            var impacts = [];
+            bullet.collideWithTile = (data, pos)=>
+            {
+                if (bullet.destroyed) return true;
+                impacts.push([pos.x, bullet.pos.x]);
+                bullet.destroy();
+                return true;
+            };
+            bullet.velocity = vec2(10, 0);`));
+        assert.equal(run(`frames(1); JSON.stringify(impacts)`), '[[4,4]]', `far layer first ${farFirst}`);
+    }
+
+    // a near wall it lets through, and the far one stops it
+    const { run } = loadEngine();
+    run(layers(`make([[4, 1]], 3); make([[8, 1]]); bullet.collideWithTile = (data)=> data != 3;
+        bullet.velocity = vec2(10, 0);`));
+    assert.ok(abs(run(`frames(1); bullet.pos.x`) - 8) < .01, 'through the near wall to the far one');
+});

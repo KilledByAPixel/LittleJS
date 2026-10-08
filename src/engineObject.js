@@ -448,17 +448,36 @@ class EngineObject
     /** @private */
     updatePhysicsBullet(oldPos, gravityY, wasFalling)
     {
-        // already inside a solid tile it moves out freely, as a box that starts in one does; tested a hair back along
-        // its move, so one that stopped on a tile's face going into it is outside
         const end = this.pos.copy(), move = end.subtract(oldPos), normal = vec2();
         const length = move.length();
-        if (!length || tileCollisionGetData(oldPos.subtract(move.scale(1e-6 / length))) > 0) return;
+        if (!length) return;
 
-        // each tile the ray meets is asked about with the bullet where the ray goes into it
-        const hit = tileCollisionRaycast(oldPos, end, (data, tilePos)=>
+        // the cell it starts in, a hair back along its move so one stopped on a tile's face going into it is outside;
+        // the tile there is not tested, so it moves out of one it is inside, as a box that starts in one does, and
+        // a tile after it still stops it
+        const back = oldPos.subtract(move.scale(1e-6 / length)), startX = floor(back.x), startY = floor(back.y);
+
+        // one walk along the ray over the world grid all collision layers share, each cell tested in every solid
+        // layer, so the tiles are asked about nearest first whatever the layers' order; the first that collideWithTile
+        // takes is the hit, and its layer is what it hit; it is asked with the bullet where the ray goes into the tile
+        /** @type {TileCollisionLayer|undefined} */
+        let layer;
+        const hit = lineTest(oldPos, end, (cell)=>
         {
-            this.pos = engineObjectRayEntry(oldPos, end, tilePos);
-            return this.collideWithTile(data, tilePos);
+            if (cell.x === startX && cell.y === startY) return false;
+            for (const l of tileCollisionLayers)
+            {
+                if (!l.isSolid) continue;
+                const x = cell.x - l.pos.x, y = cell.y - l.pos.y;
+                if (x < 0 || y < 0 || x >= l.size.x || y >= l.size.y) continue;
+                const data = l.collisionData[y*l.size.x + x];
+                if (!data || tileCollisionOneWayPass(l, x, y, oldPos.x, oldPos.y)) continue;
+                const tilePos = vec2(cell.x, cell.y);
+                this.pos = engineObjectRayEntry(oldPos, end, tilePos);
+                if (this.collideWithTile(data, tilePos))
+                    return layer = l, true;
+            }
+            return false;
         }, normal);
         if (!hit)
         {
@@ -467,10 +486,8 @@ class EngineObject
         }
 
         // stop at the surface, a hair off it, and bounce off it by the more bouncy of it and the layer
-        tileCollisionGetDataFrom(hit, oldPos.x, oldPos.y);
-        const layer = tileCollisionDataLayer;
         this.pos = hit.add(normal.scale(1e-3));
-        const restitution = max(this.restitution, layer ? layer.restitution : 0);
+        const restitution = max(this.restitution, layer ? layer.restitution : 0); // set with every hit
         const into = this.velocity.dot(normal);
         if (into < 0)
             this.velocity = this.velocity.subtract(normal.scale(into * (1 + restitution)));
