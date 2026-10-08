@@ -236,3 +236,18 @@ test('a bullet of no size is not held to objectMaxSpeed with solid collision on,
     sized.run(level(`bullet.setCollision(); bullet.isBullet = true; bullet.velocity = vec2(3, 0);`));
     assert.equal(sized.run(`frames(1); bullet.velocity.x`), 1);
 });
+
+test('a bullet bouncing in a shaft one tile wide uses its three legs and ends in the shaft, not in a wall', () =>
+{
+    const { run } = loadEngine();
+    run(layers(`
+        make([[10, 1], [12, 1]]);
+        var asked = 0;
+        bullet.collideWithTile = ()=> (++asked, true);
+        bullet.pos = vec2(11.5, 1.5);
+        bullet.restitution = 1;
+        bullet.velocity = vec2(5, 0);`));
+    const [x, asked] = JSON.parse(run(`frames(1); JSON.stringify([bullet.pos.x, asked])`));
+    assert.ok(x > 11 && x < 12, 'in the shaft, ' + x);
+    assert.equal(asked, 3, 'one wall a leg, three legs');
+});
