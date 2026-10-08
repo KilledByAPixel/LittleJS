@@ -355,8 +355,6 @@ export class Bullet extends LJS.EngineObject
     {
         if (data <= 0)
             return false;
-        if (this.destroyed)
-            return true;
 
         // a bullet is where it meets the wall, so the sparks start there
         GameEffects.destroyTile(pos);

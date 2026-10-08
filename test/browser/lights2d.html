@@ -88,13 +88,14 @@ smokeRun(async ()=>
     const glowing = new EngineObject(vec2(5));
     glowing.emissive = 1;
     glowing.shader = new Shader('void mainImage(out vec4 c, vec2 uv) { c = vec4(1.); }');
-    glowing.renderEmissive = ()=> { throw Error('on purpose'); };
+    glowing.renderEmissive = function() { drawTile(this.pos, vec2(1), tile(1, 16)); throw Error('on purpose'); };
     thrown = undefined;
+    const shaderBefore = glCustomShader;
     try { engineStep(); } catch (e) { thrown = e.message; }
     const viewport2 = [...gl.getParameter(gl.VIEWPORT)];
-    check('a throwing renderEmissive leaves the screen the target too', thrown == 'on purpose' &&
-        gl.getParameter(gl.FRAMEBUFFER_BINDING) === null && viewport2[2] == glCanvas.width && !glAdditive,
-        [thrown, viewport2]);
+    check('a throwing renderEmissive that drew with a Shader leaves the screen the target and the Shader as it was',
+        thrown == 'on purpose' && gl.getParameter(gl.FRAMEBUFFER_BINDING) === null && viewport2[2] == glCanvas.width &&
+        !glAdditive && glCustomShader === shaderBefore && drawContext === mainContext, [thrown, viewport2]);
     glowing.destroy();
     checkGLError();
 });

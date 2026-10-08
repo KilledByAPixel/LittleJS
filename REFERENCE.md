@@ -2288,10 +2288,12 @@ await newgrounds.getScores(id, user, social, skip, limit, period) // the scores 
                                      // 'D' today (the server default), 'W', 'M', 'Y', 'A' all time; a user or social
                                      // narrows it down, and without either it is the whole board even when logged in
 await newgrounds.cloudSave(slot, data) // any value JSON can hold, to a slot numbered from 1, as many as the app's
-                                     // settings give; needs a logged in player; true once saved
+                                     // settings give; needs a logged in player; true once saved, false with a
+                                     // warning for a value JSON can not hold
 await newgrounds.cloudLoad(slot)     // the value saved there, null when the slot is empty, undefined when it could
-                                     // not be loaded or the player is not logged in: never save over one undefined;
-                                     // a file there that is not a save is undefined every time, said in the console
+                                     // not be loaded or the player is not logged in: never save over one undefined
+newgrounds.lastLoadFailure           // why the last cloudLoad gave undefined: 'notSave' for a file there that is not a
+                                     // save, where a game may offer to start over, else 'failed'
 newgrounds.logEvent(name)            // count an event of the game's own, by name, on its stats page
 newgrounds.unlockMedal(id)           // low level request only, the medal is not changed; games call medal.unlock()
 newgrounds.pendingUnlocks            // advanced: the unlocks in flight or waiting to be resent, with their promises
@@ -2341,8 +2343,9 @@ await wavedash.cloudSave(slot, data) // any value JSON can hold, kept across dev
                                      // saves a minute and 300 an hour, so at checkpoints; true once saved, false
                                      // with a warning for a value JSON can not hold
 await wavedash.cloudLoad(slot)       // the value saved there, null when the slot is empty, undefined when it could
-                                     // not be loaded or off Wavedash: never save over one that loaded undefined;
-                                     // a file there that is not a save is undefined every time, said in the console
+                                     // not be loaded or off Wavedash: never save over one that loaded undefined
+wavedash.lastLoadFailure             // why the last cloudLoad gave undefined: 'notSave' for a file there that is not a
+                                     // save, where a game may offer to start over, else 'failed'
 await wavedash.setStat(name, value, storeNow=false) // a stat made in the developer portal, kept a second later or
                                      // at once; the player's stats load the first time one is used
 await wavedash.getStat(name)         // a stat's value, 0 for one never set or off Wavedash

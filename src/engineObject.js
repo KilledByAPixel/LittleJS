@@ -233,7 +233,9 @@ class EngineObject
          *  - Its collision with solid objects is the usual one, so one with a size that collides with them is still held
          *    to objectMaxSpeed; one of no size is not, it never collides with them
          *  - this.pos is set for each tile asked about and put where the move ends after, so a change collideWithTile
-         *    makes to it is not kept; move it after the physics, in update */
+         *    makes to it is not kept; move it after the physics, in update
+         *  - Once destroyed, as by its own collideWithTile, it is asked about no more tiles that frame, where an object
+         *    that is not a bullet still is */
         this.isBullet = false;
         /** @property {EngineObject|undefined} - Object we are standing on, if any
          *  @type {EngineObject|undefined} */

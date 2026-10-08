@@ -38,13 +38,13 @@ const wavedashSavePath = (slot)=> 'saves/slot' + slot + '.json';
 
 // a call's answer, or undefined if it does not come in time or fails, with a warning; the time limit is let go of once
 // the answer is in, so nothing waits on it after
-function wavedashWait(name, answer)
+function wavedashWait(name, answer, quiet=false)
 {
     let timer;
     const timedOut = {}; // what the time limit gives, told apart from any answer
     const limit = new Promise((resolve)=> timer = setTimeout(()=> resolve(timedOut), wavedashTimeoutMS));
     return Promise.race([Promise.resolve(answer), limit])
-        .then((value)=> value !== timedOut ? value :
+        .then((value)=> value !== timedOut ? value : quiet ? undefined :
             void console.warn('Wavedash ' + name + ' took over ' + wavedashTimeoutMS / 1e3 + ' seconds'),
             (error)=> { console.warn('Wavedash ' + name + ' failed: ' + error); })
         .finally(()=> clearTimeout(timer));
@@ -144,6 +144,11 @@ class WavedashPlugin
         this.slotQueues = new Map; // each slot's last save or load, the next waits for it, as they share a file
         /** @type {Map<string, Set<Promise<*>>>} */
         this.slotCalls = new Map; // each slot's file calls Wavedash has not answered, a timed out one may still change it
+        /** @property {string|undefined} - Why the last cloudLoad gave undefined: 'failed' when it could not load, as
+         *  off Wavedash or on a timeout, and 'notSave' when the slot holds a file that is not a save, where a game may
+         *  offer to start over; undefined when it loaded a save or found the slot empty
+         *  @type {string|undefined} */
+        this.lastLoadFailure = undefined;
 
         // Wavedash keeps its loading screen until init, which is called once
         wavedashWait('init', this.call('init'));
@@ -259,8 +264,8 @@ class WavedashPlugin
 
     /** Load the value a cloud save slot holds: null when Wavedash says it holds none, undefined when it could not be
      *  loaded or off Wavedash, said in the console on Wavedash
-     *  - Do not save over a slot that loaded as undefined, it may hold the player's save; one whose file is there but
-     *    is not a save loads as undefined every time, said in the console, where a game may offer to start over
+     *  - Do not save over a slot that loaded as undefined, it may hold the player's save; lastLoadFailure says why it
+     *    did: 'notSave' for a file there that is not a save, where a game may offer to start over, 'failed' otherwise
      *  @param {number} slot - The slot number
      *  @return {Promise<*>} - The value saved, null for none, undefined for a load that failed
      *  @example
@@ -268,6 +273,7 @@ class WavedashPlugin
     async cloudLoad(slot)
     {
         ASSERT(isNumber(slot), 'Wavedash cloudLoad: slot must be a number', slot);
+        this.lastLoadFailure = 'failed'; // until it is known
         if (!this.isActive()) return;
         return this.slotQueue(slot, undefined, async (track)=>
         {
@@ -278,7 +284,9 @@ class WavedashPlugin
                 // a file Wavedash says is not there is an empty slot, anything else a load that failed; it may answer
                 // false or {success: true, data: false}
                 const exists = await wavedashWait('cloudLoad', track(this.call('remoteFileExists', path)));
-                if (exists === false || exists?.['success'] && exists['data'] === false) return null;
+                if (exists === false || exists?.['success'] && exists['data'] === false)
+                    return this.lastLoadFailure = undefined, null;
+                this.lastLoadFailure = 'failed';
                 console.warn('Wavedash could not load slot ' + slot);
                 return;
             }
@@ -287,12 +295,22 @@ class WavedashPlugin
             const read = await wavedashWait('cloudLoad', track(this.call('readLocalFile', path)));
             const bytes = read instanceof Uint8Array || read instanceof ArrayBuffer || typeof read == 'string' ?
                 read : read?.['data'];
-            if (!bytes) return void console.warn('Wavedash could not read slot ' + slot);
-            try { return JSON.parse(typeof bytes == 'string' ? bytes : new TextDecoder().decode(bytes)); }
+            if (!bytes)
+            {
+                this.lastLoadFailure = 'failed';
+                return void console.warn('Wavedash could not read slot ' + slot);
+            }
+            try
+            {
+                const save = JSON.parse(typeof bytes == 'string' ? bytes : new TextDecoder().decode(bytes));
+                this.lastLoadFailure = undefined;
+                return save;
+            }
             catch (error)
             {
-                console.warn('Wavedash cloudLoad: slot ' + slot + ' holds a file that is not a save, so it loads as ' +
-                    'undefined every time; a game may offer to start over there');
+                this.lastLoadFailure = 'notSave';
+                console.warn('Wavedash cloudLoad: slot ' + slot + ' holds a file that is not a save, lastLoadFailure ' +
+                    'is notSave');
             }
         });
     }
@@ -323,7 +341,7 @@ class WavedashPlugin
         };
         const start = async ()=>
         {
-            if (calls.size && !await wavedashWait('slot ' + slot, Promise.allSettled([...calls]).then(()=> true)))
+            if (calls.size && !await wavedashWait('slot ' + slot, Promise.allSettled([...calls]).then(()=> true), true))
             {
                 console.warn('Wavedash slot ' + slot + ' is still busy with a call that timed out, not used');
                 return failed;

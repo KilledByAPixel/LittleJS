@@ -45,7 +45,7 @@ function game(sdk)
     const items = {}, timers = [];
     const extra = { localStorage: { getItem: (k)=> items[k] ?? null, setItem: (k, v)=> { items[k] = String(v); } },
         setTimeout: (f)=> (timers.push(f), timers.length), clearTimeout: (id)=> { timers[id - 1] = undefined; },
-        TextEncoder, TextDecoder };
+        TextEncoder, TextDecoder, console: {...console} }; // a console of its own, so a test can replace its warn
     if (sdk) extra.Wavedash = sdk;
     const engine = loadEngine(extra);
     engine.run('setHeadlessMode(true)');
@@ -490,4 +490,20 @@ test('a slot holding a file that is not a save loads as undefined, said in the c
     await sdk.uploadRemoteFile('saves/slot1.json');
     assert.equal(await run(`wavedash.cloudLoad(1)`), undefined);
     assert.ok(run('warnings.join()').includes('not a save'));
+});
+
+test('lastLoadFailure says why a load gave undefined: notSave for a file that is not a save, failed otherwise', async ()=>
+{
+    const log = [], sdk = filesSDK(log);
+    const { run } = game(sdk);
+    run('new WavedashPlugin(); console.warn = ()=> {}');
+    assert.equal(await run(`wavedash.cloudLoad(1)`), null);
+    assert.equal(run('wavedash.lastLoadFailure'), undefined, 'an empty slot is no failure');
+    await sdk.writeLocalFile('saves/slot1.json', new TextEncoder().encode('not json'));
+    await sdk.uploadRemoteFile('saves/slot1.json');
+    assert.equal(await run(`wavedash.cloudLoad(1)`), undefined);
+    assert.equal(run('wavedash.lastLoadFailure'), 'notSave');
+    sdk.downloadRemoteFile = ()=> Promise.resolve({success: false});
+    assert.equal(await run(`wavedash.cloudLoad(1)`), undefined);
+    assert.equal(run('wavedash.lastLoadFailure'), 'failed');
 });
