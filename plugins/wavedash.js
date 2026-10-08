@@ -1,6 +1,7 @@
 /**
  * LittleJS Wavedash Plugin
- * - The Wavedash twin of the Newgrounds plugin: achievements and leaderboards, the same shape so a game can switch
+ * - The Wavedash twin of the Newgrounds plugin: achievements, leaderboards and cloud saves, the same shape so a game
+ *   can switch, and stats and presence of Wavedash's own
  * - Wavedash serves the game's page and puts its SDK in window.Wavedash before the game runs, so nothing is bundled;
  *   off Wavedash (local, itch, GitHub Pages) there is none, and every call does nothing
  * - Make the plugin when the game can draw, at the end of gameInit: Wavedash.init is called then, and until it is
@@ -31,6 +32,9 @@ const wavedashDisplayTypes = {number: 0, seconds: 1, milliseconds: 2, ticks: 3};
 
 // the SDK Wavedash put on the page, read at each call, undefined off Wavedash
 const wavedashSDK = ()=> globalThis['Wavedash'];
+
+// the file a cloud save slot is kept in
+const wavedashSavePath = (slot)=> 'saves/slot' + slot + '.json';
 
 // a call's answer, or undefined if it does not come in time or fails, with a warning; the time limit is let go of once
 // the answer is in, so nothing waits on it after
@@ -121,6 +125,8 @@ class WavedashPlugin
         this.achievementTries = Object.create(null); // how many times each one not taken yet was sent
         /** @type {number|undefined} */
         this.achievementRetry = undefined; // the timer that sends refused ones again
+        /** @type {Promise<boolean>|undefined} */
+        this.stats = undefined; // the player's stats loading, asked for the first time a stat is
 
         // Wavedash keeps its loading screen until init, which is called once
         wavedashWait('init', this.call('init'));
@@ -197,6 +203,105 @@ class WavedashPlugin
         const result = await wavedashWait('getScores',
             this.call('listLeaderboardEntries', id, offset|0, limit|0, !!friendsOnly));
         return result?.['success'] ? result['data'] : undefined;
+    }
+
+    /** Save a value to one of the player's cloud save slots, kept by Wavedash across devices; off Wavedash it does
+     *  nothing
+     *  - Any value JSON can hold, stored as the file saves/slot#.json
+     *  - Wavedash takes at most 30 saves a minute and 300 an hour from a player, so save at checkpoints, the end of a
+     *    level or when asked, not every frame; one over the limit is refused, said in the console
+     *  @param {number} slot - The slot number, any whole number the game picks
+     *  @param {*} data - The value to save
+     *  @return {Promise<boolean>} - Whether it saved
+     *  @example
+     *  wavedash.cloudSave(1, {level, coins}); */
+    async cloudSave(slot, data)
+    {
+        ASSERT(isNumber(slot), 'Wavedash cloudSave: slot must be a number', slot);
+        if (!this.isActive()) return false;
+        const path = wavedashSavePath(slot);
+        const written = await wavedashWait('cloudSave', this.call('writeLocalFile', path,
+            new TextEncoder().encode(JSON.stringify(data))));
+        if (written?.['success'] === false) return false;
+        const result = await wavedashWait('cloudSave', this.call('uploadRemoteFile', path));
+        result && !result['success'] && console.warn('Wavedash refused cloudSave of slot ' + slot + ': ' +
+            (result['message'] ?? result['error'] ?? 'no reason given'));
+        return !!result?.['success'];
+    }
+
+    /** Load the value a cloud save slot holds, undefined when it holds none or off Wavedash
+     *  @param {number} slot - The slot number
+     *  @return {Promise<*>} - The value saved, undefined for none
+     *  @example
+     *  const save = await wavedash.cloudLoad(1); */
+    async cloudLoad(slot)
+    {
+        ASSERT(isNumber(slot), 'Wavedash cloudLoad: slot must be a number', slot);
+        if (!this.isActive()) return;
+        const path = wavedashSavePath(slot);
+        const downloaded = await wavedashWait('cloudLoad', this.call('downloadRemoteFile', path));
+        if (!downloaded?.['success']) return;
+
+        // the file's bytes, given as they are or in a response's data
+        const read = await wavedashWait('cloudLoad', this.call('readLocalFile', path));
+        const bytes = read instanceof Uint8Array || read instanceof ArrayBuffer || typeof read == 'string' ?
+            read : read?.['data'];
+        if (!bytes) return;
+        try { return JSON.parse(typeof bytes == 'string' ? bytes : new TextDecoder().decode(bytes)); }
+        catch (error) { console.warn('Wavedash cloudLoad: slot ' + slot + ' does not hold a save'); }
+    }
+
+    /** Set one of the player's stats, as made for the game in the Wavedash developer portal, which can unlock an
+     *  achievement set to follow it; Wavedash keeps it about a second later, or at once with storeNow; off Wavedash it
+     *  does nothing
+     *  @param {string} name - The stat's identifier
+     *  @param {number} value
+     *  @param {boolean} [storeNow] - Keep it now, as at the end of a game, not a second later
+     *  @return {Promise<boolean>} - Whether Wavedash took it */
+    async setStat(name, value, storeNow=false)
+    {
+        ASSERT(typeof name === 'string' && name !== '', 'Wavedash setStat: name must be a string', name);
+        ASSERT(isNumber(value), 'Wavedash setStat: value must be a number', value);
+        if (!this.isActive() || !await this.statsLoaded()) return false;
+        return this.call('setStat', name, value, !!storeNow) === true;
+    }
+
+    /** Read one of the player's stats, 0 for one never set or off Wavedash
+     *  @param {string} name - The stat's identifier
+     *  @return {Promise<number>} */
+    async getStat(name)
+    {
+        if (!this.isActive() || !await this.statsLoaded()) return 0;
+        const value = this.call('getStat', name);
+        return isNumber(value) ? value : 0;
+    }
+
+    /** The player's stats loaded from Wavedash, which they must be before they are read or set, asked for the first
+     *  time a stat is
+     *  @return {Promise<boolean>} - Whether they loaded
+     *  @ignore */
+    statsLoaded()
+    {
+        return this.stats ||= wavedashWait('requestStats', this.call('requestStats')).then((result)=>
+        {
+            const loaded = !!result?.['success'];
+            loaded || (this.stats = undefined); // asked for again next time
+            return loaded;
+        });
+    }
+
+    /** Set what the player is doing, kept with their presence on Wavedash; off Wavedash it does nothing
+     *  @param {string} [status] - One line of what they are doing, like 'In a race'
+     *  @param {string} [details] - More about it, like 'Lap 2 of 3'; both left out clears it
+     *  @return {Promise<boolean>} - Whether it was set */
+    async setPresence(status, details)
+    {
+        if (!this.isActive()) return false;
+        const presence = {};
+        status === undefined || (presence['status'] = String(status));
+        details === undefined || (presence['details'] = String(details));
+        const result = await wavedashWait('setPresence', this.call('updateUserPresence', presence));
+        return !!result?.['success'];
     }
 
     /** Send every unlocked WavedashMedal's achievement Wavedash has not taken yet, again every two seconds while it

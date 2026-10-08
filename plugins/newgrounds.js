@@ -332,6 +332,52 @@ class NewgroundsPlugin
         return this.call('ScoreBoard.getScores', parameters, session_id);
     }
 
+    /** Save a value to one of the player's cloud save slots, which needs a logged in player
+     *  - Any value JSON can hold; the slots are numbered from 1, as many as the app's Newgrounds settings give it
+     *  @param {number} slot - The slot number
+     *  @param {*} data - The value to save
+     *  @return {Promise<boolean>} - Whether it saved, false when not logged in
+     *  @example
+     *  newgrounds.cloudSave(1, {level, coins}); */
+    async cloudSave(slot, data)
+    {
+        ASSERT(isNumber(slot), 'Newgrounds cloudSave: slot must be a number', slot);
+        if (!this.session_id) return false;
+        const response = await this.call('CloudSave.setData', {'id':slot, 'data':JSON.stringify(data)});
+        newgroundsSessionLost(response) && this.dropSession();
+        return !!response?.result?.data?.['success'];
+    }
+
+    /** Load the value a cloud save slot holds, undefined when it holds none or the player is not logged in
+     *  @param {number} slot - The slot number
+     *  @return {Promise<*>} - The value saved, undefined for none
+     *  @example
+     *  const save = await newgrounds.cloudLoad(1); */
+    async cloudLoad(slot)
+    {
+        ASSERT(isNumber(slot), 'Newgrounds cloudLoad: slot must be a number', slot);
+        if (!this.session_id) return;
+        const response = await this.call('CloudSave.loadSlot', {'id':slot});
+        newgroundsSessionLost(response) && this.dropSession();
+        const url = response?.result?.data?.['slot']?.['url']; // where the saved text is, none for an empty slot
+        if (!url) return;
+        try
+        {
+            const signal = globalThis.AbortSignal?.timeout?.(newgroundsTimeoutMS);
+            return JSON.parse(await (await fetch(url, {'cache':'no-store', 'signal':signal})).text());
+        }
+        catch(e) { debugMedals && LOG('Newgrounds cloudLoad failed', e); }
+    }
+
+    /** Count an event of the game's own on its Newgrounds stats page, like a level finished or a button pressed
+     *  @param {string} name - The event's name, as made in the app's Newgrounds settings
+     *  @return {Promise<Object>} - The response JSON object, undefined when the call failed */
+    logEvent(name)
+    {
+        ASSERT(typeof name === 'string' && name !== '', 'Newgrounds logEvent: name must be a string', name);
+        return this.call('Event.logEvent', {'event_name':name, 'host':this.host});
+    }
+
     /** Encrypt text the way the Newgrounds gateway expects, AES-128 CBC with a random iv in front, as Base64
      *  @param {string} text
      *  @return {Promise<string>} */

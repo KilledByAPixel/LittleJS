@@ -44,7 +44,8 @@ function game(sdk)
 {
     const items = {}, timers = [];
     const extra = { localStorage: { getItem: (k)=> items[k] ?? null, setItem: (k, v)=> { items[k] = String(v); } },
-        setTimeout: (f)=> (timers.push(f), timers.length), clearTimeout: (id)=> { timers[id - 1] = undefined; } };
+        setTimeout: (f)=> (timers.push(f), timers.length), clearTimeout: (id)=> { timers[id - 1] = undefined; },
+        TextEncoder, TextDecoder };
     if (sdk) extra.Wavedash = sdk;
     const engine = loadEngine(extra);
     engine.run('setHeadlessMode(true)');
@@ -245,4 +246,73 @@ test('a board or an achievement named like an object\'s own built-in, as constru
         [['board', 'constructor', 1, 0], ['upload', 'id-constructor', 5, true]], 'made and posted to, higher wins');
     runTimers();
     assert.deepEqual(log.filter((l)=> l[0] === 'achievement'), [['achievement', 'toString']], 'sent again, not given up');
+});
+
+// a stand-in for Wavedash's files: local ones written and read, remote ones uploaded and downloaded, its stats and
+// presence, each checking its arguments' types as the real one does
+function filesSDK(log)
+{
+    const check = (ok)=> { if (!ok) throw new TypeError('argument of the wrong type'); };
+    const local = new Map, remote = new Map, stats = {};
+    let statsLoaded = false;
+    return { ...mockSDK(log),
+        writeLocalFile(path, bytes) { check(typeof path === 'string' && bytes instanceof Uint8Array); local.set(path, bytes); return Promise.resolve({success: true}); },
+        uploadRemoteFile(path) { check(typeof path === 'string'); remote.set(path, local.get(path)); return Promise.resolve({success: true, data: path}); },
+        downloadRemoteFile(path) { check(typeof path === 'string'); if (!remote.has(path)) return Promise.resolve({success: false}); local.set(path, remote.get(path)); return Promise.resolve({success: true}); },
+        readLocalFile(path) { check(typeof path === 'string'); return Promise.resolve(local.get(path)); },
+        requestStats() { log.push(['requestStats']); statsLoaded = true; return Promise.resolve({success: true}); },
+        setStat(id, value, storeNow) { check(typeof id === 'string' && typeof value === 'number' && typeof storeNow === 'boolean'); if (!statsLoaded) return false; stats[id] = value; log.push(['setStat', id, value, storeNow]); return true; },
+        getStat(id) { check(typeof id === 'string'); return statsLoaded ? stats[id] ?? 0 : 0; },
+        updateUserPresence(presence) { check(typeof presence === 'object'); log.push(['presence', presence]); return Promise.resolve({success: true}); },
+    };
+}
+
+test('a cloud save writes the value as a file and uploads it, and loads back from a download', async ()=>
+{
+    const log = [];
+    const { run } = game(filesSDK(log));
+    run('new WavedashPlugin()');
+    assert.equal(await run(`wavedash.cloudSave(1, {level: 3, coins: [1, 2]})`), true);
+    assert.equal(await run(`wavedash.cloudLoad(1).then((save)=> JSON.stringify(save))`), '{"level":3,"coins":[1,2]}');
+    assert.equal(await run(`wavedash.cloudLoad(2)`), undefined, 'a slot never saved');
+});
+
+test('a read given as a response loads too, and an upload Wavedash refuses is false', async ()=>
+{
+    const log = [], sdk = filesSDK(log), read = sdk.readLocalFile;
+    sdk.readLocalFile = async (path)=> ({success: true, data: await read(path)});
+    const { run } = game(sdk);
+    run('new WavedashPlugin()');
+    await run(`wavedash.cloudSave(1, 7)`);
+    assert.equal(await run(`wavedash.cloudLoad(1)`), 7);
+    sdk.uploadRemoteFile = ()=> Promise.resolve({success: false, message: 'rate limited, wait 20 seconds'});
+    assert.equal(await run(`wavedash.cloudSave(1, 8)`), false);
+});
+
+test('stats load the first time one is used, then set and read; presence is set and cleared', async ()=>
+{
+    const log = [];
+    const { run } = game(filesSDK(log));
+    run('new WavedashPlugin()');
+    assert.ok(!log.some((l)=> l[0] == 'requestStats'), 'not asked for until a stat is');
+    assert.equal(await run(`wavedash.setStat('total_kills', 12)`), true);
+    assert.equal(await run(`wavedash.getStat('total_kills')`), 12);
+    assert.equal(await run(`wavedash.setStat('total_kills', 13, true)`), true);
+    assert.deepEqual(log.filter((l)=> l[0] != 'init'), [['requestStats'], ['setStat', 'total_kills', 12, false],
+        ['setStat', 'total_kills', 13, true]], 'loaded once, storeNow a real boolean');
+    assert.equal(await run(`wavedash.setPresence('In a race', 'Lap 2')`), true);
+    assert.equal(await run(`wavedash.setPresence()`), true);
+    assert.equal(JSON.stringify(log.filter((l)=> l[0] == 'presence').map((l)=> l[1])),
+        '[{"status":"In a race","details":"Lap 2"},{}]');
+});
+
+test('off Wavedash cloud saves, stats and presence do nothing', async ()=>
+{
+    const { run } = game();
+    run('new WavedashPlugin()');
+    assert.equal(await run(`wavedash.cloudSave(1, 5)`), false);
+    assert.equal(await run(`wavedash.cloudLoad(1)`), undefined);
+    assert.equal(await run(`wavedash.setStat('x', 1)`), false);
+    assert.equal(await run(`wavedash.getStat('x')`), 0);
+    assert.equal(await run(`wavedash.setPresence('x')`), false);
 });

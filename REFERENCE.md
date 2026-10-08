@@ -2286,6 +2286,10 @@ newgrounds.postScore(id, value)      // needs a logged in player and a whole num
 await newgrounds.getScores(id, user, social, skip, limit, period) // the scores are in result.data.scores; period
                                      // 'D' today (the server default), 'W', 'M', 'Y', 'A' all time; a user or social
                                      // narrows it down, and without either it is the whole board even when logged in
+await newgrounds.cloudSave(slot, data) // any value JSON can hold, to a slot numbered from 1, as many as the app's
+                                     // settings give; needs a logged in player; true once saved
+await newgrounds.cloudLoad(slot)     // the value saved there, undefined for none or when not logged in
+newgrounds.logEvent(name)            // count an event made in the app's settings on its stats page
 newgrounds.unlockMedal(id)           // low level request only, the medal is not changed; games call medal.unlock()
 newgrounds.pendingUnlocks            // advanced: the unlocks in flight or waiting to be resent, with their promises
 newgrounds.resendUnlocks()           // advanced: send the ones whose request did not reach the server again now, as
@@ -2330,6 +2334,13 @@ await wavedash.postScore(name, score) // a whole number, milliseconds for a time
 await wavedash.getScores(name, offset=0, limit=10, friendsOnly=false) // the entries as Wavedash gives them,
                                      // undefined off Wavedash or when they could not be read
 wavedash.leaderboards                // each board's id promise by its name
+await wavedash.cloudSave(slot, data) // any value JSON can hold, kept across devices as saves/slot#.json; at most 30
+                                     // saves a minute and 300 an hour, so at checkpoints; true once saved
+await wavedash.cloudLoad(slot)       // the value saved there, undefined for none or off Wavedash
+await wavedash.setStat(name, value, storeNow=false) // a stat made in the developer portal, kept a second later or
+                                     // at once; the player's stats load the first time one is used
+await wavedash.getStat(name)         // a stat's value, 0 for one never set or off Wavedash
+await wavedash.setPresence(status, details) // what the player is doing, kept with their presence; none clears it
 ```
 
 ## LittleJS Drawing Utilities
