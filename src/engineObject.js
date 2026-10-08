@@ -22,6 +22,17 @@ function engineObjectOneWayPass(solid, solidPos, from, fromSize)
         from.y + fromSize.y/2 > solidPos.y - size.y/2 + epsilon;
 }
 
+// where a move from start to end goes into the cell at its corner, the first point of it inside the cell's box
+function engineObjectRayEntry(start, end, cell)
+{
+    const dx = end.x - start.x, dy = end.y - start.y;
+    let t = 0;
+    if (dx) t = max(t, min((cell.x - start.x) / dx, (cell.x + 1 - start.x) / dx));
+    if (dy) t = max(t, min((cell.y - start.y) / dy, (cell.y + 1 - start.y) / dy));
+    t = clamp(t);
+    return vec2(start.x + dx*t, start.y + dy*t);
+}
+
 // where an object was before this frame's moves, for a one way test: kept by the update when a one way solid is in
 // it, or where it is when updatePhysics is called on its own
 function engineObjectStartPos(o) { return engineObjectsOneWayStart?.get(o) || o.pos; }
@@ -137,6 +148,11 @@ class EngineObject
         this.children = [];
         /** @property {boolean} - Limit object speed along x and y axis */
         this.clampSpeed = true;
+        /** @property {boolean} - Move through the tiles as a point along a ray, so it can not pass through one at
+         *  any speed, for small fast things like bullets: its speed is not held to objectMaxSpeed for the tiles,
+         *  collideWithTile is asked with this.pos where the ray goes into the tile, and on a hit it stops at the
+         *  surface and bounces off it by restitution; its collision with solid objects is the usual one */
+        this.isBullet = false;
         /** @property {EngineObject|undefined} - Object we are standing on, if any
          *  @type {EngineObject|undefined} */
         this.groundObject = undefined;
@@ -234,7 +250,8 @@ class EngineObject
         // limit max speed to prevent missing collisions, after gravity so no move is past it, only for what collides:
         // with solids, or with tiles while it has a mass, which tile collision needs; anything else moves as fast as
         // it is told
-        if (this.clampSpeed && enablePhysicsSolver && (this.collideSolidObjects || this.collideLevel && this.mass))
+        if (this.clampSpeed && enablePhysicsSolver &&
+            (this.collideSolidObjects || this.collideLevel && this.mass && !this.isBullet))
         {
             this.velocity.x = clamp(this.velocity.x, -objectMaxSpeed, objectMaxSpeed);
             this.velocity.y = clamp(this.velocity.y, -objectMaxSpeed, objectMaxSpeed);
@@ -418,9 +435,48 @@ class EngineObject
             // check collision against tiles, one way tiles go by where it was; put back after, a callback may throw
             const fromObject = tileCollisionFromObject, fromPos = tileCollisionFromPos;
             tileCollisionFromObject = this, tileCollisionFromPos = oldPos;
-            try { this.updatePhysicsTiles(oldPos, gravityY, wasFalling); }
+            try
+            {
+                this.isBullet ? this.updatePhysicsBullet(oldPos, gravityY, wasFalling) :
+                    this.updatePhysicsTiles(oldPos, gravityY, wasFalling);
+            }
             finally { tileCollisionFromObject = fromObject, tileCollisionFromPos = fromPos; }
         }
+    }
+
+    // a bullet's move from oldPos through the tiles, as a point along a ray, called by updatePhysics
+    /** @private */
+    updatePhysicsBullet(oldPos, gravityY, wasFalling)
+    {
+        // already inside a solid tile it moves out freely, as a box that starts in one does; tested a hair back along
+        // its move, so one that stopped on a tile's face going into it is outside
+        const end = this.pos.copy(), move = end.subtract(oldPos), normal = vec2();
+        const length = move.length();
+        if (!length || tileCollisionGetData(oldPos.subtract(move.scale(1e-6 / length))) > 0) return;
+
+        // each tile the ray meets is asked about with the bullet where the ray goes into it
+        const hit = tileCollisionRaycast(oldPos, end, (data, tilePos)=>
+        {
+            this.pos = engineObjectRayEntry(oldPos, end, tilePos);
+            return this.collideWithTile(data, tilePos);
+        }, normal);
+        if (!hit)
+        {
+            this.pos = end;
+            return;
+        }
+
+        // stop at the surface, a hair off it, and bounce off it by the more bouncy of it and the layer
+        tileCollisionGetDataFrom(hit, oldPos.x, oldPos.y);
+        const layer = tileCollisionDataLayer;
+        this.pos = hit.add(normal.scale(1e-3));
+        const restitution = max(this.restitution, layer ? layer.restitution : 0);
+        const into = this.velocity.dot(normal);
+        if (into < 0)
+            this.velocity = this.velocity.subtract(normal.scale(into * (1 + restitution)));
+        if (normal.y * gravityY < 0 && wasFalling) // landed, against its gravity
+            this.groundObject = layer;
+        debugPhysics && debugPoint(this.pos, '#f00', undefined, undefined, false);
     }
 
     // resolve the tile collision of a move from oldPos, called by updatePhysics
@@ -559,8 +615,8 @@ class EngineObject
      *    positions it only tries, so keep it free of side effects or guard them to once a frame
      *  - this.pos has already moved, so a check on where it came from needs the position saved in update; for a one
      *    way platform the layer's setOneWay does that, and this is not asked about a one way tile it passes through
-     *  - For the point of impact, like sparks where a bullet hit, raycast from where this frame's move started,
-     *    this.pos minus this.velocity, to this.pos with tileCollisionRaycast, as the platformer's Bullet does
+     *  - For the point of impact, like sparks where a bullet hit, set isBullet: this.pos is then where it meets the
+     *    tile, as the platformer's Bullet uses it
      *  @param {number}  tileData - the value of the tile at the position
      *  @param {Vector2} pos - the tile's bottom left corner in world space
      *  @return {boolean} - true if the collision should be resolved by modifying it's position and velocity */

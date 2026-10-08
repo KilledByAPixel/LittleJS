@@ -306,6 +306,7 @@ export class Bullet extends LJS.EngineObject
         this.drawSize = vec2(.2,.5);
         this.range = 5;
         this.setCollision(1,0);
+        this.isBullet = true; // moves along a ray, stops at the wall it hits
     }
 
     update()
@@ -357,16 +358,13 @@ export class Bullet extends LJS.EngineObject
         if (this.destroyed)
             return true;
 
-        // this.pos has already moved into the wall, so find where
-        // this frame's move hit it, before the tile is destroyed
-        const startPos = this.pos.subtract(this.velocity);
-        const hitPos = LJS.tileCollisionRaycast(startPos, this.pos);
+        // a bullet is where it meets the wall, so the sparks start there
         GameEffects.destroyTile(pos);
-        this.kill(hitPos);
+        this.kill();
         return true;
     }
 
-    kill(hitPos = this.pos)
+    kill()
     {
         if (this.destroyed)
             return;
@@ -374,7 +372,7 @@ export class Bullet extends LJS.EngineObject
 
         // spark effects
         const emitter = new LJS.ParticleEmitter(
-            hitPos, 0, 0, .1, 100, .5, // pos, angle, size, time, rate, cone
+            this.pos, 0, 0, .1, 100, .5, // pos, angle, size, time, rate, cone
             0,                           // tileInfo
             hsl(1/6,1,.5), hsl(0,1,.5), // colorStartA, colorStartB
             hsl(1/6,1,.5), hsl(0,1,.5), // colorEndA, colorEndB
