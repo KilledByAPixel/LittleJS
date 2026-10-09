@@ -74,6 +74,6 @@ what the ray is tested against. See Try it for what a turn does.
 
 ## See also
 Tile Raycast casts a ray at a tile layer and gets the point and the side
-that was hit. `engineObjectsCallback` and `engineObjectsCollect` find
-the objects in an area in place of along a line.
+that was hit. Object Collect finds the objects in an area in place of
+along a line, with `engineObjectsCallback` and `engineObjectsCollect`.
 */

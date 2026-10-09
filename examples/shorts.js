@@ -218,6 +218,7 @@ const exampleList =
     new ExampleInfo('Physics', 'physics.js', 'Objects that fall, bounce, slide and float, and a sensor', false, 'gravity, restitution, friction, mass, gravityScale, collideWithObject, sensor, objects'),
     new ExampleInfo('Tile Raycast', 'tileRaycast.js', 'Raycasts against a tile layer', false, 'level, map, grid'),
     new ExampleInfo('Object Raycast', 'objectRaycast.js', 'Raycast against engine objects', false, 'collision, intersect, hit, query'),
+    new ExampleInfo('Object Collect', 'objectCollect.js', 'Find the objects in a rectangle or circle', false, 'engineObjectsCallback, engineObjectsCollect, area, query, overlap'),
     new ExampleInfo('Parent / Child', 'parentChild.js', 'EngineObject transform hierarchy', false, 'addChild, localPos, localAngle, attachment, hierarchy'),
     new ExampleInfo('Maze Generator', 'maze.js', 'Procedural maze generation', false, 'generative, level, tiles, map, grid'),
     new ExampleInfo('Path Finder', 'pathFinder.js', 'A* pathfinding with path smoothing', false, 'ai, navigation, astar, search'),
