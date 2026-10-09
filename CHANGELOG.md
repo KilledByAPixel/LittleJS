@@ -7,6 +7,7 @@ What changed in each release, newest first. Releases before 1.20.0 are on the
 
 ### New Changes
 - The Object Collect short: balls drifting through a square and a circle, colored by `engineObjectsCallback` while inside and counted by `engineObjectsCollect`, and a click pushes away the balls near the mouse
+- A debug build warns once when a game sets a child object's `pos` or `angle`, which its parent puts back every frame, naming `localPos` or `localAngle` to set instead
 
 ## 1.27.0 - 2026-10-08
 

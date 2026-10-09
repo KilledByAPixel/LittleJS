@@ -53,7 +53,8 @@ Which angle it changes depends on whether it has a parent:
 - With no parent it changes `angle`, its angle in the world.
 - With a parent it changes `localAngle`. Its `angle` is set by the
   engine every frame from the parent, so a change made to that would be
-  written over.
+  written over. The same goes for `pos` and `localPos`. A debug build
+  says so once in the console when a child's `pos` or `angle` is set.
 
 `super(vec2(), size, 0, 0, color)` makes each bar at `vec2(0,0)` with no
 tile and no angle. A bar with no tile draws as a rectangle of its size
@@ -83,6 +84,10 @@ object that has one.
 - Give the grandchild a starting angle, a third argument to `addChild`:
   `child.addChild(grandchild, vec2(1.5, 0), PI/2);`
 - Stop the root: change `.005` to `0`. The other two keep turning.
+- See the mistake the engine warns about: in `update`, change
+  `this.localAngle += this.spinSpeed;` to
+  `this.angle += this.spinSpeed;`. The red and cyan bars stop turning
+  on their own, and the console says to set `localAngle`.
 
 ## See also
 Space Game and Clock turn things with angles. `attach` adds a child

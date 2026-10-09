@@ -115,6 +115,29 @@ function engineObjectBulletSweep(object, from, to)
 // it, or where it is when updatePhysics is called on its own
 function engineObjectStartPos(o) { return engineObjectsOneWayStart?.get(o) || o.pos; }
 
+// debug only: where each child was last placed from its parent, [x, y, angle], so a pos or angle the game set on it,
+// which its parent's transform puts back at once, can be said once; a WeakMap keeps the objects' own shape
+const engineObjectChildPlacedAt = new WeakMap;
+let engineObjectChildWarned = false;
+function engineObjectChildPlaced(o)
+{
+    const placed = engineObjectChildPlacedAt.get(o);
+    if (placed)
+        placed[0] = o.pos.x, placed[1] = o.pos.y, placed[2] = o.angle;
+    else
+        engineObjectChildPlacedAt.set(o, [o.pos.x, o.pos.y, o.angle]);
+}
+function engineObjectChildCheck(o)
+{
+    const placed = engineObjectChildPlacedAt.get(o);
+    if (!placed || engineObjectChildWarned) return;
+    const posSet = o.pos.x !== placed[0] || o.pos.y !== placed[1], angleSet = o.angle !== placed[2];
+    if (!posSet && !angleSet) return;
+    engineObjectChildWarned = true;
+    console.warn(`a child object's ${posSet ? 'pos' : 'angle'} was set, but its parent places it each frame: ` +
+        `set its ${posSet ? 'localPos' : 'localAngle'} instead, which is relative to the parent`, o);
+}
+
 /**
  * LittleJS Object Base Object Class
  * - Top level object class used by the engine
@@ -284,6 +307,9 @@ class EngineObject
         const parent = this.parent;
         if (parent)
         {
+            // in a debug build, a pos or angle the game set on a child is said once, since it is placed over here
+            debug && engineObjectChildCheck(this);
+
             // compose with parent transform inline to avoid intermediate vector allocs
             const mirror = parent.getMirrorSign();
             const lp = this.localPos, pp = parent.pos;
@@ -296,6 +322,7 @@ class EngineObject
             else
                 this.pos.set(lx + pp.x, ly + pp.y);
             this.angle = mirror*this.localAngle + pa;
+            debug && engineObjectChildPlaced(this);
         }
 
         // update children
@@ -777,6 +804,7 @@ class EngineObject
         child.parent = this;
         child.localPos = localPos.copy();
         child.localAngle = localAngle;
+        debug && engineObjectChildPlacedAt.delete(child); // where it was placed by an earlier parent does not count
         child.updateTransforms();
         return child;
     }
