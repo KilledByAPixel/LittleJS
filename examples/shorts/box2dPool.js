@@ -17,8 +17,8 @@ class Ball extends Box2dObject
         this.setBullet(true);
         this.setFixedRotation(true);
     }
-    beginContact()
-    { hitSound.play(this.pos, clamp(this.getSpeed()/20)); }
+    beginContact(other, fixture, otherFixture, impactSpeed)
+    { hitSound.play(this.pos, clamp(impactSpeed/20)); }
     canHit()
     { return this == cueBall && this.getSpeed() < 1; }
     getHitStrength()
@@ -162,8 +162,9 @@ It is the width of the aim line and the volume of the hit sound.
 
 ### Contacts and pockets
 Box2D calls an object's `beginContact(other)` when it starts touching
-another. `Ball` uses it to play a click, louder the faster the ball is
-moving.
+another, with how fast the two were closing as they hit. `Ball` uses
+it to play a click, louder the harder the hit, so a ball that only
+grazes another barely makes a sound.
 
 A `Pocket` is a static body with a small circle, and `setSensor(true)`
 makes its shapes sensors: they report contacts and block nothing. Its

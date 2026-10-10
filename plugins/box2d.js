@@ -47,6 +47,30 @@ const box2dQueryObjects = {};
 const box2dGravity = {x:NaN, y:NaN}; // the gravity the world was last given
 function box2dQueryObject(key, type) { return box2dQueryObjects[key] ||= new box2d.instance[type](); }
 
+// how fast two bodies close along the contact normal as they start touching, the fastest of its points, with spin;
+// BeginContact comes before the solver changes the velocities, so this is the hit, and a sensor has no points, 0
+function box2dImpactSpeed(contact)
+{
+    const pointCount = contact.GetManifold().get_pointCount();
+    if (!pointCount)
+        return 0;
+    const manifold = box2dQueryObject('impactManifold', 'b2WorldManifold');
+    contact.GetWorldManifold(manifold);
+    const normal = manifold.get_normal(), nx = normal.get_x(), ny = normal.get_y();
+    const bodyA = contact.GetFixtureA().GetBody(), bodyB = contact.GetFixtureB().GetBody();
+    let speed = 0;
+    for (let i = 0; i < pointCount; ++i)
+    {
+        // the normal points from A to B, so A moving along it faster than B is closing
+        const point = manifold.get_points(i);
+        const vA = bodyA.GetLinearVelocityFromWorldPoint(point);
+        const ax = vA.get_x(), ay = vA.get_y();
+        const vB = bodyB.GetLinearVelocityFromWorldPoint(point);
+        speed = max(speed, (ax - vB.get_x())*nx + (ay - vB.get_y())*ny);
+    }
+    return speed;
+}
+
 // Box2D finds fixtures by boxes it pads and stretches ahead along the velocity, so a query checks the shape's own box
 function box2dFixtureOverlaps(fixture, aabb)
 {
@@ -351,10 +375,13 @@ class Box2dObject extends EngineObject
      *  and creating objects, fixtures or joints must wait until after the step
      *  - The fixtures say which shapes touched, the same objects addBox and the others returned, so a small sensor
      *    under a player's feet can tell standing on the ground from touching a wall
+     *  - impactSpeed is how hard they hit: how fast they were closing along the contact normal, spin included,
+     *    in world units per second, measured before the solver pushed them apart; 0 for a sensor
      *  @param {Box2dObject} otherObject
      *  @param {Object} [fixture] - This object's fixture that touched
-     *  @param {Object} [otherFixture] - The other object's fixture that touched */
-    beginContact(otherObject, fixture, otherFixture) {}
+     *  @param {Object} [otherFixture] - The other object's fixture that touched
+     *  @param {number} [impactSpeed] - How fast they were closing as they touched */
+    beginContact(otherObject, fixture, otherFixture, impactSpeed) {}
 
     /** Called when a contact ends, while the world steps or a body is destroyed: a destroy or a setter waits
      *  until the step is done, and creating objects, fixtures or joints must wait until after the step
@@ -2130,8 +2157,9 @@ class Box2dPlugin
             const objectB  = fixtureB.GetBody().object;
             // raw user-created b2Bodies may have no .object — skip those
             if (!objectA || !objectB) return;
-            objectA.beginContact(objectB, fixtureA, fixtureB);
-            objectB.beginContact(objectA, fixtureB, fixtureA);
+            const impactSpeed = box2dImpactSpeed(contact);
+            objectA.beginContact(objectB, fixtureA, fixtureB, impactSpeed);
+            objectB.beginContact(objectA, fixtureB, fixtureA, impactSpeed);
         }
         listener.EndContact = function(contactPtr)
         {

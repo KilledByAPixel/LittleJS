@@ -127,3 +127,41 @@ test('an object destroyed in its contact callback goes after the step, and the w
     box2d.step(); // and the world steps on
     ground.destroy();
 });
+
+test('beginContact gets how fast the bodies closed along the normal, and 0 for a sensor', () =>
+{
+    // step until the first contact and give back what each side was handed
+    function hit(a, b)
+    {
+        const speeds = [];
+        a.beginContact = (o, f, of, speed)=> speeds[0] = speed;
+        b.beginContact = (o, f, of, speed)=> speeds[1] = speed;
+        for (let i = 0; i < 120 && !speeds.length; ++i)
+            box2d.step();
+        a.destroy(); b.destroy();
+        return speeds;
+    }
+
+    // head on along x, gravity only pulls on y
+    let a = new Box2dObject(vec2(0, 50)), b = new Box2dObject(vec2(3, 50));
+    a.addBox(); b.addBox();
+    a.setLinearVelocity(vec2(3, 0)); b.setLinearVelocity(vec2(-2, 0));
+    let [speedA, speedB] = hit(a, b);
+    assert.ok(Math.abs(speedA - 5) < .01, 'closing speed of both: ' + speedA);
+    assert.equal(speedA, speedB, 'both sides get the same speed');
+
+    // a round ball meeting a wall at 45 degrees closes at only part of its speed
+    const wall = new Box2dStaticObject(vec2(3, 100));
+    wall.addBox(vec2(1, 20));
+    a = new Box2dObject(vec2(0, 100)); a.addCircle();
+    a.setLinearVelocity(vec2(4, 4)); a.setGravityScale(0);
+    [speedA] = hit(a, wall);
+    assert.ok(Math.abs(speedA - 4) < .01, 'only the part along the normal: ' + speedA);
+
+    // a sensor has no contact points
+    a = new Box2dObject(vec2(0, 150)); b = new Box2dObject(vec2(3, 150));
+    a.addBox(); b.addBox(vec2(1), vec2(), 0, 1, .2, 0, true);
+    a.setLinearVelocity(vec2(3, 0));
+    [speedA] = hit(a, b);
+    assert.equal(speedA, 0);
+});
