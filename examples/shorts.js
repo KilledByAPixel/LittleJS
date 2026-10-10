@@ -1,3 +1,5 @@
+import JSONCrush from './JSONCrush.js';
+
 class ExampleInfo
 {
     constructor(name, filename, description='', largeExample=false, tags='', info='')
@@ -321,9 +323,19 @@ function initExampleBrowser()
     // load the examples into the list
     filterExamples();
 
-    // set the selected example from the URL parameters, or the first one
+    // set the selected example from the URL parameters, or the first one, and the code of a shared link in place
+    // of its own; the code is read first, since selecting an example takes the link's hash off the address, and
+    // put back after, so a reload shows it again
+    const sharedCode = readSharedCode(), sharedHash = window.location.hash;
     const name = new URLSearchParams(window.location.search).get('example');
     selectExampleByName(name) || selectExampleByName(exampleList[1].name);
+    if (sharedCode !== undefined && !exampleList[selectedExample].largeExample)
+    {
+        showSharedCode(sharedCode);
+        const url = new URL(window.location);
+        url.hash = sharedHash;
+        window.history.replaceState({}, '', url);
+    }
 
     // the stylesheet lays the page out for the window's shape; the code view is measured again after a change
     addEventListener('resize', resizeWindow);
@@ -361,10 +373,12 @@ function setExample()
     exampleLink.href = 'https://github.com/KilledByAPixel/LittleJS/tree/main/' + filename;
     exampleLink.title = filename + ' on GitHub';
 
-    // update URL parameter
+    // update URL parameter, and drop the code of a shared link
     const url = new URL(window.location);
     url.searchParams.set('example', example.name);
+    url.hash = '';
     window.history.replaceState({}, '', url);
+    buttonShare.disabled = example.largeExample;
 
     loadFile(example.filename, example.largeExample, example.info || example.description + '.');
 }
@@ -689,6 +703,60 @@ function showListPanel(show)
     listPanel.classList.toggle('open', show);
     document.body.classList.toggle('listOpen', show);
     show && markSelectedExample(true);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// sharing code by a link
+
+// a shared link carries the code in its hash, crushed by JSONCrush, so nothing is stored anywhere: it opens the
+// example it was made from, with the link's code in place of the example's own
+function readSharedCode()
+{
+    const hash = window.location.hash;
+    if (!hash.startsWith('#code='))
+        return;
+    try { return JSONCrush.uncrush(decodeURIComponent(hash.slice(6))); }
+    catch { return; } // a link cut short can end in half an escape
+}
+
+// show and run the code of a shared link, in place of the example's own
+function showSharedCode(code)
+{
+    ++loadFileCount; // the example's own file, still loading, is not shown when it arrives
+    const example = exampleList[selectedExample];
+    exampleInfo.textContent = 'Shared code';
+    setExampleInfo(`This code came from a shared link, made from the ` +
+        `[${example.name}](?example=${encodeURIComponent(example.name)}) example.`);
+    codeIsJS = true;
+    if (codeMirror)
+    {
+        codeMirror.setOption('mode', 'javascript');
+        codeMirror.setValue(code);
+    }
+    else
+        textareaCode.value = code;
+    clearTimeout(inputTimeout);
+    setCode(code);
+}
+
+// put a link to the code as it is now in the address bar and copy it; a big short takes a second or so to crush
+async function shareCode()
+{
+    buttonShare.disabled = true;
+    buttonShare.textContent = 'Sharing...';
+    await new Promise((resolve)=> setTimeout(resolve, 30)); // let the button show it first
+    const code = codeMirror ? codeMirror.getValue() : textareaCode.value;
+    const url = new URL(window.location);
+    url.hash = 'code=' + encodeURIComponent(JSONCrush.crush(code));
+    window.history.replaceState({}, '', url);
+    let copied = false;
+    try { await navigator.clipboard.writeText(url.href); copied = true; } catch {}
+    buttonShare.textContent = copied ? 'Link copied' : 'Link in address bar';
+    setTimeout(()=>
+    {
+        buttonShare.textContent = 'Share';
+        buttonShare.disabled = exampleList[selectedExample].largeExample;
+    }, 2000);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1173,6 +1241,7 @@ inputSearch.addEventListener('keydown', (e)=>
     inputSearch.value ? filterExamples(1) : showListPanel(false);
 });
 buttonRestart.addEventListener('click', restartCode);
+buttonShare.addEventListener('click', shareCode);
 buttonPrev.addEventListener('click', ()=> stepExample(-1));
 buttonNext.addEventListener('click', ()=> stepExample(1));
 buttonTheme.addEventListener('click', ()=>
