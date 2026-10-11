@@ -644,6 +644,7 @@ EngineObject.collideWithTile(tileData, pos, isHit) // Tile collision resolve che
 EngineObject.collideWithObject(object, push)       // Object collision resolve check, push is 3D only
 EngineObject.getAliveTime()                        // How long since object was created
 EngineObject.getSpeed()                            // Length of the velocity
+EngineObject.getVelocityAtPoint(pos)               // Velocity of a world point on it, its spin included
 EngineObject.applyAcceleration(acceleration)       // Apply acceleration
 EngineObject.applyForce(force)                     // Apply force
 EngineObject.getMirrorSign()                       // Get mirror direction (1 or -1)
@@ -2188,6 +2189,7 @@ obj.setGravityScale(scale=1)
 obj.setMassData(localCenter, mass, momentOfInertia) // undefined leaves that one as it is, inertia is about the
                                                     // center of mass
 obj.getMass() / getCenterOfMass() / getInertia() // the center of mass in world space, setMassData takes a local one
+obj.getVelocityAtPoint(pos)            // Velocity of a world point on the body, its spin included
 
 // Raycasting and queries
 box2d.raycast(start, end, includeSensors=false)    // Returns the closest Box2dRaycastResult or undefined; sensors

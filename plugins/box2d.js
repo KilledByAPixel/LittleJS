@@ -724,6 +724,12 @@ class Box2dObject extends EngineObject
      *  @return {number} */
     getSpeed() { return this.getLinearVelocity().length(); }
 
+    /** Get the velocity of a point on this object, its linear velocity and its spin about its center of mass
+     *  together, in Box2D's units like getLinearVelocity
+     *  @param {Vector2} pos - the point in world space
+     *  @return {Vector2} */
+    getVelocityAtPoint(pos) { return box2d.vec2From(this.body.GetLinearVelocityFromWorldPoint(box2dTemp(pos))); }
+
     ///////////////////////////////////////////////////////////////////////////////
     // physics set functions
 

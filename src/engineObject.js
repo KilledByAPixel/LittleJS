@@ -778,6 +778,17 @@ class EngineObject
      *  @return {number} */
     getSpeed() { return this.velocity.length(); }
 
+    /** Get the velocity of a point on this object, its velocity and its spin about pos together, per frame like
+     *  velocity, so the tip of a spinning blade moves faster than its middle; its length is the point's speed
+     *  @param {Vector2} pos - the point in world space
+     *  @return {Vector2} */
+    getVelocityAtPoint(pos)
+    {
+        // angleVelocity is clockwise, so a point above pos moves right
+        const w = this.angleVelocity, x = pos.x - this.pos.x, y = pos.y - this.pos.y;
+        return vec2(this.velocity.x + w*y, this.velocity.y - w*x);
+    }
+
     /** Apply acceleration to this object (adjust velocity, not affected by mass)
      *  - Does nothing on a static object (mass 0), set its velocity instead
      *  @param {Vector2} acceleration */
