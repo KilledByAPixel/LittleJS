@@ -67,7 +67,7 @@ function engineObjectBulletSweep(object, from, to)
             if (!data || tileCollisionOneWayPass(layer, x, y, from.x, from.y)) continue;
             const tilePos = vec2(cell.x, cell.y), entry = engineObjectRayEntry(from, to, tilePos);
             object.pos = entry.pos;
-            if (!object.collideWithTile(data, tilePos))
+            if (!object.collideWithTile(data, tilePos, true))
             {
                 if (object.destroyed) return false; // nor the other layers' tiles in this cell
                 continue;
@@ -545,13 +545,18 @@ class EngineObject
         {
             // check collision against tiles, one way tiles go by where it was; put back after, a callback may throw
             const fromObject = tileCollisionFromObject, fromPos = tileCollisionFromPos;
+            const hitObject = tileCollisionHitObject;
             tileCollisionFromObject = this, tileCollisionFromPos = oldPos;
             try
             {
                 this.isBullet ? this.updatePhysicsBullet(oldPos, gravityY, wasFalling) :
                     this.updatePhysicsTiles(oldPos, gravityY, wasFalling);
             }
-            finally { tileCollisionFromObject = fromObject, tileCollisionFromPos = fromPos; }
+            finally
+            {
+                tileCollisionFromObject = fromObject, tileCollisionFromPos = fromPos;
+                tileCollisionHitObject = hitObject;
+            }
         }
     }
 
@@ -595,7 +600,11 @@ class EngineObject
     /** @private */
     updatePhysicsTiles(oldPos, gravityY, wasFalling)
     {
+        // the first test is where the move put it, so the tiles it asks about are hits; the tests after it only try
+        // places to find which side it hit and where it can go
+        tileCollisionHitObject = this;
         const hitLayer = tileCollisionTest(this.pos, this.size, this);
+        tileCollisionHitObject = undefined;
         if (hitLayer)
         {
             // if already was stuck in collision, don't do anything
@@ -724,15 +733,20 @@ class EngineObject
 
     /** Called to check if a tile collision should be resolved. Return true for physics to resolve the collision or false to ignore and resolve it manually
      *  - Called for each solid tile the physics tests, which can be several times a frame for the same tile, and for
-     *    positions it only tries, so keep it free of side effects or guard them to once a frame
+     *    positions it only tries, so keep side effects to the calls where isHit is true
+     *  - isHit is true when the tile is one the object overlaps where its move put it, the physics' first test, or
+     *    one a bullet's ray goes into; a box is asked about the tiles it overlaps until one returns true, so a box
+     *    against two tiles at once is asked about one of them; false for the places the physics only tries after
+     *    that, and for the game's own tests and raycasts
      *  - this.pos has already moved, so a check on where it came from needs the position saved in update; for a one
      *    way platform the layer's setOneWay does that, and this is not asked about a one way tile it passes through
      *  - For the point of impact, like sparks where a bullet hit, set isBullet: this.pos is then where it meets the
      *    tile, as the platformer's Bullet uses it
      *  @param {number}  tileData - the value of the tile at the position
      *  @param {Vector2} pos - the tile's bottom left corner in world space
+     *  @param {boolean} [isHit] - true when it overlaps the tile where it moved to, false for a place only tried
      *  @return {boolean} - true if the collision should be resolved by modifying it's position and velocity */
-    collideWithTile(tileData, pos) { return tileData > 0; }
+    collideWithTile(tileData, pos, isHit) { return tileData > 0; }
 
     /** Called by the engine to check if an object collision should be resolved. Return true for physics to resolve the collision or false to ignore and resolve it manually
      *  - Both objects of a touching pair are asked once a frame, whichever order they update in; an object that

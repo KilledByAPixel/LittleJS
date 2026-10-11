@@ -640,7 +640,7 @@ EngineObject.update()                              // Update object, called auto
 EngineObject.render()                              // Render object, called automatically
 EngineObject.destroy(immediate=false)              // Destroy this object and children, removed at the end of the frame;
                                                    // immediate cuts attached emitters off instead of letting them finish
-EngineObject.collideWithTile(tileData, pos)        // Tile collision resolve check
+EngineObject.collideWithTile(tileData, pos, isHit) // Tile collision resolve check, isHit false for places only tried
 EngineObject.collideWithObject(object, push)       // Object collision resolve check, push is 3D only
 EngineObject.getAliveTime()                        // How long since object was created
 EngineObject.getSpeed()                            // Length of the velocity

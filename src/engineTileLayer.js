@@ -50,6 +50,9 @@ function tileCollisionAssertWhole(layer)
 // the object the physics is moving and where it was before this frame's move, for one way tiles
 let tileCollisionFromObject, tileCollisionFromPos;
 
+// the object whose tiles are asked about where its move put it, for collideWithTile's isHit
+let tileCollisionHitObject;
+
 // a one way tile at a layer's cell lets a box at from pass, when the cell draws a tile set one way and the box was not
 // wholly on its solid side, the side it can be passed through toward; the way is turned and mirrored as the tile's
 // art is, mirror first, then its quarter turns clockwise; a point is a box of no size
@@ -102,7 +105,7 @@ function tileCollisionTester(callbackObject)
     ASSERT(!callbackObject || typeof callbackObject === 'function' || callbackObject instanceof EngineObject, 'callbackObject must be a function or EngineObject');
     return !callbackObject ? (tileData)=> tileData > 0 :
         typeof callbackObject === 'function' ? (tileData, pos)=> callbackObject(tileData, pos) :
-        (tileData, pos)=> callbackObject.collideWithTile(tileData, pos);
+        (tileData, pos)=> callbackObject.collideWithTile(tileData, pos, callbackObject === tileCollisionHitObject);
 }
 
 /** Get tile collision data for a given cell in the grid

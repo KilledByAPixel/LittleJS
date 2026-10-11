@@ -6,6 +6,7 @@ What changed in each release, newest first. Releases before 1.20.0 are on the
 ## Unreleased
 
 ### New Changes
+- `collideWithTile` gets a third argument, `isHit`: true when the object overlaps the tile where its move put it, or a bullet's ray goes into it, and false for the places the physics only tries to find which side it hit, so a game can act on a hit once and ignore the rest
 - The Object Collect short: balls drifting through a square and a circle, colored by `engineObjectsCallback` while inside and counted by `engineObjectsCollect`, and a click pushes away the balls near the mouse
 - A debug build warns once when a game sets a child object's `pos` or `angle`, which its parent puts back every frame, naming `localPos` or `localAngle` to set instead
 - The example browser's Share button copies a link to the code as it is in the editor, crushed into the link with JSONCrush so nothing is stored anywhere; the link opens the example it was made from and runs the shared code
