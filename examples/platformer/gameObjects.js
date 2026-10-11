@@ -378,7 +378,7 @@ export class Bullet extends LJS.EngineObject
             1, 1, .5, 3.14, .1, // damp, angleDamp, gravityScale, particleCone, fade, 
             .5, 1, 1            // randomness, collide, additive
         );
-        emitter.trailScale = 1;
+        emitter.trailScale = 3;
         emitter.restitution = .3;
         emitter.angle = this.velocity.angle() + LJS.PI;
     }
