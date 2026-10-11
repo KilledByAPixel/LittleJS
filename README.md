@@ -25,7 +25,7 @@ The code is very clean and well documented with many examples to get you started
 
 <div align='center' markdown='1'>
 
-## [Demos](https://killedbyapixel.github.io/LittleJS/examples) | [Arcade](https://killedbyapixel.github.io/LittleJSArcade) | [Docs](https://killedbyapixel.github.io/LittleJS/docs) | [Reference](https://github.com/KilledByAPixel/LittleJS/blob/main/REFERENCE.md) | [FAQ](https://github.com/KilledByAPixel/LittleJS/blob/main/FAQ.md) | [Trailer](https://youtu.be/chuBzGjv7Ms) | [Discord](https://discord.gg/zb7hcGkyZe)  | [AI](https://github.com/KilledByAPixel/LittleJS-AI)
+## [Examples](https://killedbyapixel.github.io/LittleJS/examples) | [Arcade](https://killedbyapixel.github.io/LittleJSArcade) | [Docs](https://killedbyapixel.github.io/LittleJS/docs) | [Reference](https://github.com/KilledByAPixel/LittleJS/blob/main/REFERENCE.md) | [FAQ](https://github.com/KilledByAPixel/LittleJS/blob/main/FAQ.md) | [Trailer](https://youtu.be/chuBzGjv7Ms) | [Discord](https://discord.gg/zb7hcGkyZe)  | [AI](https://github.com/KilledByAPixel/LittleJS-AI)
 
 </div>
 
