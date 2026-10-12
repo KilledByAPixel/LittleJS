@@ -1192,7 +1192,8 @@ class LavaTile extends EngineObject {
 
 ```javascript
 new PostProcessPlugin(shaderCode, includeMainCanvas=false, feedbackTexture=false) // call in gameInit; with no
-                               // shaderCode the image passes through unchanged
+                               // shaderCode the image passes through unchanged, and one effect may be given alone,
+                               // new PostProcessPlugin(postProcessVignette()), which postProcessEffects joins
 postProcess                    // Global instance created by the plugin
 postProcessBloom(threshold=.6, strength=1, size=6, includeMainCanvas=false) // set up a ready made bloom effect, so
                                // bright colors and lights glow; threshold is where the glow starts, and the 2D canvas

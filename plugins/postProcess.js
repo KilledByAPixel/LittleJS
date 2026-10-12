@@ -31,7 +31,8 @@ let postProcess;
 class PostProcessPlugin
 {
     /** Create global post processing shader
-    *  @param {string} [shaderCode] - Shadertoy style mainImage code, a pass-through when left out
+    *  @param {string} [shaderCode] - Shadertoy style mainImage code, or an effect alone like postProcessVignette(),
+    *                                 which postProcessEffects joins; a pass-through when left out
     *  @param {boolean} [includeMainCanvas] - combine mainCanvas onto glCanvas
     *  @param {boolean} [feedbackTexture] - also pass the shader's own output from the previous frame as iChannel1,
     *                                       for trails and echoes; iChannel0 is still the frame just drawn
@@ -47,7 +48,7 @@ class PostProcessPlugin
         postProcess = this;
 
         /** @property {string} - The shadertoy style mainImage code it shades with, see setShaderCode */
-        this.shaderCode = shaderCode || postProcessEffects(); // no code passes the frame through
+        this.shaderCode = postProcessShaderCode(shaderCode);
 
         /** @property {boolean} - Is the pass on? Off, the frame shows as the engine drew it, the shader is kept,
          *  and the feedback texture holds the last frame drawn with it on */
@@ -261,12 +262,11 @@ class PostProcessPlugin
     }
 
     /** Shade with new code from the next frame on, to switch effects while the game runs; the shader is made again
-     *  @param {string} [shaderCode] - Shadertoy style mainImage code, postProcessEffects builds it; none passes the
-     *  frame through */
+     *  @param {string} [shaderCode] - Shadertoy style mainImage code, postProcessEffects builds it, or an effect
+     *  alone; none passes the frame through */
     setShaderCode(shaderCode)
     {
-        ASSERT(!shaderCode || typeof shaderCode === 'string', 'shader code must be a string');
-        this.shaderCode = shaderCode || postProcessEffects();
+        this.shaderCode = postProcessShaderCode(shaderCode);
         if (!this.shader || headlessMode || !glContext) return;
 
         // what the new shader replaces, made again by the next render
@@ -283,6 +283,15 @@ class PostProcessPlugin
 // what the shader declares of the game's values, each name and its length, so a value that changes either makes the
 // shader again
 const postProcessValueKey = (values)=> Object.entries(values).map(([name, v])=> name + ':' + (isArray(v) ? v.length : 1)).join();
+
+// the code the pass shades with: none passes the frame through, and code with no mainImage of its own, an effect like
+// postProcessVignette() given alone, is a piece that postProcessEffects joins into one
+function postProcessShaderCode(shaderCode)
+{
+    ASSERT(!shaderCode || typeof shaderCode === 'string', 'shader code must be a string');
+    return !shaderCode ? postProcessEffects() :
+        shaderCode.includes('mainImage') ? shaderCode : postProcessEffects(shaderCode);
+}
 
 // the fragment shader of the post process pass around its mainImage snippet: the frame on iChannel0, the last output
 // on iChannel1 with a feedback texture, and the 3D depth on iChannel2 when render3D.depthTexture is on, read with

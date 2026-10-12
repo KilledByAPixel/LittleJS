@@ -68,4 +68,9 @@ test('a post process plugin takes new shader code', ()=>
     assert.ok(postProcess.shaderCode.includes('// scanlines'));
     postProcess.setShaderCode();
     assert.ok(postProcess.shaderCode.includes('mainImage'), 'none is the frame as it is');
+    postProcess.setShaderCode(postProcessVignette(1, 1));
+    assert.equal(postProcess.shaderCode, postProcessEffects(postProcessVignette(1, 1)), 'an effect alone is joined');
+    const own = postProcessEffects('c.r = 1.;');
+    postProcess.setShaderCode(own);
+    assert.equal(postProcess.shaderCode, own, 'code with its own mainImage is kept as it is');
 });
