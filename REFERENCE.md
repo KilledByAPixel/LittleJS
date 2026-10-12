@@ -1392,6 +1392,11 @@ render3D.fogColor = undefined         // uses canvasClearColor when undefined
 render3D.fogStart = 20; render3D.fogEnd = 100 // e.g., both 0 by default which is no fog; measured by camera distance,
                                               // fogEnd 0 disables fog; additive draws fade out with distance instead
                                               // of taking the fog color, since adding it would brighten them
+render3D.fogDepth = true              // false by default; measure fog by depth along the view instead of distance
+                                      // from the camera, even across the screen like a classic depth fog
+render3D.fogFadeStart = 400; render3D.fogFadeEnd = 533 // e.g., both 0 by default for no fade; see through draws fade
+                                      // to transparent between these, measured like the fog, so distant things melt
+                                      // into a sky or backdrop drawn behind them; opaque draws stay solid
 render3D.gravity = vec3(0, -.01, 0) // e.g., vec3() by default so nothing falls; objects with a mass fall by this each
                                     // frame, times their gravityScale, and slow by their damping, which is 1 by
                                     // default for no slowing

@@ -53,6 +53,9 @@ let render3DShadowCut; // the cut last sent to the shadow shader, see render3DSe
 ///////////////////////////////////////////////////////////////////////////////
 // Private helpers
 
+// a fog fade range is off (both 0) or ends past where it starts
+const render3DFogFadeValid = (start, end)=> !end || start < end;
+
 // outward normal of a triangle or a quad given its corners in loop order,
 // from the diagonals so a collapsed corner still works
 function render3DFaceNormal(a, b, c, d=a)
@@ -550,6 +553,14 @@ class Render3DPlugin
         this.fogStart = 0;
         /** @property {number} - Distance from the camera where fog is total, 0 disables fog */
         this.fogEnd = 0;
+        /** @property {boolean} - Measure fog by depth along the view instead of distance from the camera, so fog is
+         *  even across the screen like a classic depth fog; the fade below is measured the same way */
+        this.fogDepth = false;
+        /** @property {number} - Where see through draws start to fade to transparent, measured like the fog */
+        this.fogFadeStart = 0;
+        /** @property {number} - Where see through draws are fully transparent, 0 turns the fade off; distant things
+         *  melt into a sky or backdrop drawn behind them instead of into the fog color */
+        this.fogFadeEnd = 0;
         /** @property {Vector3} - Added to the velocity3D of every object with a mass each frame, scaled by its
          *  gravityScale; sync2D objects use the 2D gravity */
         this.gravity = vec3();
@@ -1751,7 +1762,8 @@ const RENDER3D_SNIPPET_NAMES =
 // and a mainNormal in it bends the normal after the normal map, before all the lighting reads it
 // uniforms: lightDir (xyz the way the sunlight travels, w = emissive, 1 or more skips the lighting),
 //   lightColor (the sun's rgb, a = specular), ambientFog (rgb, a = fogEnd), fogColor (rgb, a = fogStart),
-//   cameraPos, tex, shadowMap, shadowParams (x = shadows on, y = bias, z = blur step in texture space,
+//   fogFade (x = fogFadeStart, y = fogFadeEnd, 0 skips the fade, z = 1 measures fog along the view),
+//   cameraPos, cameraDir (the view's forward), tex, shadowMap, shadowParams (x = shadows on, y = bias, z = blur step in texture space,
 //   w = how the draw finishes: 1 opaque and alpha tested, 0 blended, -1 additive),
 //   materialParams (x = normal map scale, 0 skips it, y = shininess, z = reflectivity), emissiveTint (rgb, a = the
 //   emissive map is on), skyTop, skyHorizon, skyBottom (what a reflection shows), normalTex, emissiveTex
@@ -1760,11 +1772,11 @@ function render3DFragmentSource(fragmentCode)
     const hasNormal = /\bmainNormal\s*\(/.test(fragmentCode || '');
     return '#version 300 es\n' +
         'precision highp float;' +
-        'uniform vec4 lightDir,lightColor,ambientFog,ambientGround,fogColor,shadowParams;' +
+        'uniform vec4 lightDir,lightColor,ambientFog,ambientGround,fogColor,shadowParams,fogFade;' +
         'uniform vec4 extraLights[' + RENDER3D_MAX_LIGHTS + '],extraLightColors[' + RENDER3D_MAX_LIGHTS + '];' +
         'uniform vec4 extraLightCones[' + RENDER3D_MAX_LIGHTS + '];' +
         'uniform int extraLightCount;' +
-        'uniform vec3 cameraPos;' +
+        'uniform vec3 cameraPos,cameraDir;' +
         'uniform vec4 materialParams,emissiveTint,skyTop,skyHorizon,skyBottom,gelAxes;' +
         'uniform sampler2D tex,normalTex,emissiveTex,gelTex;' +
         'uniform samplerCube envMap;' + // the environment, when envParams.x is 1, envParams.y its last mipmap, z the
@@ -1864,9 +1876,13 @@ function render3DFragmentSource(fragmentCode)
         '}}else c.rgb*=e;' + // fully emissive: its own color, or brighter, with no lighting to work out
         // the emissive map adds its light on top, lit or not
         'if(emissiveTint.a>0.)c.rgb+=texture(emissiveTex,T).rgb*emissiveTint.rgb;' +
-        'if(ambientFog.a>0.){' +
-        'float z=distance(cameraPos,P);' +
+        'if(ambientFog.a>0.||fogFade.y>0.){' +
+        'float z=fogFade.z>0.?dot(P-cameraPos,cameraDir):distance(cameraPos,P);' +
+        'if(ambientFog.a>0.)' +
         'c.rgb=mix(c.rgb,shadowParams.w<0.?vec3(0):fogColor.rgb,smoothstep(fogColor.a,ambientFog.a,z));' +
+        // see through draws fade out with distance after the fog color, so they melt into what is behind them;
+        // an opaque draw stays solid
+        'if(fogFade.y>0.&&shadowParams.w<=0.)c.a*=clamp((fogFade.y-z)/(fogFade.y-fogFade.x),0.,1.);' +
         '}' +
         // an opaque draw drops see through texels, as the shadow map does, at the end, after the normal map's
         // derivatives and the texture samples, which need the pixels around them, and stays opaque otherwise
@@ -1901,8 +1917,9 @@ function render3DUseProgram(program)
     gl.uniform1i(render3DUniform('gelTex'), 4);
     gl.uniform1i(render3DUniform('envMap'), 5);
     gl.uniform4fv(render3DUniform('gelAxes'), r.gelAxes);
-    const c = r.camera.pos;
+    const c = r.camera.pos, d = r.cameraForward;
     gl.uniform3f(render3DUniform('cameraPos'), c.x, c.y, c.z);
+    gl.uniform3f(render3DUniform('cameraDir'), d.x, d.y, d.z);
     gl.uniform1i(render3DUniform('extraLightCount'), r.lightCount);
     if (r.lightCount)
     {
@@ -2641,6 +2658,9 @@ function render3DSetDrawUniforms(matrix, tileInfo, tint, uvRect, state=render3D)
     gc ? render3DUniform4f('ambientGround', gc.r, gc.g, gc.b, 1) : render3DUniform4f('ambientGround', 0, 0, 0, 0);
 
     render3DUniform4f('fogColor', fc.r, fc.g, fc.b, r.fogEnd ? min(r.fogStart, r.fogEnd - 1e-3) : r.fogStart);
+    ASSERT(render3DFogFadeValid(r.fogFadeStart, r.fogFadeEnd), 'fogFadeStart must be less than fogFadeEnd',
+        r.fogFadeStart, r.fogFadeEnd);
+    render3DUniform4f('fogFade', r.fogFadeStart, r.fogFadeEnd, r.fogDepth ? 1 : 0, 0);
     // how the fragment shader finishes: 1 drops see through texels and keeps the draw opaque,
     // 0 blends them away instead, and -1 is additive, which has to fade into fog differently
     const blendMode = state.blend ? (state.additive ? -1 : 0) : 1;

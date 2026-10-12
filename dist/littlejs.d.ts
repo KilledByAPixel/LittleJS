@@ -4298,15 +4298,20 @@ declare module "littlejsengine" {
         worldToLocalVector(vec: Vector2): Vector2;
         /** Called to check if a tile collision should be resolved. Return true for physics to resolve the collision or false to ignore and resolve it manually
          *  - Called for each solid tile the physics tests, which can be several times a frame for the same tile, and for
-         *    positions it only tries, so keep it free of side effects or guard them to once a frame
+         *    positions it only tries, so keep side effects to the calls where isHit is true
+         *  - isHit is true when the tile is one the object overlaps where its move put it, the physics' first test, or
+         *    one a bullet's ray goes into; a box is asked about the tiles it overlaps until one returns true, so a box
+         *    against two tiles at once is asked about one of them; false for the places the physics only tries after
+         *    that, and for the game's own tests and raycasts
          *  - this.pos has already moved, so a check on where it came from needs the position saved in update; for a one
          *    way platform the layer's setOneWay does that, and this is not asked about a one way tile it passes through
          *  - For the point of impact, like sparks where a bullet hit, set isBullet: this.pos is then where it meets the
          *    tile, as the platformer's Bullet uses it
          *  @param {number}  tileData - the value of the tile at the position
          *  @param {Vector2} pos - the tile's bottom left corner in world space
+         *  @param {boolean} [isHit] - true when it overlaps the tile where it moved to, false for a place only tried
          *  @return {boolean} - true if the collision should be resolved by modifying it's position and velocity */
-        collideWithTile(tileData: number, pos: Vector2): boolean;
+        collideWithTile(tileData: number, pos: Vector2, isHit?: boolean): boolean;
         /** Called by the engine to check if an object collision should be resolved. Return true for physics to resolve the collision or false to ignore and resolve it manually
          *  - Both objects of a touching pair are asked once a frame, whichever order they update in; an object that
          *    destroys itself here is gone at the end of the frame and is still asked about the pairs left this frame, so a
@@ -4332,6 +4337,11 @@ declare module "littlejsengine" {
         /** Get the speed of this object
          *  @return {number} */
         getSpeed(): number;
+        /** Get the velocity of a point on this object, its velocity and its spin about pos together, per frame like
+         *  velocity, so the tip of a spinning blade moves faster than its middle; its length is the point's speed
+         *  @param {Vector2} pos - the point in world space
+         *  @return {Vector2} */
+        getVelocityAtPoint(pos: Vector2): Vector2;
         /** Apply acceleration to this object (adjust velocity, not affected by mass)
          *  - Does nothing on a static object (mass 0), set its velocity instead
          *  @param {Vector2} acceleration */
@@ -6961,10 +6971,13 @@ declare module "littlejsengine" {
          *  and creating objects, fixtures or joints must wait until after the step
          *  - The fixtures say which shapes touched, the same objects addBox and the others returned, so a small sensor
          *    under a player's feet can tell standing on the ground from touching a wall
+         *  - impactSpeed is how hard they hit: how fast they were closing along the contact normal, spin included,
+         *    in world units per second, measured before the solver pushed them apart; 0 for a sensor
          *  @param {Box2dObject} otherObject
          *  @param {Object} [fixture] - This object's fixture that touched
-         *  @param {Object} [otherFixture] - The other object's fixture that touched */
-        beginContact(otherObject: Box2dObject, fixture?: any, otherFixture?: any): void;
+         *  @param {Object} [otherFixture] - The other object's fixture that touched
+         *  @param {number} [impactSpeed] - How fast they were closing as they touched */
+        beginContact(otherObject: Box2dObject, fixture?: any, otherFixture?: any, impactSpeed?: number): void;
         /** Called when a contact ends, while the world steps or a body is destroyed: a destroy or a setter waits
          *  until the step is done, and creating objects, fixtures or joints must wait until after the step
          *  @param {Box2dObject} otherObject
@@ -9020,6 +9033,14 @@ declare module "littlejsengine" {
         fogStart: number;
         /** @property {number} - Distance from the camera where fog is total, 0 disables fog */
         fogEnd: number;
+        /** @property {boolean} - Measure fog by depth along the view instead of distance from the camera, so fog is
+         *  even across the screen like a classic depth fog; the fade below is measured the same way */
+        fogDepth: boolean;
+        /** @property {number} - Where see through draws start to fade to transparent, measured like the fog */
+        fogFadeStart: number;
+        /** @property {number} - Where see through draws are fully transparent, 0 turns the fade off; distant things
+         *  melt into a sky or backdrop drawn behind them instead of into the fog color */
+        fogFadeEnd: number;
         /** @property {Vector3} - Added to the velocity3D of every object with a mass each frame, scaled by its
          *  gravityScale; sync2D objects use the 2D gravity */
         gravity: Vector3;

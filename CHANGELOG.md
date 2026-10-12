@@ -6,6 +6,7 @@ What changed in each release, newest first. Releases before 1.20.0 are on the
 ## Unreleased
 
 ### New Changes
+- `render3D.fogDepth` measures fog by depth along the view instead of distance from the camera, and `render3D.fogFadeStart` / `fogFadeEnd` fade see through draws to transparent with distance, so a scene can melt into its sky instead of a fog color
 - `getVelocityAtPoint(pos)` on an object: the velocity of a point on it, its velocity and its spin together, so the tip of a spinning blade moves faster than its middle; a `Box2dObject` asks Box2D, about its center of mass
 - `collideWithTile` gets a third argument, `isHit`: true when the object overlaps the tile where its move put it, or a bullet's ray goes into it, and false for the places the physics only tries to find which side it hit, so a game can act on a hit once and ignore the rest
 - The Object Collect short: balls drifting through a square and a circle, colored by `engineObjectsCallback` while inside and counted by `engineObjectsCollect`, and a click pushes away the balls near the mouse
