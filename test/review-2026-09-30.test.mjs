@@ -108,7 +108,8 @@ test('a self-contained glTF loads from a blob url and from a data url', async ()
 
 test('post process feedback: the frame drawn is kept in the feedback texture, not the scene texture', ()=>
 {
-    // a gl that knows which unit is active and what is bound to each, and notes where each upload lands
+    // a gl that knows which unit is active and what is bound to each, and notes where each upload or copy of the
+    // drawing buffer lands
     const uploads = [];
     let unit = 0, made = 0, drawn = false;
     const bound = {};
@@ -117,7 +118,9 @@ test('post process feedback: the frame drawn is kept in the feedback texture, no
         createTexture: ()=> ({texture: ++made}),
         activeTexture: (u)=> unit = u - 33984,
         bindTexture: (target, texture)=> bound[unit] = texture,
-        texImage2D: ()=> uploads.push({unit, texture: bound[unit], afterDraw: drawn}),
+        // six arguments is an upload from an image or canvas, nine one from an array of pixels
+        texImage2D: (...args)=> uploads.push({unit, texture: bound[unit], afterDraw: drawn, image: args.length == 6}),
+        copyTexImage2D: ()=> uploads.push({unit, texture: bound[unit], afterDraw: drawn}),
         drawArrays: ()=> drawn = true,
         getShaderParameter: ()=> true, getProgramParameter: ()=> true, isContextLost: ()=> false,
     }, {get: (target, key)=> key in target ? target[key] : ()=> ({})});
@@ -132,5 +135,7 @@ test('post process feedback: the frame drawn is kept in the feedback texture, no
     assert.equal(kept.length, 1, 'one upload after the draw');
     assert.equal(kept[0].texture, feedback, 'it lands in the feedback texture');
     assert.ok(uploads.some((u)=> !u.afterDraw && u.texture === scene), 'the scene texture got the canvas');
+    // copied on the GPU, an upload from the canvas is a readback to the CPU every frame in Firefox
+    assert.ok(!uploads.some((u)=> u.image), 'nothing is uploaded from the canvas, both frames are copies');
     assert.equal(unit, 0, 'and the first unit is active again for the engine');
 });
