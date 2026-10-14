@@ -17,6 +17,7 @@ What changed in each release, newest first. Releases before 1.20.0 are on the
 - Box2D `beginContact` gets a fourth argument, `impactSpeed`: how fast the two bodies were closing along the contact normal as they touched, spin included, so a game can tell a hard hit from a graze; the Box2D Pool short's click goes by it
 
 ### Fixes
+- `PostProcessPlugin` copies the frame into its texture on the GPU with `copyTexImage2D` instead of uploading the canvas, which Firefox read back to the CPU every frame; a game with a post process there ran several times slower, AstroBlast's glow at 7 fps where it now runs at 31
 - particleEffect's assert for an option it does not have lists the options it does, and names the one meant when only its case is off, `emitrate` for `emitRate`
 - The build scripts, the engine's and the starter, module and TypeScript examples', run their tools with node and no shell, so a file name can not run as a command; a data file with a space in its name no longer breaks the examples' zip, and a tool that is not installed fails with a message to run `npm install` instead of being downloaded by npx
 

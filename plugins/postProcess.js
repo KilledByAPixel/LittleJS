@@ -196,8 +196,9 @@ class PostProcessPlugin
             }
             else
             {
-                // copy glCanvas to texture
-                glContext.texImage2D(glContext.TEXTURE_2D, 0, glContext.RGBA, glContext.RGBA, glContext.UNSIGNED_BYTE, glCanvas);
+                // copy the drawing buffer to the texture on the GPU, bottom row first as the flip above would have,
+                // and premultiplied as the context keeps it; a canvas source is a slow readback in Firefox
+                glContext.copyTexImage2D(glContext.TEXTURE_2D, 0, glContext.RGBA, 0, 0, glCanvas.width, glCanvas.height, 0);
             }
 
             // the previous frame's output, on the second texture unit
@@ -239,7 +240,7 @@ class PostProcessPlugin
                 // keep this frame's output for the next one, in the feedback texture still bound to the second
                 // unit, then hand the first texture unit back to the engine
                 glContext.activeTexture(glContext.TEXTURE1);
-                glContext.texImage2D(glContext.TEXTURE_2D, 0, glContext.RGBA, glContext.RGBA, glContext.UNSIGNED_BYTE, glCanvas);
+                glContext.copyTexImage2D(glContext.TEXTURE_2D, 0, glContext.RGBA, 0, 0, glCanvas.width, glCanvas.height, 0);
                 glContext.activeTexture(glContext.TEXTURE0);
             }
 
