@@ -10,12 +10,14 @@
  */
 
 import fs from 'node:fs';
-import { execSync } from 'node:child_process';
+import { execFileSync } from 'node:child_process';
+import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { basename, dirname, join } from 'node:path';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
+const require = createRequire(import.meta.url);
 const ROOT_DIR = join(__dirname, '..');
 
 const ENGINE_NAME = 'littlejs';
@@ -235,7 +237,7 @@ function closureCompilerStep(filename)
     fs.copyFileSync(filename, filenameTemp);
     try
     {
-        execSync(`npx google-closure-compiler --js="${filenameTemp}" --js_output_file="${filename}" --jscomp_off=*`);
+        runTool('google-closure-compiler/cli.js', [`--js=${filenameTemp}`, `--js_output_file=${filename}`, '--jscomp_off=*']);
         fs.rmSync(filenameTemp);
     }
     catch (e) { handleError(e, 'Failed to run Closure Compiler step!'); }
@@ -246,7 +248,7 @@ function uglifyBuildStep(filename)
 {
     try
     {
-        execSync(`npx uglifyjs "${filename}" -o "${filename}"`);
+        runTool('uglify-js/bin/uglifyjs', [filename, '-o', filename]);
     }
     catch (e) { handleError(e,'Failed to run Uglify minification step!'); }
 };
@@ -257,7 +259,7 @@ function uglifyModuleBuildStep(filename)
 {
     try
     {
-        execSync(`npx uglifyjs "${filename}" -c --module -o "${filename}"`);
+        runTool('uglify-js/bin/uglifyjs', [filename, '-c', '--module', '-o', filename]);
     }
     catch (e) { handleError(e,'Failed to run Uglify minification step!'); }
 };
@@ -297,7 +299,7 @@ function typeScriptBuildStep(filename)
         // flare may be missing; a game not in strict mode reads the same types as before
         // the target names the library tsc types with: without it tsc takes ES5's, where Map and Set do not resolve
         // and come out as any, which went unseen while a dependency brought @types/node, which declares them
-        execSync(`npx -p typescript tsc "${filename}" --declaration --allowJs --emitDeclarationOnly --strictNullChecks --target es2022 --outFile "${tsFilename}"`);
+        runTool('typescript/bin/tsc', [filename, '--declaration', '--allowJs', '--emitDeclarationOnly', '--strictNullChecks', '--target', 'es2022', '--outFile', tsFilename]);
 
         // Make declare module part use the package name littlejsengine
         let fileContent = fs.readFileSync(tsFilename, 'utf8');
@@ -353,6 +355,16 @@ function typeScriptCloseOf(text, start)
 }
 
 // display the error and exit
+// Run an installed tool's script with node, its arguments passed as they are with no shell to read them,
+// so a file name can not run as a command; a tool that is not installed fails instead of being downloaded
+function runTool(binPath, args, options)
+{
+    let bin;
+    try { bin = require.resolve(binPath); }
+    catch { throw new Error(`${binPath.split('/')[0]} is not installed, run "npm install" first`); }
+    execFileSync(process.execPath, [bin, ...args], options);
+}
+
 function handleError(e,message)
 {
     console.error(e);

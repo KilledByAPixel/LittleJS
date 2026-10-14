@@ -15,6 +15,9 @@ What changed in each release, newest first. Releases before 1.20.0 are on the
 - `PostProcessPlugin` and `setShaderCode` take a built in effect on its own, `new PostProcessPlugin(postProcessVignette())`, joining it with `postProcessEffects` as they would have needed; before, that failed to compile with an error about `uv`
 - Box2D `beginContact` gets a fourth argument, `impactSpeed`: how fast the two bodies were closing along the contact normal as they touched, spin included, so a game can tell a hard hit from a graze; the Box2D Pool short's click goes by it
 
+### Fixes
+- The build scripts, the engine's and the starter, module and TypeScript examples', run their tools with node and no shell, so a file name can not run as a command; a data file with a space in its name no longer breaks the examples' zip, and a tool that is not installed fails with a message to run `npm install` instead of being downloaded by npx
+
 ## 1.27.0 - 2026-10-08
 
 ### New Changes

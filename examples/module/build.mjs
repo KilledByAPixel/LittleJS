@@ -7,9 +7,11 @@
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import fs from 'node:fs';
-import { execSync } from 'node:child_process';
+import { execSync, execFileSync } from 'node:child_process';
+import { createRequire } from 'node:module';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
+const require = createRequire(import.meta.url);
 
 const PROGRAM_TITLE = 'Little JS Starter Project';
 const PROGRAM_NAME = 'game';
@@ -92,7 +94,7 @@ function moduleFixStep(filename)
 function uglifyBuildStep(filename)
 {
     console.log('Running uglify...');
-    execSync(`npx uglifyjs "${filename}" -c -m -o "${filename}"`, {stdio: 'inherit'});
+    runTool('uglify-js/bin/uglifyjs', [filename, '-c', '-m', '-o', filename]);
 }
 
 function htmlBuildStep()
@@ -118,7 +120,16 @@ function zipBuildStep()
 {
     console.log('Zipping...');
     const sources = ['index.html', 'littlejs.esm.min.js', ...sourceFiles, ...dataFiles];
-    const sourceList = sources.join(' ');
-    execSync(`npx bestzip ../${PROGRAM_NAME}.zip ${sourceList}`, {cwd:BUILD_FOLDER, stdio: 'inherit'});
+    runTool('bestzip/bin/cli.js', [`../${PROGRAM_NAME}.zip`, ...sources], {cwd:BUILD_FOLDER});
     console.log(`Size of ${PROGRAM_NAME}.zip: ${fs.statSync(join(__dirname, `${PROGRAM_NAME}.zip`)).size} bytes`);
+}
+
+// Run an installed tool's script with node, its arguments passed as they are with no shell to read them,
+// so a file name can not run as a command; a tool that is not installed fails instead of being downloaded
+function runTool(binPath, args, options)
+{
+    let bin;
+    try { bin = require.resolve(binPath); }
+    catch { throw new Error(`${binPath.split('/')[0]} is not installed, run "npm install" first`); }
+    execFileSync(process.execPath, [bin, ...args], {stdio: 'inherit', ...options});
 }

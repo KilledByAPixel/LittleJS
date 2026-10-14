@@ -7,9 +7,11 @@
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import fs from 'node:fs';
-import { execSync } from 'node:child_process';
+import { execSync, execFileSync } from 'node:child_process';
+import { createRequire } from 'node:module';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
+const require = createRequire(import.meta.url);
 
 const PROGRAM_TITLE = 'Little JS Starter Project';
 const PROGRAM_NAME = 'game';
@@ -80,20 +82,23 @@ function closureCompilerStep(filename)
     // use closer compiler to minify the code
     const filenameTemp = filename + '.tmp';
     fs.copyFileSync(filename, filenameTemp);
-    execSync(`npx google-closure-compiler --js="${filenameTemp}" --js_output_file="${filename}" --compilation_level=ADVANCED --warning_level=VERBOSE --jscomp_off=* --assume_function_wrapper`, {stdio: 'inherit'});
+    runTool('google-closure-compiler/cli.js', [`--js=${filenameTemp}`, `--js_output_file=${filename}`, '--compilation_level=ADVANCED', '--warning_level=VERBOSE', '--jscomp_off=*', '--assume_function_wrapper']);
     fs.rmSync(filenameTemp);
 }
 
 function uglifyBuildStep(filename)
 {
     console.log('Running uglify...');
-    execSync(`npx uglifyjs "${filename}" -c -m -o "${filename}"`, {stdio: 'inherit'});
+    runTool('uglify-js/bin/uglifyjs', [filename, '-c', '-m', '-o', filename]);
 }
 
 function roadrollerBuildStep(filename)
 {
     console.log('Running roadroller...');
-    execSync(`npx roadroller "${filename}" -o "${filename}"`, {stdio: 'inherit'});
+
+    // roadroller's exports hide its cli, which sits beside its main file
+    const cli = join(dirname(toolPath('roadroller')), 'cli.mjs');
+    runTool(cli, [filename, '-o', filename]);
 }
 
 function htmlBuildStep(filename)
@@ -120,7 +125,19 @@ function zipBuildStep(filename)
 {
     console.log('Zipping...');
     const sources = ['index.html', ...dataFiles];
-    const sourceList = sources.join(' ');
-    execSync(`npx bestzip ../${PROGRAM_NAME}.zip ${sourceList}`, {cwd:BUILD_FOLDER, stdio: 'inherit'});
+    runTool('bestzip/bin/cli.js', [`../${PROGRAM_NAME}.zip`, ...sources], {cwd:BUILD_FOLDER});
     console.log(`Size of ${PROGRAM_NAME}.zip: ${fs.statSync(join(__dirname, `${PROGRAM_NAME}.zip`)).size} bytes`);
+}
+
+// Run an installed tool's script with node, its arguments passed as they are with no shell to read them,
+// so a file name can not run as a command; a tool that is not installed fails instead of being downloaded
+function runTool(binPath, args, options)
+{
+    execFileSync(process.execPath, [toolPath(binPath), ...args], {stdio: 'inherit', ...options});
+}
+
+function toolPath(binPath)
+{
+    try { return require.resolve(binPath); }
+    catch { throw new Error(`${binPath.split('/')[0]} is not installed, run "npm install" first`); }
 }

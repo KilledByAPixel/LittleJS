@@ -7,9 +7,11 @@
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import fs from 'node:fs';
-import { execSync } from 'node:child_process';
+import { execFileSync } from 'node:child_process';
+import { createRequire } from 'node:module';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
+const require = createRequire(import.meta.url);
 const PROGRAM_NAME = 'game';
 const BUILD_FOLDER = join(__dirname, 'build');
 
@@ -33,13 +35,15 @@ console.log(`Compiling TypeScript...`);
 // Use tsconfig.json for compilation settings
 try
 {
-    const result = execSync(`npx -p typescript tsc`, {cwd: __dirname, encoding: 'utf8', stdio: 'pipe'});
+    // run tsc with node and no shell, a missing typescript fails instead of being downloaded
+    const result = execFileSync(process.execPath, [require.resolve('typescript/bin/tsc')], {cwd: __dirname, encoding: 'utf8', stdio: 'pipe'});
     console.log(result);
 } catch (error)
 {
     console.error('TypeScript compilation errors:');
     if (error.stdout) console.log(error.stdout);
     if (error.stderr) console.error(error.stderr);
+    if (!error.stdout && !error.stderr) console.error(error.message);
     console.error('TypeScript compilation failed!');
     process.exit(1);
 }

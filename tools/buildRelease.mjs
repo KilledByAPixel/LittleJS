@@ -7,12 +7,14 @@
  */
 
 import fs from 'node:fs';
-import { execSync } from 'node:child_process';
+import { execSync, execFileSync } from 'node:child_process';
+import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
+const require = createRequire(import.meta.url);
 const ROOT_DIR = join(__dirname, '..');
 
 const packageInfo = JSON.parse(fs.readFileSync(join(ROOT_DIR, 'package.json')));
@@ -60,13 +62,23 @@ try
 {
     // remove any older zip for this version so we never merge into a stale one
     fs.rmSync(ZIP_FILE, { force: true });
-    execSync(`npx bestzip ${ZIP_NAME} ${releaseFiles.join(' ')}`, { stdio: 'inherit' });
+    runTool('bestzip/bin/cli.js', [ZIP_NAME, ...releaseFiles], { stdio: 'inherit' });
 }
 catch (e) { handleError(e, 'Failed to create release zip!'); }
 
 const zipSizeKB = (fs.statSync(ZIP_FILE).size/1024).toFixed(1);
 console.log(`Size of ${ZIP_NAME}: ${zipSizeKB} KB`);
 console.log(`Release built in ${((Date.now() - startTime)/1e3).toFixed(2)} seconds! ✨`);
+
+// Run an installed tool's script with node, its arguments passed as they are with no shell to read them,
+// so a file name can not run as a command; a tool that is not installed fails instead of being downloaded
+function runTool(binPath, args, options)
+{
+    let bin;
+    try { bin = require.resolve(binPath); }
+    catch { throw new Error(`${binPath.split('/')[0]} is not installed, run "npm install" first`); }
+    execFileSync(process.execPath, [bin, ...args], options);
+}
 
 function handleError(e, message)
 {

@@ -7,12 +7,14 @@
  */
 
 import fs from 'node:fs';
-import { execSync } from 'node:child_process';
+import { execFileSync } from 'node:child_process';
+import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { basename, dirname, join } from 'node:path';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
+const require = createRequire(import.meta.url);
 const ROOT_DIR = join(__dirname, '..');
 
 // built in a folder of its own and put in docs when all of it is there, so a build that fails leaves the site whole
@@ -60,7 +62,9 @@ try
 {
     // parsing progress stays live on stdout, the messages on stderr are captured
     // so the expected tag errors can be told apart from real ones
-    execSync(`npx jsdoc -c ${CONFIG_FILE} -d "${DOCS_FOLDER}"`, { stdio: ['ignore', 'inherit', 'pipe'] });
+    // run with node and no shell, so the arguments are passed as they are and a missing jsdoc fails instead of
+    // being downloaded
+    execFileSync(process.execPath, [require.resolve('jsdoc/jsdoc.js'), '-c', CONFIG_FILE, '-d', DOCS_FOLDER], { stdio: ['ignore', 'inherit', 'pipe'] });
 }
 catch (e)
 {
