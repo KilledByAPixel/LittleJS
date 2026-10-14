@@ -35,7 +35,7 @@ const engineName = 'LittleJS';
  *  @type {string}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.27.0';
+const engineVersion = '1.27.1';
 
 /** Frames per second to update
  *  @type {number}
@@ -1162,6 +1162,7 @@ function engineObjectsRaycast(start, end, objects=engineObjects)
  */
 
 let debugWatermark = false;
+let debugLineWidth = 2;
 let debugKey = '';
 let debugKeysAlways = false;
 let debugTweakables = false;
@@ -3791,6 +3792,11 @@ function setSoundPauseWhenHidden(pause) { soundPauseWhenHidden = pause; }
  *  @param {boolean} show
  *  @memberof Debug */
 function setDebugWatermark(show) { debugWatermark = show; }
+
+/** Set the width in pixels of the outlines debug shapes are drawn with
+ *  @param {number} width
+ *  @memberof Debug */
+function setDebugLineWidth(width) { debugLineWidth = width; }
 
 /** Set key code used to toggle debug mode, Esc by default
  *  @param {string} key
@@ -10911,6 +10917,11 @@ class ParticleEmitter extends EngineObject
         /** @property {ParticleCallback|undefined} - Callback each time a particle updates, after it moves
          *  @type {ParticleCallback|undefined} */
         this.particleUpdateCallback = undefined;
+        /** @property {(function(ParticleEmitter): void)|undefined} - Called once with the emitter when it finishes:
+         *  done emitting and its last particle gone, or destroyed with none left; not when destroyed immediately,
+         *  as engineObjectsDestroy does, which takes its particles with no particleDestroyCallback either
+         *  @type {(function(ParticleEmitter): void)|undefined} */
+        this.finishCallback = undefined;
         /** @property {number} - Percentage of velocity to pass to particles (0-1) */
         this.velocityInheritance = 0;
         /** @property {number} - Particles owed to the emit rate, starts at one so the first comes out at once */
@@ -10989,7 +11000,10 @@ class ParticleEmitter extends EngineObject
             }
         }
         else if (this.particles.length === 0)
+        {
             this.destroy(true);
+            this.finishCallback?.(this); // after, so one that throws is not called again
+        }
             
         // a local space particle is placed relative to the emitter, but the tile collision is in the world
         false&&ASSERT(!this.localSpace || !this.collideLevel, 'local space particles cannot collide with the level, turn one of them off');
@@ -11106,6 +11120,8 @@ class ParticleEmitter extends EngineObject
             this.destroyed = false;
             this.emitTime = -1;
         }
+        else if (!immediate)
+            this.finishCallback?.(this); // none left, it finishes now
     }
 }
 
@@ -14125,7 +14141,8 @@ let postProcess;
 class PostProcessPlugin
 {
     /** Create global post processing shader
-    *  @param {string} [shaderCode] - Shadertoy style mainImage code, a pass-through when left out
+    *  @param {string} [shaderCode] - Shadertoy style mainImage code, or an effect alone like postProcessVignette(),
+    *                                 which postProcessEffects joins; a pass-through when left out
     *  @param {boolean} [includeMainCanvas] - combine mainCanvas onto glCanvas
     *  @param {boolean} [feedbackTexture] - also pass the shader's own output from the previous frame as iChannel1,
     *                                       for trails and echoes; iChannel0 is still the frame just drawn
@@ -14141,7 +14158,7 @@ class PostProcessPlugin
         postProcess = this;
 
         /** @property {string} - The shadertoy style mainImage code it shades with, see setShaderCode */
-        this.shaderCode = shaderCode || postProcessEffects(); // no code passes the frame through
+        this.shaderCode = postProcessShaderCode(shaderCode);
 
         /** @property {boolean} - Is the pass on? Off, the frame shows as the engine drew it, the shader is kept,
          *  and the feedback texture holds the last frame drawn with it on */
@@ -14289,8 +14306,9 @@ class PostProcessPlugin
             }
             else
             {
-                // copy glCanvas to texture
-                glContext.texImage2D(glContext.TEXTURE_2D, 0, glContext.RGBA, glContext.RGBA, glContext.UNSIGNED_BYTE, glCanvas);
+                // copy the drawing buffer to the texture on the GPU, bottom row first as the flip above would have,
+                // and premultiplied as the context keeps it; a canvas source is a slow readback in Firefox
+                glContext.copyTexImage2D(glContext.TEXTURE_2D, 0, glContext.RGBA, 0, 0, glCanvas.width, glCanvas.height, 0);
             }
 
             // the previous frame's output, on the second texture unit
@@ -14332,7 +14350,7 @@ class PostProcessPlugin
                 // keep this frame's output for the next one, in the feedback texture still bound to the second
                 // unit, then hand the first texture unit back to the engine
                 glContext.activeTexture(glContext.TEXTURE1);
-                glContext.texImage2D(glContext.TEXTURE_2D, 0, glContext.RGBA, glContext.RGBA, glContext.UNSIGNED_BYTE, glCanvas);
+                glContext.copyTexImage2D(glContext.TEXTURE_2D, 0, glContext.RGBA, 0, 0, glCanvas.width, glCanvas.height, 0);
                 glContext.activeTexture(glContext.TEXTURE0);
             }
 
@@ -14355,12 +14373,11 @@ class PostProcessPlugin
     }
 
     /** Shade with new code from the next frame on, to switch effects while the game runs; the shader is made again
-     *  @param {string} [shaderCode] - Shadertoy style mainImage code, postProcessEffects builds it; none passes the
-     *  frame through */
+     *  @param {string} [shaderCode] - Shadertoy style mainImage code, postProcessEffects builds it, or an effect
+     *  alone; none passes the frame through */
     setShaderCode(shaderCode)
     {
-        false&&ASSERT(!shaderCode || typeof shaderCode === 'string', 'shader code must be a string');
-        this.shaderCode = shaderCode || postProcessEffects();
+        this.shaderCode = postProcessShaderCode(shaderCode);
         if (!this.shader || headlessMode || !glContext) return;
 
         // what the new shader replaces, made again by the next render
@@ -14377,6 +14394,15 @@ class PostProcessPlugin
 // what the shader declares of the game's values, each name and its length, so a value that changes either makes the
 // shader again
 const postProcessValueKey = (values)=> Object.entries(values).map(([name, v])=> name + ':' + (isArray(v) ? v.length : 1)).join();
+
+// the code the pass shades with: none passes the frame through, and code with no mainImage of its own, an effect like
+// postProcessVignette() given alone, is a piece that postProcessEffects joins into one
+function postProcessShaderCode(shaderCode)
+{
+    false&&ASSERT(!shaderCode || typeof shaderCode === 'string', 'shader code must be a string');
+    return !shaderCode ? postProcessEffects() :
+        shaderCode.includes('mainImage') ? shaderCode : postProcessEffects(shaderCode);
+}
 
 // the fragment shader of the post process pass around its mainImage snippet: the frame on iChannel0, the last output
 // on iChannel1 with a feedback texture, and the 3D depth on iChannel2 when render3D.depthTexture is on, read with
@@ -31536,6 +31562,10 @@ class ParticleEmitter3D extends EngineObject3D
         /** @property {Particle3DCallback|undefined} - Called with each particle as it goes, its life over or destroyed
          *  @type {Particle3DCallback|undefined} */
         this.particleDestroyCallback = undefined;
+        /** @property {(function(ParticleEmitter3D): void)|undefined} - Called once with the emitter when it
+         *  finishes, as the 2D emitter's: its last particle gone, not when destroyed immediately
+         *  @type {(function(ParticleEmitter3D): void)|undefined} */
+        this.finishCallback = undefined;
         /** @property {Particle3D} - The particle the callbacks get, one object for every particle and call
          *  @type {Particle3D} */
         this.particleView = render3DParticleView(this);
@@ -31657,8 +31687,14 @@ class ParticleEmitter3D extends EngineObject3D
      *  @param {boolean} [immediate] */
     destroy(immediate)
     {
-        if (immediate || !this.particleCount || this.destroyed)
+        if (immediate || this.destroyed)
             return super.destroy(immediate);
+        if (!this.particleCount)
+        {
+            super.destroy(immediate);
+            this.finishCallback?.(this); // after, so one that throws is not called again
+            return;
+        }
         this.emitTime = -1; // stops emitting, and update destroys it once the particles are gone
         render3DDetach(this); // the particles are in world space, they no longer need the parent
     }
@@ -34660,8 +34696,15 @@ function particleEffectResolve(nameOrEffect, options)
             emitRect: options.emitRect ?? true};
     if (debug)
         for (const key in options)
-            false&&ASSERT(PARTICLE_EFFECT_OPTIONS.includes(key) || particleEffectSettings.some((setting)=> setting.name === key),
-                'particleEffect: no option named ' + key);
+            if (!PARTICLE_EFFECT_OPTIONS.includes(key) && !particleEffectSettings.some((setting)=> setting.name === key))
+            {
+                // name the ones there are, each its own argument since ASSERT cuts each at 200 characters, and the one
+                // meant when only its case is off
+                const names = [...new Set([...PARTICLE_EFFECT_OPTIONS, ...particleEffectSettings.map((s)=> s.name)])];
+                const meant = names.find((name)=> name.toLowerCase() === key.toLowerCase());
+                false&&ASSERT(false, 'particleEffect: no option named ' + key + (meant ? ', did you mean ' + meant + '?' : '') +
+                    '\nOptions:', ...names);
+            }
     // any setting in the options replaces the effect's own for this play, emitTime for a burst or a loop; one that is
     // not a value of its kind keeps the effect's own, where the sanitizing would put the library's default
     const settings = {...found.settings};

@@ -777,6 +777,12 @@ declare module "littlejsengine" {
      *  @default
      *  @memberof Debug */
     export let debugWatermark: boolean;
+    /** Width in pixels of the outlines debug shapes are drawn with, the physics boxes and the tile collision view
+     *  among them; larger makes them easier to see
+     *  @type {number}
+     *  @default
+     *  @memberof Debug */
+    export let debugLineWidth: number;
     /** Key code used to toggle debug mode, Esc by default
      *  @type {string}
      *  @default
@@ -1771,6 +1777,10 @@ declare module "littlejsengine" {
      *  @param {boolean} [enable]
      *  @memberof Debug */
     export function setDebugKeysAlways(enable?: boolean): void;
+    /** Set the width in pixels of the outlines debug shapes are drawn with
+     *  @param {number} width
+     *  @memberof Debug */
+    export function setDebugLineWidth(width: number): void;
     /** Set if the tweakables panel is shown, as 9 does while the debug overlay is open
      *  @param {boolean} [show]
      *  @memberof Debug */
@@ -4917,6 +4927,11 @@ declare module "littlejsengine" {
         /** @property {ParticleCallback|undefined} - Callback each time a particle updates, after it moves
          *  @type {ParticleCallback|undefined} */
         particleUpdateCallback: ParticleCallback | undefined;
+        /** @property {(function(ParticleEmitter): void)|undefined} - Called once with the emitter when it finishes:
+         *  done emitting and its last particle gone, or destroyed with none left; not when destroyed immediately,
+         *  as engineObjectsDestroy does, which takes its particles with no particleDestroyCallback either
+         *  @type {(function(ParticleEmitter): void)|undefined} */
+        finishCallback: ((arg0: ParticleEmitter) => void) | undefined;
         /** @property {number} - Percentage of velocity to pass to particles (0-1) */
         velocityInheritance: number;
         /** @property {number} - Particles owed to the emit rate, starts at one so the first comes out at once */
@@ -5505,7 +5520,8 @@ declare module "littlejsengine" {
      */
     export class PostProcessPlugin {
         /** Create global post processing shader
-        *  @param {string} [shaderCode] - Shadertoy style mainImage code, a pass-through when left out
+        *  @param {string} [shaderCode] - Shadertoy style mainImage code, or an effect alone like postProcessVignette(),
+        *                                 which postProcessEffects joins; a pass-through when left out
         *  @param {boolean} [includeMainCanvas] - combine mainCanvas onto glCanvas
         *  @param {boolean} [feedbackTexture] - also pass the shader's own output from the previous frame as iChannel1,
         *                                       for trails and echoes; iChannel0 is still the frame just drawn
@@ -5515,7 +5531,7 @@ declare module "littlejsengine" {
         */
         constructor(shaderCode?: string, includeMainCanvas?: boolean, feedbackTexture?: boolean);
         /** @property {string} - The shadertoy style mainImage code it shades with, see setShaderCode */
-        shaderCode: string;
+        shaderCode: any;
         /** @property {boolean} - Is the pass on? Off, the frame shows as the engine drew it, the shader is kept,
          *  and the feedback texture holds the last frame drawn with it on */
         enabled: boolean;
@@ -5544,8 +5560,8 @@ declare module "littlejsengine" {
          *  @type {WebGLVertexArrayObject|undefined} */
         vao: WebGLVertexArrayObject | undefined;
         /** Shade with new code from the next frame on, to switch effects while the game runs; the shader is made again
-         *  @param {string} [shaderCode] - Shadertoy style mainImage code, postProcessEffects builds it; none passes the
-         *  frame through */
+         *  @param {string} [shaderCode] - Shadertoy style mainImage code, postProcessEffects builds it, or an effect
+         *  alone; none passes the frame through */
         setShaderCode(shaderCode?: string): void;
     }
     /**
@@ -10907,6 +10923,10 @@ declare module "littlejsengine" {
         /** @property {Particle3DCallback|undefined} - Called with each particle as it goes, its life over or destroyed
          *  @type {Particle3DCallback|undefined} */
         particleDestroyCallback: Particle3DCallback | undefined;
+        /** @property {(function(ParticleEmitter3D): void)|undefined} - Called once with the emitter when it
+         *  finishes, as the 2D emitter's: its last particle gone, not when destroyed immediately
+         *  @type {(function(ParticleEmitter3D): void)|undefined} */
+        finishCallback: ((arg0: ParticleEmitter3D) => void) | undefined;
         /** @property {Particle3D} - The particle the callbacks get, one object for every particle and call
          *  @type {Particle3D} */
         particleView: Particle3D;

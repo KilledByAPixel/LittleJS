@@ -5,6 +5,10 @@ What changed in each release, newest first. Releases before 1.20.0 are on the
 
 ## Unreleased
 
+Nothing yet.
+
+## 1.27.1 - 2026-10-14
+
 ### New Changes
 - `debugLineWidth` and `setDebugLineWidth(width)`: the width in pixels of the outlines debug shapes are drawn with, the physics boxes and the tile collision view among them, 2 as before, larger to make them easier to see
 - `render3D.fogDepth` measures fog by depth along the view instead of distance from the camera, and `render3D.fogFadeStart` / `fogFadeEnd` fade see through draws to transparent with distance, so a scene can melt into its sky instead of a fog color
