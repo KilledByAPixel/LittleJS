@@ -31,6 +31,7 @@ test('a bad option or one of no name asserts in a debug build, naming it', ()=>
     const { run } = loadEngine({}, 'setHeadlessMode(true); console.assert = ()=> {}');
     const said = (options)=> run(`(()=> { try { particleEffect('fire', vec2(), ${options}); } catch (e) { return e.message; } })()`);
     assert.match(said('{speed: null}'), /particleEffect: speed must be a number/);
-    assert.match(said('{emitrate: 5}'), /particleEffect: no option named emitrate/);
+    assert.match(said('{emitrate: 5}'), /particleEffect: no option named emitrate, did you mean emitRate\?/);
+    assert.match(said('{sparks: 5}'), /no option named sparks\nOptions: hue saturation .* emitRate .* tilePadding$/);
     assert.equal(said('{speed: .3, hue: .5, scale: 2}'), undefined, 'good options pass');
 });

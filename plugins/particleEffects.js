@@ -503,8 +503,15 @@ function particleEffectResolve(nameOrEffect, options)
             emitRect: options.emitRect ?? true};
     if (debug)
         for (const key in options)
-            ASSERT(PARTICLE_EFFECT_OPTIONS.includes(key) || particleEffectSettings.some((setting)=> setting.name === key),
-                'particleEffect: no option named ' + key);
+            if (!PARTICLE_EFFECT_OPTIONS.includes(key) && !particleEffectSettings.some((setting)=> setting.name === key))
+            {
+                // name the ones there are, each its own argument since ASSERT cuts each at 200 characters, and the one
+                // meant when only its case is off
+                const names = [...new Set([...PARTICLE_EFFECT_OPTIONS, ...particleEffectSettings.map((s)=> s.name)])];
+                const meant = names.find((name)=> name.toLowerCase() === key.toLowerCase());
+                ASSERT(false, 'particleEffect: no option named ' + key + (meant ? ', did you mean ' + meant + '?' : '') +
+                    '\nOptions:', ...names);
+            }
     // any setting in the options replaces the effect's own for this play, emitTime for a burst or a loop; one that is
     // not a value of its kind keeps the effect's own, where the sanitizing would put the library's default
     const settings = {...found.settings};
