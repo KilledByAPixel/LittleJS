@@ -205,6 +205,11 @@ class ParticleEmitter extends EngineObject
         /** @property {ParticleCallback|undefined} - Callback each time a particle updates, after it moves
          *  @type {ParticleCallback|undefined} */
         this.particleUpdateCallback = undefined;
+        /** @property {(function(ParticleEmitter): void)|undefined} - Called once with the emitter when it finishes:
+         *  done emitting and its last particle gone, or destroyed with none left; not when destroyed immediately,
+         *  as engineObjectsDestroy does, which takes its particles with no particleDestroyCallback either
+         *  @type {(function(ParticleEmitter): void)|undefined} */
+        this.finishCallback = undefined;
         /** @property {number} - Percentage of velocity to pass to particles (0-1) */
         this.velocityInheritance = 0;
         /** @property {number} - Particles owed to the emit rate, starts at one so the first comes out at once */
@@ -283,7 +288,10 @@ class ParticleEmitter extends EngineObject
             }
         }
         else if (this.particles.length === 0)
+        {
             this.destroy(true);
+            this.finishCallback?.(this); // after, so one that throws is not called again
+        }
             
         // a local space particle is placed relative to the emitter, but the tile collision is in the world
         ASSERT(!this.localSpace || !this.collideLevel, 'local space particles cannot collide with the level, turn one of them off');
@@ -400,6 +408,8 @@ class ParticleEmitter extends EngineObject
             this.destroyed = false;
             this.emitTime = -1;
         }
+        else if (!immediate)
+            this.finishCallback?.(this); // none left, it finishes now
     }
 }
 

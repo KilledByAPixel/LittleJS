@@ -13,6 +13,7 @@ What changed in each release, newest first. Releases before 1.20.0 are on the
 - A debug build warns once when a game sets a child object's `pos` or `angle`, which its parent puts back every frame, naming `localPos` or `localAngle` to set instead
 - The example browser's Share button copies a link to the code as it is in the editor, crushed into the link with JSONCrush so nothing is stored anywhere; the link opens the example it was made from and runs the shared code
 - `PostProcessPlugin` and `setShaderCode` take a built in effect on its own, `new PostProcessPlugin(postProcessVignette())`, joining it with `postProcessEffects` as they would have needed; before, that failed to compile with an error about `uv`
+- `emitter.finishCallback` on `ParticleEmitter` and `ParticleEmitter3D`: called once with the emitter when it finishes, done emitting and its last particle gone, so a game can play a sound or start the next effect when an explosion is over; not when it is destroyed immediately, as a scene clear does
 - Box2D `beginContact` gets a fourth argument, `impactSpeed`: how fast the two bodies were closing along the contact normal as they touched, spin included, so a game can tell a hard hit from a graze; the Box2D Pool short's click goes by it
 
 ### Fixes

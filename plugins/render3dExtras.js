@@ -1095,6 +1095,10 @@ class ParticleEmitter3D extends EngineObject3D
         /** @property {Particle3DCallback|undefined} - Called with each particle as it goes, its life over or destroyed
          *  @type {Particle3DCallback|undefined} */
         this.particleDestroyCallback = undefined;
+        /** @property {(function(ParticleEmitter3D): void)|undefined} - Called once with the emitter when it
+         *  finishes, as the 2D emitter's: its last particle gone, not when destroyed immediately
+         *  @type {(function(ParticleEmitter3D): void)|undefined} */
+        this.finishCallback = undefined;
         /** @property {Particle3D} - The particle the callbacks get, one object for every particle and call
          *  @type {Particle3D} */
         this.particleView = render3DParticleView(this);
@@ -1216,8 +1220,14 @@ class ParticleEmitter3D extends EngineObject3D
      *  @param {boolean} [immediate] */
     destroy(immediate)
     {
-        if (immediate || !this.particleCount || this.destroyed)
+        if (immediate || this.destroyed)
             return super.destroy(immediate);
+        if (!this.particleCount)
+        {
+            super.destroy(immediate);
+            this.finishCallback?.(this); // after, so one that throws is not called again
+            return;
+        }
         this.emitTime = -1; // stops emitting, and update destroys it once the particles are gone
         render3DDetach(this); // the particles are in world space, they no longer need the parent
     }
