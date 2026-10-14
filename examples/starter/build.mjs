@@ -7,7 +7,7 @@
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import fs from 'node:fs';
-import { execSync, execFileSync } from 'node:child_process';
+import { execFileSync } from 'node:child_process';
 import { createRequire } from 'node:module';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -31,9 +31,6 @@ const dataFiles =
 
 console.log(`Building ${PROGRAM_NAME}...`);
 const startTime = Date.now();
-
-// rebuild engine
-//execSync(`npm run build`, { stdio: 'inherit' });
 
 // remove old files and setup build folder
 fs.rmSync(BUILD_FOLDER, { recursive: true, force: true });
