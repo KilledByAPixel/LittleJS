@@ -11,6 +11,7 @@
 'use strict';
 
 let debugWatermark = false;
+let debugLineWidth = 2;
 let debugKey = '';
 let debugKeysAlways = false;
 let debugTweakables = false;

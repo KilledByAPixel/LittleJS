@@ -903,6 +903,11 @@ function setSoundPauseWhenHidden(pause) { soundPauseWhenHidden = pause; }
  *  @memberof Debug */
 function setDebugWatermark(show) { debugWatermark = show; }
 
+/** Set the width in pixels of the outlines debug shapes are drawn with
+ *  @param {number} width
+ *  @memberof Debug */
+function setDebugLineWidth(width) { debugLineWidth = width; }
+
 /** Set key code used to toggle debug mode, Esc by default
  *  @param {string} key
  *  @memberof Debug */

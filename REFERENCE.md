@@ -2534,6 +2534,7 @@ saveDataURL(url, filename='download', revokeTime)           // Save url to a fil
 // Debug settings
 debug                // Is debug enabled?
 debugPointSize = .5  // Size to render debug points by default
+debugLineWidth = 2   // Width in pixels of debug outlines, setDebugLineWidth(width)
 debugKey = 'Escape'  // Key code used to toggle debug mode
 debugKeysAlways = false // The number and +/- keys work with the overlay closed too, setDebugKeysAlways(enable=true)
 debugOverlay         // Is the debug overlay active? setDebugOverlay(show=true) opens or closes it from code

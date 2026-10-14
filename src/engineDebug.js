@@ -26,6 +26,13 @@ const debug = true;
  *  @memberof Debug */
 const debugPointSize = .5;
 
+/** Width in pixels of the outlines debug shapes are drawn with, the physics boxes and the tile collision view
+ *  among them; larger makes them easier to see
+ *  @type {number}
+ *  @default
+ *  @memberof Debug */
+let debugLineWidth = 2;
+
 /** True if watermark with FPS should be shown, false in release builds
  *  @type {boolean}
  *  @default
@@ -549,7 +556,7 @@ function debugRender()
     {
         // draw debug primitives, the line width put back after so the game's next frame starts as it would in release
         debugContext.save();
-        debugContext.lineWidth = 2;
+        debugContext.lineWidth = debugLineWidth;
         debugPrimitives.forEach(p=>
         {
             debugContext.save();

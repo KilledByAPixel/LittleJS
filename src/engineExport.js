@@ -33,6 +33,7 @@ export
     debug,
     debugOverlay,
     debugWatermark,
+    debugLineWidth,
     debugKey,
     debugKeysAlways,
     debugTweakables,
@@ -182,6 +183,7 @@ export
     setDebugWatermark,
     setDebugKey,
     setDebugKeysAlways,
+    setDebugLineWidth,
     setDebugTweakables,
     setDebugOverlay,
 
