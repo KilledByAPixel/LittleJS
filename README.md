@@ -157,7 +157,7 @@ LittleJS comes with several demos both for learning and using as starter project
 
 - [Example Browser](https://killedbyapixel.github.io/LittleJS/examples/) - Live example browser with all examples and editable source
 - [LittleJS Arcade](https://killedbyapixel.github.io/LittleJSArcade/) - Over 50 example games you can use as starter projects
-- [Short Examples](https://github.com/KilledByAPixel/LittleJS/tree/main/examples/shorts) - 100+ single-file demos showing off individual engine features
+- [Short Examples](https://killedbyapixel.github.io/LittleJS/examples/) - 100+ single-file demos showing off individual engine features
 - [Breakout](https://killedbyapixel.github.io/LittleJS/examples/breakout/) - Block breaking game with post-processing effects
 - [Puzzle Game](https://killedbyapixel.github.io/LittleJS/examples/puzzle/) - Match 3 puzzle game with HD rendering and high score tracking
 - [Platformer](https://killedbyapixel.github.io/LittleJS/examples/platformer/) - Platformer/shooter demo that loads level data
