@@ -6,6 +6,7 @@ What changed in each release, newest first. Releases before 1.20.0 are on the
 ## Unreleased
 
 ### New Changes
+- The particle designer has a Clear button beside Delete: after a confirm it deletes every effect in the list, leaving one new one, and Add Presets brings the built in ones back
 - The 3D example's island is a 3D level, made once from noise: Esc then 0 opens the 3D level editor on it, to sculpt and paint the terrain and place trees, sprites and orbs, with the edits autosaved; Save writes the level, and `levelFile` in its game.js loads that file in place of the noise. Before, 0 opened the 2D editor, which had nothing to edit and left the 3D view still
 
 ### Fixes

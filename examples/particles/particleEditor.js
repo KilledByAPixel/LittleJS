@@ -656,6 +656,15 @@ function setupLibraryBar()
             library.push(particleEffectSanitize({name:'New Effect'}));
         selectEffect(min(index, library.length - 1));
     };
+    $('buttonClear').onclick = ()=>
+    {
+        // Save Library first keeps them, Add Presets brings the built in back
+        const count = library.length;
+        if (!confirm(`Delete all ${count} effect${count == 1 ? '' : 's'}?`))
+            return;
+        library = [particleEffectSanitize({name:'New Effect'})];
+        selectEffect(0);
+    };
     $('buttonPresets').onclick = ()=>
     {
         const first = library.length;
