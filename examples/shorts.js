@@ -154,10 +154,14 @@ collect. F switches to a free camera to look around.
 - Meshes built from shapes, a forest drawn with instancing, sprites and
   text in 3D
 - Point lights, particles, a trail, bloom and sound placed in 3D
+- The island as a 3D level, made once from noise: Esc then 0 opens the
+  level editor, where T sculpts and paints the terrain and the Place list
+  adds trees, sprites and orbs; the edits are autosaved, and Save writes
+  them to a file the game can load in place of the noise
 
 ## See also
 The shorts under LittleJS 3D take these one at a time, starting with 3D
-Basics.`,
+Basics. 3D Level Editor is a level made by hand.`,
 
 threejs: `
 A small 3D platformer drawn by three.js, with LittleJS running the

@@ -5,6 +5,9 @@ What changed in each release, newest first. Releases before 1.20.0 are on the
 
 ## Unreleased
 
+### New Changes
+- The 3D example's island is a 3D level, made once from noise: Esc then 0 opens the 3D level editor on it, to sculpt and paint the terrain and place trees, sprites and orbs, with the edits autosaved; Save writes the level, and `levelFile` in its game.js loads that file in place of the noise. Before, 0 opened the 2D editor, which had nothing to edit and left the 3D view still
+
 ### Fixes
 - A press on a level whose autosaved edits wait for Apply edits or Drop them, as when its file changed since they were made, says why it does nothing: the panel's box flashes, a line at the mouse and the hint line say to apply or drop them first, in both level editors; before, painting just did nothing
 

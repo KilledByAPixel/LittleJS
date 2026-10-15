@@ -2,9 +2,11 @@
     LittleJS 3D Example
     - A tour of the 3D plugin in one scene
     - Terrain from a height map, shadows, fog and a sky
-    - Meshes built from shapes, an instanced forest, sprites and 3D text
+    - Meshes built from shapes, a forest sharing one mesh, sprites and 3D text
     - Point lights with lens flares, particles, a trail, bloom and 3D sound
     - Roll the ball with the arrow keys, jump with space, and collect the orbs
+    - The island is a 3D level: Esc then 0 opens the level editor, to sculpt
+      and paint the terrain and place trees, sprites and orbs
 */
 
 'use strict';
@@ -12,21 +14,26 @@
 // each tile in tiles.png has a 1 pixel border, which stops texture bleeding
 setTileDefaultPadding(1);
 
-const terrainSize = 600, terrainHeight = 24, orbCount = 40;
+const terrainSize = 600, terrainHeight = 24;
 const soundCollect = new Sound([,,,.02,,.5,,3,,-50,40,,.05]);
 const soundEngine = new Sound([,0,80,.01,,.1,2,5,,,,,,.5,,,,,,,-100]);
 const soundJump = new Sound([.5,,140,,,,,.5,12]);
 const worldRandom = new RandomGenerator(1234); // the same world every time
-let terrain, player, title, freeCamera;
+
+// a level saved from the editor, level3D.json, loads in place of the island
+// made from noise once it is put next to this file and named here
+const levelFile = '';
+
+let level, terrain, player, playerStart, title, freeCamera;
 
 ///////////////////////////////////////////////////////////////////////////////
 // the player rolls over the terrain with a trail behind it
 
 class Player extends EngineObject3D
 {
-    constructor()
+    constructor(pos)
     {
-        super(vec3(0,0,6), buildSphere(2));
+        super(pos.copy(), buildSphere(2));
         this.pos3D.y = terrain.getHeight(this.pos3D) + 1; // start on the ground
         this.color = hsl(.55,.8,.6);
         this.specular = .5;
@@ -80,14 +87,13 @@ class Player extends EngineObject3D
 
 class Orb extends EngineObject3D
 {
-    constructor(pos)
+    constructor(pos, properties)
     {
         super(pos, render3D.sphereMesh);
         this.scale3D = vec3(1.4);
-        this.color = hsl(worldRandom.float(),1,.6);
         this.emissive = 1; // make it appear bright
         this.angleVelocity3D = vec3(.01,.02,0);
-        const light = new Light3D(vec3(), 12, this.color);
+        const light = new Light3D(vec3(), 12, properties.color);
         light.addFlare(.5, 3); // a small lens flare in the orb's color
         this.addChild(light);
     }
@@ -114,6 +120,23 @@ class Orb extends EngineObject3D
     }
 }
 
+///////////////////////////////////////////////////////////////////////////////
+// a sprite from the tile sheet, standing on the ground
+
+class Sprite extends EngineObject3D
+{
+    constructor(pos, properties)
+    {
+        super(pos, undefined, tile(properties.tile, 16));
+        this.size3D = vec3(3);
+        this.upright = true;  // stands on the ground
+        this.pixelated = true; // hard edged pixels
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// the island as a 3D level, made once from noise
+
 // a random spot on the island, clear of the middle where the player starts
 function randomGroundPos()
 {
@@ -121,9 +144,96 @@ function randomGroundPos()
     return vec3(distance, 0, 0).rotateY(worldRandom.float(2*PI));
 }
 
+// a color as a level keeps it, and a position to a hundredth
+const hex = (color)=> color.toString(false);
+const place = (pos)=> [pos.x, pos.y, pos.z].map((v)=> round(v*100)/100);
+
+function makeLevel()
+{
+    // an island of noise, higher in the middle and sinking at the edges, its
+    // colors painted on by height, from a list of 26 the editor paints with
+    const samples = 129, heights = [], paint = [], colors = [];
+    const water = hsl(.55,.5,.45), rock = hsl(.1,.2,.45);
+    for (let row = 0; row < samples; ++row)
+    {
+        const heightRow = [];
+        for (let column = 0; column < samples; ++column)
+        {
+            const x = column/(samples-1) - .5, z = row/(samples-1) - .5;
+            const hills = noise2D(x*36, z*36)*.6 + noise2D(x*90, z*90)*.2;
+            const height = clamp(hills + .35 - hypot(x, z)*1.6);
+            heightRow.push(round(height*1e3)/1e3);
+            const step = round(height*24)/24, grass = hsl(.3,.5,.25 + step*.4);
+            const color = hex(height < .12 ? water : grass.lerp(rock, step));
+            colors.includes(color) || colors.push(color);
+            paint.push(colors.indexOf(color) + 1);
+        }
+        heights.push(heightRow);
+    }
+
+    // the paint as runs of a count and a color, the way a level keeps it
+    const cells = [];
+    for (let i = 0; i < paint.length;)
+    {
+        let end = i + 1;
+        while (end < paint.length && paint[end] == paint[i]) ++end;
+        cells.push(end - i, paint[i]);
+        i = end;
+    }
+    const terrain = {pos: [0,0,0], size: [terrainSize, terrainSize],
+        height: terrainHeight, color: hex(water), heights,
+        paint: {colors, cells}};
+
+    // the ground under each spot, from a height map made only to ask
+    const ground = new HeightMap(heights, vec2(terrainSize), terrainHeight);
+    const objects = [];
+    const add = (type, pos, more)=>
+        objects.push({id: objects.length + 1, type, pos: place(pos), ...more});
+    add('PlayerStart', vec3(0, ground.getHeight(vec3(0,0,6)) + 1, 6));
+
+    // a forest of trees above the shore, each its own size
+    for (let i = 200; i--;)
+    {
+        const pos = randomGroundPos();
+        pos.y = ground.getHeight(pos);
+        const size = round(worldRandom.float(.5,1.5)*100)/100;
+        pos.y < 2 || add('Tree', pos, {scale: [size, size, size]});
+    }
+
+    // sprites from the tile sheet, higher up
+    for (let i = 40; i--;)
+    {
+        const pos = randomGroundPos();
+        pos.y = ground.getHeight(pos) + 1.5;
+        pos.y < 3 || add('Sprite', pos,
+            {properties: {tile: i%4, color: hex(hsl(i/40,.7,.7))}});
+    }
+
+    // orbs to collect, anywhere on the island
+    for (let i = 40; i--;)
+    {
+        const pos = randomGroundPos();
+        pos.y = ground.getHeight(pos) + 2;
+        const color = hex(hsl(worldRandom.float(),1,.6));
+        add('Orb', pos, {properties: {color}});
+    }
+    ground.destroy();
+    return {littlejs3D: 1, terrain, objects};
+}
+
+// build the level from its data, and again when the editor restarts it
+function loadLevel()
+{
+    engineObjectsDestroy(); // all but the persistent lights and title
+    const made = level3DLoad(level);
+    terrain = made.find((o)=> o instanceof HeightMap);
+    player = new Player(playerStart);
+    freeCamera = undefined;
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 
-function gameInit()
+async function gameInit()
 {
     // the 3D pass draws first, then bloom shades the WebGL canvas
     new Render3DPlugin;
@@ -137,59 +247,22 @@ function gameInit()
     render3D.shadowMapSize = 4096;
     render3D.smoothShading = true;
 
-    // add cool directional light opposite from the sun
-    new DirectionalLight3D(vec3(0,.3,-1), hsl(.55,.4,.3));
+    // add cool directional light opposite from the sun, and the sun flares in
+    // the lens when the free camera looks up at it; both outlive a restart
+    new DirectionalLight3D(vec3(0,.3,-1), hsl(.55,.4,.3)).persistent = true;
+    new LensFlare3D().persistent = true;
 
-    // the sun flares in the lens when the free camera looks up at it
-    new LensFlare3D;
-
-    // an island of noise, higher in the middle and sinking at the edges
-    const samples = 193, heights = [], colors = [];
-    for (let row = 0; row < samples; ++row)
-    {
-        const heightRow = [], colorRow = [];
-        for (let column = 0; column < samples; ++column)
-        {
-            const x = column/(samples-1) - .5, z = row/(samples-1) - .5;
-            const hills = noise2D(x*36, z*36)*.6 + noise2D(x*90, z*90)*.2;
-            const height = clamp(hills + .35 - hypot(x, z)*1.6);
-            heightRow.push(height);
-            const grass = hsl(.3,.5,.25 + height*.4), rock = hsl(.1,.2,.45);
-            const water = hsl(.55,.5,.45);
-            colorRow.push(height < .12 ? water : grass.lerp(rock, height));
-        }
-        heights.push(heightRow);
-        colors.push(colorRow);
-    }
-    terrain = new HeightMap(heights, vec2(terrainSize), terrainHeight, colors);
-
-    // a forest sharing one mesh, so all of it is a single draw call
+    // the types of the level's objects, by the names they have in it; the
+    // forest shares one mesh, so all of it is a single draw call
     const tree = new Mesh()
         .combine(buildCylinder(.7, 3, 6), vec3(0,1.5,0), hsl(.1,.4,.3))
         .combine(buildCone(4, 5, 7), vec3(0,4.5,0), hsl(.3,.5,.25));
-    for (let i = 1000; i--;)
-    {
-        const pos = randomGroundPos();
-        pos.y = terrain.getHeight(pos);
-        if (pos.y < 2)
-            continue;
-        const treeObject = new EngineObject3D(pos, tree);
-        treeObject.scale3D = vec3(worldRandom.float(.5,1.5));
-    }
-
-    // sprites from the tile sheet
-    for (let i = 150; i--;)
-    {
-        const pos = randomGroundPos();
-        pos.y = terrain.getHeight(pos) + 1.5;
-        if (pos.y < 3)
-            continue;
-        const sprite = new EngineObject3D(pos, undefined, tile(i%4, 16));
-        sprite.color = hsl(i/150,.7,.7);
-        sprite.size3D = vec3(3);
-        sprite.upright = true;  // stands on the ground
-        sprite.pixelated = true; // hard edged pixels
-    }
+    level3DAddMesh('Tree', tree);
+    level3DAddType('Sprite', Sprite, {tile: 0, color: WHITE});
+    level3DAddType('Orb', Orb, {color: hsl(.15,1,.6)});
+    level3DAddType('PlayerStart', (pos)=> playerStart = pos);
+    level = levelFile ? await fetchJSON(levelFile) : makeLevel();
+    loadLevel();
 
     // title text, extruded from the engine font
     const titleMesh = buildText3D('LITTLEJS 3D', 5, 2);
@@ -197,12 +270,19 @@ function gameInit()
     title.pos3D.y = terrain.getHeight(title.pos3D) + 7; // just above the ground
     title.color = hsl(.1,1,.6);
     title.specular = 1;
+    title.persistent = true;
 
-    // spawn the player with the camera already behind it, and orbs to collect
-    player = new Player;
+    // start with the camera already behind the player
     render3D.camera.follow(player.pos3D, vec3(0,10,18));
-    for (let i = orbCount; i--;)
-        new Orb(randomGroundPos());
+
+    // the editor's Restart builds the level again with the edits, and Play
+    // from mouse puts the ball where the mouse is
+    levelEditor.onRestart = loadLevel;
+    levelEditor.onPlayFrom = (pos)=>
+    {
+        player.pos3D = pos.add(vec3(0,1,0));
+        player.speed = vec3();
+    };
 }
 
 function gameUpdate()
@@ -238,6 +318,7 @@ function gameUpdatePost()
 
 function gameRenderPost()
 {
+    if (levelEditor.isOpen) return; // the editor has its own hints
     const text = freeCamera ? 'click: look / WASD: fly / F: back to the ball' :
         'arrow keys: roll / space: jump / F: free camera';
     const pos = vec2(mainCanvasSize.x/2, mainCanvasSize.y - 40);
