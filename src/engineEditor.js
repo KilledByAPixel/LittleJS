@@ -2132,6 +2132,7 @@ const editorHelpLines =
 // the hint line, for what is held and whether there is a selection
 function editorHint()
 {
+    if (editorRecord()?.pending) return EDITOR_PENDING_HINT;
     if (keyIsDown('Space')) return 'Drag to pan';
     if (editorGameTool()) return editorGameTool().hint || levelEditor.tool;
     if (editorObjectLayer)
@@ -2141,6 +2142,27 @@ function editorHint()
         return 'Selection: drag moves · F fill · Delete clear · Ctrl+C copy · Ctrl+X cut · click to clear';
     if (keyIsDown('ShiftLeft') || keyIsDown('ShiftRight')) return 'Shift: line from the last tile';
     return 'Left paint · Right pick / drag select · F fill · Space or middle drag pans · ? keys';
+}
+
+// edits waiting in the panel's box for Apply or Drop: an edit of their level is refused till then, and a press on
+// the level says why, the box flashing and a line at the mouse for a moment; both editors use these
+const EDITOR_PENDING_HINT = 'The level file changed: apply your edits or drop them';
+let editorPendingNudgeTime;
+function editorPendingNudge() { editorPendingNudgeTime = timeReal; }
+const editorPendingNudgeAge = ()=> editorPendingNudgeTime === undefined ? Infinity : timeReal - editorPendingNudgeTime;
+
+// the panel's box, flashing brighter after a refused press
+function editorPendingFlash(element)
+{
+    const age = editorPendingNudgeAge(), color = age < 1.5 && (age * 4 | 0) % 2 == 0 ? '#c60' : '#630';
+    element.style.background === color || (element.style.background = color);
+}
+
+// the line at the mouse after a refused press
+function editorPendingNote()
+{
+    editorPendingNudgeAge() < 2 && drawTextScreen('Apply or drop your autosaved edits in the panel first',
+        mousePosScreen.add(vec2(0, -30)), 18, hsl(.1, 1, .7), 4, BLACK);
 }
 
 // what the brush is, in words
@@ -2489,6 +2511,7 @@ function editorPanelUpdate()
     p.resize.title = canResize ? '' : 'Resizing needs levelEditor.onRestart, to make the level again';
     p.turns.style.display = editorObjectLayer ? 'none' : ''; // the tile brush's, not an object layer's
     p.pending.style.display = record?.pending ? '' : 'none';
+    record?.pending && editorPendingFlash(p.pending);
     p.pendingUnfit.style.display = record?.pendingUnfit ? '' : 'none';
     p.reset.style.display = record?.synthetic ? 'none' : ''; // a layer made in code has no file
 
@@ -2807,6 +2830,7 @@ function editorUpdate()
     editorApplyCamera();
 
     editorMouseOnPanel || (editorMouseScreen = mousePosScreen.copy());
+    mouseWasPressed(0) && !space && !editorMouseOnPanel && editorRecord()?.pending && editorPendingNudge();
     editorCall('onUpdate');
     if (editorToolUpdate(space)) return; // a tool of the game's own has the mouse
     if (editorObjectLayer)
@@ -2978,6 +3002,7 @@ function editorRender()
         editorGameHelp(editorPanelParts.gameHelp);
     }
     if (!editorIsOpen || headlessMode) return;
+    editorRecord()?.pending && editorPendingNote();
     const layer = editorLayer?.live.destroyed ? undefined : editorLayer;
     if (!layer && !editorObjectLayer) return;
 

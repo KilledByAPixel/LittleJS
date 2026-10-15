@@ -2566,6 +2566,7 @@ function editor3DEditorUpdate(seconds)
         return editor3DDragCancel();
 
     const ray = render3D.screenToRay(mouse), idle = !cameraDrag && !editor3DMouseOnPanel && !editor3DDrag;
+    idle && mouseWasPressed(0) && editor3DRecords.get(editor3DLevel)?.pending && editorPendingNudge();
     editor3DHover = idle ? editor3DHandleAt(mouse) : undefined;
     editorCall('onUpdate');
     if (editor3DToolUpdate(ray, idle, shift, ctrl)) return; // a tool of the game's own has the mouse
@@ -2633,7 +2634,7 @@ const editor3DHelpLines =
 function editor3DHint()
 {
     if (editor3DRecords.get(editor3DLevel)?.pending)
-        return 'The level file changed: apply your edits or drop them';
+        return EDITOR_PENDING_HINT;
     if (editorGameTool()) return editorGameTool().hint || levelEditor.tool;
     if (editor3DDrag)
         return editor3DDrag.kind === 'box' ? 'Let go to select what is inside' :
@@ -3037,7 +3038,9 @@ function editor3DPanelUpdate()
     editorGamePanel(p.game);
     editorGameHelp(p.gameHelp);
     p.restart.style.display = editorHas('onRestart') ? '' : 'none';
-    p.pending.style.display = editor3DRecords.get(editor3DLevel)?.pending ? '' : 'none';
+    const pending = editor3DRecords.get(editor3DLevel)?.pending;
+    p.pending.style.display = pending ? '' : 'none';
+    pending && editorPendingFlash(p.pending);
     for (const tool in p.toolButtons)
         p.toolButtons[tool].style.outline = tool === editor3DTool ? lit : '';
     p.grid.checked = editor3DGrid;
@@ -3619,6 +3622,7 @@ function editor3DRender()
         drawTextScreen('Free camera · C or Esc to leave', vec2(mainCanvasSize.x / 2, mainCanvasSize.y - 30), 20, WHITE,
             4, BLACK);
     editor3DIsOpen && editor3DDrawLabels();
+    editor3DIsOpen && editor3DRecords.get(editor3DLevel)?.pending && editorPendingNote();
 }
 
 debug && engineAddPlugin(editor3DUpdate, editor3DRender);

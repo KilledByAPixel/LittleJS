@@ -5,7 +5,8 @@ What changed in each release, newest first. Releases before 1.20.0 are on the
 
 ## Unreleased
 
-Nothing yet.
+### Fixes
+- A press on a level whose autosaved edits wait for Apply edits or Drop them, as when its file changed since they were made, says why it does nothing: the panel's box flashes, a line at the mouse and the hint line say to apply or drop them first, in both level editors; before, painting just did nothing
 
 ## 1.27.1 - 2026-10-14
 

@@ -1547,3 +1547,33 @@ test('undo keeps the last 100 edits: of 101, 100 undo and the first stays', asyn
     assert.equal(run('editorUndoList.length'), 0);
     assert.equal(run('frontData[3]'), run('editorTileToGid(1)'), 'the first edit, past the cap, is kept');
 });
+
+test('a press on a level whose autosaved edits wait for Apply or Drop paints nothing and says why', async () =>
+{
+    const storage = makeStorage();
+    paintAndSave(await reload(storage));
+    const engine = await reload(storage, [0, 0, 4, 0, 0, 0]); // the file changed under the autosave
+    engine.run(`levelEditor.open(); editorLayer = front; editorBrush = editorStampTile(editorTileToGid(6));
+        editorCameraPos = vec2(1.5, .5); editorCameraScale = 100;`);
+    assert.equal(engine.run('!!front.record.pending'), true);
+    assert.equal(engine.run('editorHint()'), engine.run('EDITOR_PENDING_HINT'), 'the hint says so first');
+    const before = [...engine.run('frontData')];
+    assert.equal(engine.run('editorPendingNudgeTime'), undefined);
+    engine.handlers.mousedown(at(1, 0));
+    step(engine);
+    leftUp(engine);
+    assert.deepEqual([...engine.run('frontData')], before, 'nothing painted');
+    assert.notEqual(engine.run('editorPendingNudgeTime'), undefined, 'the panel and the mouse say why');
+    assert.ok(engine.run('editorPendingNudgeAge()') < 2);
+});
+
+test('a press on a level with nothing waiting paints and says nothing more', async () =>
+{
+    const engine = await loadGame();
+    engine.run(editCode);
+    engine.handlers.mousedown(at(1, 0));
+    step(engine);
+    leftUp(engine);
+    assert.equal(engine.run('editorPendingNudgeTime'), undefined);
+    assert.notEqual(engine.run('editorHint()'), engine.run('EDITOR_PENDING_HINT'));
+});
