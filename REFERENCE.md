@@ -690,7 +690,8 @@ EngineObject.clampSpeed    // Hold each axis of velocity to objectMaxSpeed while
                            // while it has a mass, so it can not pass through a thin wall; true by default, false for
                            // a fast bullet that collides; what does not collide moves as fast as it is told
 EngineObject.parent / children // Set by addChild, a child is placed by its parent and sits out solid collision;
-                                // setting a child's pos or angle moves it, and its localPos or localAngle follows
+                                // setting a child's pos or angle moves it, and its localPos or localAngle follows;
+                                // a 3D child's pos3D is local instead, see EngineObject3D
 EngineObject.isBullet      // Moves through the tiles as a point along a ray, never passing one at any speed and not held
                            // to objectMaxSpeed for them; collideWithTile sees it where it meets the tile; on a hit it
                            // bounces by restitution and goes on with the rest of its move, so it rolls along a floor;
@@ -1532,7 +1533,9 @@ new EngineObject3D(pos3D, mesh, tileInfo, color) // a tileInfo with no mesh draw
                                                  // size3D.z does not change how a sprite draws, only how it collides;
                                                  // a whole TextureInfo is kept as the
                                                  // tile covering it, so obj.tileInfo is always a TileInfo as it is in 2D
-obj.pos3D obj.rotation3D obj.scale3D // Vector3, rotation is (pitch, yaw, roll); change them in place or assign new ones
+obj.pos3D obj.rotation3D obj.scale3D // Vector3, rotation is (pitch, yaw, roll); change them in place or assign new ones;
+                                     // on a child of an EngineObject3D all three are relative to the parent, unlike
+                                     // a 2D child, whose pos and angle stay in world space
 obj.velocity3D obj.angleVelocity3D // added to pos3D and rotation3D by the engine before update, like the 2D physics,
                                    // no super.update() needed; damping and angleDamping slow them as in 2D, and
                                    // clampSpeed keeps each axis of velocity3D within objectMaxSpeed while it collides
@@ -1638,7 +1641,8 @@ engineObjectsRaycast3D(ray, objects)       // every object along the ray, neares
 obj.lookAt(target)                      // turn -Z toward a world space point: sets pitch and yaw, clears roll;
                                         // a child aims through its parent, since its rotation3D is local
 obj.render3D() // override for custom drawing, the draw state is already set from the flags; render() is empty
-// children attached with addChild follow an EngineObject3D parent's 3D transform, pos3D is then local; addChild's 2D
+// children attached with addChild follow an EngineObject3D parent's 3D transform, pos3D, rotation3D and scale3D are
+// then local, as in three.js, where 2D keeps a child's pos and angle in world space and its offset in localPos; addChild's 2D
 // offset arguments do nothing in 3D; attach keeps a child where it is and works its pos3D, rotation3D and scale3D out,
 // and removeChild leaves it where it was in the world, both as close as those three values can get under a shear,
 // and exactly for a child with a localMatrix

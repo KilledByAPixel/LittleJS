@@ -27,8 +27,10 @@
  * - Its tile and raycast halves are 2D only so they default off here, and a child sits solid collision out
  * - A sync2D object collides in 2D instead, which needs the 2D size set as well as size3D
  * - setMesh swaps the mesh and frees the old one, for text and terrain that get built again
- * - addChild attaches the 3D transform, and pos3D becomes an offset from the parent; attach keeps the child where
- *   it is and works the offset out, and removeChild leaves it where it was in the world
+ * - addChild attaches the 3D transform, and a child's pos3D, rotation3D and scale3D are then relative to its parent,
+ *   as in three.js and Godot; this differs from 2D, where a child's pos and angle stay in world space and localPos
+ *   and localAngle hold the offset; getWorldPos3D and getMatrix give a child's world transform
+ * - attach keeps the child where it is and works the offset out, and removeChild leaves it where it was in the world
  * - The 2D offset arguments of addChild do nothing here, set the child's pos3D
  * @extends EngineObject
  * @memberof Render3D
@@ -61,12 +63,14 @@ class EngineObject3D extends EngineObject
         ASSERT(!mesh || mesh instanceof Mesh, 'mesh must be a Mesh or undefined');
         this.mass = 0; // static: no 2D physics, and no 3D gravity until a mass is set
 
-        /** @property {Vector3} - World space position, local to the parent when attached to an EngineObject3D */
+        /** @property {Vector3} - Position in world space, or relative to the parent while attached to an
+         *  EngineObject3D, unlike a 2D child's pos, which stays in world space; getWorldPos3D gives a child's world
+         *  position */
         this.pos3D = pos3D.copy();
-        /** @property {Vector3} - Rotation vec3(pitch, yaw, roll) in radians, local to the parent when attached to an
-         *  EngineObject3D */
+        /** @property {Vector3} - Rotation vec3(pitch, yaw, roll) in radians, relative to the parent while attached to
+         *  an EngineObject3D, like pos3D */
         this.rotation3D = vec3();
-        /** @property {Vector3} - Scale, local to the parent when attached to an EngineObject3D */
+        /** @property {Vector3} - Scale, relative to the parent while attached to an EngineObject3D, like pos3D */
         this.scale3D = vec3(1);
         /** @property {Vector3} - Added to pos3D each frame by the engine before update, like the 2D velocity, no super
          *  call needed; damping and render3D.gravity act on it once the object has a mass */

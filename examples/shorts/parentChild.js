@@ -91,5 +91,6 @@ object that has one.
 Space Game and Clock turn things with angles. `attach` adds a child
 where it already is in the world, and `removeChild` lets one go. The
 3D objects have the same `addChild`, as 3D First Person uses for the
-lights on its lamps.
+lights on its lamps, but there a child's `pos3D` is relative to its
+parent, as in three.js, and `getWorldPos3D()` gives where it is.
 */
