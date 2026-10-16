@@ -947,17 +947,18 @@ function engineObjectsUpdate()
     // objects update in render order, which rendering keeps them in, so a headless run or a frame that rendered
     // nothing updates them the same way
     engineObjectsSort();
-    // a pos or angle the game set on a child since the last frame is kept before its parent moves, so it moves with it
-    for (const o of engineObjects)
-        o.parent && engineObjectChildKeep(o);
     // get list of solid objects for physics optimization, in update order, which 3D collision pairs by;
     // 2D checks the static ones last, so a contact with a moving object can not leave something back inside a static
     // solid it was already pushed out of
     const fixed = [];
     engineObjectsCollide = [];
     engineObjectsCollideStaticLast = [];
+    // and a pos or angle the game set on a child since the last frame is kept before its parent moves, to move with it
     for (const o of engineObjects)
+    {
+        o.parent && engineObjectChildKeep(o);
         o.collideSolidObjects && (engineObjectsCollide.push(o), (o.mass ? engineObjectsCollideStaticLast : fixed).push(o));
+    }
     for (const o of fixed)
         engineObjectsCollideStaticLast.push(o);
     // written only when there is a grid: V8 keeps a variable that is never written as a constant, and writing it

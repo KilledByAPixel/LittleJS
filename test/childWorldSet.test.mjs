@@ -111,6 +111,26 @@ test('a child moved while detached takes the local transform addChild gives it, 
     near(run(`child.angle`), 3, 'attach angle');
 });
 
+test('a child whose angle and localAngle are both set before it is placed again fails an assert', () =>
+{
+    const { run } = engine();
+    assert.throws(()=> run(`child.angle = 2; child.localAngle = 1; engineObjectsUpdate();`), /angle and localAngle/);
+});
+
+test('a child whose pos and localPos are both set before it is placed again fails an assert', () =>
+{
+    const { run } = engine();
+    assert.throws(()=> run(`child.pos.x += 1; child.localPos.y = 2; engineObjectsUpdate();`), /pos and localPos/);
+});
+
+test('a child whose angle is set and whose localPos is set keeps both, with no assert', () =>
+{
+    const { run } = engine();
+    run(`child.angle = 2; child.localPos.set(0, 2); engineObjectsUpdate();`);
+    near(run(`child.angle`), 2, 'the angle set');
+    assert.deepEqual([...run(`[child.localPos.x, child.localPos.y]`)], [0, 2]);
+});
+
 test('the release build keeps a set angle too', () =>
 {
     const { run } = engine('littlejs.release.js');

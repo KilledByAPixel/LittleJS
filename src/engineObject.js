@@ -117,7 +117,7 @@ function engineObjectStartPos(o) { return engineObjectsOneWayStart?.get(o) || o.
 
 // a pos or angle the game set on a child since its parent last placed it is kept: made its localPos or localAngle,
 // so the child stays where it was put and moves with its parent from there; each is kept alone, so setting the
-// angle leaves localPos exactly as it was
+// angle leaves localPos exactly as it was; setting one and its local value both is a mistake, the local one is lost
 function engineObjectChildKeep(o)
 {
     const placed = o.placedTransform, parent = o.parent;
@@ -125,13 +125,27 @@ function engineObjectChildKeep(o)
     const mirror = parent.getMirrorSign();
     if (o.pos.x !== placed[0] || o.pos.y !== placed[1])
     {
+        ASSERT(o.localPos.x === placed[3] && o.localPos.y === placed[4],
+            'a child\'s pos and localPos were both set before it was placed again, set one of them', o);
         const local = parent.worldToLocal(o.pos);
         o.localPos.set(local.x * mirror, local.y);
     }
     if (o.angle !== placed[2])
+    {
+        ASSERT(o.localAngle === placed[5],
+            'a child\'s angle and localAngle were both set before it was placed again, set one of them', o);
         o.localAngle = mirror * (o.angle - parent.angle);
+    }
     // kept now, so a later check before it is placed again does not take it from where the parent has moved to
+    engineObjectChildPlaced(o);
+}
+
+// keep where a child is placed, [x, y, angle, localPos.x, localPos.y, localAngle], to tell what the game set since
+function engineObjectChildPlaced(o)
+{
+    const placed = o.placedTransform || (o.placedTransform = []);
     placed[0] = o.pos.x, placed[1] = o.pos.y, placed[2] = o.angle;
+    placed[3] = o.localPos.x, placed[4] = o.localPos.y, placed[5] = o.localAngle;
 }
 
 /**
@@ -278,7 +292,9 @@ class EngineObject
         this.localPos = undefined;
         /** @property {number} - Angle relative to the parent, only while attached to one */
         this.localAngle = 0;
-        // the pos and angle the parent last placed this child at, [x, y, angle], so one the game sets is kept
+        // where the parent last placed this child, with the local values it was placed from, so a pos or angle the
+        // game sets is kept, see engineObjectChildPlaced
+        /** @type {Array<number>|undefined} */
         this.placedTransform = undefined;
 
         // collision flags
@@ -324,11 +340,7 @@ class EngineObject
             else
                 this.pos.set(lx + pp.x, ly + pp.y);
             this.angle = mirror*this.localAngle + pa;
-            const placed = this.placedTransform;
-            if (placed)
-                placed[0] = this.pos.x, placed[1] = this.pos.y, placed[2] = this.angle;
-            else
-                this.placedTransform = [this.pos.x, this.pos.y, this.angle];
+            engineObjectChildPlaced(this);
         }
 
         // update children
