@@ -5,7 +5,8 @@ What changed in each release, newest first. Releases before 1.20.0 are on the
 
 ## Unreleased
 
-Nothing yet.
+### New Changes
+- Setting a child object's `pos` or `angle` works: it stays where it was put and moves with its parent from there, the change made its new `localPos` or `localAngle`; before, the parent put it back every frame, and a debug build only warned. Reading them is unchanged, they are in world space as before
 
 ## 1.27.2 - 2026-10-15
 

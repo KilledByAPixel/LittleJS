@@ -947,6 +947,9 @@ function engineObjectsUpdate()
     // objects update in render order, which rendering keeps them in, so a headless run or a frame that rendered
     // nothing updates them the same way
     engineObjectsSort();
+    // a pos or angle the game set on a child since the last frame is kept before its parent moves, so it moves with it
+    for (const o of engineObjects)
+        o.parent && engineObjectChildKeep(o);
     // get list of solid objects for physics optimization, in update order, which 3D collision pairs by;
     // 2D checks the static ones last, so a contact with a moving object can not leave something back inside a static
     // solid it was already pushed out of

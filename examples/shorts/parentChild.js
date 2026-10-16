@@ -8,10 +8,7 @@ class Spinner extends EngineObject
     update()
     {
         // rotate self: parent will carry children along
-        if (this.parent)
-            this.localAngle += this.spinSpeed;
-        else
-            this.angle += this.spinSpeed;
+        this.angle += this.spinSpeed;
     }
 }
 
@@ -48,13 +45,11 @@ The class is an object that turns itself in `update`, which the engine
 calls for every object 60 times a second. `spinSpeed` is in radians per
 update, so the root's `.005` is `.3` radians a second.
 
-Which angle it changes depends on whether it has a parent:
-
-- With no parent it changes `angle`, its angle in the world.
-- With a parent it changes `localAngle`. Its `angle` is set by the
-  engine every frame from the parent, so a change made to that would be
-  written over. The same goes for `pos` and `localPos`. A debug build
-  says so once in the console when a child's `pos` or `angle` is set.
+It changes `angle`, its angle in the world, with or without a parent.
+On a child the engine keeps the change: before it places the child
+again, it makes the new `angle` the child's `localAngle`, so the bar
+stays turned and goes on turning with its parent from there. The same
+goes for `pos` and `localPos`.
 
 `super(vec2(), size, 0, 0, color)` makes each bar at `vec2(0,0)` with no
 tile and no angle. A bar with no tile draws as a rectangle of its size
@@ -84,10 +79,13 @@ object that has one.
 - Give the grandchild a starting angle, a third argument to `addChild`:
   `child.addChild(grandchild, vec2(1.5, 0), PI/2);`
 - Stop the root: change `.005` to `0`. The other two keep turning.
-- See the mistake the engine warns about: in `update`, change
-  `this.localAngle += this.spinSpeed;` to
-  `this.angle += this.spinSpeed;`. The red and cyan bars stop turning
-  on their own, and the console says to set `localAngle`.
+- Turn by the local angle: in `update`, change `this.angle +=` to
+  `this.localAngle +=`. The red and cyan bars turn as before, since on
+  a child the two are the same change, but the yellow bar stops: an
+  object with no parent is not placed from its `localAngle`.
+- Move a child in the world: after `root.addChild(child, vec2(4, 0));`
+  add `child.pos = vec2(0, 3);`. The red bar starts above the middle
+  of the yellow one, and is carried around from there.
 
 ## See also
 Space Game and Clock turn things with angles. `attach` adds a child

@@ -689,7 +689,8 @@ EngineObject.groundObject  // What it stands on this frame, a tile layer or an o
 EngineObject.clampSpeed    // Hold each axis of velocity to objectMaxSpeed while it collides, with solids or with tiles
                            // while it has a mass, so it can not pass through a thin wall; true by default, false for
                            // a fast bullet that collides; what does not collide moves as fast as it is told
-EngineObject.parent / children // Set by addChild, a child is placed by its parent and sits out solid collision
+EngineObject.parent / children // Set by addChild, a child is placed by its parent and sits out solid collision;
+                                // setting a child's pos or angle moves it, and its localPos or localAngle follows
 EngineObject.isBullet      // Moves through the tiles as a point along a ray, never passing one at any speed and not held
                            // to objectMaxSpeed for them; collideWithTile sees it where it meets the tile; on a hit it
                            // bounces by restitution and goes on with the rest of its move, so it rolls along a floor;

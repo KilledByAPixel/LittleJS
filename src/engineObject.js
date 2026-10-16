@@ -115,27 +115,23 @@ function engineObjectBulletSweep(object, from, to)
 // it, or where it is when updatePhysics is called on its own
 function engineObjectStartPos(o) { return engineObjectsOneWayStart?.get(o) || o.pos; }
 
-// debug only: where each child was last placed from its parent, [x, y, angle], so a pos or angle the game set on it,
-// which its parent's transform puts back at once, can be said once; a WeakMap keeps the objects' own shape
-const engineObjectChildPlacedAt = new WeakMap;
-let engineObjectChildWarned = false;
-function engineObjectChildPlaced(o)
+// a pos or angle the game set on a child since its parent last placed it is kept: made its localPos or localAngle,
+// so the child stays where it was put and moves with its parent from there; each is kept alone, so setting the
+// angle leaves localPos exactly as it was
+function engineObjectChildKeep(o)
 {
-    const placed = engineObjectChildPlacedAt.get(o);
-    if (placed)
-        placed[0] = o.pos.x, placed[1] = o.pos.y, placed[2] = o.angle;
-    else
-        engineObjectChildPlacedAt.set(o, [o.pos.x, o.pos.y, o.angle]);
-}
-function engineObjectChildCheck(o)
-{
-    const placed = engineObjectChildPlacedAt.get(o);
-    if (!placed || engineObjectChildWarned) return;
-    const posSet = o.pos.x !== placed[0] || o.pos.y !== placed[1], angleSet = o.angle !== placed[2];
-    if (!posSet && !angleSet) return;
-    engineObjectChildWarned = true;
-    console.warn(`a child object's ${posSet ? 'pos' : 'angle'} was set, but its parent places it each frame: ` +
-        `set its ${posSet ? 'localPos' : 'localAngle'} instead, which is relative to the parent`, o);
+    const placed = o.placedTransform, parent = o.parent;
+    if (!placed || !parent) return;
+    const mirror = parent.getMirrorSign();
+    if (o.pos.x !== placed[0] || o.pos.y !== placed[1])
+    {
+        const local = parent.worldToLocal(o.pos);
+        o.localPos.set(local.x * mirror, local.y);
+    }
+    if (o.angle !== placed[2])
+        o.localAngle = mirror * (o.angle - parent.angle);
+    // kept now, so a later check before it is placed again does not take it from where the parent has moved to
+    placed[0] = o.pos.x, placed[1] = o.pos.y, placed[2] = o.angle;
 }
 
 /**
@@ -185,7 +181,8 @@ class EngineObject
         ASSERT(isColor(color), 'object color should be a valid rgba color');
         ASSERT(typeof renderOrder === 'number', 'object renderOrder should be a number');
 
-        /** @property {Vector2} - World space position of the object */
+        /** @property {Vector2} - World space position of the object, on a child too, where setting it moves the
+         *  child there and its localPos follows */
         this.pos = pos.copy();
         /** @property {Vector2} - World space width and height of the object */
         this.size = size.copy();
@@ -195,7 +192,8 @@ class EngineObject
         /** @property {TileInfo|undefined} - Tile info to render object (undefined is untextured)
          *  @type {TileInfo|undefined} */
         this.tileInfo = tileInfo;
-        /** @property {number} - Angle to rotate the object */
+        /** @property {number} - Angle to rotate the object, in world space on a child too, where setting it turns
+         *  the child and its localAngle follows */
         this.angle = angle;
         /** @property {Color} - Color to apply when rendered */
         this.color = color.copy();
@@ -278,8 +276,10 @@ class EngineObject
         /** @property {Vector2|undefined} - Position relative to the parent, only while attached to one
          *  @type {Vector2|undefined} */
         this.localPos = undefined;
-        /** @property {number} - Local angle if child  */
+        /** @property {number} - Angle relative to the parent, only while attached to one */
         this.localAngle = 0;
+        // the pos and angle the parent last placed this child at, [x, y, angle], so one the game sets is kept
+        this.placedTransform = undefined;
 
         // collision flags
         /** @property {boolean} - Object collides with the level, its tile collision layers
@@ -307,8 +307,8 @@ class EngineObject
         const parent = this.parent;
         if (parent)
         {
-            // in a debug build, a pos or angle the game set on a child is said once, since it is placed over here
-            debug && engineObjectChildCheck(this);
+            // a pos or angle the game set is kept, made the local transform it is placed from
+            engineObjectChildKeep(this);
 
             // compose with parent transform inline to avoid intermediate vector allocs
             const mirror = parent.getMirrorSign();
@@ -322,7 +322,11 @@ class EngineObject
             else
                 this.pos.set(lx + pp.x, ly + pp.y);
             this.angle = mirror*this.localAngle + pa;
-            debug && engineObjectChildPlaced(this);
+            const placed = this.placedTransform;
+            if (placed)
+                placed[0] = this.pos.x, placed[1] = this.pos.y, placed[2] = this.angle;
+            else
+                this.placedTransform = [this.pos.x, this.pos.y, this.angle];
         }
 
         // update children
@@ -829,7 +833,7 @@ class EngineObject
         child.parent = this;
         child.localPos = localPos.copy();
         child.localAngle = localAngle;
-        debug && engineObjectChildPlacedAt.delete(child); // where it was placed by an earlier parent does not count
+        child.placedTransform = undefined; // where it is now is not kept, it is placed from the local transform given
         child.updateTransforms();
         return child;
     }
