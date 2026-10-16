@@ -140,12 +140,14 @@ function engineObjectChildKeep(o)
     engineObjectChildPlaced(o);
 }
 
-// keep where a child is placed, [x, y, angle, localPos.x, localPos.y, localAngle], to tell what the game set since
+// keep where a child is placed, [x, y, angle], to tell what the game set since, and in a debug build the local
+// values it was placed from, [localPos.x, localPos.y, localAngle] after those, for the assert that both were set
 function engineObjectChildPlaced(o)
 {
     const placed = o.placedTransform || (o.placedTransform = []);
     placed[0] = o.pos.x, placed[1] = o.pos.y, placed[2] = o.angle;
-    placed[3] = o.localPos.x, placed[4] = o.localPos.y, placed[5] = o.localAngle;
+    if (debug)
+        placed[3] = o.localPos.x, placed[4] = o.localPos.y, placed[5] = o.localAngle;
 }
 
 /**
