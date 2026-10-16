@@ -79,6 +79,17 @@ test('a child set under a mirrored parent stays where it was put and moves with 
     near(run(`child.angle`), 1, 'the parent did not turn');
 });
 
+test('updateTransforms called after setting a child pos and angle makes them its local transform at once', () =>
+{
+    const { run } = engine();
+    run(`child.pos.set(5, 5); child.angle = 2; child.updateTransforms();`);
+    near(run(`child.localAngle`), 2 - .4, 'localAngle');
+    near(run(`parent.localToWorld(vec2(child.localPos.x, child.localPos.y)).x`), 5, 'localPos x');
+    near(run(`parent.localToWorld(vec2(child.localPos.x, child.localPos.y)).y`), 5, 'localPos y');
+    near(run(`child.pos.x`), 5, 'still where it was set');
+    near(run(`child.angle`), 2, 'still turned as set');
+});
+
 test('a child whose angle alone is set keeps its localPos exactly', () =>
 {
     const { run } = engine();

@@ -301,6 +301,8 @@ class EngineObject
     }
 
     /** Update the object transform, called automatically by engine even when paused
+     *  - A child is placed from its parent, and a pos or angle set on it since is kept first, made its localPos or
+     *    localAngle; the engine does that each frame, call this after setting one to have them right away
      *  @param {boolean} [updateChildren] - Also update the children's transforms */
     updateTransforms(updateChildren=true)
     {
