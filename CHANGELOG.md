@@ -9,6 +9,7 @@ What changed in each release, newest first. Releases before 1.20.0 are on the
 - Setting a child object's `pos` or `angle` works: it stays where it was put and moves with its parent from there, the change made its new `localPos` or `localAngle`; before, the parent put it back every frame, and a debug build only warned. Reading them is unchanged, they are in world space as before
 - A Box2D `beginContact` gets a fifth argument, `contact`: `point`, where the objects touched, `normal`, the other's surface normal pointing toward this object, and `impulse`, an estimate of how hard they hit from both objects' mass and inertia at the point, so a stick heavy at its ends hits harder than one heavy in the middle spinning at the same speed, which `impactSpeed` alone can not tell apart
 - Box2D one way platforms, conveyor belts and `preSolve`: `oneWay` on a `Box2dObject` works as in 2D, blocking only what first touches it from the far side and turning with the body; `setSurfaceSpeed(speed)` runs its surface clockwise around it, carrying what touches it; `preSolve(otherObject, fixture, otherFixture, contact)` is called each step before a contact is solved, where `contact.enabled = false` lets them pass through until they stop touching, as for dropping through a platform, and its friction, restitution and surface speed can be changed
+- The Box2D Platformer short: jump up through one way ledges, drop back through them with `preSolve`, and ride conveyor belts with crates
 
 ## 1.27.2 - 2026-10-15
 

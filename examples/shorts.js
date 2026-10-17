@@ -254,6 +254,7 @@ const exampleList =
     new ExampleInfo('Box2D Car', 'box2dCar.js', 'Drivable car with Box2D physics', false, 'objects, vehicle, suspension, wheels'),
     new ExampleInfo('Box2D Pool', 'box2dPool.js', 'Pool table game with Box2D physics', false, 'objects, game'),
     new ExampleInfo('Box2D Tile Layer', 'box2dTileLayer.js', 'Tile layer with Box2D physics', false, 'objects, level, map, grid'),
+    new ExampleInfo('Box2D Platformer', 'box2dPlatformer.js', 'One way ledges and conveyor belts with Box2D physics', false, 'objects, platformer, one way, conveyor, preSolve, surfaceSpeed'),
     new ExampleInfo('Mini games'),
     new ExampleInfo('Pong Game', 'pongGame.js', 'Classic paddle ball bouncing', false, 'objects, collision'),
     new ExampleInfo('Flappy Game', 'flappyGame.js', 'Flappy bird style game', false, 'objects, obstacles'),
