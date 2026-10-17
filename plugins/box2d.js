@@ -117,6 +117,90 @@ function box2dContactInfo(contact)
     return {speed, point, normal: vec2(-nx, -ny), impulse: total * (1 + contact.GetRestitution())};
 }
 
+/** A contact about to be solved, given to preSolve, whose changes the solver takes
+ *  @typedef {Object} Box2dPreSolveContact
+ *  @property {Vector2} point - Where they touch in world space, between the points when there are two
+ *  @property {Vector2} normal - The other object's surface normal where they touch, pointing toward this object
+ *  @property {boolean} enabled - Set false to let them pass through each other until they stop touching,
+ *                                true to make them collide again
+ *  @property {number} friction - The contact's friction, kept while they touch
+ *  @property {number} restitution - The contact's restitution, kept while they touch
+ *  @property {number} surfaceSpeed - How fast this object's surface moves there for this step, clockwise around it,
+ *                                    its surfaceSpeed to start with
+ *  @memberof Box2D */
+
+// the contacts turned off until they stop touching, by pointer: true for one a one way object lets pass, which
+// the contact callbacks never hear of, false for one a preSolve turned off
+const box2dContactsOff = new Map;
+
+// whether any object needs its contacts before they are solved, found before each step, so the solver's callback
+// does nothing in a game without one
+let box2dPreSolveOn = false;
+const box2dWantsPreSolve = (o)=> !o.destroyed && (o.surfaceSpeed || o.preSolve !== Box2dObject.prototype.preSolve);
+
+// a one way object lets the other pass while they touch, unless it came from the far side, the side it is passed
+// toward: the object's surface normal toward the other within 60 degrees of oneWay, which turns with the body
+function box2dOneWayPass(o, toOther)
+{
+    const way = o.oneWay.rotate(-o.body.GetAngle()).normalize();
+    return way.dot(toOther) < .5;
+}
+
+// where two bodies touch, between the points when there are two, and the normal from B toward A
+function box2dContactPoint(contact)
+{
+    const manifold = box2dQueryObject('impactManifold', 'b2WorldManifold');
+    contact.GetWorldManifold(manifold);
+    const normal = manifold.get_normal(), count = contact.GetManifold().get_pointCount();
+    let x = 0, y = 0;
+    for (let i = count; i--;)
+    {
+        const p = manifold.get_points(i);
+        x += p.get_x(), y += p.get_y();
+    }
+    return {point: vec2(x / count, y / count), normal: vec2(-normal.get_x(), -normal.get_y())};
+}
+
+// before Box2D solves a contact: the objects' preSolve and what it changed, whether it is on, and the surface
+// speeds, which the solver takes as the speed B's surface slides along A's, its tangent the normal turned a quarter
+// clockwise; a positive surface speed runs clockwise around its object, which comes to the same sum from either side
+function box2dPreSolve(contact, pointer, objectA, objectB, fixtureA, fixtureB)
+{
+    let enabled = !box2dContactsOff.has(pointer);
+    let speedA = objectA.surfaceSpeed, speedB = objectB.surfaceSpeed;
+    const hookA = objectA.preSolve !== Box2dObject.prototype.preSolve;
+    const hookB = objectB.preSolve !== Box2dObject.prototype.preSolve;
+    if (hookA || hookB)
+    {
+        // each side gets its own contact, B sees what A changed
+        const {point, normal} = box2dContactPoint(contact);
+        const friction = contact.GetFriction(), restitution = contact.GetRestitution();
+        const shared = {enabled, friction, restitution};
+        if (hookA)
+        {
+            const c = {point, normal, ...shared, surfaceSpeed: speedA};
+            objectA.preSolve(objectB, fixtureA, fixtureB, c);
+            shared.enabled = c.enabled, shared.friction = c.friction, shared.restitution = c.restitution;
+            speedA = c.surfaceSpeed;
+        }
+        if (hookB)
+        {
+            const c = {point: point.copy(), normal: normal.scale(-1), ...shared, surfaceSpeed: speedB};
+            objectB.preSolve(objectA, fixtureB, fixtureA, c);
+            shared.enabled = c.enabled, shared.friction = c.friction, shared.restitution = c.restitution;
+            speedB = c.surfaceSpeed;
+        }
+        ASSERT(isNumber(shared.friction) && isNumber(shared.restitution) && isNumber(speedA) && isNumber(speedB),
+            'preSolve: friction, restitution and surfaceSpeed must be numbers');
+        shared.friction === friction || contact.SetFriction(box2dFinite(shared.friction, friction));
+        shared.restitution === restitution || contact.SetRestitution(box2dFinite(shared.restitution, restitution));
+        enabled = !!shared.enabled;
+        enabled ? box2dContactsOff.delete(pointer) : box2dContactsOff.set(pointer, false);
+    }
+    enabled || contact.SetEnabled(false); // Box2D turns every contact on again each step
+    contact.SetTangentSpeed(box2dFinite(speedA + speedB, 0));
+}
+
 // Box2D finds fixtures by boxes it pads and stretches ahead along the velocity, so a query checks the shape's own box
 function box2dFixtureOverlaps(fixture, aabb)
 {
@@ -289,6 +373,10 @@ function box2dCheckUnusedFields(o)
  *   angleDamping, mass, friction, restitution and gravityScale; use setLinearVelocity, setAngularVelocity,
  *   setLinearDamping, setAngularDamping, setMass, the friction and restitution of its shapes and setGravityScale.
  *   A debug build warns once when one of them is set
+ * - oneWay makes it one way as in 2D, like a platform jumped up through: up, down, left or right, the way others pass
+ *   through, turning with the body; it blocks only what first touches it from its far side, and what it lets pass
+ *   gets no beginContact or endContact, though a sensor does
+ * - surfaceSpeed makes it a conveyor belt, and preSolve changes a contact before it is solved
  * @extends EngineObject
  * @memberof Box2D
  */
@@ -328,6 +416,10 @@ class Box2dObject extends EngineObject
         this.edgeLoops = [];
         // the fixtures of the edge lists and loops, by pointer, each to the points it is drawn with
         this.edgeListFixtures = new Map;
+        /** @property {number} - How fast its surface moves, clockwise around it, in world units per second, like a
+         *  conveyor belt: what touches it is carried along by friction, to the right across its top when positive;
+         *  set it with setSurfaceSpeed, which wakes what rests on it */
+        this.surfaceSpeed = 0;
 
         this.body.object = this; // link body to this object
         box2d.objects.push(this); // keep track of all box2d objects
@@ -439,6 +531,25 @@ class Box2dObject extends EngineObject
      *  @param {Object} [fixture] - This object's fixture that touched
      *  @param {Object} [otherFixture] - The other object's fixture that touched */
     endContact(otherObject, fixture, otherFixture) {}
+
+    /** Called before Box2D solves a contact, each step while they touch, for an object that overrides it, while the
+     *  world steps as beginContact is; change the contact to change how they collide
+     *  - enabled false lets them pass through each other until they stop touching, like a platform dropped through
+     *  - friction and restitution are kept while they touch, surfaceSpeed is for this step, like a patch of a belt
+     *  - A sleeping body's contacts are not solved, so wake it with setAwake for this to be called, as for a player
+     *    standing still on a platform it drops through
+     *  @param {Box2dObject} otherObject
+     *  @param {Object} [fixture] - This object's fixture that touches
+     *  @param {Object} [otherFixture] - The other object's fixture that touches
+     *  @param {Box2dPreSolveContact} [contact] - Where they touch and how they collide
+     *  @example
+     *  // drop down through a one way platform
+     *  player.preSolve = (other, fixture, otherFixture, contact)=>
+     *  {
+     *      if (other.oneWay && keyIsDown('ArrowDown'))
+     *          contact.enabled = false;
+     *  } */
+    preSolve(otherObject, fixture, otherFixture, contact) {}
 
     ///////////////////////////////////////////////////////////////////////////////
     // physics fixtures and shapes
@@ -855,6 +966,15 @@ class Box2dObject extends EngineObject
     {
         this.body.SetGravityScale(this.gravityScale = scale);
         this.body.SetAwake(true); // a sleeping body would not feel it
+    }
+
+    /** Sets how fast its surface moves, clockwise around it, like a conveyor belt, see surfaceSpeed
+     *  @param {number} speed - World units per second */
+    setSurfaceSpeed(speed)
+    {
+        ASSERT(isNumber(speed), 'setSurfaceSpeed: speed must be a number', speed);
+        this.surfaceSpeed = speed;
+        box2dWakeWithContacts(this.body); // what sleeps on it would not move
     }
 
     /** Should be like a bullet for continuous collision detection?
@@ -2215,6 +2335,16 @@ class Box2dPlugin
             if (!objectA || !objectB) return;
             // each side gets its own contact, its normal toward itself, made before either is called
             const {speed, point, normal, impulse} = box2dContactInfo(contact);
+
+            // what a one way object lets pass goes through it until they stop touching, with no callbacks, as in 2D;
+            // a sensor has no normal and is told of it
+            if (normal && (objectA.oneWay && box2dOneWayPass(objectA, normal.scale(-1)) ||
+                objectB.oneWay && box2dOneWayPass(objectB, normal)))
+            {
+                box2dContactsOff.set(contactPtr, true);
+                return;
+            }
+
             const contactA = {point, normal, impulse};
             const contactB = {point: point?.copy(), normal: normal?.scale(-1), impulse};
             objectA.beginContact(objectB, fixtureA, fixtureB, speed, contactA);
@@ -2222,6 +2352,11 @@ class Box2dPlugin
         }
         listener.EndContact = function(contactPtr)
         {
+            // a contact a one way object let pass was never begun for the objects
+            const passed = box2dContactsOff.get(contactPtr);
+            box2dContactsOff.delete(contactPtr);
+            if (passed) return;
+
             const contact  = box2d.instance.wrapPointer(contactPtr, box2d.instance.b2Contact);
             const fixtureA = contact.GetFixtureA();
             const fixtureB = contact.GetFixtureB();
@@ -2231,7 +2366,20 @@ class Box2dPlugin
             objectA.endContact(objectB, fixtureA, fixtureB);
             objectB.endContact(objectA, fixtureB, fixtureA);
         };
-        listener.PreSolve  = function() {};
+        listener.PreSolve = function(contactPtr)
+        {
+            const off = box2dContactsOff.get(contactPtr);
+            if (!box2dPreSolveOn && off === undefined) return;
+            const contact = box2d.instance.wrapPointer(contactPtr, box2d.instance.b2Contact);
+            if (off) // a one way object passing it
+                return contact.SetEnabled(false);
+            const fixtureA = contact.GetFixtureA();
+            const fixtureB = contact.GetFixtureB();
+            const objectA  = fixtureA.GetBody().object;
+            const objectB  = fixtureB.GetBody().object;
+            if (!objectA || !objectB) return;
+            box2dPreSolve(contact, contactPtr, objectA, objectB, fixtureA, fixtureB);
+        };
         listener.PostSolve = function() {};
         box2d.world.SetContactListener(listener);
     }
@@ -2248,6 +2396,7 @@ class Box2dPlugin
             for (let b = box2d.world.GetBodyList(); !box2d.isNull(b); b = b.GetNext())
                 b.SetAwake(true);
         }
+        box2dPreSolveOn = this.objects.some(box2dWantsPreSolve);
         for (let i=frames; i--;)
         {
             box2d.world.Step(timeDelta, this.velocityIterations, this.positionIterations);

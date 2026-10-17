@@ -2176,6 +2176,14 @@ obj.endContact(otherObject, fixture, otherFixture)   // object's shapes touched,
 // heavy in the middle at the same speed); point and normal are undefined for a sensor, impulse 0
 // In beginContact/endContact the world is stepping: destroys and setTransform, setBodyType and setMassData
 // wait until after the step, and creating objects, fixtures or joints there is not allowed
+obj.preSolve(otherObject, fixture, otherFixture, contact) // override; each step while they touch, before the
+// contact is solved: contact is {point, normal, enabled, friction, restitution, surfaceSpeed}, and enabled = false
+// lets them pass through until they stop touching, like dropping through a platform; a sleeping body is not solved
+obj.oneWay = vec2(0, 1)                // One way as in 2D, a platform jumped up through: blocks only what first
+                                       // touches it from the far side, turns with the body; what passes gets no
+                                       // beginContact or endContact
+obj.setSurfaceSpeed(speed)             // A conveyor belt: its surface runs clockwise around it at speed, to the
+                                       // right across its top when positive, carrying what touches it (surfaceSpeed)
 
 // Common fixture setup (call from constructor or after creation)
 obj.addBox(size, offset, angle, density, friction, restitution, isSensor)
