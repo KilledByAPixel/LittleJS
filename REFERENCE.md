@@ -2168,9 +2168,12 @@ new Box2dStaticObject(pos, size, tileInfo, angle, color, renderOrder)     // Imm
 new Box2dKinematicObject(pos, size, tileInfo, angle, color, renderOrder)  // Moves but ignores forces
 new Box2dTileLayer(tileLayer)                                  // Static collision from a TileCollisionLayer, built now
 b.buildCollision(friction=.2, restitution=0)                   // Build it again after changing the collision data
-obj.beginContact(otherObject, fixture, otherFixture, impactSpeed) // override; fixture is which of this object's
-obj.endContact(otherObject, fixture, otherFixture)   // shapes touched, as addBox and the others returned it, like a
-// foot sensor; impactSpeed is how fast they closed along the normal as they hit, spin included, 0 for a sensor
+obj.beginContact(otherObject, fixture, otherFixture, impactSpeed, contact) // override; fixture is which of this
+obj.endContact(otherObject, fixture, otherFixture)   // object's shapes touched, as addBox and the others returned it,
+// like a foot sensor; impactSpeed is how fast they closed along the normal as they hit, spin included, 0 for a sensor
+// contact is {point, normal, impulse}: where they touched, the other's surface normal pointing toward this object,
+// and an estimate of how hard they hit, counting mass and inertia (a stick heavy at its ends hits harder than one
+// heavy in the middle at the same speed); point and normal are undefined for a sensor, impulse 0
 // In beginContact/endContact the world is stepping: destroys and setTransform, setBodyType and setMassData
 // wait until after the step, and creating objects, fixtures or joints there is not allowed
 

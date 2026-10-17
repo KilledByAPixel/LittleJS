@@ -7,6 +7,7 @@ What changed in each release, newest first. Releases before 1.20.0 are on the
 
 ### New Changes
 - Setting a child object's `pos` or `angle` works: it stays where it was put and moves with its parent from there, the change made its new `localPos` or `localAngle`; before, the parent put it back every frame, and a debug build only warned. Reading them is unchanged, they are in world space as before
+- A Box2D `beginContact` gets a fifth argument, `contact`: `point`, where the objects touched, `normal`, the other's surface normal pointing toward this object, and `impulse`, an estimate of how hard they hit from both objects' mass and inertia at the point, so a stick heavy at its ends hits harder than one heavy in the middle spinning at the same speed, which `impactSpeed` alone can not tell apart
 
 ## 1.27.2 - 2026-10-15
 

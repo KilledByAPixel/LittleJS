@@ -165,3 +165,72 @@ test('beginContact gets how fast the bodies closed along the normal, and 0 for a
     [speedA] = hit(a, b);
     assert.equal(speedA, 0);
 });
+
+test('beginContact gets where they touched, the normal toward each side and the impulse of the hit', () =>
+{
+    // step until the first contact and give back what each side was handed
+    function hit(a, b)
+    {
+        const got = [];
+        a.beginContact = (o, f, of, speed, contact)=> got[0] = {speed, ...contact};
+        b.beginContact = (o, f, of, speed, contact)=> got[1] = {speed, ...contact};
+        for (let i = 0; i < 120 && !got.length; ++i)
+            box2d.step();
+        a.destroy(); b.destroy();
+        return got;
+    }
+    const near = (a, b, e=.01)=> Math.abs(a - b) < e;
+
+    // a ball dropping on the ground, a push through its center, so the impulse is its mass times its speed
+    let ground = new Box2dStaticObject(vec2(0, 200));
+    ground.addBox(vec2(20, 1), vec2(), 0, 1, .2, .5);
+    let ball = new Box2dObject(vec2(0, 203)), restitution = .5;
+    ball.addCircle(1, vec2(), 1, .2, 0);
+    ball.setLinearVelocity(vec2(0, -6)); ball.setGravityScale(0);
+    const ballMass = ball.getMass();
+    let [onBall, onGround] = hit(ball, ground);
+    assert.ok(near(onBall.normal.x, 0) && near(onBall.normal.y, 1), 'the ground pushes the ball up: ' + onBall.normal);
+    assert.ok(near(onGround.normal.y, -1), 'and the ball pushes the ground down: ' + onGround.normal);
+    assert.ok(near(onBall.point.y, 200.5, .05) && near(onBall.point.x, 0), 'on the ground under the ball ' + onBall.point);
+    assert.notEqual(onBall.point, onGround.point, 'each side has its own point');
+    assert.ok(near(onBall.impulse, ballMass * onBall.speed * (1 + restitution), .05),
+        onBall.impulse + ' is mass ' + ballMass + ' times speed ' + onBall.speed + ' with the bounce');
+    assert.equal(onBall.impulse, onGround.impulse);
+
+    // a box landing flat touches at two corners, solved together it is still its mass times its speed, in the middle
+    ground = new Box2dStaticObject(vec2(0, 250));
+    ground.addBox(vec2(20, 1));
+    const box = new Box2dObject(vec2(3, 253));
+    box.addBox(vec2(2, 1));
+    box.setLinearVelocity(vec2(0, -6)); box.setGravityScale(0);
+    const boxMass = box.getMass();
+    [onBall] = hit(box, ground);
+    assert.ok(near(onBall.impulse, boxMass * onBall.speed, .05), onBall.impulse + ' is ' + boxMass * onBall.speed);
+    assert.ok(near(onBall.point.x, 3, .05), 'between its corners: ' + onBall.point);
+
+    // a stick spun into a post, the same mass at the middle or the ends, hits at the same speed
+    // but much harder with its mass at the ends, which turn it harder to stop
+    function spin(weightOffset)
+    {
+        const post = new Box2dStaticObject(vec2(1, 302));
+        post.addBox(vec2(.5, .5));
+        const stick = new Box2dObject(vec2(0, 300));
+        stick.addBox(vec2(.1, 4), vec2(), 0, .1);
+        stick.addBox(vec2(.4), vec2(0, weightOffset), 0, 10);
+        stick.addBox(vec2(.4), vec2(0, -weightOffset), 0, 10);
+        stick.setGravityScale(0);
+        stick.setAngularVelocity(3);
+        const [onStick] = hit(stick, post);
+        return onStick;
+    }
+    const middle = spin(.3), ends = spin(1.8);
+    assert.ok(near(middle.speed, ends.speed, .05), 'the same speed: ' + middle.speed + ', ' + ends.speed);
+    assert.ok(ends.impulse > middle.impulse * 3, 'the ends hit harder: ' + ends.impulse + ' to ' + middle.impulse);
+
+    // a sensor has no point or normal
+    const a = new Box2dObject(vec2(0, 350)), b = new Box2dObject(vec2(3, 350));
+    a.addBox(); b.addBox(vec2(1), vec2(), 0, 1, .2, 0, true);
+    a.setLinearVelocity(vec2(3, 0));
+    const [onSensor] = hit(a, b);
+    assert.deepEqual(onSensor, {speed: 0, point: undefined, normal: undefined, impulse: 0});
+});

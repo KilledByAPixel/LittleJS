@@ -47,28 +47,74 @@ const box2dQueryObjects = {};
 const box2dGravity = {x:NaN, y:NaN}; // the gravity the world was last given
 function box2dQueryObject(key, type) { return box2dQueryObjects[key] ||= new box2d.instance[type](); }
 
-// how fast two bodies close along the contact normal as they start touching, the fastest of its points, with spin;
-// BeginContact comes before the solver changes the velocities, so this is the hit, and a sensor has no points, 0
-function box2dImpactSpeed(contact)
+/** Where and how hard two objects hit, given to beginContact
+ *  @typedef {Object} Box2dContact
+ *  @property {Vector2|undefined} point - Where they touched in world space, between the two points of a flat
+ *                                        landing, toward the one pushed harder; undefined for a sensor
+ *  @property {Vector2|undefined} normal - The other object's surface normal where they touched, pointing toward
+ *                                         this object; undefined for a sensor
+ *  @property {number} impulse - An estimate of how hard they hit: the impulse that stops them closing, from the mass
+ *                               and inertia of both where they touched, times 1 + restitution; mass times world units
+ *                               per second, 0 for a sensor
+ *  @memberof Box2D */
+
+// a body's inverse mass and inverse inertia about its center of mass, 0 for one that does not move or turn,
+// and its center of mass
+function box2dContactBody(body)
+{
+    const mass = body.GetMass(), local = body.GetLocalCenter(), center = body.GetWorldCenter();
+    const inertia = body.GetInertia() - box2dCenterInertia(mass, local.get_x(), local.get_y());
+    return [mass > 0 ? 1/mass : 0, inertia > 0 ? 1/inertia : 0, center.get_x(), center.get_y()];
+}
+
+// how two bodies meet as they start touching, for body A: how fast they close along the contact normal, the fastest
+// of its points, with spin; where; the normal toward A; and the impulse the hit takes, worked out from the masses
+// and inertias at the points as Box2D's solver does, both points of a flat landing solved together;
+// BeginContact comes before the solver changes the velocities, so this is the hit, and a sensor has no points
+function box2dContactInfo(contact)
 {
     const pointCount = contact.GetManifold().get_pointCount();
     if (!pointCount)
-        return 0;
+        return {speed: 0, point: undefined, normal: undefined, impulse: 0};
     const manifold = box2dQueryObject('impactManifold', 'b2WorldManifold');
     contact.GetWorldManifold(manifold);
     const normal = manifold.get_normal(), nx = normal.get_x(), ny = normal.get_y();
     const bodyA = contact.GetFixtureA().GetBody(), bodyB = contact.GetFixtureB().GetBody();
+    const [massA, inertiaA, ax, ay] = box2dContactBody(bodyA), [massB, inertiaB, bx, by] = box2dContactBody(bodyB);
+    const points = [], speeds = [], turnA = [], turnB = [];
     let speed = 0;
     for (let i = 0; i < pointCount; ++i)
     {
         // the normal points from A to B, so A moving along it faster than B is closing
-        const point = manifold.get_points(i);
+        const point = manifold.get_points(i), px = point.get_x(), py = point.get_y();
         const vA = bodyA.GetLinearVelocityFromWorldPoint(point);
-        const ax = vA.get_x(), ay = vA.get_y();
+        const vAx = vA.get_x(), vAy = vA.get_y();
         const vB = bodyB.GetLinearVelocityFromWorldPoint(point);
-        speed = max(speed, (ax - vB.get_x())*nx + (ay - vB.get_y())*ny);
+        const closing = (vAx - vB.get_x())*nx + (vAy - vB.get_y())*ny;
+        speed = max(speed, closing);
+        points.push(vec2(px, py));
+        speeds.push(max(0, closing));
+        // how much a push along the normal at the point turns each body
+        turnA.push((px - ax)*ny - (py - ay)*nx);
+        turnB.push((px - bx)*ny - (py - by)*nx);
     }
-    return speed;
+
+    // how much a push at point j changes the closing speed at point i
+    const k = (i, j)=> massA + massB + inertiaA*turnA[i]*turnA[j] + inertiaB*turnB[i]*turnB[j];
+    let impulses = speeds.map((s, i)=> s / k(i, i)); // each point alone
+    if (pointCount > 1)
+    {
+        // a flat landing pushes at both points at once, a push at one slowing the other too
+        const k11 = k(0, 0), k12 = k(0, 1), k22 = k(1, 1), det = k11*k22 - k12*k12;
+        const j1 = (k22*speeds[0] - k12*speeds[1]) / det, j2 = (k11*speeds[1] - k12*speeds[0]) / det;
+        if (det > 1e-6*k11*k22 && j1 >= 0 && j2 >= 0)
+            impulses = [j1, j2];
+        else // one point takes the hit, the one that would take more alone
+            impulses = impulses[0] > impulses[1] ? [impulses[0], 0] : [0, impulses[1]];
+    }
+    const total = pointCount > 1 ? impulses[0] + impulses[1] : impulses[0];
+    const point = pointCount > 1 ? points[0].lerp(points[1], total ? impulses[1] / total : .5) : points[0];
+    return {speed, point, normal: vec2(-nx, -ny), impulse: total * (1 + contact.GetRestitution())};
 }
 
 // Box2D finds fixtures by boxes it pads and stretches ahead along the velocity, so a query checks the shape's own box
@@ -375,13 +421,17 @@ class Box2dObject extends EngineObject
      *  and creating objects, fixtures or joints must wait until after the step
      *  - The fixtures say which shapes touched, the same objects addBox and the others returned, so a small sensor
      *    under a player's feet can tell standing on the ground from touching a wall
-     *  - impactSpeed is how hard they hit: how fast they were closing along the contact normal, spin included,
-     *    in world units per second, measured before the solver pushed them apart; 0 for a sensor
+     *  - impactSpeed is how fast they were closing along the contact normal, spin included, in world units per
+     *    second, measured before the solver pushed them apart; 0 for a sensor
+     *  - contact has where they touched, the normal toward this object and the impulse of the hit, which counts
+     *    their mass and how it is spread: a stick heavy at its ends hits harder than one heavy in the middle,
+     *    spinning at the same speed
      *  @param {Box2dObject} otherObject
      *  @param {Object} [fixture] - This object's fixture that touched
      *  @param {Object} [otherFixture] - The other object's fixture that touched
-     *  @param {number} [impactSpeed] - How fast they were closing as they touched */
-    beginContact(otherObject, fixture, otherFixture, impactSpeed) {}
+     *  @param {number} [impactSpeed] - How fast they were closing as they touched
+     *  @param {Box2dContact} [contact] - Where they touched and how hard they hit */
+    beginContact(otherObject, fixture, otherFixture, impactSpeed, contact) {}
 
     /** Called when a contact ends, while the world steps or a body is destroyed: a destroy or a setter waits
      *  until the step is done, and creating objects, fixtures or joints must wait until after the step
@@ -2163,9 +2213,12 @@ class Box2dPlugin
             const objectB  = fixtureB.GetBody().object;
             // raw user-created b2Bodies may have no .object — skip those
             if (!objectA || !objectB) return;
-            const impactSpeed = box2dImpactSpeed(contact);
-            objectA.beginContact(objectB, fixtureA, fixtureB, impactSpeed);
-            objectB.beginContact(objectA, fixtureB, fixtureA, impactSpeed);
+            // each side gets its own contact, its normal toward itself, made before either is called
+            const {speed, point, normal, impulse} = box2dContactInfo(contact);
+            const contactA = {point, normal, impulse};
+            const contactB = {point: point?.copy(), normal: normal?.scale(-1), impulse};
+            objectA.beginContact(objectB, fixtureA, fixtureB, speed, contactA);
+            objectB.beginContact(objectA, fixtureB, fixtureA, speed, contactB);
         }
         listener.EndContact = function(contactPtr)
         {
