@@ -29,7 +29,8 @@
  * - setMesh swaps the mesh and frees the old one, for text and terrain that get built again
  * - addChild attaches the 3D transform, and a child's pos3D, rotation3D and scale3D are then relative to its parent,
  *   as in three.js and Godot; this differs from 2D, where a child's pos and angle stay in world space and localPos
- *   and localAngle hold the offset; getWorldPos3D and getMatrix give a child's world transform
+ *   and localAngle hold the offset; getWorldPos3D, getWorldRotation3D and getMatrix give a child's world transform,
+ *   and setWorldPos3D and setWorldRotation3D put it at a world position or rotation
  * - attach keeps the child where it is and works the offset out, and removeChild leaves it where it was in the world
  * - The 2D offset arguments of addChild do nothing here, set the child's pos3D
  * @extends EngineObject
@@ -261,6 +262,44 @@ class EngineObject3D extends EngineObject
     /** Returns the world position
      *  @return {Vector3} */
     getWorldPos3D() { return render3DObjectMatrix(this).getTranslation(); }
+
+    /** Move the object so its world position is pos, setting pos3D, which on a child is relative to the parent
+     *  - Exact whatever the parent's turn and scale; a child with a localMatrix has the matrix moved instead
+     *  @param {Vector3} pos */
+    setWorldPos3D(pos)
+    {
+        ASSERT(isVector3(pos), 'setWorldPos3D: pos must be a vec3', pos);
+        const parent = this.parent instanceof EngineObject3D ? this.parent : undefined;
+        const local = parent ? render3DObjectMatrix(parent).copy().invert().transformPoint(pos) : pos.copy();
+        if (this.localMatrix)
+            this.localMatrix.m[12] = local.x, this.localMatrix.m[13] = local.y, this.localMatrix.m[14] = local.z;
+        else
+            this.pos3D = local;
+    }
+
+    /** Returns the rotation in the world as vec3(pitch, yaw, roll), the parent's included on a child
+     *  - Under a parent scaled unevenly a turned child is sheared, which no rotation is exactly, so it is the nearest
+     *  @return {Vector3} */
+    getWorldRotation3D() { return render3DObjectMatrix(this).getRotation(); }
+
+    /** Turn the object so its rotation in the world is rotation, setting rotation3D, which on a child is relative to
+     *  the parent; it stays where it is
+     *  - Exact unless the parent, or one above it, is scaled unevenly, the same limit as attach
+     *  - A child with a localMatrix has the matrix built again from its position and scale with the new turn
+     *  @param {Vector3} rotation - vec3(pitch, yaw, roll) in radians */
+    setWorldRotation3D(rotation)
+    {
+        ASSERT(isVector3(rotation), 'setWorldRotation3D: rotation must be a vec3', rotation);
+        const parent = this.parent instanceof EngineObject3D ? this.parent : undefined;
+        // the parent's turn undone, then the one wanted
+        const local = parent ? buildMatrix(undefined, render3DObjectMatrix(parent).getRotation()).invert()
+            .multiply(buildMatrix(undefined, rotation)).getRotation() : rotation.copy();
+        const matrix = this.localMatrix;
+        if (matrix)
+            this.localMatrix = buildMatrix(matrix.getTranslation(), local, matrix.getScale());
+        else
+            this.rotation3D = local;
+    }
 
     /** Returns the direction the object faces, its -Z axis in the world
      *  @return {Vector3} */

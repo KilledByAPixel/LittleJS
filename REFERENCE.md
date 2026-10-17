@@ -1631,6 +1631,10 @@ obj.localMatrix // a Matrix4 from the parent used in place of pos3D, rotation3D 
                 // hold; glTF animations pose parts with it and it stays after they stop, set it to undefined to move a
                 // part by pos3D again; undefined by default
 obj.getWorldPos3D()                     // world position, pos3D is local when parented
+obj.setWorldPos3D(pos)                  // move a child to a world position, setting its local pos3D; exact
+obj.getWorldRotation3D()                // rotation in the world, the parent's included, the nearest under a shear
+obj.setWorldRotation3D(rotation)        // turn a child to a world rotation, setting its local rotation3D; exact
+                                        // unless a parent above it is scaled unevenly
 obj.getForward3D() .getRight3D() .getUp3D() // the object's axes in the world, forward is -Z
 engineObjectsCollect3D(pos, size, objects, testCenters) // the EngineObject3D objects whose boxes overlap a sphere,
                                            // size a number (diameter, 0 for a point), or a box, size a vec3;
