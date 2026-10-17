@@ -1355,6 +1355,7 @@ class UIText extends UIObject
         ASSERT(isStringLike(font), 'ui text font must be a string');
 
         // set properties
+        /** @property {string} - The text shown */
         this.text = text;
         this.align = align;
         this.font = font;
@@ -1409,6 +1410,7 @@ class UITextInput extends UIObject
         this.maxLength = 0;
 
         // set properties, as a string, which typing adds to
+        /** @property {string} - The text typed in it */
         this.text = text + '';
         this.interactive = true;
         this.canBeHover = true;
@@ -1567,6 +1569,7 @@ class UIButton extends UIObject
         this.textOffset = vec2();
 
         // set properties
+        /** @property {string} - The label shown on the button */
         this.text = text;
         this.color = color.copy();
         this.interactive = true;
@@ -1607,6 +1610,7 @@ class UICheckbox extends UIObject
         /** @property {boolean} - Is the checkbox currently checked? */
         this.checked = checked;
         // set properties
+        /** @property {string} - The label shown beside the box */
         this.text = text;
         this.color = color.copy();
         this.interactive = true;
@@ -1676,6 +1680,7 @@ class UISlider extends UIObject
         this.fillMode = false;
 
         // set properties
+        /** @property {string} - The label shown on the slider */
         this.text = text;
         this.color = color.copy();
         this.interactive = true;

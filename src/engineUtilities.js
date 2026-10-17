@@ -30,6 +30,7 @@ class Timer
     constructor(timeLeft, useRealTime=false)
     {
         ASSERT(timeLeft === undefined || isNumber(timeLeft), 'Timer: time must be a number of seconds', timeLeft);
+        /** @property {boolean} - Runs on real time, so it keeps going while the game is paused, see setUseRealTime */
         this.useRealTime = useRealTime;
         const globalTime = this.getGlobalTime();
         /** @type {number|undefined} */

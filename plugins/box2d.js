@@ -1777,8 +1777,11 @@ class Box2dGearJoint extends Box2dJoint
         jointDef.set_ratio(ratio * ratioSign);
         super(jointDef);
 
+        /** @property {Box2dJoint} - The first joint geared, a revolute or prismatic joint */
         this.joint1 = joint1;
+        /** @property {Box2dJoint} - The second joint geared, a revolute or prismatic joint */
         this.joint2 = joint2;
+        // -1 when one joint turns and the other slides, since angles turn the other way to Box2D's
         this.ratioSign = ratioSign;
         box2dGearJoints.add(this);
     }

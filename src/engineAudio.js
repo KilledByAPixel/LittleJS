@@ -242,6 +242,9 @@ class Sound
      */
     constructor(asset, randomness, range, taper=soundDefaultTaper, onloadCallback)
     {
+        /** @property {number} - Percentage of this sound currently loaded, sounds
+         *  fetched from a url stay at 0 until decoding completes */
+        this.loadedPercent = 0;
         if (!soundEnable || headlessMode || !audioContext) // a browser with no audio makes none either
         {
             // no sound is made: it counts as loaded, so a game that waits for its sounds goes on
@@ -279,9 +282,6 @@ class Sound
         /** @ignore
          *  @type {Array<Array<number>|Float32Array>|undefined} */
         this._sampleChannels = undefined;
-        /** @property {number} - Percentage of this sound currently loaded, sounds
-         *  fetched from a url stay at 0 until decoding completes */
-        this.loadedPercent = 0;
         /** @property {SoundLoadCallback|undefined} - function to call when sound is loaded
          *  @type {SoundLoadCallback|undefined} */
         this.onloadCallback = onloadCallback;

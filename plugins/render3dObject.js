@@ -81,12 +81,12 @@ class EngineObject3D extends EngineObject
         /** @property {Mesh|undefined} - Mesh to draw
          *  @type {Mesh|undefined} */
         this.mesh = mesh;
+        // a shared mesh measured since it last changed is not walked again for each object made from it
+        const bounds = mesh && mesh.points.length ? !mesh.dirty && mesh.bounds || mesh.getBounds() : undefined;
         /** @property {Vector3} - Size for solid collision and the collect and callback helpers, and of the sprite when
          *  there is a tileInfo and no mesh; starts at the size of the mesh's box, or 1 with no mesh, and setMesh leaves
          *  it as it is; the box is centered on pos3D, so center() a mesh whose origin is not its middle, like a model
          *  standing on its feet, or set size3D; scale3D and any parent's scale grow it, so drawing and picking agree */
-        // a shared mesh measured since it last changed is not walked again for each object made from it
-        const bounds = mesh && mesh.points.length ? !mesh.dirty && mesh.bounds || mesh.getBounds() : undefined;
         this.size3D = bounds ? bounds.max.subtract(bounds.min) : vec3(1);
         /** @property {number} - Diameter of a soft shadow drawn under the object on render3D.softShadowHeight, 0 for
          *  none; scale3D and a parent's scale grow it, so set it once for the unscaled object */
