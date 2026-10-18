@@ -13,7 +13,9 @@
 
 /** A scene, any object with the hooks it needs, each optional and called as a method so this is the scene
  *  @typedef {Object} Scene
- *  @property {function():void} [enter] - Called when the scene starts, after the old one left and the objects were destroyed
+ *  @property {function():void} [enter] - Called when the scene starts, after the old one left and the objects were destroyed;
+ *                                        it is not awaited, so setup done once, like await box2dInit() and new plugins, goes
+ *                                        in gameInit before the first setScene
  *  @property {function():void} [leave] - Called before the next scene starts, while the scene is current and its objects are still there
  *  @property {function():void} [update] - Called each update after gameUpdate, not while paused or at time scale 0
  *  @property {function():void} [render] - Called before gameRender, to draw under the objects

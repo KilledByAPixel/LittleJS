@@ -953,7 +953,8 @@ setScene(scene)      // Leave the current scene, clear objects, enter scene; the
 getScene()           // The current scene, or undefined
 
 // A scene is any object, every hook is optional
-scene.enter()        // After the old scene left and the objects were cleared
+scene.enter()        // After the old scene left and the objects were cleared; not awaited, so setup done once
+                     // (await box2dInit(), new plugins) goes in gameInit before the first setScene
 scene.leave()        // Before the objects are cleared, while the scene is still current
 scene.update()       // Each update after gameUpdate, not while paused or at time scale 0
 scene.render()       // Before gameRender, under the objects
