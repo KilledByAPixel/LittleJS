@@ -27,6 +27,24 @@ let cameraAngle = 0;
  *  @memberof Settings */
 let cameraScale = 32;
 
+/** How far a full camera shake moves the view, in world units, see cameraShake
+ *  @type {number}
+ *  @default
+ *  @memberof Settings */
+let cameraShakeDistance = .5;
+
+/** How far a full camera shake turns the view, in radians, see cameraShake
+ *  @type {number}
+ *  @default
+ *  @memberof Settings */
+let cameraShakeAngle = .05;
+
+/** How much camera shake fades each second, 1 takes a full shake to nothing in a second, see cameraShake
+ *  @type {number}
+ *  @default
+ *  @memberof Settings */
+let cameraShakeDecay = 1;
+
 ///////////////////////////////////////////////////////////////////////////////
 // Time settings
 
@@ -473,6 +491,21 @@ function setCameraAngle(angle) { cameraAngle = angle; }
  *  @param {number} scale
  *  @memberof Settings */
 function setCameraScale(scale) { cameraScale = scale; }
+
+/** Set how far a full camera shake moves the view, in world units
+ *  @param {number} distance
+ *  @memberof Settings */
+function setCameraShakeDistance(distance) { cameraShakeDistance = distance; }
+
+/** Set how far a full camera shake turns the view, in radians
+ *  @param {number} angle
+ *  @memberof Settings */
+function setCameraShakeAngle(angle) { cameraShakeAngle = angle; }
+
+/** Set how much camera shake fades each second
+ *  @param {number} decay
+ *  @memberof Settings */
+function setCameraShakeDecay(decay) { cameraShakeDecay = decay; }
 
 /** Set scale applied to engine time
  *  - 0 freezes the game like a pause, gameUpdatePost and input still run so the game can set it back

@@ -1654,6 +1654,65 @@ function cameraFit(center, size, worldMargin, screenInset)
     }
 }
 
+///////////////////////////////////////////////////////////////////////////////
+// Camera shake
+
+// how much shake is left, 0 to 1, cameraShake adds to it and it fades by cameraShakeDecay a second
+let cameraShakeTrauma = 0;
+// noise steps a second, how fast the shaken view wanders
+const CAMERA_SHAKE_FREQUENCY = 15;
+// the game's own cameraPos and cameraAngle, kept while a frame draws shaken
+let cameraShakeSavedPos, cameraShakeSavedAngle = 0;
+
+/** Shake the camera, for a hit or an explosion: adds to the shake, which fades on its own by cameraShakeDecay
+ *  - The view moves by smooth noise scaled by the shake squared, so a small one is gentle and a big one is wild,
+ *    up to cameraShakeDistance and cameraShakeAngle
+ *  - It moves only what is drawn, in 2D and in 3D: cameraPos and cameraAngle are the game's own between frames
+ *  - It holds while the game is paused
+ *  @param {number} [amount] - How much to add, the shake is at most 1
+ *  @memberof Draw */
+function cameraShake(amount=.5)
+{
+    ASSERT(isNumber(amount) && amount >= 0, 'cameraShake: amount must be a number, 0 or more', amount);
+    cameraShakeTrauma = min(1, cameraShakeTrauma + amount);
+}
+
+// how far the shake moves and turns the view now, nothing at all when there is no shake
+function cameraShakeOffset()
+{
+    if (!cameraShakeTrauma)
+        return {pos: vec2(), angle: 0};
+    const k = cameraShakeTrauma ** 2, t = time * CAMERA_SHAKE_FREQUENCY;
+    const wander = (seed)=> noise1D(t + seed) * 2 - 1;
+    return {pos: vec2(wander(0), wander(100)).scale(k * cameraShakeDistance), angle: wander(200) * k * cameraShakeAngle};
+}
+
+// fade the shake, called by the engine each update after gameUpdatePost
+function cameraShakeUpdate()
+{
+    if (!paused)
+        cameraShakeTrauma = max(0, cameraShakeTrauma - cameraShakeDecay * timeDelta);
+}
+
+// shake the view for the draw, called by the engine before a frame renders
+function cameraShakeBegin()
+{
+    cameraShakeSavedPos = undefined;
+    if (!cameraShakeTrauma) return;
+    const offset = cameraShakeOffset();
+    cameraShakeSavedPos = cameraPos, cameraShakeSavedAngle = cameraAngle;
+    cameraPos = cameraPos.add(offset.pos);
+    cameraAngle += offset.angle;
+}
+
+// give the game its own cameraPos and cameraAngle back, called by the engine after a frame renders
+function cameraShakeEnd()
+{
+    if (!cameraShakeSavedPos) return;
+    cameraPos = cameraShakeSavedPos, cameraAngle = cameraShakeSavedAngle;
+    cameraShakeSavedPos = undefined;
+}
+
 /** Check if a box, point, or circle is on screen with a circle test
  *  If size is a Vector2, uses the length as diameter
  *  This can be used to cull offscreen objects from render or update

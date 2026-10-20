@@ -398,6 +398,11 @@ worldToScreenDelta(worldDelta)  // Convert a world space delta to screen space
 screenToWorldTransform(screenPos, screenSize, screenAngle=0) // Convert a whole transform
 getCameraSize()          // Get the camera's visible area in world space
 cameraFit(center, size, worldMargin, screenInset) // Fit the camera to a world space rectangle
+cameraShake(amount=.5)   // Shake for a hit: adds to a shake that fades by itself, only what is drawn moves,
+                         // cameraPos and cameraAngle stay the game's own; in 2D and 3D, held while paused
+cameraShakeDistance = .5 // How far a full shake moves the view, world units; setCameraShakeDistance(distance)
+cameraShakeAngle = .05   // How far a full shake turns the view, radians; setCameraShakeAngle(angle)
+cameraShakeDecay = 1     // How much shake fades a second, 1 is a full shake gone in a second; setCameraShakeDecay(decay)
 
 // Display settings
 canvasMaxSize = (3840, 2160)  // The max size of the canvas in css pixels

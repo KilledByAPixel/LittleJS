@@ -618,6 +618,7 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
             // do post update
             debugUpdate();
             gameUpdatePost();
+            cameraShakeUpdate();
             inputUpdatePost();
         }
 
@@ -652,26 +653,31 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
             if (!wasUpdated)
                 engineUpdateCanvas();
 
-            // render the game and objects
-            enginePreRender();
-            gameRender();
-            engineObjectsSort();
-            for (const o of engineObjects)
+            // render the game and objects, the view shaken for the draw only
+            cameraShakeBegin();
+            try
             {
-                if (o.destroyed) continue;
-                setShader(o.shader); // each object draws with its own shader, or none
-                o.render();
-            }
-            setShader(); // back to the engine's for gameRenderPost
+                enginePreRender();
+                gameRender();
+                engineObjectsSort();
+                for (const o of engineObjects)
+                {
+                    if (o.destroyed) continue;
+                    setShader(o.shader); // each object draws with its own shader, or none
+                    o.render();
+                }
+                setShader(); // back to the engine's for gameRenderPost
 
-            // post rendering
-            gameRenderPost();
-            setShader(); // plugin, input and debug draws start from the engine's state
-            setAdditiveBlendMode(false);
-            pluginList.forEach(plugin=>plugin.render?.());
-            inputRender();
-            debugRender();
-            glFlush();
+                // post rendering
+                gameRenderPost();
+                setShader(); // plugin, input and debug draws start from the engine's state
+                setAdditiveBlendMode(false);
+                pluginList.forEach(plugin=>plugin.render?.());
+                inputRender();
+                debugRender();
+                glFlush();
+            }
+            finally { cameraShakeEnd(); } // the game's own camera back, even when a draw throws
             drawCount = 0;
             primitiveCount = 0;
         }

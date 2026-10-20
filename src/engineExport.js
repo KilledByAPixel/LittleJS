@@ -60,6 +60,9 @@ export
     cameraPos,
     cameraAngle,
     cameraScale,
+    cameraShakeDistance,
+    cameraShakeAngle,
+    cameraShakeDecay,
     timeScale,
     canvasColorTiles,
     canvasClearColor,
@@ -122,6 +125,9 @@ export
     setCameraPos,
     setCameraAngle,
     setCameraScale,
+    setCameraShakeDistance,
+    setCameraShakeAngle,
+    setCameraShakeDecay,
     setTimeScale,
     setCanvasColorTiles,
     setCanvasClearColor,
@@ -324,6 +330,7 @@ export
     setCursor,
     getCameraSize,
     cameraFit,
+    cameraShake,
     isOnScreen,
 
     // WebGL
