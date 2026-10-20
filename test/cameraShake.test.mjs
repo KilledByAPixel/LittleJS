@@ -76,3 +76,11 @@ test('the settings have setters', () =>
     assert.deepEqual(JSON.parse(run(`JSON.stringify([cameraShakeDistance, cameraShakeAngle, cameraShakeDecay])`)),
         [2, .1, 3]);
 });
+
+test('a camera set while a frame draws shaken is kept, not put back', () =>
+{
+    const { run } = loadEngine();
+    run(`cameraPos = vec2(3, 4); cameraShake(1); time = .37; cameraShakeBegin();
+        setCameraPos(vec2(9, 9)); cameraAngle = .5; cameraShakeEnd();`);
+    assert.deepEqual(JSON.parse(run(`JSON.stringify([cameraPos.x, cameraPos.y, cameraAngle])`)), [9, 9, .5]);
+});

@@ -399,7 +399,8 @@ screenToWorldTransform(screenPos, screenSize, screenAngle=0) // Convert a whole 
 getCameraSize()          // Get the camera's visible area in world space
 cameraFit(center, size, worldMargin, screenInset) // Fit the camera to a world space rectangle
 cameraShake(amount=.5)   // Shake for a hit: adds to a shake that fades by itself, only what is drawn moves,
-                         // cameraPos and cameraAngle stay the game's own; in 2D and 3D, held while paused
+                         // cameraPos and cameraAngle stay the game's own; in 2D and 3D, held while paused or
+                         // at time scale 0
 cameraShakeDistance = .5 // How far a full shake moves the view, world units; setCameraShakeDistance(distance)
 cameraShakeAngle = .05   // How far a full shake turns the view, radians; setCameraShakeAngle(angle)
 cameraShakeDecay = 1     // How much shake fades a second, 1 is a full shake gone in a second; setCameraShakeDecay(decay)
@@ -1382,7 +1383,7 @@ camera.autoSwing = true        // swing behind the way the target moves across t
                                // behind the target's getForward3D instead
 camera.manualControl = true    // the mouse dragging dragButton = 2 (lockPointer to capture it) and gamepad stick 1 turn
                                // it, holding the swing for swingDelay = 1 second; camera.turn(yaw, pitch) does the same
-camera.collideWalls = true     // a wall between pulls it in, wallMargin = .2 in front, easing back out over
+camera.collideWalls = true     // the level or a solid object between pulls it in, wallMargin = .2 in front, easing back out over
                                // wallSmoothing = .2 seconds; the target and its parts are never the wall
 camera.smoothing = .05         // seconds the pivot trails the target; pitchRange = vec2(-.4, 1.2); snap() at once
 // the 3D cameras are cameras of the camera plugin: the newest made drives render3D.camera after the objects move,

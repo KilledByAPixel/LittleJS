@@ -93,6 +93,9 @@ function getPaused() { return paused; }
  *  @memberof Engine */
 function setPaused(isPaused=true) { paused = isPaused; }
 
+// the update running now is frozen, paused or at a time scale of 0, so what follows game time holds
+let engineFrozenTick = false;
+
 /** Frames drawn per second, smoothed over the last few seconds, in release builds too
  *  @type {number}
  *  @memberof Engine */
@@ -596,6 +599,7 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
         // one tick of the loop: update game and objects, when frozen update everything except them
         function engineTick(frozenTick)
         {
+            engineFrozenTick = frozenTick;
             wasUpdated = true;
             engineUpdateCanvas();
             inputUpdate();

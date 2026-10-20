@@ -1661,14 +1661,14 @@ function cameraFit(center, size, worldMargin, screenInset)
 let cameraShakeTrauma = 0;
 // noise steps a second, how fast the shaken view wanders
 const CAMERA_SHAKE_FREQUENCY = 15;
-// the game's own cameraPos and cameraAngle, kept while a frame draws shaken
-let cameraShakeSavedPos, cameraShakeSavedAngle = 0;
+// the game's own cameraPos and cameraAngle, kept while a frame draws shaken, and the shaken ones set in their place
+let cameraShakeSavedPos, cameraShakeSavedAngle = 0, cameraShakeShakenPos, cameraShakeShakenAngle = 0;
 
 /** Shake the camera, for a hit or an explosion: adds to the shake, which fades on its own by cameraShakeDecay
  *  - The view moves by smooth noise scaled by the shake squared, so a small one is gentle and a big one is wild,
  *    up to cameraShakeDistance and cameraShakeAngle
  *  - It moves only what is drawn, in 2D and in 3D: cameraPos and cameraAngle are the game's own between frames
- *  - It holds while the game is paused
+ *  - It holds while the game is paused or at a time scale of 0
  *  @param {number} [amount] - How much to add, the shake is at most 1
  *  @memberof Draw */
 function cameraShake(amount=.5)
@@ -1690,7 +1690,7 @@ function cameraShakeOffset()
 // fade the shake, called by the engine each update after gameUpdatePost
 function cameraShakeUpdate()
 {
-    if (!paused)
+    if (!paused && !engineFrozenTick) // held while paused or at time scale 0, a hit stop
         cameraShakeTrauma = max(0, cameraShakeTrauma - cameraShakeDecay * timeDelta);
 }
 
@@ -1701,16 +1701,20 @@ function cameraShakeBegin()
     if (!cameraShakeTrauma) return;
     const offset = cameraShakeOffset();
     cameraShakeSavedPos = cameraPos, cameraShakeSavedAngle = cameraAngle;
-    cameraPos = cameraPos.add(offset.pos);
-    cameraAngle += offset.angle;
+    cameraPos = cameraShakeShakenPos = cameraPos.add(offset.pos);
+    cameraAngle = cameraShakeShakenAngle = cameraAngle + offset.angle;
 }
 
-// give the game its own cameraPos and cameraAngle back, called by the engine after a frame renders
+// give the game its own cameraPos and cameraAngle back, called by the engine after a frame renders; one the game set
+// while the frame drew is its own already, and is kept
 function cameraShakeEnd()
 {
     if (!cameraShakeSavedPos) return;
-    cameraPos = cameraShakeSavedPos, cameraAngle = cameraShakeSavedAngle;
-    cameraShakeSavedPos = undefined;
+    if (cameraPos === cameraShakeShakenPos)
+        cameraPos = cameraShakeSavedPos;
+    if (cameraAngle === cameraShakeShakenAngle)
+        cameraAngle = cameraShakeSavedAngle;
+    cameraShakeSavedPos = cameraShakeShakenPos = undefined;
 }
 
 /** Check if a box, point, or circle is on screen with a circle test

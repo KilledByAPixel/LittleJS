@@ -39,7 +39,7 @@ function cameraUpdatePost()
 {
     for (let i = cameraList.length; i--;)
         cameraList[i].destroyed && cameraList.splice(i, 1);
-    if (paused) return;
+    if (paused || engineFrozenTick) return; // held while paused or at time scale 0
     const camera = cameraList[cameraList.length - 1];
     if (camera && camera !== cameraDriving && !camera.cameraNew)
         camera.takeView();
@@ -119,6 +119,7 @@ class FollowCamera extends EngineObject
         this.lookDirection = vec2(); // which way it looks on each axis, -1, 0 or 1
         this.lookTravel = vec2();    // how far the target has gone back against the look since it last went with it
         this.lookFrom = undefined;   // where the target was last update, to see which way it moves
+        this.lookTarget = undefined; // the object lookFrom is of, a new one starts measuring again
         this.activate();
         this.snap();
     }
@@ -134,6 +135,7 @@ class FollowCamera extends EngineObject
     {
         if (this.scale !== undefined)
             setCameraScale(this.scale);
+        this.lookFrom = undefined; // a teleport is not a move to look along
         this.updateLook(true);
         const focus = this.getFocus();
         if (focus)
@@ -180,6 +182,8 @@ class FollowCamera extends EngineObject
     // on each axis the first move sets the look; it turns once the target has gone back lookAheadTurn the other way
     updateLook(snap)
     {
+        if (this.target !== this.lookTarget && this.target instanceof EngineObject)
+            this.lookTarget = this.target, this.lookFrom = undefined; // a new target, not a move
         const pos = this.getTargetPos(), from = this.lookFrom;
         if (!pos) return;
         if (from)

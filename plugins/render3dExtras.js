@@ -823,7 +823,8 @@ class CameraControl3D extends EngineObject3D
  * - The mouse, dragging dragButton or with the pointer locked, and a gamepad stick turn it by hand when
  *   manualControl is on, and turning by hand holds the swing for swingDelay seconds; turn() does the same for a
  *   game's own controls
- * - A wall between the pivot and the camera pulls it in, in front of the wall, and it eases back out once clear
+ * - A wall between the pivot and the camera, the level or a solid object, pulls it in, in front of the wall, and it
+ *   eases back out once clear
  * - A camera of the camera plugin: the newest made drives the view, after the objects move each update
  * - Destroy it to hand the camera back
  * @extends EngineObject3D
@@ -918,15 +919,20 @@ class ThirdPersonCamera3D extends EngineObject3D
         this.turnTime = time;
     }
 
-    /** Put the camera on the target at once, with no easing, for a level start or a teleport */
+    /** Put the camera on the target at once, with no easing, for a level start or a teleport; with no target it
+     *  stays where the camera is, looking the way it looks */
     snap()
     {
         const pos = this.getTargetPos();
-        if (pos)
+        if (!pos)
         {
-            this.pivot = pos.add(this.pivotOffset);
-            this.targetFrom = pos.copy();
+            this.takeView();
+            this.poleLength = this.distance;
+            this.pivot = render3D.camera.pos.subtract(this.getPoleDirection().scale(this.distance));
+            return this.placeCamera();
         }
+        this.pivot = pos.add(this.pivotOffset);
+        this.targetFrom = pos.copy();
         this.poleLength = this.getPoleLimit();
         this.placeCamera();
     }
@@ -989,16 +995,18 @@ class ThirdPersonCamera3D extends EngineObject3D
         return vec3(sin(this.yaw) * c, sin(this.pitch), cos(this.yaw) * c);
     }
 
-    // how long the pole can be, short of the nearest wall along it, not counting the target, its parts or this
+    // how long the pole can be, short of the nearest wall along it: the level and solid objects, not counting the
+    // target, its parts or this
     getPoleLimit()
     {
         if (!this.collideWalls) return this.distance;
-        const target = this.target, own = (o)=>
+        const target = this.target, wall = (o)=>
         {
             for (let p = o; p; p = p.parent)
-                if (p === target || p === this) return true;
+                if (p === target || p === this) return false;
+            return o.isSolid || render3DLevel.includes(o);
         };
-        const hit = render3D.pick(new Ray3D(this.pivot, this.getPoleDirection()), engineObjects.filter((o)=> !own(o)));
+        const hit = render3D.pick(new Ray3D(this.pivot, this.getPoleDirection()), engineObjects.filter(wall));
         return hit && hit.distance < this.distance + this.wallMargin ?
             max(0, hit.distance - this.wallMargin) : this.distance;
     }
@@ -1008,6 +1016,14 @@ class ThirdPersonCamera3D extends EngineObject3D
     {
         render3D.camera.orbit(this.pivot, this.poleLength, this.yaw, this.pitch);
         this.pos3D = render3D.camera.pos.copy();
+    }
+
+    /** Let go of the mouse and stop driving the camera
+     *  @param {boolean} [immediate] */
+    destroy(immediate)
+    {
+        this.lockPointer && pointerLockIsActive() && pointerLockExit();
+        super.destroy(immediate);
     }
 
     /** Camera controls draw nothing */

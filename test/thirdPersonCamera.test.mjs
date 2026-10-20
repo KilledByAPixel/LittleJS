@@ -120,3 +120,27 @@ test('a destroyed target holds the camera where it is', () =>
     run(`step(); var before = JSON.stringify(render3D.camera.pos); target.destroy(); step(10);`);
     assert.equal(run(`JSON.stringify(render3D.camera.pos)`), run(`before`));
 });
+
+test('with no target it holds the camera where it is', () =>
+{
+    const { run } = loadEngine();
+    run(`headlessMode = true; new Render3DPlugin; timeDelta = 1/60;
+        render3D.camera.pos = vec3(50, 5, 50); render3D.camera.rotation = vec3(-.2, .4, 0);
+        var camera = new ThirdPersonCamera3D; cameraUpdatePost();`);
+    assert.ok(run(`render3D.camera.pos.distance(vec3(50, 5, 50))`) < 1e-6, 'held');
+});
+
+test('only the level and solid objects pull it in, not a sprite or a mesh that is not solid', () =>
+{
+    const run = engine();
+    run(`var bush = new EngineObject3D(vec3(0, 1 + 3 * sin(.3), 3 * cos(.3)), render3D.boxMesh); step();`);
+    near(run(`render3D.camera.pos.distance(vec3(0, 1, 0))`), 6, 'full length');
+});
+
+test('destroying it lets go of a captured pointer', () =>
+{
+    const run = engine();
+    run(`camera.lockPointer = true; var exited = 0; pointerLockIsActive = ()=> true; pointerLockExit = ()=> ++exited;
+        camera.destroy();`);
+    assert.equal(run(`exited`), 1);
+});

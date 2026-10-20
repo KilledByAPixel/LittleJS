@@ -198,3 +198,12 @@ test('a velocity given to the camera, as an area effect might, does not move it'
         camera.velocity = vec2(5, 5); camera.updatePhysics(); step();`);
     assert.deepEqual(view(), [0, 0]);
 });
+
+test('a teleport with snap, or a new target, does not turn the look', () =>
+{
+    const { run, ahead } = looking('vec2(3, 0)', 0);
+    run(`walk(.1, 0, 20); target.pos = vec2(-50, 0); camera.snap(); step();`);
+    near(ahead()[0], 3, 'after a teleport');
+    run(`var other = new EngineObject(vec2(-90, 0)); camera.target = other; target = other; step(2);`);
+    near(ahead()[0], 3, 'after a new target');
+});
