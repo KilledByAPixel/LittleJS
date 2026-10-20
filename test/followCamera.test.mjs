@@ -190,3 +190,11 @@ test('snap puts the look on at once', () =>
     run(`camera.snap();`);
     near(ahead()[0], 3, 'ahead');
 });
+
+test('a velocity given to the camera, as an area effect might, does not move it', () =>
+{
+    const { run, view } = engine();
+    run(`var camera = new FollowCamera(target, 0); camera.deadZone = vec2(100);
+        camera.velocity = vec2(5, 5); camera.updatePhysics(); step();`);
+    assert.deepEqual(view(), [0, 0]);
+});

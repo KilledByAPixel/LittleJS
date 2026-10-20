@@ -228,9 +228,8 @@ export function decorateTile(pos, tileLayer)
     }
 }
 
-export function getCameraTarget()
+export function getCameraOffset()
 {
     // camera is above player
-    const offset = 100/LJS.cameraScale*LJS.percent(LJS.mainCanvasSize.y, 300, 600);
-    return Game.player.pos.add(vec2(0, offset));
+    return vec2(0, 100/LJS.cameraScale*LJS.percent(LJS.mainCanvasSize.y, 300, 600));
 }

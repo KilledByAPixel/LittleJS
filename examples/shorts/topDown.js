@@ -12,9 +12,6 @@ class Player extends EngineObject
         // apply movement controls
         const moveInput = keyDirection().clampLength(1).scale(.2);
         this.velocity = this.velocity.add(moveInput);
-
-        // smoothly follow player with lerp
-        cameraPos = cameraPos.lerp(this.pos, .1);
     }
 }
 
@@ -23,7 +20,10 @@ function gameInit()
     // setup level
     canvasClearColor = hsl(.3,.2,.6);
     objectDefaultDamping = .7;
-    new Player;
+    const player = new Player;
+
+    // the camera glides after the player
+    const camera = new FollowCamera(player, .15);
 
     // create collision objects
     for (let i=300; i--;)
@@ -39,8 +39,8 @@ function gameInit()
 
 /* info
 A world seen from straight above. The arrow keys or WASD move the
-player in any direction among 300 solid blocks, and the camera glides
-after it.
+player in any direction among 300 solid blocks, and a `FollowCamera`
+glides after it.
 
 ## How it works
 There is no gravity here, since `gravity` is zero unless a game sets
@@ -61,10 +61,13 @@ lowest first, so the player draws over a block.
   diagonally is no faster. `scale(.2)` makes it the push for one frame.
 - The push is added to the velocity, and the engine moves the object
   by its velocity and stops it at anything solid.
-- `cameraPos.lerp(this.pos, .1)` is the point a tenth of the way from
-  the camera to the player. Doing that every frame closes a tenth of
-  what is left each time, so the camera moves fast when it is far
-  behind and settles gently.
+
+### The camera
+`new FollowCamera(player, .15)` follows the player and sets
+`cameraPos` every frame, after the objects have moved, so it is never
+a frame behind. Its smoothing, `.15`, is in seconds: each moment it
+closes the same share of what is left, so it moves fast when it is far
+behind and settles gently, the same at any frame rate.
 
 ### Damping
 Adding a push every frame would make the player faster and faster.
@@ -87,13 +90,16 @@ That leaves the start clear and spreads the blocks thinner farther out.
 ## Try it
 - Skate on ice: `objectDefaultDamping = .7` to `.95`.
 - Move with twice the push: `scale(.2)` to `scale(.4)`.
-- Change the `.1` in the `lerp` to `.02` for a lazy camera, or to `1`
-  to lock it to the player.
+- Change the camera's `.15` to `.6` for a lazy camera, or to `0` to
+  lock it to the player.
+- Let the player wander a little before the camera follows: after the
+  camera is made, add `camera.deadZone = vec2(8, 6);`.
 - Give the blocks a random hue: `hsl(.1,.5,rand(.2))` to
   `hsl(rand(),.5,.3)`.
 
 ## See also
 Tilted View Game turns this into a view from an angle. Camera Mouse
-Drag moves the camera by hand, and Vectors shows `lerp`. Look up
-`clampLength`, `objectDefaultDamping` and `renderOrder`.
+Drag moves the camera by hand, and Camera Shake shakes it. Look up
+`FollowCamera`, `clampLength`, `objectDefaultDamping` and
+`renderOrder`.
 */

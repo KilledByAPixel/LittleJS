@@ -65,6 +65,7 @@ export function explosion(pos, radius=3)
     LJS.ASSERT(radius > 0);
 
     sound_explosion.play(pos);
+    LJS.cameraShake(radius/10); // a bigger blast shakes more
 
     {
         // destroy level

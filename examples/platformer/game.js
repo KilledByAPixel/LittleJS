@@ -17,7 +17,7 @@ import * as GameLevel from './gameLevel.js';
 const {vec2} = LJS;
 
 // globals
-export let gameLevelData, spriteAtlas, player, score, deaths;
+export let gameLevelData, spriteAtlas, player, camera, score, deaths;
 export function addToScore(delta=1) { score += delta; }
 export function addToDeaths() { ++deaths; }
 
@@ -36,7 +36,15 @@ function loadLevel()
     
     // spawn player
     player = new GamePlayer.Player(GameLevel.playerStartPos);
-    LJS.setCameraPos(GameLevel.getCameraTarget());
+
+    // the camera follows the player, showing more of the way it runs, and keeps the view over the level
+    camera = new LJS.FollowCamera(player, .15);
+    camera.offset = GameLevel.getCameraOffset();
+    camera.deadZone = vec2(1, 3);
+    camera.lookAhead = vec2(3, 0);
+    camera.boundsMin = vec2();
+    camera.boundsMax = vec2(GameLevel.levelSize.x, Infinity);
+    camera.snap();
 
     // init game
     score = deaths = 0;
@@ -87,10 +95,12 @@ function gameUpdate()
         player = new GamePlayer.Player(GameLevel.playerStartPos);
         player.velocity = vec2(0,.1);
         GameEffects.sound_jump.play();
+        camera.target = player;
     }
     
-    // mouse wheel = zoom
+    // mouse wheel = zoom, the camera keeps the player the same height above the middle of the view
     LJS.setCameraScale(LJS.clamp(LJS.cameraScale*(1-LJS.mouseWheel/10), 1, 1e3));
+    camera.offset = GameLevel.getCameraOffset();
     
     // T = drop test crate
     if (LJS.keyWasPressed('KeyT'))
@@ -114,11 +124,7 @@ function gameUpdate()
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-function gameUpdatePost()
-{
-    // update camera
-    LJS.setCameraPos(LJS.cameraPos.lerp(GameLevel.getCameraTarget(), LJS.clamp(player.getAliveTime()/2)));
-}
+function gameUpdatePost() {}
 
 ///////////////////////////////////////////////////////////////////////////////
 function gameRender()

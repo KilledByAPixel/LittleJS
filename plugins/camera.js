@@ -104,7 +104,8 @@ class FollowCamera extends EngineObject
         /** @property {Vector2|undefined} - Lowest corner of the area the view stays in
          *  @type {Vector2|undefined} */
         this.boundsMin = undefined;
-        /** @property {Vector2|undefined} - Highest corner of the area the view stays in
+        /** @property {Vector2|undefined} - Highest corner of the area the view stays in, Infinity on an axis leaves
+         *  that side open
          *  @type {Vector2|undefined} */
         this.boundsMax = undefined;
         /** @property {number|undefined} - The cameraScale it eases to, undefined leaves cameraScale to the game
@@ -213,6 +214,9 @@ class FollowCamera extends EngineObject
             clamp(p, a === undefined ? -Infinity : a + h, b === undefined ? Infinity : b - h);
         return vec2(axis(pos.x, low?.x, high?.x, half.x), axis(pos.y, low?.y, high?.y, half.y));
     }
+
+    /** A camera is moved only by its target, physics leaves it alone */
+    updatePhysics() {}
 
     /** A camera draws nothing */
     render() {}

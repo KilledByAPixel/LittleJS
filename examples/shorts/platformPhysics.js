@@ -16,9 +16,6 @@ class Player extends EngineObject
         this.velocity.x += input.x * (this.groundObject ? .06 : .01);
         if (this.groundObject && input.y > 0)
             this.velocity.y = .5;
-        // follow it, keeping the view over the level, 42 units across
-        const w = min(getCameraSize().x/2, 21);
-        cameraPos = vec2(clamp(this.pos.x, w, 42 - w), 7);
     }
 
     // asked about a one way tile only when it would land on it
@@ -100,6 +97,11 @@ function gameInit()
 
     new Lift(vec2(26, 5));
     player = new Player(vec2(2, 2));
+
+    // the camera follows the player and keeps the view over the level
+    const camera = new FollowCamera(player);
+    camera.boundsMin = vec2();
+    camera.boundsMax = layer.size;
 }
 
 /* info
@@ -119,6 +121,13 @@ and with solid objects. Its `update` reads `keyDirection()`, adds to
 `velocity.x` to run, a lot on the ground and a little in the air, and
 sets `velocity.y` to jump, but only when `groundObject`, what it stands
 on, is set.
+
+### The camera
+A `FollowCamera` follows the player and sets `cameraPos` each frame.
+`boundsMin` and `boundsMax`, the level's corners, keep the view over
+the level, so it stops at the level's ends, and where the level is
+smaller than the view, as it is from bottom to top, the view sits in
+its middle.
 
 ### One way platforms
 The level is a `TileCollisionLayer`. Tile 10, the bricks, is the
@@ -169,6 +178,8 @@ the player keeps sliding after the keys are let go. A layer's
 - Make the ice a trampoline: add `ice.restitution = 1;`.
 - Make the crate light: `crate.mass = 3;` to `crate.mass = .3;`.
 - Make the lift faster: `.06` to `.12`.
+- Let the view leave the level: remove the two lines that set
+  `boundsMin` and `boundsMax`.
 
 ## See also
 Platformer Game is the smallest platformer, and Platforming Game in the
