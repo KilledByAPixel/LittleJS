@@ -5,13 +5,17 @@ What changed in each release, newest first. Releases before 1.20.0 are on the
 
 ## Unreleased
 
+Nothing yet.
+
+## 1.28.0 - 2026-10-20
+
 ### New Changes
 - Setting a child object's `pos` or `angle` works: it stays where it was put and moves with its parent from there, the change made its new `localPos` or `localAngle`; before, the parent put it back every frame, and a debug build only warned. Reading them is unchanged, they are in world space as before
 - `setWorldPos3D(pos)`, `setWorldRotation3D(rotation)` and `getWorldRotation3D()` on an `EngineObject3D`: put a child at a position or rotation in the world, setting its `pos3D` or `rotation3D`, which stay relative to the parent, and read its rotation in the world as `getWorldPos3D()` reads its place
 - The camera plugin, `plugins/camera.js`: `FollowCamera`, a 2D camera that follows a target with smoothing in seconds, an offset, a dead zone, a look ahead that slides across when the target turns, level bounds and zoom; the newest camera made drives the view, after the objects move, so it is never a frame behind
 - The platformer follows its player with a `FollowCamera`, looking ahead the way it runs and kept over the level, and its explosions shake the view; Top Down and Platform Physics use one too, the 3D example rolls its ball the way a `ThirdPersonCamera3D` faces, swinging behind it, and the Camera Shake and 3D Third Person shorts are new
 - `ThirdPersonCamera3D`: a camera on a pole from the player that swings around behind the way it moves, or its facing with `useFacing`, turned by the mouse or a gamepad stick or `turn()`, which holds the swing for a moment, and pulled in by a wall between it and the player
-- `cameraShake(amount)`: a shake for hits and explosions that fades by itself, smooth noise scaled by the shake squared, in 2D and 3D; it moves only what is drawn, so `cameraPos` and `cameraAngle` stay the game's own, and it holds while paused; `cameraShakeDistance`, `cameraShakeAngle` and `cameraShakeDecay` tune it, with setters
+- `cameraShake(amount)`: a shake for hits and explosions that fades by itself, smooth noise scaled by the shake squared, in 2D and 3D; it moves only what is drawn, so `cameraPos` and `cameraAngle` stay the game's own, and it holds while paused or at time scale 0, for a hit stop; `cameraShakeDistance`, `cameraShakeAngle` and `cameraShakeDecay` tune it, with setters
 - `engineAddPlugin` takes a sixth function, `updatePost`, called each tick after the objects update and before `gameUpdatePost`, paused included, for a plugin that follows an object, like a camera
 - A Box2D `beginContact` gets a fifth argument, `contact`: `point`, where the objects touched, `normal`, the other's surface normal pointing toward this object, and `impulse`, an estimate of how hard they hit from both objects' mass and inertia at the point, so a stick heavy at its ends hits harder than one heavy in the middle spinning at the same speed, which `impactSpeed` alone can not tell apart
 - Box2D one way platforms, conveyor belts and `preSolve`: `oneWay` on a `Box2dObject` works as in 2D, blocking only what first touches it from the far side and turning with the body; `setSurfaceSpeed(speed)` runs its surface clockwise around it, carrying what touches it; `preSolve(otherObject, fixture, otherFixture, contact)` is called each step before a contact is solved, where `contact.enabled = false` lets them pass through until they stop touching, as for dropping through a platform, and its friction, restitution and surface speed can be changed

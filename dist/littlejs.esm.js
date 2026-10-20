@@ -35,7 +35,7 @@ const engineName = 'LittleJS';
  *  @type {string}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.27.2';
+const engineVersion = '1.28.0';
 
 /** Frames per second to update
  *  @type {number}
@@ -95,6 +95,9 @@ function getPaused() { return paused; }
  *  @param {boolean} [isPaused]
  *  @memberof Engine */
 function setPaused(isPaused=true) { paused = isPaused; }
+
+// the update running now is frozen, paused or at a time scale of 0, so what follows game time holds
+let engineFrozenTick = false;
 
 /** Frames drawn per second, smoothed over the last few seconds, in release builds too
  *  @type {number}
@@ -334,13 +337,14 @@ let showEngineVersion = true;
 const pluginList = [];
 class EnginePlugin
 {
-    constructor(update, render, glContextLost, glContextRestored, preRender)
+    constructor(update, render, glContextLost, glContextRestored, preRender, updatePost)
     {
         this.update = update;
         this.render = render;
         this.glContextLost = glContextLost;
         this.glContextRestored = glContextRestored;
         this.preRender = preRender;
+        this.updatePost = updatePost;
     }
 }
 
@@ -356,17 +360,19 @@ class EnginePlugin
  *  @param {PluginCallback} [glContextLost]
  *  @param {PluginCallback} [glContextRestored]
  *  @param {PluginCallback} [preRender] - Called after the canvas is cleared and before gameRender
+ *  @param {PluginCallback} [updatePost] - Called after the objects update each tick, before gameUpdatePost, paused
+ *    included, for what follows an object, like a camera
  *  @memberof Engine */
-function engineAddPlugin(update, render, glContextLost, glContextRestored, preRender)
+function engineAddPlugin(update, render, glContextLost, glContextRestored, preRender, updatePost)
 {
     // make sure plugin functions are unique
     ASSERT(!pluginList.find(p=>
         p.update === update && p.render === render &&
         p.glContextLost === glContextLost &&
         p.glContextRestored === glContextRestored &&
-        p.preRender === preRender), 'engineAddPlugin: this plugin was already added');
+        p.preRender === preRender && p.updatePost === updatePost), 'engineAddPlugin: this plugin was already added');
 
-    const plugin = new EnginePlugin(update, render, glContextLost, glContextRestored, preRender);
+    const plugin = new EnginePlugin(update, render, glContextLost, glContextRestored, preRender, updatePost);
     pluginList.push(plugin);
 }
 
@@ -596,6 +602,7 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
         // one tick of the loop: update game and objects, when frozen update everything except them
         function engineTick(frozenTick)
         {
+            engineFrozenTick = frozenTick;
             wasUpdated = true;
             engineUpdateCanvas();
             inputUpdate();
@@ -613,10 +620,12 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
             }
             else
                 engineObjectsUpdate();
+            pluginList.forEach(plugin=>plugin.updatePost?.());
 
             // do post update
             debugUpdate();
             gameUpdatePost();
+            cameraShakeUpdate();
             inputUpdatePost();
         }
 
@@ -651,26 +660,31 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
             if (!wasUpdated)
                 engineUpdateCanvas();
 
-            // render the game and objects
-            enginePreRender();
-            gameRender();
-            engineObjectsSort();
-            for (const o of engineObjects)
+            // render the game and objects, the view shaken for the draw only
+            cameraShakeBegin();
+            try
             {
-                if (o.destroyed) continue;
-                setShader(o.shader); // each object draws with its own shader, or none
-                o.render();
-            }
-            setShader(); // back to the engine's for gameRenderPost
+                enginePreRender();
+                gameRender();
+                engineObjectsSort();
+                for (const o of engineObjects)
+                {
+                    if (o.destroyed) continue;
+                    setShader(o.shader); // each object draws with its own shader, or none
+                    o.render();
+                }
+                setShader(); // back to the engine's for gameRenderPost
 
-            // post rendering
-            gameRenderPost();
-            setShader(); // plugin, input and debug draws start from the engine's state
-            setAdditiveBlendMode(false);
-            pluginList.forEach(plugin=>plugin.render?.());
-            inputRender();
-            debugRender();
-            glFlush();
+                // post rendering
+                gameRenderPost();
+                setShader(); // plugin, input and debug draws start from the engine's state
+                setAdditiveBlendMode(false);
+                pluginList.forEach(plugin=>plugin.render?.());
+                inputRender();
+                debugRender();
+                glFlush();
+            }
+            finally { cameraShakeEnd(); } // the game's own camera back, even when a draw throws
             drawCount = 0;
             primitiveCount = 0;
         }
@@ -956,8 +970,12 @@ function engineObjectsUpdate()
     const fixed = [];
     engineObjectsCollide = [];
     engineObjectsCollideStaticLast = [];
+    // and a pos or angle the game set on a child since the last frame is kept before its parent moves, to move with it
     for (const o of engineObjects)
+    {
+        o.parent && engineObjectChildKeep(o);
         o.collideSolidObjects && (engineObjectsCollide.push(o), (o.mass ? engineObjectsCollideStaticLast : fixed).push(o));
+    }
     for (const o of fixed)
         engineObjectsCollideStaticLast.push(o);
     // written only when there is a grid: V8 keeps a variable that is never written as a constant, and writing it
@@ -3313,6 +3331,7 @@ class Timer
     constructor(timeLeft, useRealTime=false)
     {
         ASSERT(timeLeft === undefined || isNumber(timeLeft), 'Timer: time must be a number of seconds', timeLeft);
+        /** @property {boolean} - Runs on real time, so it keeps going while the game is paused, see setUseRealTime */
         this.useRealTime = useRealTime;
         const globalTime = this.getGlobalTime();
         /** @type {number|undefined} */
@@ -3656,6 +3675,24 @@ let cameraAngle = 0;
  *  @default
  *  @memberof Settings */
 let cameraScale = 32;
+
+/** How far a full camera shake moves the view, in world units, see cameraShake
+ *  @type {number}
+ *  @default
+ *  @memberof Settings */
+let cameraShakeDistance = .5;
+
+/** How far a full camera shake turns the view, in radians, see cameraShake
+ *  @type {number}
+ *  @default
+ *  @memberof Settings */
+let cameraShakeAngle = .05;
+
+/** How much camera shake fades each second, 1 takes a full shake to nothing in a second, see cameraShake
+ *  @type {number}
+ *  @default
+ *  @memberof Settings */
+let cameraShakeDecay = 1;
 
 ///////////////////////////////////////////////////////////////////////////////
 // Time settings
@@ -4103,6 +4140,21 @@ function setCameraAngle(angle) { cameraAngle = angle; }
  *  @param {number} scale
  *  @memberof Settings */
 function setCameraScale(scale) { cameraScale = scale; }
+
+/** Set how far a full camera shake moves the view, in world units
+ *  @param {number} distance
+ *  @memberof Settings */
+function setCameraShakeDistance(distance) { cameraShakeDistance = distance; }
+
+/** Set how far a full camera shake turns the view, in radians
+ *  @param {number} angle
+ *  @memberof Settings */
+function setCameraShakeAngle(angle) { cameraShakeAngle = angle; }
+
+/** Set how much camera shake fades each second
+ *  @param {number} decay
+ *  @memberof Settings */
+function setCameraShakeDecay(decay) { cameraShakeDecay = decay; }
 
 /** Set scale applied to engine time
  *  - 0 freezes the game like a pause, gameUpdatePost and input still run so the game can set it back
@@ -4667,27 +4719,39 @@ function engineObjectBulletSweep(object, from, to)
 // it, or where it is when updatePhysics is called on its own
 function engineObjectStartPos(o) { return engineObjectsOneWayStart?.get(o) || o.pos; }
 
-// debug only: where each child was last placed from its parent, [x, y, angle], so a pos or angle the game set on it,
-// which its parent's transform puts back at once, can be said once; a WeakMap keeps the objects' own shape
-const engineObjectChildPlacedAt = new WeakMap;
-let engineObjectChildWarned = false;
+// a pos or angle the game set on a child since its parent last placed it is kept: made its localPos or localAngle,
+// so the child stays where it was put and moves with its parent from there; each is kept alone, so setting the
+// angle leaves localPos exactly as it was; setting one and its local value both is a mistake, the local one is lost
+function engineObjectChildKeep(o)
+{
+    const placed = o.placedTransform, parent = o.parent;
+    if (!placed || !parent) return;
+    const mirror = parent.getMirrorSign();
+    if (o.pos.x !== placed[0] || o.pos.y !== placed[1])
+    {
+        ASSERT(o.localPos.x === placed[3] && o.localPos.y === placed[4],
+            'a child\'s pos and localPos were both set before it was placed again, set one of them', o);
+        const local = parent.worldToLocal(o.pos);
+        o.localPos.set(local.x * mirror, local.y);
+    }
+    if (o.angle !== placed[2])
+    {
+        ASSERT(o.localAngle === placed[5],
+            'a child\'s angle and localAngle were both set before it was placed again, set one of them', o);
+        o.localAngle = mirror * (o.angle - parent.angle);
+    }
+    // kept now, so a later check before it is placed again does not take it from where the parent has moved to
+    engineObjectChildPlaced(o);
+}
+
+// keep where a child is placed, [x, y, angle], to tell what the game set since, and in a debug build the local
+// values it was placed from, [localPos.x, localPos.y, localAngle] after those, for the assert that both were set
 function engineObjectChildPlaced(o)
 {
-    const placed = engineObjectChildPlacedAt.get(o);
-    if (placed)
-        placed[0] = o.pos.x, placed[1] = o.pos.y, placed[2] = o.angle;
-    else
-        engineObjectChildPlacedAt.set(o, [o.pos.x, o.pos.y, o.angle]);
-}
-function engineObjectChildCheck(o)
-{
-    const placed = engineObjectChildPlacedAt.get(o);
-    if (!placed || engineObjectChildWarned) return;
-    const posSet = o.pos.x !== placed[0] || o.pos.y !== placed[1], angleSet = o.angle !== placed[2];
-    if (!posSet && !angleSet) return;
-    engineObjectChildWarned = true;
-    console.warn(`a child object's ${posSet ? 'pos' : 'angle'} was set, but its parent places it each frame: ` +
-        `set its ${posSet ? 'localPos' : 'localAngle'} instead, which is relative to the parent`, o);
+    const placed = o.placedTransform || (o.placedTransform = []);
+    placed[0] = o.pos.x, placed[1] = o.pos.y, placed[2] = o.angle;
+    if (debug)
+        placed[3] = o.localPos.x, placed[4] = o.localPos.y, placed[5] = o.localAngle;
 }
 
 /**
@@ -4737,7 +4801,8 @@ class EngineObject
         ASSERT(isColor(color), 'object color should be a valid rgba color');
         ASSERT(typeof renderOrder === 'number', 'object renderOrder should be a number');
 
-        /** @property {Vector2} - World space position of the object */
+        /** @property {Vector2} - World space position of the object, on a child too, where setting it moves the
+         *  child there and its localPos follows */
         this.pos = pos.copy();
         /** @property {Vector2} - World space width and height of the object */
         this.size = size.copy();
@@ -4747,7 +4812,8 @@ class EngineObject
         /** @property {TileInfo|undefined} - Tile info to render object (undefined is untextured)
          *  @type {TileInfo|undefined} */
         this.tileInfo = tileInfo;
-        /** @property {number} - Angle to rotate the object */
+        /** @property {number} - Angle to rotate the object, in world space on a child too, where setting it turns
+         *  the child and its localAngle follows */
         this.angle = angle;
         /** @property {Color} - Color to apply when rendered */
         this.color = color.copy();
@@ -4830,8 +4896,12 @@ class EngineObject
         /** @property {Vector2|undefined} - Position relative to the parent, only while attached to one
          *  @type {Vector2|undefined} */
         this.localPos = undefined;
-        /** @property {number} - Local angle if child  */
+        /** @property {number} - Angle relative to the parent, only while attached to one */
         this.localAngle = 0;
+        // where the parent last placed this child, with the local values it was placed from, so a pos or angle the
+        // game sets is kept, see engineObjectChildPlaced
+        /** @type {Array<number>|undefined} */
+        this.placedTransform = undefined;
 
         // collision flags
         /** @property {boolean} - Object collides with the level, its tile collision layers
@@ -4853,14 +4923,16 @@ class EngineObject
     }
 
     /** Update the object transform, called automatically by engine even when paused
+     *  - A child is placed from its parent, and a pos or angle set on it since is kept first, made its localPos or
+     *    localAngle; the engine does that each frame, call this after setting one to have them right away
      *  @param {boolean} [updateChildren] - Also update the children's transforms */
     updateTransforms(updateChildren=true)
     {
         const parent = this.parent;
         if (parent)
         {
-            // in a debug build, a pos or angle the game set on a child is said once, since it is placed over here
-            debug && engineObjectChildCheck(this);
+            // a pos or angle the game set is kept, made the local transform it is placed from
+            engineObjectChildKeep(this);
 
             // compose with parent transform inline to avoid intermediate vector allocs
             const mirror = parent.getMirrorSign();
@@ -4874,7 +4946,7 @@ class EngineObject
             else
                 this.pos.set(lx + pp.x, ly + pp.y);
             this.angle = mirror*this.localAngle + pa;
-            debug && engineObjectChildPlaced(this);
+            engineObjectChildPlaced(this);
         }
 
         // update children
@@ -5381,7 +5453,7 @@ class EngineObject
         child.parent = this;
         child.localPos = localPos.copy();
         child.localAngle = localAngle;
-        debug && engineObjectChildPlacedAt.delete(child); // where it was placed by an earlier parent does not count
+        child.placedTransform = undefined; // where it is now is not kept, it is placed from the local transform given
         child.updateTransforms();
         return child;
     }
@@ -7128,6 +7200,69 @@ function cameraFit(center, size, worldMargin, screenInset)
             left:   p.left   || 0,
         };
     }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// Camera shake
+
+// how much shake is left, 0 to 1, cameraShake adds to it and it fades by cameraShakeDecay a second
+let cameraShakeTrauma = 0;
+// noise steps a second, how fast the shaken view wanders
+const CAMERA_SHAKE_FREQUENCY = 15;
+// the game's own cameraPos and cameraAngle, kept while a frame draws shaken, and the shaken ones set in their place
+let cameraShakeSavedPos, cameraShakeSavedAngle = 0, cameraShakeShakenPos, cameraShakeShakenAngle = 0;
+
+/** Shake the camera, for a hit or an explosion: adds to the shake, which fades on its own by cameraShakeDecay
+ *  - The view moves by smooth noise scaled by the shake squared, so a small one is gentle and a big one is wild,
+ *    up to cameraShakeDistance and cameraShakeAngle
+ *  - It moves only what is drawn, in 2D and in 3D: cameraPos and cameraAngle are the game's own between frames
+ *  - It holds while the game is paused or at a time scale of 0
+ *  @param {number} [amount] - How much to add, the shake is at most 1
+ *  @memberof Draw */
+function cameraShake(amount=.5)
+{
+    ASSERT(isNumber(amount) && amount >= 0, 'cameraShake: amount must be a number, 0 or more', amount);
+    cameraShakeTrauma = min(1, cameraShakeTrauma + amount);
+}
+
+// how far the shake moves and turns the view now, nothing at all when there is no shake
+function cameraShakeOffset()
+{
+    if (!cameraShakeTrauma)
+        return {pos: vec2(), angle: 0};
+    const k = cameraShakeTrauma ** 2, t = time * CAMERA_SHAKE_FREQUENCY;
+    const wander = (seed)=> noise1D(t + seed) * 2 - 1;
+    return {pos: vec2(wander(0), wander(100)).scale(k * cameraShakeDistance), angle: wander(200) * k * cameraShakeAngle};
+}
+
+// fade the shake, called by the engine each update after gameUpdatePost
+function cameraShakeUpdate()
+{
+    if (!paused && !engineFrozenTick) // held while paused or at time scale 0, a hit stop
+        cameraShakeTrauma = max(0, cameraShakeTrauma - cameraShakeDecay * timeDelta);
+}
+
+// shake the view for the draw, called by the engine before a frame renders
+function cameraShakeBegin()
+{
+    cameraShakeSavedPos = undefined;
+    if (!cameraShakeTrauma) return;
+    const offset = cameraShakeOffset();
+    cameraShakeSavedPos = cameraPos, cameraShakeSavedAngle = cameraAngle;
+    cameraPos = cameraShakeShakenPos = cameraPos.add(offset.pos);
+    cameraAngle = cameraShakeShakenAngle = cameraAngle + offset.angle;
+}
+
+// give the game its own cameraPos and cameraAngle back, called by the engine after a frame renders; one the game set
+// while the frame drew is its own already, and is kept
+function cameraShakeEnd()
+{
+    if (!cameraShakeSavedPos) return;
+    if (cameraPos === cameraShakeShakenPos)
+        cameraPos = cameraShakeSavedPos;
+    if (cameraAngle === cameraShakeShakenAngle)
+        cameraAngle = cameraShakeSavedAngle;
+    cameraShakeSavedPos = cameraShakeShakenPos = undefined;
 }
 
 /** Check if a box, point, or circle is on screen with a circle test
@@ -9295,6 +9430,9 @@ class Sound
      */
     constructor(asset, randomness, range, taper=soundDefaultTaper, onloadCallback)
     {
+        /** @property {number} - Percentage of this sound currently loaded, sounds
+         *  fetched from a url stay at 0 until decoding completes */
+        this.loadedPercent = 0;
         if (!soundEnable || headlessMode || !audioContext) // a browser with no audio makes none either
         {
             // no sound is made: it counts as loaded, so a game that waits for its sounds goes on
@@ -9332,9 +9470,6 @@ class Sound
         /** @ignore
          *  @type {Array<Array<number>|Float32Array>|undefined} */
         this._sampleChannels = undefined;
-        /** @property {number} - Percentage of this sound currently loaded, sounds
-         *  fetched from a url stay at 0 until decoding completes */
-        this.loadedPercent = 0;
         /** @property {SoundLoadCallback|undefined} - function to call when sound is loaded
          *  @type {SoundLoadCallback|undefined} */
         this.onloadCallback = onloadCallback;
@@ -18446,6 +18581,7 @@ class UIText extends UIObject
         ASSERT(isStringLike(font), 'ui text font must be a string');
 
         // set properties
+        /** @property {string} - The text shown */
         this.text = text;
         this.align = align;
         this.font = font;
@@ -18500,6 +18636,7 @@ class UITextInput extends UIObject
         this.maxLength = 0;
 
         // set properties, as a string, which typing adds to
+        /** @property {string} - The text typed in it */
         this.text = text + '';
         this.interactive = true;
         this.canBeHover = true;
@@ -18658,6 +18795,7 @@ class UIButton extends UIObject
         this.textOffset = vec2();
 
         // set properties
+        /** @property {string} - The label shown on the button */
         this.text = text;
         this.color = color.copy();
         this.interactive = true;
@@ -18698,6 +18836,7 @@ class UICheckbox extends UIObject
         /** @property {boolean} - Is the checkbox currently checked? */
         this.checked = checked;
         // set properties
+        /** @property {string} - The label shown beside the box */
         this.text = text;
         this.color = color.copy();
         this.interactive = true;
@@ -18767,6 +18906,7 @@ class UISlider extends UIObject
         this.fillMode = false;
 
         // set properties
+        /** @property {string} - The label shown on the slider */
         this.text = text;
         this.color = color.copy();
         this.interactive = true;
@@ -19203,28 +19343,158 @@ const box2dQueryObjects = {};
 const box2dGravity = {x:NaN, y:NaN}; // the gravity the world was last given
 function box2dQueryObject(key, type) { return box2dQueryObjects[key] ||= new box2d.instance[type](); }
 
-// how fast two bodies close along the contact normal as they start touching, the fastest of its points, with spin;
-// BeginContact comes before the solver changes the velocities, so this is the hit, and a sensor has no points, 0
-function box2dImpactSpeed(contact)
+/** Where and how hard two objects hit, given to beginContact
+ *  @typedef {Object} Box2dContact
+ *  @property {Vector2|undefined} point - Where they touched in world space, between the two points of a flat
+ *                                        landing, toward the one pushed harder; undefined for a sensor
+ *  @property {Vector2|undefined} normal - The other object's surface normal where they touched, pointing toward
+ *                                         this object; undefined for a sensor
+ *  @property {number} impulse - An estimate of how hard they hit: the impulse that stops them closing, from the mass
+ *                               and inertia of both where they touched, times 1 + restitution; mass times world units
+ *                               per second, 0 for a sensor
+ *  @memberof Box2D */
+
+// a body's inverse mass and inverse inertia about its center of mass, 0 for one that does not move or turn,
+// and its center of mass
+function box2dContactBody(body)
+{
+    const mass = body.GetMass(), local = body.GetLocalCenter(), center = body.GetWorldCenter();
+    const inertia = body.GetInertia() - box2dCenterInertia(mass, local.get_x(), local.get_y());
+    return [mass > 0 ? 1/mass : 0, inertia > 0 ? 1/inertia : 0, center.get_x(), center.get_y()];
+}
+
+// how two bodies meet as they start touching, for body A: how fast they close along the contact normal, the fastest
+// of its points, with spin; where; the normal toward A; and the impulse the hit takes, worked out from the masses
+// and inertias at the points as Box2D's solver does, both points of a flat landing solved together;
+// BeginContact comes before the solver changes the velocities, so this is the hit, and a sensor has no points
+function box2dContactInfo(contact)
 {
     const pointCount = contact.GetManifold().get_pointCount();
     if (!pointCount)
-        return 0;
+        return {speed: 0, point: undefined, normal: undefined, impulse: 0};
     const manifold = box2dQueryObject('impactManifold', 'b2WorldManifold');
     contact.GetWorldManifold(manifold);
     const normal = manifold.get_normal(), nx = normal.get_x(), ny = normal.get_y();
     const bodyA = contact.GetFixtureA().GetBody(), bodyB = contact.GetFixtureB().GetBody();
+    const [massA, inertiaA, ax, ay] = box2dContactBody(bodyA), [massB, inertiaB, bx, by] = box2dContactBody(bodyB);
+    const points = [], speeds = [], turnA = [], turnB = [];
     let speed = 0;
     for (let i = 0; i < pointCount; ++i)
     {
         // the normal points from A to B, so A moving along it faster than B is closing
-        const point = manifold.get_points(i);
+        const point = manifold.get_points(i), px = point.get_x(), py = point.get_y();
         const vA = bodyA.GetLinearVelocityFromWorldPoint(point);
-        const ax = vA.get_x(), ay = vA.get_y();
+        const vAx = vA.get_x(), vAy = vA.get_y();
         const vB = bodyB.GetLinearVelocityFromWorldPoint(point);
-        speed = max(speed, (ax - vB.get_x())*nx + (ay - vB.get_y())*ny);
+        const closing = (vAx - vB.get_x())*nx + (vAy - vB.get_y())*ny;
+        speed = max(speed, closing);
+        points.push(vec2(px, py));
+        speeds.push(max(0, closing));
+        // how much a push along the normal at the point turns each body
+        turnA.push((px - ax)*ny - (py - ay)*nx);
+        turnB.push((px - bx)*ny - (py - by)*nx);
     }
-    return speed;
+
+    // how much a push at point j changes the closing speed at point i
+    const k = (i, j)=> massA + massB + inertiaA*turnA[i]*turnA[j] + inertiaB*turnB[i]*turnB[j];
+    let impulses = speeds.map((s, i)=> s / k(i, i)); // each point alone
+    if (pointCount > 1)
+    {
+        // a flat landing pushes at both points at once, a push at one slowing the other too
+        const k11 = k(0, 0), k12 = k(0, 1), k22 = k(1, 1), det = k11*k22 - k12*k12;
+        const j1 = (k22*speeds[0] - k12*speeds[1]) / det, j2 = (k11*speeds[1] - k12*speeds[0]) / det;
+        if (det > 1e-6*k11*k22 && j1 >= 0 && j2 >= 0)
+            impulses = [j1, j2];
+        else // one point takes the hit, the one that would take more alone
+            impulses = impulses[0] > impulses[1] ? [impulses[0], 0] : [0, impulses[1]];
+    }
+    const total = pointCount > 1 ? impulses[0] + impulses[1] : impulses[0];
+    const point = pointCount > 1 ? points[0].lerp(points[1], total ? impulses[1] / total : .5) : points[0];
+    return {speed, point, normal: vec2(-nx, -ny), impulse: total * (1 + contact.GetRestitution())};
+}
+
+/** A contact about to be solved, given to preSolve, whose changes the solver takes
+ *  @typedef {Object} Box2dPreSolveContact
+ *  @property {Vector2} point - Where they touch in world space, between the points when there are two
+ *  @property {Vector2} normal - The other object's surface normal where they touch, pointing toward this object
+ *  @property {boolean} enabled - Set false to let them pass through each other until they stop touching,
+ *                                true to make them collide again
+ *  @property {number} friction - The contact's friction, kept while they touch
+ *  @property {number} restitution - The contact's restitution, kept while they touch
+ *  @property {number} surfaceSpeed - How fast this object's surface moves there for this step, clockwise around it,
+ *                                    its surfaceSpeed to start with
+ *  @memberof Box2D */
+
+// the contacts turned off until they stop touching, by pointer: true for one a one way object lets pass, which
+// the contact callbacks never hear of, false for one a preSolve turned off
+const box2dContactsOff = new Map;
+
+// whether any object needs its contacts before they are solved, found before each step, so the solver's callback
+// does nothing in a game without one
+let box2dPreSolveOn = false;
+const box2dWantsPreSolve = (o)=> !o.destroyed && (o.surfaceSpeed || o.preSolve !== Box2dObject.prototype.preSolve);
+
+// a one way object lets the other pass while they touch, unless it came from the far side, the side it is passed
+// toward: the object's surface normal toward the other within 60 degrees of oneWay, which turns with the body
+function box2dOneWayPass(o, toOther)
+{
+    const way = o.oneWay.rotate(-o.body.GetAngle()).normalize();
+    return way.dot(toOther) < .5;
+}
+
+// where two bodies touch, between the points when there are two, and the normal from B toward A
+function box2dContactPoint(contact)
+{
+    const manifold = box2dQueryObject('impactManifold', 'b2WorldManifold');
+    contact.GetWorldManifold(manifold);
+    const normal = manifold.get_normal(), count = contact.GetManifold().get_pointCount();
+    let x = 0, y = 0;
+    for (let i = count; i--;)
+    {
+        const p = manifold.get_points(i);
+        x += p.get_x(), y += p.get_y();
+    }
+    return {point: vec2(x / count, y / count), normal: vec2(-normal.get_x(), -normal.get_y())};
+}
+
+// before Box2D solves a contact: the objects' preSolve and what it changed, whether it is on, and the surface
+// speeds, which the solver takes as the speed B's surface slides along A's, its tangent the normal turned a quarter
+// clockwise; a positive surface speed runs clockwise around its object, which comes to the same sum from either side
+function box2dPreSolve(contact, pointer, objectA, objectB, fixtureA, fixtureB)
+{
+    let enabled = !box2dContactsOff.has(pointer);
+    let speedA = objectA.surfaceSpeed, speedB = objectB.surfaceSpeed;
+    const hookA = objectA.preSolve !== Box2dObject.prototype.preSolve;
+    const hookB = objectB.preSolve !== Box2dObject.prototype.preSolve;
+    if (hookA || hookB)
+    {
+        // each side gets its own contact, B sees what A changed
+        const {point, normal} = box2dContactPoint(contact);
+        const friction = contact.GetFriction(), restitution = contact.GetRestitution();
+        const shared = {enabled, friction, restitution};
+        if (hookA)
+        {
+            const c = {point, normal, ...shared, surfaceSpeed: speedA};
+            objectA.preSolve(objectB, fixtureA, fixtureB, c);
+            shared.enabled = c.enabled, shared.friction = c.friction, shared.restitution = c.restitution;
+            speedA = c.surfaceSpeed;
+        }
+        if (hookB)
+        {
+            const c = {point: point.copy(), normal: normal.scale(-1), ...shared, surfaceSpeed: speedB};
+            objectB.preSolve(objectA, fixtureB, fixtureA, c);
+            shared.enabled = c.enabled, shared.friction = c.friction, shared.restitution = c.restitution;
+            speedB = c.surfaceSpeed;
+        }
+        ASSERT(isNumber(shared.friction) && isNumber(shared.restitution) && isNumber(speedA) && isNumber(speedB),
+            'preSolve: friction, restitution and surfaceSpeed must be numbers');
+        shared.friction === friction || contact.SetFriction(box2dFinite(shared.friction, friction));
+        shared.restitution === restitution || contact.SetRestitution(box2dFinite(shared.restitution, restitution));
+        enabled = !!shared.enabled;
+        enabled ? box2dContactsOff.delete(pointer) : box2dContactsOff.set(pointer, false);
+    }
+    enabled || contact.SetEnabled(false); // Box2D turns every contact on again each step
+    contact.SetTangentSpeed(box2dFinite(speedA + speedB, 0));
 }
 
 // Box2D finds fixtures by boxes it pads and stretches ahead along the velocity, so a query checks the shape's own box
@@ -19399,6 +19669,10 @@ function box2dCheckUnusedFields(o)
  *   angleDamping, mass, friction, restitution and gravityScale; use setLinearVelocity, setAngularVelocity,
  *   setLinearDamping, setAngularDamping, setMass, the friction and restitution of its shapes and setGravityScale.
  *   A debug build warns once when one of them is set
+ * - oneWay makes it one way as in 2D, like a platform jumped up through: up, down, left or right, the way others pass
+ *   through, turning with the body; it blocks only what first touches it from its far side, and what it lets pass
+ *   gets no beginContact or endContact, though a sensor does
+ * - surfaceSpeed makes it a conveyor belt, and preSolve changes a contact before it is solved
  * @extends EngineObject
  * @memberof Box2D
  */
@@ -19438,6 +19712,10 @@ class Box2dObject extends EngineObject
         this.edgeLoops = [];
         // the fixtures of the edge lists and loops, by pointer, each to the points it is drawn with
         this.edgeListFixtures = new Map;
+        /** @property {number} - How fast its surface moves, clockwise around it, in world units per second, like a
+         *  conveyor belt: what touches it is carried along by friction, to the right across its top when positive;
+         *  set it with setSurfaceSpeed, which wakes what rests on it */
+        this.surfaceSpeed = 0;
 
         this.body.object = this; // link body to this object
         box2d.objects.push(this); // keep track of all box2d objects
@@ -19531,13 +19809,17 @@ class Box2dObject extends EngineObject
      *  and creating objects, fixtures or joints must wait until after the step
      *  - The fixtures say which shapes touched, the same objects addBox and the others returned, so a small sensor
      *    under a player's feet can tell standing on the ground from touching a wall
-     *  - impactSpeed is how hard they hit: how fast they were closing along the contact normal, spin included,
-     *    in world units per second, measured before the solver pushed them apart; 0 for a sensor
+     *  - impactSpeed is how fast they were closing along the contact normal, spin included, in world units per
+     *    second, measured before the solver pushed them apart; 0 for a sensor
+     *  - contact has where they touched, the normal toward this object and the impulse of the hit, which counts
+     *    their mass and how it is spread: a stick heavy at its ends hits harder than one heavy in the middle,
+     *    spinning at the same speed
      *  @param {Box2dObject} otherObject
      *  @param {Object} [fixture] - This object's fixture that touched
      *  @param {Object} [otherFixture] - The other object's fixture that touched
-     *  @param {number} [impactSpeed] - How fast they were closing as they touched */
-    beginContact(otherObject, fixture, otherFixture, impactSpeed) {}
+     *  @param {number} [impactSpeed] - How fast they were closing as they touched
+     *  @param {Box2dContact} [contact] - Where they touched and how hard they hit */
+    beginContact(otherObject, fixture, otherFixture, impactSpeed, contact) {}
 
     /** Called when a contact ends, while the world steps or a body is destroyed: a destroy or a setter waits
      *  until the step is done, and creating objects, fixtures or joints must wait until after the step
@@ -19545,6 +19827,25 @@ class Box2dObject extends EngineObject
      *  @param {Object} [fixture] - This object's fixture that touched
      *  @param {Object} [otherFixture] - The other object's fixture that touched */
     endContact(otherObject, fixture, otherFixture) {}
+
+    /** Called before Box2D solves a contact, each step while they touch, for an object that overrides it, while the
+     *  world steps as beginContact is; change the contact to change how they collide
+     *  - enabled false lets them pass through each other until they stop touching, like a platform dropped through
+     *  - friction and restitution are kept while they touch, surfaceSpeed is for this step, like a patch of a belt
+     *  - A sleeping body's contacts are not solved, so wake it with setAwake for this to be called, as for a player
+     *    standing still on a platform it drops through
+     *  @param {Box2dObject} otherObject
+     *  @param {Object} [fixture] - This object's fixture that touches
+     *  @param {Object} [otherFixture] - The other object's fixture that touches
+     *  @param {Box2dPreSolveContact} [contact] - Where they touch and how they collide
+     *  @example
+     *  // drop down through a one way platform
+     *  player.preSolve = (other, fixture, otherFixture, contact)=>
+     *  {
+     *      if (other.oneWay && keyIsDown('ArrowDown'))
+     *          contact.enabled = false;
+     *  } */
+    preSolve(otherObject, fixture, otherFixture, contact) {}
 
     ///////////////////////////////////////////////////////////////////////////////
     // physics fixtures and shapes
@@ -19961,6 +20262,15 @@ class Box2dObject extends EngineObject
     {
         this.body.SetGravityScale(this.gravityScale = scale);
         this.body.SetAwake(true); // a sleeping body would not feel it
+    }
+
+    /** Sets how fast its surface moves, clockwise around it, like a conveyor belt, see surfaceSpeed
+     *  @param {number} speed - World units per second */
+    setSurfaceSpeed(speed)
+    {
+        ASSERT(isNumber(speed), 'setSurfaceSpeed: speed must be a number', speed);
+        this.surfaceSpeed = speed;
+        box2dWakeWithContacts(this.body); // what sleeps on it would not move
     }
 
     /** Should be like a bullet for continuous collision detection?
@@ -20763,8 +21073,11 @@ class Box2dGearJoint extends Box2dJoint
         jointDef.set_ratio(ratio * ratioSign);
         super(jointDef);
 
+        /** @property {Box2dJoint} - The first joint geared, a revolute or prismatic joint */
         this.joint1 = joint1;
+        /** @property {Box2dJoint} - The second joint geared, a revolute or prismatic joint */
         this.joint2 = joint2;
+        // -1 when one joint turns and the other slides, since angles turn the other way to Box2D's
         this.ratioSign = ratioSign;
         box2dGearJoints.add(this);
     }
@@ -21319,12 +21632,30 @@ class Box2dPlugin
             const objectB  = fixtureB.GetBody().object;
             // raw user-created b2Bodies may have no .object — skip those
             if (!objectA || !objectB) return;
-            const impactSpeed = box2dImpactSpeed(contact);
-            objectA.beginContact(objectB, fixtureA, fixtureB, impactSpeed);
-            objectB.beginContact(objectA, fixtureB, fixtureA, impactSpeed);
+            // each side gets its own contact, its normal toward itself, made before either is called
+            const {speed, point, normal, impulse} = box2dContactInfo(contact);
+
+            // what a one way object lets pass goes through it until they stop touching, with no callbacks, as in 2D;
+            // a sensor has no normal and is told of it
+            if (normal && (objectA.oneWay && box2dOneWayPass(objectA, normal.scale(-1)) ||
+                objectB.oneWay && box2dOneWayPass(objectB, normal)))
+            {
+                box2dContactsOff.set(contactPtr, true);
+                return;
+            }
+
+            const contactA = {point, normal, impulse};
+            const contactB = {point: point?.copy(), normal: normal?.scale(-1), impulse};
+            objectA.beginContact(objectB, fixtureA, fixtureB, speed, contactA);
+            objectB.beginContact(objectA, fixtureB, fixtureA, speed, contactB);
         }
         listener.EndContact = function(contactPtr)
         {
+            // a contact a one way object let pass was never begun for the objects
+            const passed = box2dContactsOff.get(contactPtr);
+            box2dContactsOff.delete(contactPtr);
+            if (passed) return;
+
             const contact  = box2d.instance.wrapPointer(contactPtr, box2d.instance.b2Contact);
             const fixtureA = contact.GetFixtureA();
             const fixtureB = contact.GetFixtureB();
@@ -21334,7 +21665,20 @@ class Box2dPlugin
             objectA.endContact(objectB, fixtureA, fixtureB);
             objectB.endContact(objectA, fixtureB, fixtureA);
         };
-        listener.PreSolve  = function() {};
+        listener.PreSolve = function(contactPtr)
+        {
+            const off = box2dContactsOff.get(contactPtr);
+            if (!box2dPreSolveOn && off === undefined) return;
+            const contact = box2d.instance.wrapPointer(contactPtr, box2d.instance.b2Contact);
+            if (off) // a one way object passing it
+                return contact.SetEnabled(false);
+            const fixtureA = contact.GetFixtureA();
+            const fixtureB = contact.GetFixtureB();
+            const objectA  = fixtureA.GetBody().object;
+            const objectB  = fixtureB.GetBody().object;
+            if (!objectA || !objectB) return;
+            box2dPreSolve(contact, contactPtr, objectA, objectB, fixtureA, fixtureB);
+        };
         listener.PostSolve = function() {};
         box2d.world.SetContactListener(listener);
     }
@@ -21351,6 +21695,7 @@ class Box2dPlugin
             for (let b = box2d.world.GetBodyList(); !box2d.isNull(b); b = b.GetNext())
                 b.SetAwake(true);
         }
+        box2dPreSolveOn = this.objects.some(box2dWantsPreSolve);
         for (let i=frames; i--;)
         {
             box2d.world.Step(timeDelta, this.velocityIterations, this.positionIterations);
@@ -23461,7 +23806,9 @@ engineAddPlugin(tweenUpdate);
 
 /** A scene, any object with the hooks it needs, each optional and called as a method so this is the scene
  *  @typedef {Object} Scene
- *  @property {function():void} [enter] - Called when the scene starts, after the old one left and the objects were destroyed
+ *  @property {function():void} [enter] - Called when the scene starts, after the old one left and the objects were destroyed;
+ *                                        it is not awaited, so setup done once, like await box2dInit() and new plugins, goes
+ *                                        in gameInit before the first setScene
  *  @property {function():void} [leave] - Called before the next scene starts, while the scene is current and its objects are still there
  *  @property {function():void} [update] - Called each update after gameUpdate, not while paused or at time scale 0
  *  @property {function():void} [render] - Called before gameRender, to draw under the objects
@@ -23680,6 +24027,241 @@ function parallaxMountains(topColor=hsl(.6, .2, .6), bottomColor=hsl(.6, .3, .25
         for (let x = w; x--;)
             ridge[x] < h && context.drawImage(strip.canvas, 0, 0, 1, h, x, ridge[x], 1, h - ridge[x]);
     };
+}
+
+/**
+ * LittleJS Camera Plugin
+ * - Camera objects that drive the view, so a game need not move cameraPos itself
+ * - FollowCamera follows a 2D target with smoothing, an offset, a dead zone, a look ahead, level bounds and zoom
+ * - The 3D cameras, ThirdPersonCamera3D, CameraControl3D and FirstPersonCamera3D, drive the view the same way
+ * - The newest camera made drives the view; destroy it and the one before takes over from where the view is
+ * - Cameras update after the objects move each update, so they are never a frame behind, and hold while paused
+ * - cameraShake works with or without a camera object
+ * @namespace Camera
+ */
+
+///////////////////////////////////////////////////////////////////////////////
+
+// the cameras made, the last one live drives the view
+const cameraList = [];
+// the camera that drove the view last update
+let cameraDriving;
+// the plugin hook is added with the first camera
+let cameraPluginAdded = false;
+
+// the camera driving the view, the last live one made or activated
+function cameraDriver()
+{
+    for (let i = cameraList.length; i--;)
+        if (!cameraList[i].destroyed) return cameraList[i];
+}
+
+// make a camera the one that drives the view, called by each camera's activate
+function cameraActivate(camera)
+{
+    const i = cameraList.indexOf(camera);
+    i >= 0 && cameraList.splice(i, 1);
+    cameraList.push(camera);
+    if (!cameraPluginAdded)
+    {
+        cameraPluginAdded = true;
+        engineAddPlugin(undefined, undefined, undefined, undefined, undefined, cameraUpdatePost);
+    }
+}
+
+// update the camera that drives the view, after the objects moved, called by the engine each update
+// a camera that takes over from another starts from where the view is, one just made from where it snapped
+function cameraUpdatePost()
+{
+    for (let i = cameraList.length; i--;)
+        cameraList[i].destroyed && cameraList.splice(i, 1);
+    if (paused || engineFrozenTick) return; // held while paused or at time scale 0
+    const camera = cameraList[cameraList.length - 1];
+    if (camera && camera !== cameraDriving && !camera.cameraNew)
+        camera.takeView();
+    for (const c of cameraList)
+        c.cameraNew = false;
+    cameraDriving = camera;
+    camera?.updateCamera();
+}
+
+// how much of a gap smoothing closes this update, smoothing a time constant in seconds, 0 closes all of it
+function cameraSmoothFactor(smoothing) { return smoothing > 0 ? 1 - Math.exp(-timeDelta / smoothing) : 1; }
+
+///////////////////////////////////////////////////////////////////////////////
+
+/**
+ * FollowCamera - The 2D camera: follows a target and drives cameraPos, and cameraScale when it has a scale
+ * - Smoothing is in seconds, so it comes out the same at any frame rate
+ * - A dead zone lets the target move about without the view moving
+ * - lookAhead shows more of the way the target is going, sliding across when it turns
+ * - boundsMin and boundsMax keep the view over the level, centered where the level is smaller than the view;
+ *   they go by the view's size without cameraAngle
+ * - Its pos is the middle of the view, before any cameraShake
+ * - The newest camera made drives the view; a game can still change cameraPos in gameUpdatePost for that frame
+ * - Destroy it to stop it driving the view, which stays where it was; engineObjectsDestroy removes it as it does any
+ *   object, so make a new one after, or set persistent to keep it
+ * @extends EngineObject
+ * @memberof Camera
+ * @example
+ * const camera = new FollowCamera(player);
+ * camera.lookAhead = vec2(3, 0);   // see further the way the player runs
+ * camera.boundsMin = vec2();       // keep the view over the level
+ * camera.boundsMax = levelSize;
+ */
+class FollowCamera extends EngineObject
+{
+    /** Make a follow camera, the view goes to its target at once
+     *  @param {EngineObject|Vector2} [target] - What to follow, an object or a position
+     *  @param {number} [smoothing] - Seconds it takes to close most of the gap, 0 snaps */
+    constructor(target, smoothing=.1)
+    {
+        ASSERT(!target || target instanceof EngineObject || isVector2(target),
+            'FollowCamera: target must be an EngineObject or a vec2', target);
+        ASSERT(isNumber(smoothing) && smoothing >= 0, 'FollowCamera: smoothing must be 0 or more seconds', smoothing);
+        super(cameraPos, vec2());
+        this.mass = 0; // nothing pulls or pushes it
+
+        /** @property {EngineObject|Vector2|undefined} - What it follows; destroyed or undefined, the view holds
+         *  @type {EngineObject|Vector2|undefined} */
+        this.target = target;
+        /** @property {number} - Seconds it takes to close most of the gap to the target, 0 snaps */
+        this.smoothing = smoothing;
+        /** @property {Vector2} - Where the target sits from the middle of the view, the view moved by it */
+        this.offset = vec2();
+        /** @property {Vector2} - Size of a box in the middle of the view the target moves in without the view moving */
+        this.deadZone = vec2();
+        /** @property {Vector2} - How much more it shows the way the target goes on each axis, 0 for none */
+        this.lookAhead = vec2();
+        /** @property {number} - How far the target must go back the other way before the look turns, so a jiggle
+         *  does not flip it */
+        this.lookAheadTurn = 1;
+        /** @property {number} - Seconds the look takes to slide across when it turns */
+        this.lookAheadSmoothing = .5;
+        /** @property {Vector2|undefined} - Lowest corner of the area the view stays in
+         *  @type {Vector2|undefined} */
+        this.boundsMin = undefined;
+        /** @property {Vector2|undefined} - Highest corner of the area the view stays in, Infinity on an axis leaves
+         *  that side open
+         *  @type {Vector2|undefined} */
+        this.boundsMax = undefined;
+        /** @property {number|undefined} - The cameraScale it eases to, undefined leaves cameraScale to the game
+         *  @type {number|undefined} */
+        this.scale = undefined;
+        /** @property {number} - Seconds the zoom takes to close most of the gap to scale, 0 snaps */
+        this.scaleSmoothing = .2;
+
+        this.cameraNew = true;       // made this update, it starts where it snapped and not from the view
+        this.lookOffset = vec2();    // how far the look moves the view now
+        this.lookDirection = vec2(); // which way it looks on each axis, -1, 0 or 1
+        this.lookTravel = vec2();    // how far the target has gone back against the look since it last went with it
+        this.lookFrom = undefined;   // where the target was last update, to see which way it moves
+        this.lookTarget = undefined; // the object lookFrom is of, a new one starts measuring again
+        this.activate();
+        this.snap();
+    }
+
+    /** Make this the camera that drives the view, it starts from where the view is */
+    activate() { cameraActivate(this); }
+
+    /** Start from where the view is, called when it takes over from another camera */
+    takeView() { this.pos = cameraPos.copy(); }
+
+    /** Put it on the target at once, with no easing, for a level start or a teleport; the view goes there too when
+     *  this camera is the one driving it */
+    snap()
+    {
+        if (this.scale !== undefined)
+            setCameraScale(this.scale);
+        this.lookFrom = undefined; // a teleport is not a move to look along
+        this.updateLook(true);
+        const focus = this.getFocus();
+        if (focus)
+            this.pos = focus;
+        this.pos = this.inBounds(this.pos);
+        cameraDriver() === this && setCameraPos(this.pos); // a camera not driving keeps its place for later
+    }
+
+    /** Move toward the target and set the view, called by the camera plugin after the objects update */
+    updateCamera()
+    {
+        if (this.scale !== undefined)
+            setCameraScale(cameraScale + (this.scale - cameraScale) * cameraSmoothFactor(this.scaleSmoothing));
+        this.updateLook();
+        const focus = this.getFocus();
+        if (focus)
+        {
+            // the view moves only as far as puts the focus back in the dead zone
+            const half = this.deadZone.scale(.5), pos = this.pos;
+            const goal = vec2(clamp(pos.x, focus.x - half.x, focus.x + half.x),
+                clamp(pos.y, focus.y - half.y, focus.y + half.y));
+            this.pos = pos.lerp(goal, cameraSmoothFactor(this.smoothing));
+        }
+        this.pos = this.inBounds(this.pos);
+        setCameraPos(this.pos);
+    }
+
+    // where the target is, undefined with none or a destroyed one
+    getTargetPos()
+    {
+        const target = this.target;
+        if (!target || target instanceof EngineObject && target.destroyed) return;
+        return target instanceof EngineObject ? target.pos : target;
+    }
+
+    // where the view wants its middle: the target, the offset and the look, undefined with no live target
+    getFocus()
+    {
+        const pos = this.getTargetPos();
+        return pos && pos.add(this.offset).add(this.lookOffset);
+    }
+
+    // turn the look by which way the target moved, and slide it toward that side, at once when snapping
+    // on each axis the first move sets the look; it turns once the target has gone back lookAheadTurn the other way
+    updateLook(snap)
+    {
+        if (this.target !== this.lookTarget && this.target instanceof EngineObject)
+            this.lookTarget = this.target, this.lookFrom = undefined; // a new target, not a move
+        const pos = this.getTargetPos(), from = this.lookFrom;
+        if (!pos) return;
+        if (from)
+        {
+            const turn = (axis)=>
+            {
+                const move = pos[axis] - from[axis], direction = this.lookDirection[axis];
+                if (!this.lookAhead[axis] || !move) return;
+                if (!direction)
+                    this.lookDirection[axis] = sign(move);
+                else if (sign(move) === direction)
+                    this.lookTravel[axis] = 0;
+                else if ((this.lookTravel[axis] += abs(move)) > this.lookAheadTurn)
+                    this.lookDirection[axis] = -direction, this.lookTravel[axis] = 0;
+            };
+            turn('x');
+            turn('y');
+        }
+        this.lookFrom = pos.copy();
+        const goal = this.lookDirection.multiply(this.lookAhead);
+        this.lookOffset = this.lookOffset.lerp(goal, snap ? 1 : cameraSmoothFactor(this.lookAheadSmoothing));
+    }
+
+    // a view middle moved so the view stays in the bounds, centered on an axis where they are smaller than it
+    inBounds(pos)
+    {
+        const low = this.boundsMin, high = this.boundsMax;
+        if (!low && !high) return pos;
+        const half = getCameraSize().scale(.5);
+        const axis = (p, a, b, h)=>
+            a !== undefined && b !== undefined && b - a <= 2*h ? (a + b) / 2 :
+            clamp(p, a === undefined ? -Infinity : a + h, b === undefined ? Infinity : b - h);
+        return vec2(axis(pos.x, low?.x, high?.x, half.x), axis(pos.y, low?.y, high?.y, half.y));
+    }
+
+    /** A camera is moved only by its target, physics leaves it alone */
+    updatePhysics() {}
+
+    /** A camera draws nothing */
+    render() {}
 }
 
 /**
@@ -28229,10 +28811,36 @@ function render3DFrustumPlanes(matrix)
     return planes;
 }
 
+// the camera shaken and its own position and rotation, kept while the 3D passes draw it shaken
+let render3DShakeSaved;
+
+// shake the 3D camera for the frame's passes along its own right and up, and roll it, as cameraShake does the 2D view;
+// an align2D camera copies the 2D view, which is shaken already
+function render3DShakeBegin()
+{
+    render3DShakeEnd(); // a frame that threw before its end is taken back first, so a shake never stays
+    const camera = render3D.camera;
+    if (!cameraShakeTrauma || camera.align2D) return;
+    const offset = cameraShakeOffset();
+    render3DShakeSaved = [camera, camera.pos, camera.rotation];
+    camera.pos = camera.pos.add(camera.getRight().scale(offset.pos.x)).add(camera.getUp().scale(offset.pos.y));
+    camera.rotation = camera.rotation.add(vec3(0, 0, -offset.angle)); // 2D angles turn the other way
+}
+
+// give the game its own 3D camera back after the frame's passes, the one that was shaken
+function render3DShakeEnd()
+{
+    if (!render3DShakeSaved) return;
+    const [camera, pos, rotation] = render3DShakeSaved;
+    camera.pos = pos, camera.rotation = rotation;
+    render3DShakeSaved = undefined;
+}
+
 // the preRender hook, before gameRender: the layer under the 2D scene
 function render3DPreRender()
 {
     const r = render3D;
+    render3DShakeBegin(); // before the editor's camera goes in, so only the game's is shaken
     editor3DCameraBegin(); // debug builds draw with the free camera or the 3D editor's, the game's is back after
     r.updateMatrices();
     r.shadowMapDrawn = false;
@@ -28244,6 +28852,7 @@ function render3DRender()
 {
     render3DRenderPass(true);
     editor3DCameraEnd();
+    render3DShakeEnd();
 }
 
 // one 3D pass for the objects of a layer: take over the gl state, draw the shadow map once a frame and the stages, hand
@@ -29784,8 +30393,11 @@ const render3DSkyColors = new WeakMap;
  * - Its tile and raycast halves are 2D only so they default off here, and a child sits solid collision out
  * - A sync2D object collides in 2D instead, which needs the 2D size set as well as size3D
  * - setMesh swaps the mesh and frees the old one, for text and terrain that get built again
- * - addChild attaches the 3D transform, and pos3D becomes an offset from the parent; attach keeps the child where
- *   it is and works the offset out, and removeChild leaves it where it was in the world
+ * - addChild attaches the 3D transform, and a child's pos3D, rotation3D and scale3D are then relative to its parent,
+ *   as in three.js and Godot; this differs from 2D, where a child's pos and angle stay in world space and localPos
+ *   and localAngle hold the offset; getWorldPos3D, getWorldRotation3D and getMatrix give a child's world transform,
+ *   and setWorldPos3D and setWorldRotation3D put it at a world position or rotation
+ * - attach keeps the child where it is and works the offset out, and removeChild leaves it where it was in the world
  * - The 2D offset arguments of addChild do nothing here, set the child's pos3D
  * @extends EngineObject
  * @memberof Render3D
@@ -29818,12 +30430,14 @@ class EngineObject3D extends EngineObject
         ASSERT(!mesh || mesh instanceof Mesh, 'mesh must be a Mesh or undefined');
         this.mass = 0; // static: no 2D physics, and no 3D gravity until a mass is set
 
-        /** @property {Vector3} - World space position, local to the parent when attached to an EngineObject3D */
+        /** @property {Vector3} - Position in world space, or relative to the parent while attached to an
+         *  EngineObject3D, unlike a 2D child's pos, which stays in world space; getWorldPos3D gives a child's world
+         *  position */
         this.pos3D = pos3D.copy();
-        /** @property {Vector3} - Rotation vec3(pitch, yaw, roll) in radians, local to the parent when attached to an
-         *  EngineObject3D */
+        /** @property {Vector3} - Rotation vec3(pitch, yaw, roll) in radians, relative to the parent while attached to
+         *  an EngineObject3D, like pos3D */
         this.rotation3D = vec3();
-        /** @property {Vector3} - Scale, local to the parent when attached to an EngineObject3D */
+        /** @property {Vector3} - Scale, relative to the parent while attached to an EngineObject3D, like pos3D */
         this.scale3D = vec3(1);
         /** @property {Vector3} - Added to pos3D each frame by the engine before update, like the 2D velocity, no super
          *  call needed; damping and render3D.gravity act on it once the object has a mass */
@@ -29833,12 +30447,12 @@ class EngineObject3D extends EngineObject
         /** @property {Mesh|undefined} - Mesh to draw
          *  @type {Mesh|undefined} */
         this.mesh = mesh;
+        // a shared mesh measured since it last changed is not walked again for each object made from it
+        const bounds = mesh && mesh.points.length ? !mesh.dirty && mesh.bounds || mesh.getBounds() : undefined;
         /** @property {Vector3} - Size for solid collision and the collect and callback helpers, and of the sprite when
          *  there is a tileInfo and no mesh; starts at the size of the mesh's box, or 1 with no mesh, and setMesh leaves
          *  it as it is; the box is centered on pos3D, so center() a mesh whose origin is not its middle, like a model
          *  standing on its feet, or set size3D; scale3D and any parent's scale grow it, so drawing and picking agree */
-        // a shared mesh measured since it last changed is not walked again for each object made from it
-        const bounds = mesh && mesh.points.length ? !mesh.dirty && mesh.bounds || mesh.getBounds() : undefined;
         this.size3D = bounds ? bounds.max.subtract(bounds.min) : vec3(1);
         /** @property {number} - Diameter of a soft shadow drawn under the object on render3D.softShadowHeight, 0 for
          *  none; scale3D and a parent's scale grow it, so set it once for the unscaled object */
@@ -30014,6 +30628,44 @@ class EngineObject3D extends EngineObject
     /** Returns the world position
      *  @return {Vector3} */
     getWorldPos3D() { return render3DObjectMatrix(this).getTranslation(); }
+
+    /** Move the object so its world position is pos, setting pos3D, which on a child is relative to the parent
+     *  - Exact whatever the parent's turn and scale; a child with a localMatrix has the matrix moved instead
+     *  @param {Vector3} pos */
+    setWorldPos3D(pos)
+    {
+        ASSERT(isVector3(pos), 'setWorldPos3D: pos must be a vec3', pos);
+        const parent = this.parent instanceof EngineObject3D ? this.parent : undefined;
+        const local = parent ? render3DObjectMatrix(parent).copy().invert().transformPoint(pos) : pos.copy();
+        if (this.localMatrix)
+            this.localMatrix.m[12] = local.x, this.localMatrix.m[13] = local.y, this.localMatrix.m[14] = local.z;
+        else
+            this.pos3D = local;
+    }
+
+    /** Returns the rotation in the world as vec3(pitch, yaw, roll), the parent's included on a child
+     *  - Under a parent scaled unevenly a turned child is sheared, which no rotation is exactly, so it is the nearest
+     *  @return {Vector3} */
+    getWorldRotation3D() { return render3DObjectMatrix(this).getRotation(); }
+
+    /** Turn the object so its rotation in the world is rotation, setting rotation3D, which on a child is relative to
+     *  the parent; it stays where it is
+     *  - Exact unless the parent, or one above it, is scaled unevenly, the same limit as attach
+     *  - A child with a localMatrix has the matrix built again from its position and scale with the new turn
+     *  @param {Vector3} rotation - vec3(pitch, yaw, roll) in radians */
+    setWorldRotation3D(rotation)
+    {
+        ASSERT(isVector3(rotation), 'setWorldRotation3D: rotation must be a vec3', rotation);
+        const parent = this.parent instanceof EngineObject3D ? this.parent : undefined;
+        // the parent's turn undone, then the one wanted
+        const local = parent ? buildMatrix(undefined, render3DObjectMatrix(parent).getRotation()).invert()
+            .multiply(buildMatrix(undefined, rotation)).getRotation() : rotation.copy();
+        const matrix = this.localMatrix;
+        if (matrix)
+            this.localMatrix = buildMatrix(matrix.getTranslation(), local, matrix.getScale());
+        else
+            this.rotation3D = local;
+    }
 
     /** Returns the direction the object faces, its -Z axis in the world
      *  @return {Vector3} */
@@ -31948,6 +32600,7 @@ function render3DReadPixels(textureInfo)
 /**
  * CameraControl3D - Drag to turn the camera around a point, roll the wheel to zoom
  * - An EngineObject3D, so move its pos3D to follow something, or parent it to an object
+ * - A camera of the camera plugin: the newest made drives the view, after the objects move each update
  * - Destroy it to hand the camera back, and it stops driving the camera
  * - Set persistent to keep it when engineObjectsDestroy clears out a level
  * - Every part of it is a field, so a game can change the buttons, speeds and limits
@@ -31985,9 +32638,20 @@ class CameraControl3D extends EngineObject3D
         this.zoomRange = vec2(distance/4, distance*3);
         /** @property {Vector2} - Lowest and highest pitch, so it cannot tip over the top, widened to hold the pitch given */
         this.pitchRange = vec2(min(-.2, pitch), max(1.4, pitch));
+        this.cameraNew = true; // made this update, see cameraUpdatePost
+        this.activate();
     }
 
-    /** Read the mouse and put the camera on its orbit, called automatically each frame */
+    /** Make this the camera that drives the view */
+    activate() { cameraActivate(this); }
+
+    /** Taking over from another camera, it keeps its own orbit */
+    takeView() {}
+
+    /** Put the camera on its orbit, called by the camera plugin after the objects update */
+    updateCamera() { render3D.camera.orbit(this.getWorldPos3D(), this.distance, this.yaw, this.pitch); }
+
+    /** Read the mouse and turn the orbit, called automatically each frame */
     update()
     {
         if (mouseIsDown(this.dragButton))
@@ -32001,7 +32665,224 @@ class CameraControl3D extends EngineObject3D
         this.pitch = clamp(this.pitch, this.pitchRange.x, this.pitchRange.y);
         if (this.zoomSpeed && mouseWheel)
             this.distance = clamp(this.distance * (1 + sign(mouseWheel) * this.zoomSpeed), this.zoomRange.x, this.zoomRange.y);
-        render3D.camera.orbit(this.getWorldPos3D(), this.distance, this.yaw, this.pitch);
+    }
+
+    /** Camera controls draw nothing */
+    render3D() {}
+}
+
+///////////////////////////////////////////////////////////////////////////////
+/**
+ * ThirdPersonCamera3D - A camera on a pole from the player, swinging around behind it as it moves
+ * - The pole starts at a pivot, pivotOffset from the target, usually its head, turns by yaw and pitch, and the camera
+ *   sits at its end, distance away, looking back at the pivot
+ * - autoSwing, on by default, swings it around behind the way the target moves across the ground, eased by
+ *   swingSmoothing, only while the target moves faster than swingSpeed; useFacing swings it behind the target's own
+ *   facing instead, for a player that turns
+ * - The mouse, dragging dragButton or with the pointer locked, and a gamepad stick turn it by hand when
+ *   manualControl is on, and turning by hand holds the swing for swingDelay seconds; turn() does the same for a
+ *   game's own controls
+ * - A wall between the pivot and the camera, the level or a solid object, pulls it in, in front of the wall, and it
+ *   eases back out once clear
+ * - A camera of the camera plugin: the newest made drives the view, after the objects move each update
+ * - Destroy it to hand the camera back
+ * @extends EngineObject3D
+ * @memberof Render3D
+ * @example
+ * const camera = new ThirdPersonCamera3D(player); // follow the player from 6 units back
+ * camera.autoSwing = false;                       // a shooter turns it only by hand
+ */
+class ThirdPersonCamera3D extends EngineObject3D
+{
+    /** Make a third person camera, the view goes to it at once
+     *  @param {EngineObject3D|Vector3} [target] - What to follow, an object or a position
+     *  @param {number} [distance] - How long the pole is
+     *  @param {number} [pitch] - Angle of the pole above level, PI/2 looks straight down */
+    constructor(target, distance=6, pitch=.3)
+    {
+        ASSERT(!target || target instanceof EngineObject3D || isVector3(target),
+            'ThirdPersonCamera3D: target must be an EngineObject3D or a vec3', target);
+        super(render3D.camera.pos);
+        this.size3D = vec3(); // not a solid thing to pick or collect
+
+        /** @property {EngineObject3D|Vector3|undefined} - What it follows; destroyed or undefined, the camera holds
+         *  @type {EngineObject3D|Vector3|undefined} */
+        this.target = target;
+        /** @property {Vector3} - Where the pole starts from the target, usually its head */
+        this.pivotOffset = vec3(0, 1, 0);
+        /** @property {number} - How long the pole is */
+        this.distance = distance;
+        /** @property {number} - Angle of the pole around the target, 0 puts the camera on the +Z side looking -Z */
+        this.yaw = 0;
+        /** @property {number} - Angle of the pole above level */
+        this.pitch = pitch;
+        /** @property {Vector2} - Lowest and highest pitch */
+        this.pitchRange = vec2(-.4, 1.2);
+        /** @property {number} - Seconds the pivot takes to close most of the gap to the target, 0 sticks to it */
+        this.smoothing = .05;
+        /** @property {boolean} - Swing around behind the way the target moves */
+        this.autoSwing = true;
+        /** @property {number} - Seconds the swing takes to close most of the gap, how tight it is */
+        this.swingSmoothing = .6;
+        /** @property {number} - World units a second the target must move across the ground for it to swing */
+        this.swingSpeed = 1;
+        /** @property {number} - Seconds after turning by hand before it swings on its own again */
+        this.swingDelay = 1;
+        /** @property {boolean} - Swing behind the target's own facing, its getForward3D, instead of the way it moves */
+        this.useFacing = false;
+        /** @property {boolean} - The mouse and a gamepad stick turn it */
+        this.manualControl = true;
+        /** @property {number} - Mouse button that turns it while held, 0 is left and 2 is right */
+        this.dragButton = 2;
+        /** @property {boolean} - Capture the mouse on a press of dragButton, so turning needs no button held */
+        this.lockPointer = false;
+        /** @property {number} - How far a pixel of mouse movement turns it */
+        this.lookSpeed = .003;
+        /** @property {number} - Which gamepad stick turns it, 1 is usually the right one */
+        this.stick = 1;
+        /** @property {number} - Radians a second a stick pushed all the way turns it */
+        this.stickSpeed = 3;
+        /** @property {boolean} - Pull in, in front of a wall between the pivot and the camera */
+        this.collideWalls = true;
+        /** @property {number} - How far in front of a wall it stays */
+        this.wallMargin = .2;
+        /** @property {number} - Seconds it takes to ease most of the way back out once clear of a wall */
+        this.wallSmoothing = .2;
+
+        this.cameraNew = true;          // made this update, see cameraUpdatePost
+        this.pivot = vec3();            // where the pole starts now, eased toward the target
+        this.poleLength = distance;     // how long the pole is now, shorter at a wall
+        this.targetFrom = undefined;    // where the target was last update, to see which way it moves
+        this.turnTime = -Infinity;      // when it was last turned by hand
+        this.activate();
+        this.snap();
+    }
+
+    /** Make this the camera that drives the view */
+    activate() { cameraActivate(this); }
+
+    /** Taking over from another camera, it turns to look the way that one did */
+    takeView()
+    {
+        this.yaw = render3D.camera.rotation.y;
+        this.pitch = clamp(-render3D.camera.rotation.x, this.pitchRange.x, this.pitchRange.y);
+    }
+
+    /** Turn it by hand, as the mouse and stick do, which holds the swing for swingDelay seconds
+     *  @param {number} yaw - Radians to turn around the target
+     *  @param {number} [pitch] - Radians to tilt the pole up */
+    turn(yaw, pitch=0)
+    {
+        this.yaw += yaw;
+        this.pitch = clamp(this.pitch + pitch, this.pitchRange.x, this.pitchRange.y);
+        this.turnTime = time;
+    }
+
+    /** Put it on the target at once, with no easing, for a level start or a teleport, the camera too when this one
+     *  drives it; with no target it stays where the camera is, looking the way it looks */
+    snap()
+    {
+        const pos = this.getTargetPos();
+        if (!pos)
+        {
+            this.takeView();
+            this.poleLength = this.distance;
+            this.pivot = render3D.camera.pos.subtract(this.getPoleDirection().scale(this.distance));
+            return this.placeCamera();
+        }
+        this.pivot = pos.add(this.pivotOffset);
+        this.targetFrom = pos.copy();
+        this.poleLength = this.getPoleLimit();
+        cameraDriver() === this && this.placeCamera(); // a camera not driving keeps its place for later
+    }
+
+    /** Turn, swing and pull in, and set the camera, called by the camera plugin after the objects update */
+    updateCamera()
+    {
+        // by hand, the mouse and a stick
+        if (this.manualControl)
+        {
+            if (this.lockPointer && mouseWasPressed(this.dragButton))
+                pointerLockRequest();
+            const d = mouseDeltaScreen, stick = gamepadStick(this.stick);
+            if ((pointerLockIsActive() || mouseIsDown(this.dragButton)) && (d.x || d.y))
+                this.turn(-d.x * this.lookSpeed, d.y * this.lookSpeed);
+            if (stick.x || stick.y)
+                this.turn(-stick.x * this.stickSpeed * timeDelta, -stick.y * this.stickSpeed * timeDelta);
+        }
+        this.pitch = clamp(this.pitch, this.pitchRange.x, this.pitchRange.y);
+
+        const pos = this.getTargetPos();
+        if (pos)
+        {
+            // swing behind the way it moves across the ground, or its facing, the short way round
+            const target = this.target, from = this.targetFrom || pos;
+            this.targetFrom = pos.copy();
+            if (this.autoSwing && time - this.turnTime >= this.swingDelay)
+            {
+                const move = pos.subtract(from);
+                const way = this.useFacing && target instanceof EngineObject3D ? target.getForward3D() :
+                    hypot(move.x, move.z) > this.swingSpeed * timeDelta ? move : undefined;
+                if (way && (way.x || way.z))
+                {
+                    const turn = atan2(-way.x, -way.z) - this.yaw;
+                    this.yaw += (mod(turn + PI, 2*PI) - PI) * cameraSmoothFactor(this.swingSmoothing);
+                }
+            }
+            this.pivot = this.pivot.lerp(pos.add(this.pivotOffset), cameraSmoothFactor(this.smoothing));
+        }
+
+        // a wall pulls the pole in at once, and it eases back out
+        const limit = this.getPoleLimit();
+        this.poleLength = limit < this.poleLength ? limit :
+            this.poleLength + (limit - this.poleLength) * cameraSmoothFactor(this.wallSmoothing);
+        this.placeCamera();
+    }
+
+    // where the target is, undefined with none or a destroyed one
+    getTargetPos()
+    {
+        const target = this.target;
+        if (!target || target instanceof EngineObject3D && target.destroyed) return;
+        return target instanceof EngineObject3D ? target.getWorldPos3D() : target;
+    }
+
+    // the way the pole goes from the pivot, one unit long
+    getPoleDirection()
+    {
+        const c = cos(this.pitch);
+        return vec3(sin(this.yaw) * c, sin(this.pitch), cos(this.yaw) * c);
+    }
+
+    // how long the pole can be, short of the nearest wall along it: the level and solid objects, not counting the
+    // target, its parts or this
+    getPoleLimit()
+    {
+        if (!this.collideWalls) return this.distance;
+        const target = this.target, wall = (o)=>
+        {
+            for (let p = o; p; p = p.parent)
+                if (p === target || p === this) return false;
+            return o.isSolid || render3DLevel.includes(o);
+        };
+        const hit = render3D.pick(new Ray3D(this.pivot, this.getPoleDirection()), engineObjects.filter(wall));
+        return hit && hit.distance < this.distance + this.wallMargin ?
+            max(0, hit.distance - this.wallMargin) : this.distance;
+    }
+
+    // set the camera at the pole's end, looking at the pivot
+    placeCamera()
+    {
+        render3D.camera.orbit(this.pivot, this.poleLength, this.yaw, this.pitch);
+        this.pos3D = render3D.camera.pos.copy();
+    }
+
+    /** Let go of the mouse and stop driving the camera
+     *  @param {boolean} [immediate] */
+    destroy(immediate)
+    {
+        this.lockPointer && pointerLockIsActive() && pointerLockExit();
+        super.destroy(immediate);
     }
 
     /** Camera controls draw nothing */
@@ -32016,6 +32897,7 @@ class CameraControl3D extends EngineObject3D
  * - An EngineObject3D that moves by velocity3D, so give it a size3D and call setCollision to walk into solid
  *   objects instead of through them; walking keeps velocity3D.y, so render3D.gravity can pull it down
  * - Starts from wherever render3D.camera is, so it can take over from another camera without a jump
+ * - A camera of the camera plugin: the newest made drives the view, after the objects move each update
  * - As the child of an EngineObject3D, like a player on a ship, its yaw, pitch and walking are relative to the parent,
  *   so it turns and moves with it
  * - Destroy it to hand the camera back
@@ -32059,6 +32941,25 @@ class FirstPersonCamera3D extends EngineObject3D
          *  sit toward the top of the body instead of its middle; keep it under half the body's height, or the eye is
          *  outside the body and sees through a ceiling it stands under */
         this.eyeHeight = 0;
+        this.cameraNew = true; // made this update, see cameraUpdatePost
+        this.activate();
+    }
+
+    /** Make this the camera that drives the view */
+    activate() { cameraActivate(this); }
+
+    /** Taking over from another camera, it keeps its own eye */
+    takeView() {}
+
+    /** Put the camera at the eye, called by the camera plugin after the objects update */
+    updateCamera()
+    {
+        // the camera sits at the eye, eyeHeight above where this frame's physics left it, looking the way it does in
+        // its parent's space, since a child's velocity3D moves it in that space too
+        const rotation = vec3(this.pitch, this.yaw, 0);
+        render3D.camera.pos = render3DObjectMatrix(this).transformPoint(vec3(0, this.eyeHeight, 0));
+        render3D.camera.rotation = this.parent instanceof EngineObject3D ?
+            this.parent.getMatrix().multiply(Matrix4.rotation(rotation)).getRotation() : rotation;
     }
 
     /** Move by velocity3D, and fall by render3D.gravity unless flying, called automatically each frame */
@@ -32073,7 +32974,7 @@ class FirstPersonCamera3D extends EngineObject3D
         this.gravityScale = gravityScale;
     }
 
-    /** Read the mouse and keys and put the camera at the eye, called automatically each frame */
+    /** Read the mouse and keys and move, called automatically each frame */
     update()
     {
         // only a root moves by its own physics, a child follows its parent, so gravity would still pull one that flies
@@ -32097,13 +32998,6 @@ class FirstPersonCamera3D extends EngineObject3D
         // a jump from the ground, level collision sets what it stands on
         if (this.jumpSpeed && !this.fly && this.groundObject && (keyWasPressed('Space') || gamepadWasPressed(0)))
             this.velocity3D.y = this.jumpSpeed;
-
-        // the camera sits at the eye, eyeHeight above where this frame's physics left it, looking the way it does in
-        // its parent's space, since a child's velocity3D moves it in that space too
-        const rotation = vec3(this.pitch, this.yaw, 0);
-        render3D.camera.pos = render3DObjectMatrix(this).transformPoint(vec3(0, this.eyeHeight, 0));
-        render3D.camera.rotation = this.parent instanceof EngineObject3D ?
-            this.parent.getMatrix().multiply(Matrix4.rotation(rotation)).getRotation() : rotation;
     }
 
     /** Let go of the mouse and stop driving the camera
@@ -44413,6 +45307,9 @@ export
     cameraPos,
     cameraAngle,
     cameraScale,
+    cameraShakeDistance,
+    cameraShakeAngle,
+    cameraShakeDecay,
     timeScale,
     canvasColorTiles,
     canvasClearColor,
@@ -44475,6 +45372,9 @@ export
     setCameraPos,
     setCameraAngle,
     setCameraScale,
+    setCameraShakeDistance,
+    setCameraShakeAngle,
+    setCameraShakeDecay,
     setTimeScale,
     setCanvasColorTiles,
     setCanvasClearColor,
@@ -44677,6 +45577,7 @@ export
     setCursor,
     getCameraSize,
     cameraFit,
+    cameraShake,
     isOnScreen,
 
     // WebGL
@@ -44913,6 +45814,9 @@ export
     ParallaxLayer,
     parallaxMountains,
 
+    // Camera
+    FollowCamera,
+
     // Path Finding
     PathFinder,
     PathFinderNode,
@@ -44972,6 +45876,7 @@ export
     Light3D,
     DirectionalLight3D,
     CameraControl3D,
+    ThirdPersonCamera3D,
     FirstPersonCamera3D,
     ParticleEmitter3D,
     Trail3D,

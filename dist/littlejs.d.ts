@@ -56,6 +56,27 @@ declare module "littlejsengine" {
      */
     export type MedalCallbackFunction = (medal: Medal) => any;
     /**
+     * Where and how hard two objects hit, given to beginContact
+     */
+    export type Box2dContact = {
+        /**
+         * - Where they touched in world space, between the two points of a flat
+         *   landing, toward the one pushed harder; undefined for a sensor
+         */
+        point: Vector2 | undefined;
+        /**
+         * - The other object's surface normal where they touched, pointing toward
+         *   this object; undefined for a sensor
+         */
+        normal: Vector2 | undefined;
+        /**
+         * - An estimate of how hard they hit: the impulse that stops them closing, from the mass
+         *   and inertia of both where they touched, times 1 + restitution; mass times world units
+         *   per second, 0 for a sensor
+         */
+        impulse: number;
+    };
+    /**
      * Options for a tweak
      */
     export type TweakOptions = {
@@ -145,11 +166,44 @@ declare module "littlejsengine" {
      */
     export type DragAndDropCallback = (event: DragEvent) => any;
     /**
+     * A contact about to be solved, given to preSolve, whose changes the solver takes
+     */
+    export type Box2dPreSolveContact = {
+        /**
+         * - Where they touch in world space, between the points when there are two
+         */
+        point: Vector2;
+        /**
+         * - The other object's surface normal where they touch, pointing toward this object
+         */
+        normal: Vector2;
+        /**
+         * - Set false to let them pass through each other until they stop touching,
+         *   true to make them collide again
+         */
+        enabled: boolean;
+        /**
+         * - The contact's friction, kept while they touch
+         */
+        friction: number;
+        /**
+         * - The contact's restitution, kept while they touch
+         */
+        restitution: number;
+        /**
+         * - How fast this object's surface moves there for this step, clockwise around it,
+         *   its surfaceSpeed to start with
+         */
+        surfaceSpeed: number;
+    };
+    /**
      * A scene, any object with the hooks it needs, each optional and called as a method so this is the scene
      */
     export type Scene = {
         /**
-         * - Called when the scene starts, after the old one left and the objects were destroyed
+         * - Called when the scene starts, after the old one left and the objects were destroyed;
+         *    it is not awaited, so setup done once, like await box2dInit() and new plugins, goes
+         *    in gameInit before the first setScene
          */
         enter?: () => void;
         /**
@@ -738,8 +792,10 @@ declare module "littlejsengine" {
      *  @param {PluginCallback} [glContextLost]
      *  @param {PluginCallback} [glContextRestored]
      *  @param {PluginCallback} [preRender] - Called after the canvas is cleared and before gameRender
+     *  @param {PluginCallback} [updatePost] - Called after the objects update each tick, before gameUpdatePost, paused
+     *    included, for what follows an object, like a camera
      *  @memberof Engine */
-    export function engineAddPlugin(update?: PluginCallback, render?: PluginCallback, glContextLost?: PluginCallback, glContextRestored?: PluginCallback, preRender?: PluginCallback): void;
+    export function engineAddPlugin(update?: PluginCallback, render?: PluginCallback, glContextLost?: PluginCallback, glContextRestored?: PluginCallback, preRender?: PluginCallback, updatePost?: PluginCallback): void;
     /** Add something the game loads to what startup waits for: while engineInit and gameInit run, the game loop starts
      *  once it is done, and the loading screen counts it; images from loadTexture and sounds from files are added on
      *  their own, and a load that fails counts as done; after startup it does nothing
@@ -1149,6 +1205,21 @@ declare module "littlejsengine" {
      *  @default
      *  @memberof Settings */
     export let cameraScale: number;
+    /** How far a full camera shake moves the view, in world units, see cameraShake
+     *  @type {number}
+     *  @default
+     *  @memberof Settings */
+    export let cameraShakeDistance: number;
+    /** How far a full camera shake turns the view, in radians, see cameraShake
+     *  @type {number}
+     *  @default
+     *  @memberof Settings */
+    export let cameraShakeAngle: number;
+    /** How much camera shake fades each second, 1 takes a full shake to nothing in a second, see cameraShake
+     *  @type {number}
+     *  @default
+     *  @memberof Settings */
+    export let cameraShakeDecay: number;
     /** Scale applied to engine time, can be used for slow motion or fast forward
      *  - 1 is normal speed, 2 is double speed, 0.5 is half speed
      *  - 0 freezes the game like a pause without setting the paused flag, gameUpdatePost and input still run
@@ -1508,6 +1579,18 @@ declare module "littlejsengine" {
      *  @param {number} scale
      *  @memberof Settings */
     export function setCameraScale(scale: number): void;
+    /** Set how far a full camera shake moves the view, in world units
+     *  @param {number} distance
+     *  @memberof Settings */
+    export function setCameraShakeDistance(distance: number): void;
+    /** Set how far a full camera shake turns the view, in radians
+     *  @param {number} angle
+     *  @memberof Settings */
+    export function setCameraShakeAngle(angle: number): void;
+    /** Set how much camera shake fades each second
+     *  @param {number} decay
+     *  @memberof Settings */
+    export function setCameraShakeDecay(decay: number): void;
     /** Set scale applied to engine time
      *  - 0 freezes the game like a pause, gameUpdatePost and input still run so the game can set it back
      *  - Above 1 the fixed step runs that many updates each frame, so a large scale costs as many updates
@@ -2479,6 +2562,7 @@ declare module "littlejsengine" {
          *  @param {number} [timeLeft] - How much time left before the timer is elapsed in seconds (undefined = unset)
          *  @param {boolean} [useRealTime] - Should the timer keep running even when the game is paused? (useful for UI) */
         constructor(timeLeft?: number, useRealTime?: boolean);
+        /** @property {boolean} - Runs on real time, so it keeps going while the game is paused, see setUseRealTime */
         useRealTime: boolean;
         /** @type {number|undefined} */
         time: number | undefined;
@@ -3354,6 +3438,14 @@ declare module "littlejsengine" {
      *  @return {number} - The new camera scale
      *  @memberof Draw */
     export function cameraFit(center: Vector2, size: Vector2, worldMargin?: number | Vector2 | CameraFitSides, screenInset?: number | Vector2 | CameraFitSides): number;
+    /** Shake the camera, for a hit or an explosion: adds to the shake, which fades on its own by cameraShakeDecay
+     *  - The view moves by smooth noise scaled by the shake squared, so a small one is gentle and a big one is wild,
+     *    up to cameraShakeDistance and cameraShakeAngle
+     *  - It moves only what is drawn, in 2D and in 3D: cameraPos and cameraAngle are the game's own between frames
+     *  - It holds while the game is paused or at a time scale of 0
+     *  @param {number} [amount] - How much to add, the shake is at most 1
+     *  @memberof Draw */
+    export function cameraShake(amount?: number): void;
     /** Check if a box, point, or circle is on screen with a circle test
      *  If size is a Vector2, uses the length as diameter
      *  This can be used to cull offscreen objects from render or update
@@ -3827,6 +3919,8 @@ declare module "littlejsengine" {
          *    game counting its sounds goes on; isLoaded says which
          */
         constructor(asset?: string | URL | (number | undefined)[], randomness?: number, range?: number, taper?: number, onloadCallback?: SoundLoadCallback);
+        /** @property {number} - Percentage of this sound currently loaded, sounds
+         *  fetched from a url stay at 0 until decoding completes */
         loadedPercent: number;
         set range(arg: number);
         /** World space max range of sound, 0 for no limit; a range that is set is the sound's own, in 3D too
@@ -4157,7 +4251,8 @@ declare module "littlejsengine" {
          *  @param {number}   [renderOrder] - Objects sorted by renderOrder before being rendered
          */
         constructor(pos?: Vector2, size?: Vector2, tileInfo?: TileInfo, angle?: number, color?: Color, renderOrder?: number);
-        /** @property {Vector2} - World space position of the object */
+        /** @property {Vector2} - World space position of the object, on a child too, where setting it moves the
+         *  child there and its localPos follows */
         pos: Vector2;
         /** @property {Vector2} - World space width and height of the object */
         size: Vector2;
@@ -4167,7 +4262,8 @@ declare module "littlejsengine" {
         /** @property {TileInfo|undefined} - Tile info to render object (undefined is untextured)
          *  @type {TileInfo|undefined} */
         tileInfo: TileInfo | undefined;
-        /** @property {number} - Angle to rotate the object */
+        /** @property {number} - Angle to rotate the object, in world space on a child too, where setting it turns
+         *  the child and its localAngle follows */
         angle: number;
         /** @property {Color} - Color to apply when rendered */
         color: Color;
@@ -4246,8 +4342,10 @@ declare module "littlejsengine" {
         /** @property {Vector2|undefined} - Position relative to the parent, only while attached to one
          *  @type {Vector2|undefined} */
         localPos: Vector2 | undefined;
-        /** @property {number} - Local angle if child  */
+        /** @property {number} - Angle relative to the parent, only while attached to one */
         localAngle: number;
+        /** @type {Array<number>|undefined} */
+        placedTransform: Array<number> | undefined;
         /** @property {boolean} - Object collides with the level, its tile collision layers
          *  @type {boolean} */
         collideLevel: boolean;
@@ -4261,6 +4359,8 @@ declare module "littlejsengine" {
          *  - Calling destroy on it still destroys it, and its children go with it either way */
         persistent: boolean;
         /** Update the object transform, called automatically by engine even when paused
+         *  - A child is placed from its parent, and a pos or angle set on it since is kept first, made its localPos or
+         *    localAngle; the engine does that each frame, call this after setting one to have them right away
          *  @param {boolean} [updateChildren] - Also update the children's transforms */
         updateTransforms(updateChildren?: boolean): void;
         /** Update the object physics, called automatically by engine once each frame. Can be overridden to stop or change how physics works for an object
@@ -6582,6 +6682,7 @@ declare module "littlejsengine" {
          *  @param {string}  [font=uiSystem.defaultFont]
          */
         constructor(pos?: Vector2, size?: Vector2, text?: string, align?: "center" | "left" | "right", font?: string);
+        /** @property {string} - The text shown */
         text: string;
     }
     /**
@@ -6602,6 +6703,7 @@ declare module "littlejsengine" {
         constructor(pos?: Vector2, size?: Vector2, text?: string);
         /** @property {number} - Max length of input in characters as a reader counts them (0 = no limit) */
         maxLength: number;
+        /** @property {string} - The text typed in it */
         text: string;
         /** Stop editing the text */
         stopEditing(): void;
@@ -6643,6 +6745,7 @@ declare module "littlejsengine" {
         constructor(pos?: Vector2, size?: Vector2, text?: string, color?: Color);
         /** @property {Vector2} - Text offset for the button */
         textOffset: Vector2;
+        /** @property {string} - The label shown on the button */
         text: string;
     }
     /**
@@ -6661,6 +6764,7 @@ declare module "littlejsengine" {
         constructor(pos?: Vector2, size?: Vector2, checked?: boolean, text?: string, color?: Color);
         /** @property {boolean} - Is the checkbox currently checked? */
         checked: boolean;
+        /** @property {string} - The label shown beside the box */
         text: string;
     }
     /**
@@ -6688,6 +6792,7 @@ declare module "littlejsengine" {
         handleSlice: TileSlice | undefined;
         /** @property {boolean} - Should it fill up like a progress bar? */
         fillMode: boolean;
+        /** @property {string} - The label shown on the slider */
         text: string;
         /** Draw the handle, or the fill of a fill mode slider, with the handle slice, the slider's own, or a rectangle
          *  @param {Vector2} pos
@@ -6950,6 +7055,10 @@ declare module "littlejsengine" {
      *   angleDamping, mass, friction, restitution and gravityScale; use setLinearVelocity, setAngularVelocity,
      *   setLinearDamping, setAngularDamping, setMass, the friction and restitution of its shapes and setGravityScale.
      *   A debug build warns once when one of them is set
+     * - oneWay makes it one way as in 2D, like a platform jumped up through: up, down, left or right, the way others pass
+     *   through, turning with the body; it blocks only what first touches it from its far side, and what it lets pass
+     *   gets no beginContact or endContact, though a sensor does
+     * - surfaceSpeed makes it a conveyor belt, and preSolve changes a contact before it is solved
      * @extends EngineObject
      * @memberof Box2D
      */
@@ -6976,6 +7085,10 @@ declare module "littlejsengine" {
          *  @type {Array<Array<Vector2>>} */
         edgeLoops: Array<Array<Vector2>>;
         edgeListFixtures: Map<any, any>;
+        /** @property {number} - How fast its surface moves, clockwise around it, in world units per second, like a
+         *  conveyor belt: what touches it is carried along by friction, to the right across its top when positive;
+         *  set it with setSurfaceSpeed, which wakes what rests on it */
+        surfaceSpeed: number;
         /** Draw all this object's fixtures
          *  @param {Color}   [color]
          *  @param {Color}   [lineColor]
@@ -6987,19 +7100,41 @@ declare module "littlejsengine" {
          *  and creating objects, fixtures or joints must wait until after the step
          *  - The fixtures say which shapes touched, the same objects addBox and the others returned, so a small sensor
          *    under a player's feet can tell standing on the ground from touching a wall
-         *  - impactSpeed is how hard they hit: how fast they were closing along the contact normal, spin included,
-         *    in world units per second, measured before the solver pushed them apart; 0 for a sensor
+         *  - impactSpeed is how fast they were closing along the contact normal, spin included, in world units per
+         *    second, measured before the solver pushed them apart; 0 for a sensor
+         *  - contact has where they touched, the normal toward this object and the impulse of the hit, which counts
+         *    their mass and how it is spread: a stick heavy at its ends hits harder than one heavy in the middle,
+         *    spinning at the same speed
          *  @param {Box2dObject} otherObject
          *  @param {Object} [fixture] - This object's fixture that touched
          *  @param {Object} [otherFixture] - The other object's fixture that touched
-         *  @param {number} [impactSpeed] - How fast they were closing as they touched */
-        beginContact(otherObject: Box2dObject, fixture?: any, otherFixture?: any, impactSpeed?: number): void;
+         *  @param {number} [impactSpeed] - How fast they were closing as they touched
+         *  @param {Box2dContact} [contact] - Where they touched and how hard they hit */
+        beginContact(otherObject: Box2dObject, fixture?: any, otherFixture?: any, impactSpeed?: number, contact?: Box2dContact): void;
         /** Called when a contact ends, while the world steps or a body is destroyed: a destroy or a setter waits
          *  until the step is done, and creating objects, fixtures or joints must wait until after the step
          *  @param {Box2dObject} otherObject
          *  @param {Object} [fixture] - This object's fixture that touched
          *  @param {Object} [otherFixture] - The other object's fixture that touched */
         endContact(otherObject: Box2dObject, fixture?: any, otherFixture?: any): void;
+        /** Called before Box2D solves a contact, each step while they touch, for an object that overrides it, while the
+         *  world steps as beginContact is; change the contact to change how they collide
+         *  - enabled false lets them pass through each other until they stop touching, like a platform dropped through
+         *  - friction and restitution are kept while they touch, surfaceSpeed is for this step, like a patch of a belt
+         *  - A sleeping body's contacts are not solved, so wake it with setAwake for this to be called, as for a player
+         *    standing still on a platform it drops through
+         *  @param {Box2dObject} otherObject
+         *  @param {Object} [fixture] - This object's fixture that touches
+         *  @param {Object} [otherFixture] - The other object's fixture that touches
+         *  @param {Box2dPreSolveContact} [contact] - Where they touch and how they collide
+         *  @example
+         *  // drop down through a one way platform
+         *  player.preSolve = (other, fixture, otherFixture, contact)=>
+         *  {
+         *      if (other.oneWay && keyIsDown('ArrowDown'))
+         *          contact.enabled = false;
+         *  } */
+        preSolve(otherObject: Box2dObject, fixture?: any, otherFixture?: any, contact?: Box2dPreSolveContact): void;
         /** Add a shape fixture to the body
          *  @param {Object} shape
          *  @param {number}  [density]
@@ -7133,6 +7268,9 @@ declare module "littlejsengine" {
         /** Sets the gravity scale
          *  @param {number} [scale] */
         setGravityScale(scale?: number): void;
+        /** Sets how fast its surface moves, clockwise around it, like a conveyor belt, see surfaceSpeed
+         *  @param {number} speed - World units per second */
+        setSurfaceSpeed(speed: number): void;
         /** Should be like a bullet for continuous collision detection?
          *  @param {boolean} [isBullet] */
         setBullet(isBullet?: boolean): void;
@@ -7533,7 +7671,9 @@ declare module "littlejsengine" {
          *  @param {Box2dJoint} joint2
          *  @param {number} [ratio] */
         constructor(objectA: Box2dObject, objectB: Box2dObject, joint1: Box2dJoint, joint2: Box2dJoint, ratio?: number);
+        /** @property {Box2dJoint} - The first joint geared, a revolute or prismatic joint */
         joint1: Box2dJoint;
+        /** @property {Box2dJoint} - The second joint geared, a revolute or prismatic joint */
         joint2: Box2dJoint;
         ratioSign: number;
         /** Get the first joint
@@ -8299,6 +8439,78 @@ declare module "littlejsengine" {
      *  @return {function(OffscreenCanvasRenderingContext2D, Vector2): void}
      *  @memberof Parallax */
     export function parallaxMountains(topColor?: Color, bottomColor?: Color, seed?: number): (arg0: OffscreenCanvasRenderingContext2D, arg1: Vector2) => void;
+    /**
+     * FollowCamera - The 2D camera: follows a target and drives cameraPos, and cameraScale when it has a scale
+     * - Smoothing is in seconds, so it comes out the same at any frame rate
+     * - A dead zone lets the target move about without the view moving
+     * - lookAhead shows more of the way the target is going, sliding across when it turns
+     * - boundsMin and boundsMax keep the view over the level, centered where the level is smaller than the view;
+     *   they go by the view's size without cameraAngle
+     * - Its pos is the middle of the view, before any cameraShake
+     * - The newest camera made drives the view; a game can still change cameraPos in gameUpdatePost for that frame
+     * - Destroy it to stop it driving the view, which stays where it was; engineObjectsDestroy removes it as it does any
+     *   object, so make a new one after, or set persistent to keep it
+     * @extends EngineObject
+     * @memberof Camera
+     * @example
+     * const camera = new FollowCamera(player);
+     * camera.lookAhead = vec2(3, 0);   // see further the way the player runs
+     * camera.boundsMin = vec2();       // keep the view over the level
+     * camera.boundsMax = levelSize;
+     */
+    export class FollowCamera extends EngineObject {
+        /** Make a follow camera, the view goes to its target at once
+         *  @param {EngineObject|Vector2} [target] - What to follow, an object or a position
+         *  @param {number} [smoothing] - Seconds it takes to close most of the gap, 0 snaps */
+        constructor(target?: EngineObject | Vector2, smoothing?: number);
+        /** @property {EngineObject|Vector2|undefined} - What it follows; destroyed or undefined, the view holds
+         *  @type {EngineObject|Vector2|undefined} */
+        target: EngineObject | Vector2 | undefined;
+        /** @property {number} - Seconds it takes to close most of the gap to the target, 0 snaps */
+        smoothing: number;
+        /** @property {Vector2} - Where the target sits from the middle of the view, the view moved by it */
+        offset: Vector2;
+        /** @property {Vector2} - Size of a box in the middle of the view the target moves in without the view moving */
+        deadZone: Vector2;
+        /** @property {Vector2} - How much more it shows the way the target goes on each axis, 0 for none */
+        lookAhead: Vector2;
+        /** @property {number} - How far the target must go back the other way before the look turns, so a jiggle
+         *  does not flip it */
+        lookAheadTurn: number;
+        /** @property {number} - Seconds the look takes to slide across when it turns */
+        lookAheadSmoothing: number;
+        /** @property {Vector2|undefined} - Lowest corner of the area the view stays in
+         *  @type {Vector2|undefined} */
+        boundsMin: Vector2 | undefined;
+        /** @property {Vector2|undefined} - Highest corner of the area the view stays in, Infinity on an axis leaves
+         *  that side open
+         *  @type {Vector2|undefined} */
+        boundsMax: Vector2 | undefined;
+        /** @property {number|undefined} - The cameraScale it eases to, undefined leaves cameraScale to the game
+         *  @type {number|undefined} */
+        scale: number | undefined;
+        /** @property {number} - Seconds the zoom takes to close most of the gap to scale, 0 snaps */
+        scaleSmoothing: number;
+        cameraNew: boolean;
+        lookOffset: Vector2;
+        lookDirection: Vector2;
+        lookTravel: Vector2;
+        lookFrom: Vector2 | undefined;
+        lookTarget: any;
+        /** Make this the camera that drives the view, it starts from where the view is */
+        activate(): void;
+        /** Start from where the view is, called when it takes over from another camera */
+        takeView(): void;
+        /** Put it on the target at once, with no easing, for a level start or a teleport; the view goes there too when
+         *  this camera is the one driving it */
+        snap(): void;
+        /** Move toward the target and set the view, called by the camera plugin after the objects update */
+        updateCamera(): void;
+        getTargetPos(): Vector2 | undefined;
+        getFocus(): Vector2 | undefined;
+        updateLook(snap: any): void;
+        inBounds(pos: any): any;
+    }
     /** Grid pathfinder using A* with two optional smoothing passes
      *  @memberof PathFinding
      *  @example
@@ -9694,8 +9906,11 @@ declare module "littlejsengine" {
      * - Its tile and raycast halves are 2D only so they default off here, and a child sits solid collision out
      * - A sync2D object collides in 2D instead, which needs the 2D size set as well as size3D
      * - setMesh swaps the mesh and frees the old one, for text and terrain that get built again
-     * - addChild attaches the 3D transform, and pos3D becomes an offset from the parent; attach keeps the child where
-     *   it is and works the offset out, and removeChild leaves it where it was in the world
+     * - addChild attaches the 3D transform, and a child's pos3D, rotation3D and scale3D are then relative to its parent,
+     *   as in three.js and Godot; this differs from 2D, where a child's pos and angle stay in world space and localPos
+     *   and localAngle hold the offset; getWorldPos3D, getWorldRotation3D and getMatrix give a child's world transform,
+     *   and setWorldPos3D and setWorldRotation3D put it at a world position or rotation
+     * - attach keeps the child where it is and works the offset out, and removeChild leaves it where it was in the world
      * - The 2D offset arguments of addChild do nothing here, set the child's pos3D
      * @extends EngineObject
      * @memberof Render3D
@@ -9714,12 +9929,14 @@ declare module "littlejsengine" {
          *    the tile that covers it
          *  @param {Color} [color] - Tint */
         constructor(pos3D?: Vector3, mesh?: Mesh, tileInfo?: TileInfo | TextureInfo, color?: Color);
-        /** @property {Vector3} - World space position, local to the parent when attached to an EngineObject3D */
+        /** @property {Vector3} - Position in world space, or relative to the parent while attached to an
+         *  EngineObject3D, unlike a 2D child's pos, which stays in world space; getWorldPos3D gives a child's world
+         *  position */
         pos3D: Vector3;
-        /** @property {Vector3} - Rotation vec3(pitch, yaw, roll) in radians, local to the parent when attached to an
-         *  EngineObject3D */
+        /** @property {Vector3} - Rotation vec3(pitch, yaw, roll) in radians, relative to the parent while attached to
+         *  an EngineObject3D, like pos3D */
         rotation3D: Vector3;
-        /** @property {Vector3} - Scale, local to the parent when attached to an EngineObject3D */
+        /** @property {Vector3} - Scale, relative to the parent while attached to an EngineObject3D, like pos3D */
         scale3D: Vector3;
         /** @property {Vector3} - Added to pos3D each frame by the engine before update, like the 2D velocity, no super
          *  call needed; damping and render3D.gravity act on it once the object has a mass */
@@ -9729,6 +9946,10 @@ declare module "littlejsengine" {
         /** @property {Mesh|undefined} - Mesh to draw
          *  @type {Mesh|undefined} */
         mesh: Mesh | undefined;
+        /** @property {Vector3} - Size for solid collision and the collect and callback helpers, and of the sprite when
+         *  there is a tileInfo and no mesh; starts at the size of the mesh's box, or 1 with no mesh, and setMesh leaves
+         *  it as it is; the box is centered on pos3D, so center() a mesh whose origin is not its middle, like a model
+         *  standing on its feet, or set size3D; scale3D and any parent's scale grow it, so drawing and picking agree */
         size3D: Vector3;
         /** @property {number} - Diameter of a soft shadow drawn under the object on render3D.softShadowHeight, 0 for
          *  none; scale3D and a parent's scale grow it, so set it once for the unscaled object */
@@ -9805,6 +10026,20 @@ declare module "littlejsengine" {
         /** Returns the world position
          *  @return {Vector3} */
         getWorldPos3D(): Vector3;
+        /** Move the object so its world position is pos, setting pos3D, which on a child is relative to the parent
+         *  - Exact whatever the parent's turn and scale; a child with a localMatrix has the matrix moved instead
+         *  @param {Vector3} pos */
+        setWorldPos3D(pos: Vector3): void;
+        /** Returns the rotation in the world as vec3(pitch, yaw, roll), the parent's included on a child
+         *  - Under a parent scaled unevenly a turned child is sheared, which no rotation is exactly, so it is the nearest
+         *  @return {Vector3} */
+        getWorldRotation3D(): Vector3;
+        /** Turn the object so its rotation in the world is rotation, setting rotation3D, which on a child is relative to
+         *  the parent; it stays where it is
+         *  - Exact unless the parent, or one above it, is scaled unevenly, the same limit as attach
+         *  - A child with a localMatrix has the matrix built again from its position and scale with the new turn
+         *  @param {Vector3} rotation - vec3(pitch, yaw, roll) in radians */
+        setWorldRotation3D(rotation: Vector3): void;
         /** Returns the direction the object faces, its -Z axis in the world
          *  @return {Vector3} */
         getForward3D(): Vector3;
@@ -10704,6 +10939,7 @@ declare module "littlejsengine" {
     /**
      * CameraControl3D - Drag to turn the camera around a point, roll the wheel to zoom
      * - An EngineObject3D, so move its pos3D to follow something, or parent it to an object
+     * - A camera of the camera plugin: the newest made drives the view, after the objects move each update
      * - Destroy it to hand the camera back, and it stops driving the camera
      * - Set persistent to keep it when engineObjectsDestroy clears out a level
      * - Every part of it is a field, so a game can change the buttons, speeds and limits
@@ -10737,6 +10973,105 @@ declare module "littlejsengine" {
         zoomRange: Vector2;
         /** @property {Vector2} - Lowest and highest pitch, so it cannot tip over the top, widened to hold the pitch given */
         pitchRange: Vector2;
+        cameraNew: boolean;
+        /** Make this the camera that drives the view */
+        activate(): void;
+        /** Taking over from another camera, it keeps its own orbit */
+        takeView(): void;
+        /** Put the camera on its orbit, called by the camera plugin after the objects update */
+        updateCamera(): void;
+    }
+    /**
+     * ThirdPersonCamera3D - A camera on a pole from the player, swinging around behind it as it moves
+     * - The pole starts at a pivot, pivotOffset from the target, usually its head, turns by yaw and pitch, and the camera
+     *   sits at its end, distance away, looking back at the pivot
+     * - autoSwing, on by default, swings it around behind the way the target moves across the ground, eased by
+     *   swingSmoothing, only while the target moves faster than swingSpeed; useFacing swings it behind the target's own
+     *   facing instead, for a player that turns
+     * - The mouse, dragging dragButton or with the pointer locked, and a gamepad stick turn it by hand when
+     *   manualControl is on, and turning by hand holds the swing for swingDelay seconds; turn() does the same for a
+     *   game's own controls
+     * - A wall between the pivot and the camera, the level or a solid object, pulls it in, in front of the wall, and it
+     *   eases back out once clear
+     * - A camera of the camera plugin: the newest made drives the view, after the objects move each update
+     * - Destroy it to hand the camera back
+     * @extends EngineObject3D
+     * @memberof Render3D
+     * @example
+     * const camera = new ThirdPersonCamera3D(player); // follow the player from 6 units back
+     * camera.autoSwing = false;                       // a shooter turns it only by hand
+     */
+    export class ThirdPersonCamera3D extends EngineObject3D {
+        /** Make a third person camera, the view goes to it at once
+         *  @param {EngineObject3D|Vector3} [target] - What to follow, an object or a position
+         *  @param {number} [distance] - How long the pole is
+         *  @param {number} [pitch] - Angle of the pole above level, PI/2 looks straight down */
+        constructor(target?: Vector3 | EngineObject3D, distance?: number, pitch?: number);
+        /** @property {EngineObject3D|Vector3|undefined} - What it follows; destroyed or undefined, the camera holds
+         *  @type {EngineObject3D|Vector3|undefined} */
+        target: EngineObject3D | Vector3 | undefined;
+        /** @property {Vector3} - Where the pole starts from the target, usually its head */
+        pivotOffset: Vector3;
+        /** @property {number} - How long the pole is */
+        distance: number;
+        /** @property {number} - Angle of the pole around the target, 0 puts the camera on the +Z side looking -Z */
+        yaw: number;
+        /** @property {number} - Angle of the pole above level */
+        pitch: number;
+        /** @property {Vector2} - Lowest and highest pitch */
+        pitchRange: Vector2;
+        /** @property {number} - Seconds the pivot takes to close most of the gap to the target, 0 sticks to it */
+        smoothing: number;
+        /** @property {boolean} - Swing around behind the way the target moves */
+        autoSwing: boolean;
+        /** @property {number} - Seconds the swing takes to close most of the gap, how tight it is */
+        swingSmoothing: number;
+        /** @property {number} - World units a second the target must move across the ground for it to swing */
+        swingSpeed: number;
+        /** @property {number} - Seconds after turning by hand before it swings on its own again */
+        swingDelay: number;
+        /** @property {boolean} - Swing behind the target's own facing, its getForward3D, instead of the way it moves */
+        useFacing: boolean;
+        /** @property {boolean} - The mouse and a gamepad stick turn it */
+        manualControl: boolean;
+        /** @property {number} - Mouse button that turns it while held, 0 is left and 2 is right */
+        dragButton: number;
+        /** @property {boolean} - Capture the mouse on a press of dragButton, so turning needs no button held */
+        lockPointer: boolean;
+        /** @property {number} - How far a pixel of mouse movement turns it */
+        lookSpeed: number;
+        /** @property {number} - Which gamepad stick turns it, 1 is usually the right one */
+        stick: number;
+        /** @property {number} - Radians a second a stick pushed all the way turns it */
+        stickSpeed: number;
+        /** @property {boolean} - Pull in, in front of a wall between the pivot and the camera */
+        collideWalls: boolean;
+        /** @property {number} - How far in front of a wall it stays */
+        wallMargin: number;
+        /** @property {number} - Seconds it takes to ease most of the way back out once clear of a wall */
+        wallSmoothing: number;
+        cameraNew: boolean;
+        pivot: Vector3;
+        poleLength: number;
+        targetFrom: Vector3 | undefined;
+        turnTime: number;
+        /** Make this the camera that drives the view */
+        activate(): void;
+        /** Taking over from another camera, it turns to look the way that one did */
+        takeView(): void;
+        /** Turn it by hand, as the mouse and stick do, which holds the swing for swingDelay seconds
+         *  @param {number} yaw - Radians to turn around the target
+         *  @param {number} [pitch] - Radians to tilt the pole up */
+        turn(yaw: number, pitch?: number): void;
+        /** Put it on the target at once, with no easing, for a level start or a teleport, the camera too when this one
+         *  drives it; with no target it stays where the camera is, looking the way it looks */
+        snap(): void;
+        /** Turn, swing and pull in, and set the camera, called by the camera plugin after the objects update */
+        updateCamera(): void;
+        getTargetPos(): Vector3 | undefined;
+        getPoleDirection(): Vector3;
+        getPoleLimit(): number;
+        placeCamera(): void;
     }
     /**
      * FirstPersonCamera3D - Look around with the mouse and move with the keys, with the camera at its position
@@ -10745,6 +11080,7 @@ declare module "littlejsengine" {
      * - An EngineObject3D that moves by velocity3D, so give it a size3D and call setCollision to walk into solid
      *   objects instead of through them; walking keeps velocity3D.y, so render3D.gravity can pull it down
      * - Starts from wherever render3D.camera is, so it can take over from another camera without a jump
+     * - A camera of the camera plugin: the newest made drives the view, after the objects move each update
      * - As the child of an EngineObject3D, like a player on a ship, its yaw, pitch and walking are relative to the parent,
      *   so it turns and moves with it
      * - Destroy it to hand the camera back
@@ -10783,6 +11119,13 @@ declare module "littlejsengine" {
          *  sit toward the top of the body instead of its middle; keep it under half the body's height, or the eye is
          *  outside the body and sees through a ceiling it stands under */
         eyeHeight: number;
+        cameraNew: boolean;
+        /** Make this the camera that drives the view */
+        activate(): void;
+        /** Taking over from another camera, it keeps its own eye */
+        takeView(): void;
+        /** Put the camera at the eye, called by the camera plugin after the objects update */
+        updateCamera(): void;
     }
     /**
      * A particle as a ParticleEmitter3D's callbacks see it: one object the emitter reuses, set from the particle for each
