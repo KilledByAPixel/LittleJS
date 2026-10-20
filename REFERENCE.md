@@ -992,6 +992,27 @@ for (let i = 3; i--;)
         parallaxMountains(hsl(.6, .3, .4 + i*.15), hsl(.6, .5, .2)));
 ```
 
+## LittleJS Camera
+- Camera objects drive the view, so a game need not move cameraPos itself; the newest made drives it
+- They update after the objects move, so they are never a frame behind, and hold while paused
+- Destroy the one driving and the one before takes over from where the view is
+- cameraShake (see the camera settings) works with or without one; the 3D cameras are in LittleJS 3D Rendering
+
+```javascript
+new FollowCamera(target, smoothing=.1) // the 2D camera, follows an EngineObject or a vec2 and sets cameraPos;
+                           // the view goes to the target at once; smoothing is seconds, 0 snaps
+camera.offset = vec2()     // where the target sits from the middle of the view
+camera.deadZone = vec2()   // a box in the middle of the view the target moves in without the view moving
+camera.lookAhead = vec2()  // how much more to show the way the target goes, vec2(3, 0) for a side scroller;
+camera.lookAheadTurn = 1   // it slides across over lookAheadSmoothing = .5 seconds once the target has gone
+                           // back lookAheadTurn units the other way, so a jiggle does not flip it
+camera.boundsMin, camera.boundsMax // keep the view over the level, centered where it is smaller than the view
+camera.scale               // the cameraScale it eases to over scaleSmoothing = .2 seconds, undefined leaves it
+camera.snap()              // straight to the target, for a level start or a teleport
+camera.activate()          // make it the camera that drives the view, from where the view is
+camera.pos                 // the middle of the view it sets, before shake
+```
+
 ## LittleJS PathFinding System
 - A* pathfinding on a grid
 - Works with a TileCollisionLayer or a bare grid with custom walkability

@@ -124,6 +124,9 @@ export
     ParallaxLayer,
     parallaxMountains,
 
+    // Camera
+    FollowCamera,
+
     // Path Finding
     PathFinder,
     PathFinderNode,
