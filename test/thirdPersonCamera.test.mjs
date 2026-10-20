@@ -144,3 +144,11 @@ test('destroying it lets go of a captured pointer', () =>
         camera.destroy();`);
     assert.equal(run(`exited`), 1);
 });
+
+test('snap on a third person camera that is not driving leaves the view alone', () =>
+{
+    const run = engine();
+    run(`var other = new EngineObject3D(vec3(30, 0, 0)), newer = new ThirdPersonCamera3D(other); newer.smoothing = 0;
+        var before = JSON.stringify(render3D.camera.pos); camera.snap();`);
+    assert.equal(run(`JSON.stringify(render3D.camera.pos)`), run(`before`));
+});

@@ -146,14 +146,18 @@ The UI System, UI Layout and UI Tile Slice shorts each show one part.`,
 
 '3d': `
 A tour of the 3D plugin in one scene: an island to roll a ball around.
-Arrow keys roll the ball, space jumps, and the orbs are there to
-collect. F switches to a free camera to look around.
+Arrow keys roll the ball the way the camera faces, space jumps, and the
+orbs are there to collect. The camera swings around behind the ball,
+and dragging with the right mouse button turns it. F switches to a free
+camera to look around.
 
 ## What it shows
 - Terrain from a height map, with shadows, fog and a sky
 - Meshes built from shapes, a forest drawn with instancing, sprites and
   text in 3D
 - Point lights, particles, a trail, bloom and sound placed in 3D
+- A ThirdPersonCamera3D that swings behind the ball and pulls in at
+  the hills
 - The island as a 3D level, made once from noise: Esc then 0 opens the
   level editor, where T sculpts and paints the terrain and the Place list
   adds trees, sprites and orbs; the edits are autosaved, and Save writes

@@ -207,3 +207,11 @@ test('a teleport with snap, or a new target, does not turn the look', () =>
     run(`var other = new EngineObject(vec2(-90, 0)); camera.target = other; target = other; step(2);`);
     near(ahead()[0], 3, 'after a new target');
 });
+
+test('snap on a camera that is not driving leaves the view alone', () =>
+{
+    const { run, view } = engine();
+    run(`var a = new FollowCamera(target, 0), other = new EngineObject(vec2(20, 0)), b = new FollowCamera(other, 0);
+        target.pos = vec2(-5, 0); a.snap();`);
+    assert.deepEqual(view(), [20, 0]);
+});

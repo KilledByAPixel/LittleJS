@@ -919,8 +919,8 @@ class ThirdPersonCamera3D extends EngineObject3D
         this.turnTime = time;
     }
 
-    /** Put the camera on the target at once, with no easing, for a level start or a teleport; with no target it
-     *  stays where the camera is, looking the way it looks */
+    /** Put it on the target at once, with no easing, for a level start or a teleport, the camera too when this one
+     *  drives it; with no target it stays where the camera is, looking the way it looks */
     snap()
     {
         const pos = this.getTargetPos();
@@ -934,7 +934,7 @@ class ThirdPersonCamera3D extends EngineObject3D
         this.pivot = pos.add(this.pivotOffset);
         this.targetFrom = pos.copy();
         this.poleLength = this.getPoleLimit();
-        this.placeCamera();
+        cameraDriver() === this && this.placeCamera(); // a camera not driving keeps its place for later
     }
 
     /** Turn, swing and pull in, and set the camera, called by the camera plugin after the objects update */

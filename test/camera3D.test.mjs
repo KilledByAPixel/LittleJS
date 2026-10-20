@@ -63,3 +63,20 @@ test('a 3D camera does not drive the view while paused', () =>
         eye.pos3D = vec3(9, 9, 9); cameraUpdatePost();`);
     assert.deepEqual(json(run, `render3D.camera.pos`), {x: 4, y: 5, z: 6});
 });
+
+test('a pass that threw before its shake was taken back does not leave the camera shaken', () =>
+{
+    const run = engine();
+    run(`render3D.camera.pos = vec3(1, 2, 3); cameraShake(1); time = .37;
+        render3DShakeBegin(); time = .5; render3DShakeBegin(); render3DShakeEnd();`);
+    assert.deepEqual(json(run, `render3D.camera.pos`), {x: 1, y: 2, z: 3});
+});
+
+test('the shake is taken back from the camera it was put on, even when another is swapped in', () =>
+{
+    const run = engine();
+    run(`var game = render3D.camera; game.pos = vec3(1, 2, 3); cameraShake(1); time = .37; render3DShakeBegin();
+        render3D.camera = new Camera3D; render3D.camera.pos = vec3(7, 7, 7); render3DShakeEnd();`);
+    assert.deepEqual(json(run, `game.pos`), {x: 1, y: 2, z: 3});
+    assert.deepEqual(json(run, `render3D.camera.pos`), {x: 7, y: 7, z: 7});
+});

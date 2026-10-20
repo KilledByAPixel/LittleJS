@@ -9,6 +9,9 @@ function gameInit()
         const color = hsl(rand(), .6, .6);
         new EngineObject(vec2(x, y), vec2(1.6), tile(randInt(8)), 0, color);
     }
+
+    // start with a shake, to see what it does
+    cameraShake(.6);
 }
 
 function gameUpdate()
@@ -27,9 +30,9 @@ function gameRenderPost()
 }
 
 /* info
-A field of tiles and a camera shake. Space gives the view a small bump
-and a click a big blast; press again while it shakes and the shakes
-add up.
+A field of tiles and a camera shake. It starts with one, then Space
+gives the view a small bump and a click a big blast; press again while
+it shakes and the shakes add up.
 
 ## How it works
 `cameraShake(amount)` adds to how much shake is going, which is at

@@ -2690,27 +2690,28 @@ function render3DFrustumPlanes(matrix)
     return planes;
 }
 
-// the game's camera position and rotation, kept while the 3D passes draw it shaken
+// the camera shaken and its own position and rotation, kept while the 3D passes draw it shaken
 let render3DShakeSaved;
 
 // shake the 3D camera for the frame's passes along its own right and up, and roll it, as cameraShake does the 2D view;
 // an align2D camera copies the 2D view, which is shaken already
 function render3DShakeBegin()
 {
+    render3DShakeEnd(); // a frame that threw before its end is taken back first, so a shake never stays
     const camera = render3D.camera;
-    render3DShakeSaved = undefined;
     if (!cameraShakeTrauma || camera.align2D) return;
     const offset = cameraShakeOffset();
-    render3DShakeSaved = [camera.pos, camera.rotation];
+    render3DShakeSaved = [camera, camera.pos, camera.rotation];
     camera.pos = camera.pos.add(camera.getRight().scale(offset.pos.x)).add(camera.getUp().scale(offset.pos.y));
     camera.rotation = camera.rotation.add(vec3(0, 0, -offset.angle)); // 2D angles turn the other way
 }
 
-// give the game its own 3D camera back after the frame's passes
+// give the game its own 3D camera back after the frame's passes, the one that was shaken
 function render3DShakeEnd()
 {
     if (!render3DShakeSaved) return;
-    [render3D.camera.pos, render3D.camera.rotation] = render3DShakeSaved;
+    const [camera, pos, rotation] = render3DShakeSaved;
+    camera.pos = pos, camera.rotation = rotation;
     render3DShakeSaved = undefined;
 }
 

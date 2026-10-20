@@ -24,7 +24,7 @@ const worldRandom = new RandomGenerator(1234); // the same world every time
 // made from noise once it is put next to this file and named here
 const levelFile = '';
 
-let level, terrain, player, playerStart, title, freeCamera;
+let level, terrain, player, playerStart, title, camera, freeCamera;
 
 ///////////////////////////////////////////////////////////////////////////////
 // the player rolls over the terrain with a trail behind it
@@ -47,9 +47,9 @@ class Player extends EngineObject3D
     }
     update()
     {
-        // arrow keys push it along the ground, forward is -Z
+        // arrow keys push it along the ground the way the camera faces
         const move = freeCamera ? vec2() : keyDirection(); // still while flying
-        const push = vec3(move.x, 0, -move.y).scale(.02);
+        const push = vec3(move.x, 0, -move.y).scale(.02).rotateY(camera.yaw);
         this.speed = this.speed.add(push).scale(.94);
         this.pos3D = this.pos3D.add(this.speed);
 
@@ -229,6 +229,11 @@ function loadLevel()
     terrain = made.find((o)=> o instanceof HeightMap);
     player = new Player(playerStart);
     freeCamera = undefined;
+
+    // the camera swings around behind the ball as it rolls, right drag turns it
+    camera = new ThirdPersonCamera3D(player, 16, .45);
+    camera.pivotOffset = vec3(0,1.5,0);
+    camera.smoothing = .15;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -272,9 +277,6 @@ async function gameInit()
     title.specular = 1;
     title.persistent = true;
 
-    // start with the camera already behind the player
-    render3D.camera.follow(player.pos3D, vec3(0,10,18));
-
     // the editor's Restart builds the level again with the edits, and Play
     // from mouse puts the ball where the mouse is
     levelEditor.onRestart = loadLevel;
@@ -306,10 +308,8 @@ function gameUpdate()
 
 function gameUpdatePost()
 {
-    // the camera and the shadow map follow the player; while the camera flies
-    // free the shadows follow the camera instead
-    if (!freeCamera)
-        render3D.camera.follow(player.pos3D, vec3(0,10,18), .08);
+    // the shadow map follows the player; while the camera flies free the
+    // shadows follow the camera instead
     render3D.shadowCenter = freeCamera ? undefined : player.pos3D;
 
     // sway the title so its sides catch the light
@@ -320,7 +320,7 @@ function gameRenderPost()
 {
     if (levelEditor.isOpen) return; // the editor has its own hints
     const text = freeCamera ? 'click: look / WASD: fly / F: back to the ball' :
-        'arrow keys: roll / space: jump / F: free camera';
+        'arrow keys: roll / space: jump / right drag: look / F: free camera';
     const pos = vec2(mainCanvasSize.x/2, mainCanvasSize.y - 40);
     drawTextScreen(text, pos, 30, WHITE, 4);
 }

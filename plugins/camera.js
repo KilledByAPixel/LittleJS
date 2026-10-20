@@ -20,6 +20,13 @@ let cameraDriving;
 // the plugin hook is added with the first camera
 let cameraPluginAdded = false;
 
+// the camera driving the view, the last live one made or activated
+function cameraDriver()
+{
+    for (let i = cameraList.length; i--;)
+        if (!cameraList[i].destroyed) return cameraList[i];
+}
+
 // make a camera the one that drives the view, called by each camera's activate
 function cameraActivate(camera)
 {
@@ -63,7 +70,8 @@ function cameraSmoothFactor(smoothing) { return smoothing > 0 ? 1 - Math.exp(-ti
  *   they go by the view's size without cameraAngle
  * - Its pos is the middle of the view, before any cameraShake
  * - The newest camera made drives the view; a game can still change cameraPos in gameUpdatePost for that frame
- * - Destroy it to stop it driving the view, which stays where it was
+ * - Destroy it to stop it driving the view, which stays where it was; engineObjectsDestroy removes it as it does any
+ *   object, so make a new one after, or set persistent to keep it
  * @extends EngineObject
  * @memberof Camera
  * @example
@@ -130,7 +138,8 @@ class FollowCamera extends EngineObject
     /** Start from where the view is, called when it takes over from another camera */
     takeView() { this.pos = cameraPos.copy(); }
 
-    /** Put the view on the target at once, with no easing, for a level start or a teleport */
+    /** Put it on the target at once, with no easing, for a level start or a teleport; the view goes there too when
+     *  this camera is the one driving it */
     snap()
     {
         if (this.scale !== undefined)
@@ -141,7 +150,7 @@ class FollowCamera extends EngineObject
         if (focus)
             this.pos = focus;
         this.pos = this.inBounds(this.pos);
-        setCameraPos(this.pos);
+        cameraDriver() === this && setCameraPos(this.pos); // a camera not driving keeps its place for later
     }
 
     /** Move toward the target and set the view, called by the camera plugin after the objects update */
