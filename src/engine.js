@@ -331,13 +331,14 @@ let showEngineVersion = true;
 const pluginList = [];
 class EnginePlugin
 {
-    constructor(update, render, glContextLost, glContextRestored, preRender)
+    constructor(update, render, glContextLost, glContextRestored, preRender, updatePost)
     {
         this.update = update;
         this.render = render;
         this.glContextLost = glContextLost;
         this.glContextRestored = glContextRestored;
         this.preRender = preRender;
+        this.updatePost = updatePost;
     }
 }
 
@@ -353,17 +354,19 @@ class EnginePlugin
  *  @param {PluginCallback} [glContextLost]
  *  @param {PluginCallback} [glContextRestored]
  *  @param {PluginCallback} [preRender] - Called after the canvas is cleared and before gameRender
+ *  @param {PluginCallback} [updatePost] - Called after the objects update each tick, before gameUpdatePost, paused
+ *    included, for what follows an object, like a camera
  *  @memberof Engine */
-function engineAddPlugin(update, render, glContextLost, glContextRestored, preRender)
+function engineAddPlugin(update, render, glContextLost, glContextRestored, preRender, updatePost)
 {
     // make sure plugin functions are unique
     ASSERT(!pluginList.find(p=>
         p.update === update && p.render === render &&
         p.glContextLost === glContextLost &&
         p.glContextRestored === glContextRestored &&
-        p.preRender === preRender), 'engineAddPlugin: this plugin was already added');
+        p.preRender === preRender && p.updatePost === updatePost), 'engineAddPlugin: this plugin was already added');
 
-    const plugin = new EnginePlugin(update, render, glContextLost, glContextRestored, preRender);
+    const plugin = new EnginePlugin(update, render, glContextLost, glContextRestored, preRender, updatePost);
     pluginList.push(plugin);
 }
 
@@ -610,6 +613,7 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
             }
             else
                 engineObjectsUpdate();
+            pluginList.forEach(plugin=>plugin.updatePost?.());
 
             // do post update
             debugUpdate();
