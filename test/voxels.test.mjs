@@ -426,6 +426,7 @@ test('a FirstPersonCamera3D puts the camera eyeHeight above its position, toward
     camera.lockPointer = false;
     camera.eyeHeight = .6;
     camera.update();
+    camera.updateCamera(); // the camera plugin sets the camera after the objects update
     const eye = render3D.camera.pos;
     assert.deepEqual([eye.x, eye.y, eye.z].map(v=> Math.round(v * 1e6) / 1e6), [1, 2.6, 3]);
     camera.destroy();

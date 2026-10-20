@@ -104,6 +104,7 @@ test('a first person camera on a turned parent looks and walks the parent\'s way
     try
     {
         player.update();
+        player.updateCamera(); // the camera plugin sets the camera after the objects update
         const rotation = LJS.render3D.camera.rotation;
         assert.ok(near(rotation.x, 0) && near(rotation.y, PI/2) && near(rotation.z, 0), 'looks the ship\'s way ' + rotation);
 
