@@ -2389,6 +2389,7 @@ test('CameraControl3D turns the camera with the mouse and stops when destroyed',
     const control = new CameraControl3D(vec3(0, 1, 0), 12, .3);
     control.idleSpin = .1;
     control.update();
+    control.updateCamera(); // the camera plugin puts the camera on the orbit after the objects update
     near(control.yaw, .1); // it spins while nothing drags it
     near(render3D.camera.pos.distance(vec3(0, 1, 0)), 12);
     control.pitch = 9;
@@ -2412,6 +2413,7 @@ test('FirstPersonCamera3D takes over from the camera, puts it at the eye, and wa
     eye.pitch = 9;
     eye.velocity3D = vec3(1, -.5, 1);
     eye.update();
+    eye.updateCamera(); // the camera plugin puts the camera at the eye after the objects update
     near(eye.pitch, eye.pitchRange.y); // it cannot tip over the top
     nearVec(render3D.camera.pos, 4, 5, 6);
     nearVec(render3D.camera.rotation, eye.pitchRange.y, .5, 0);

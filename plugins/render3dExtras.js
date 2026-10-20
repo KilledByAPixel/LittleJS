@@ -741,6 +741,7 @@ function render3DReadPixels(textureInfo)
 /**
  * CameraControl3D - Drag to turn the camera around a point, roll the wheel to zoom
  * - An EngineObject3D, so move its pos3D to follow something, or parent it to an object
+ * - A camera of the camera plugin: the newest made drives the view, after the objects move each update
  * - Destroy it to hand the camera back, and it stops driving the camera
  * - Set persistent to keep it when engineObjectsDestroy clears out a level
  * - Every part of it is a field, so a game can change the buttons, speeds and limits
@@ -778,9 +779,20 @@ class CameraControl3D extends EngineObject3D
         this.zoomRange = vec2(distance/4, distance*3);
         /** @property {Vector2} - Lowest and highest pitch, so it cannot tip over the top, widened to hold the pitch given */
         this.pitchRange = vec2(min(-.2, pitch), max(1.4, pitch));
+        this.cameraNew = true; // made this update, see cameraUpdatePost
+        this.activate();
     }
 
-    /** Read the mouse and put the camera on its orbit, called automatically each frame */
+    /** Make this the camera that drives the view */
+    activate() { cameraActivate(this); }
+
+    /** Taking over from another camera, it keeps its own orbit */
+    takeView() {}
+
+    /** Put the camera on its orbit, called by the camera plugin after the objects update */
+    updateCamera() { render3D.camera.orbit(this.getWorldPos3D(), this.distance, this.yaw, this.pitch); }
+
+    /** Read the mouse and turn the orbit, called automatically each frame */
     update()
     {
         if (mouseIsDown(this.dragButton))
@@ -794,7 +806,6 @@ class CameraControl3D extends EngineObject3D
         this.pitch = clamp(this.pitch, this.pitchRange.x, this.pitchRange.y);
         if (this.zoomSpeed && mouseWheel)
             this.distance = clamp(this.distance * (1 + sign(mouseWheel) * this.zoomSpeed), this.zoomRange.x, this.zoomRange.y);
-        render3D.camera.orbit(this.getWorldPos3D(), this.distance, this.yaw, this.pitch);
     }
 
     /** Camera controls draw nothing */
@@ -809,6 +820,7 @@ class CameraControl3D extends EngineObject3D
  * - An EngineObject3D that moves by velocity3D, so give it a size3D and call setCollision to walk into solid
  *   objects instead of through them; walking keeps velocity3D.y, so render3D.gravity can pull it down
  * - Starts from wherever render3D.camera is, so it can take over from another camera without a jump
+ * - A camera of the camera plugin: the newest made drives the view, after the objects move each update
  * - As the child of an EngineObject3D, like a player on a ship, its yaw, pitch and walking are relative to the parent,
  *   so it turns and moves with it
  * - Destroy it to hand the camera back
@@ -852,6 +864,25 @@ class FirstPersonCamera3D extends EngineObject3D
          *  sit toward the top of the body instead of its middle; keep it under half the body's height, or the eye is
          *  outside the body and sees through a ceiling it stands under */
         this.eyeHeight = 0;
+        this.cameraNew = true; // made this update, see cameraUpdatePost
+        this.activate();
+    }
+
+    /** Make this the camera that drives the view */
+    activate() { cameraActivate(this); }
+
+    /** Taking over from another camera, it keeps its own eye */
+    takeView() {}
+
+    /** Put the camera at the eye, called by the camera plugin after the objects update */
+    updateCamera()
+    {
+        // the camera sits at the eye, eyeHeight above where this frame's physics left it, looking the way it does in
+        // its parent's space, since a child's velocity3D moves it in that space too
+        const rotation = vec3(this.pitch, this.yaw, 0);
+        render3D.camera.pos = render3DObjectMatrix(this).transformPoint(vec3(0, this.eyeHeight, 0));
+        render3D.camera.rotation = this.parent instanceof EngineObject3D ?
+            this.parent.getMatrix().multiply(Matrix4.rotation(rotation)).getRotation() : rotation;
     }
 
     /** Move by velocity3D, and fall by render3D.gravity unless flying, called automatically each frame */
@@ -866,7 +897,7 @@ class FirstPersonCamera3D extends EngineObject3D
         this.gravityScale = gravityScale;
     }
 
-    /** Read the mouse and keys and put the camera at the eye, called automatically each frame */
+    /** Read the mouse and keys and move, called automatically each frame */
     update()
     {
         // only a root moves by its own physics, a child follows its parent, so gravity would still pull one that flies
@@ -890,13 +921,6 @@ class FirstPersonCamera3D extends EngineObject3D
         // a jump from the ground, level collision sets what it stands on
         if (this.jumpSpeed && !this.fly && this.groundObject && (keyWasPressed('Space') || gamepadWasPressed(0)))
             this.velocity3D.y = this.jumpSpeed;
-
-        // the camera sits at the eye, eyeHeight above where this frame's physics left it, looking the way it does in
-        // its parent's space, since a child's velocity3D moves it in that space too
-        const rotation = vec3(this.pitch, this.yaw, 0);
-        render3D.camera.pos = render3DObjectMatrix(this).transformPoint(vec3(0, this.eyeHeight, 0));
-        render3D.camera.rotation = this.parent instanceof EngineObject3D ?
-            this.parent.getMatrix().multiply(Matrix4.rotation(rotation)).getRotation() : rotation;
     }
 
     /** Let go of the mouse and stop driving the camera

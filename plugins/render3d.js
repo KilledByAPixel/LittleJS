@@ -2690,10 +2690,35 @@ function render3DFrustumPlanes(matrix)
     return planes;
 }
 
+// the game's camera position and rotation, kept while the 3D passes draw it shaken
+let render3DShakeSaved;
+
+// shake the 3D camera for the frame's passes along its own right and up, and roll it, as cameraShake does the 2D view;
+// an align2D camera copies the 2D view, which is shaken already
+function render3DShakeBegin()
+{
+    const camera = render3D.camera;
+    render3DShakeSaved = undefined;
+    if (!cameraShakeTrauma || camera.align2D) return;
+    const offset = cameraShakeOffset();
+    render3DShakeSaved = [camera.pos, camera.rotation];
+    camera.pos = camera.pos.add(camera.getRight().scale(offset.pos.x)).add(camera.getUp().scale(offset.pos.y));
+    camera.rotation = camera.rotation.add(vec3(0, 0, -offset.angle)); // 2D angles turn the other way
+}
+
+// give the game its own 3D camera back after the frame's passes
+function render3DShakeEnd()
+{
+    if (!render3DShakeSaved) return;
+    [render3D.camera.pos, render3D.camera.rotation] = render3DShakeSaved;
+    render3DShakeSaved = undefined;
+}
+
 // the preRender hook, before gameRender: the layer under the 2D scene
 function render3DPreRender()
 {
     const r = render3D;
+    render3DShakeBegin(); // before the editor's camera goes in, so only the game's is shaken
     editor3DCameraBegin(); // debug builds draw with the free camera or the 3D editor's, the game's is back after
     r.updateMatrices();
     r.shadowMapDrawn = false;
@@ -2705,6 +2730,7 @@ function render3DRender()
 {
     render3DRenderPass(true);
     editor3DCameraEnd();
+    render3DShakeEnd();
 }
 
 // one 3D pass for the objects of a layer: take over the gl state, draw the shadow map once a frame and the stages, hand
