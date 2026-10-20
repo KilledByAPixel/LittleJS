@@ -115,6 +115,9 @@ class FollowCamera extends EngineObject
 
         this.cameraNew = true;       // made this update, it starts where it snapped and not from the view
         this.lookOffset = vec2();    // how far the look moves the view now
+        this.lookDirection = vec2(); // which way it looks on each axis, -1, 0 or 1
+        this.lookTravel = vec2();    // how far the target has gone back against the look since it last went with it
+        this.lookFrom = undefined;   // where the target was last update, to see which way it moves
         this.activate();
         this.snap();
     }
@@ -130,6 +133,7 @@ class FollowCamera extends EngineObject
     {
         if (this.scale !== undefined)
             setCameraScale(this.scale);
+        this.updateLook(true);
         const focus = this.getFocus();
         if (focus)
             this.pos = focus;
@@ -142,6 +146,7 @@ class FollowCamera extends EngineObject
     {
         if (this.scale !== undefined)
             setCameraScale(cameraScale + (this.scale - cameraScale) * cameraSmoothFactor(this.scaleSmoothing));
+        this.updateLook();
         const focus = this.getFocus();
         if (focus)
         {
@@ -155,13 +160,46 @@ class FollowCamera extends EngineObject
         setCameraPos(this.pos);
     }
 
-    // where the view wants its middle: the target, the offset and the look, undefined with no live target
-    getFocus()
+    // where the target is, undefined with none or a destroyed one
+    getTargetPos()
     {
         const target = this.target;
         if (!target || target instanceof EngineObject && target.destroyed) return;
-        const pos = target instanceof EngineObject ? target.pos : target;
-        return pos.add(this.offset).add(this.lookOffset);
+        return target instanceof EngineObject ? target.pos : target;
+    }
+
+    // where the view wants its middle: the target, the offset and the look, undefined with no live target
+    getFocus()
+    {
+        const pos = this.getTargetPos();
+        return pos && pos.add(this.offset).add(this.lookOffset);
+    }
+
+    // turn the look by which way the target moved, and slide it toward that side, at once when snapping
+    // on each axis the first move sets the look; it turns once the target has gone back lookAheadTurn the other way
+    updateLook(snap)
+    {
+        const pos = this.getTargetPos(), from = this.lookFrom;
+        if (!pos) return;
+        if (from)
+        {
+            const turn = (axis)=>
+            {
+                const move = pos[axis] - from[axis], direction = this.lookDirection[axis];
+                if (!this.lookAhead[axis] || !move) return;
+                if (!direction)
+                    this.lookDirection[axis] = sign(move);
+                else if (sign(move) === direction)
+                    this.lookTravel[axis] = 0;
+                else if ((this.lookTravel[axis] += abs(move)) > this.lookAheadTurn)
+                    this.lookDirection[axis] = -direction, this.lookTravel[axis] = 0;
+            };
+            turn('x');
+            turn('y');
+        }
+        this.lookFrom = pos.copy();
+        const goal = this.lookDirection.multiply(this.lookAhead);
+        this.lookOffset = this.lookOffset.lerp(goal, snap ? 1 : cameraSmoothFactor(this.lookAheadSmoothing));
     }
 
     // a view middle moved so the view stays in the bounds, centered on an axis where they are smaller than it

@@ -128,3 +128,65 @@ test('a target can be a position', () =>
     run(`var camera = new FollowCamera(vec2(2, 9), 0); step();`);
     assert.deepEqual(view(), [2, 9]);
 });
+
+// the forward look: a camera with no smoothing or dead zone, so the view's distance ahead of the target is the look
+function looking(lookAhead, lookAheadSmoothing)
+{
+    const e = engine();
+    e.run(`var camera = new FollowCamera(target, 0); camera.lookAhead = ${lookAhead};
+        camera.lookAheadSmoothing = ${lookAheadSmoothing};
+        var walk = (dx, dy, n)=> { for (let i = 0; i < n; ++i) { target.pos = target.pos.add(vec2(dx, dy)); step(); } };`);
+    e.ahead = ()=> JSON.parse(e.run(`JSON.stringify([cameraPos.x - target.pos.x, cameraPos.y - target.pos.y])`));
+    return e;
+}
+
+test('moving right, the view shows more ahead', () =>
+{
+    const { run, ahead } = looking('vec2(3, 0)', 0);
+    run(`walk(.1, 0, 20);`);
+    near(ahead()[0], 3, 'ahead');
+});
+
+test('turning slides the look across, never snapping', () =>
+{
+    const { run, ahead } = looking('vec2(3, 0)', .5);
+    run(`walk(.1, 0, 20); camera.snap();`);
+    near(ahead()[0], 3, 'snapped ahead');
+    // back the other way less than lookAheadTurn, 1, the look holds
+    run(`walk(-.1, 0, 9);`);
+    near(ahead()[0], 3, 'held');
+    const most = 6 * (1 - Math.exp(-1/60 / .5)) + 1e-9;
+    let last = ahead()[0];
+    for (let i = 0; i < 300; ++i)
+    {
+        run(`walk(-.1, 0, 1);`);
+        const now = ahead()[0];
+        assert.ok(Math.abs(now - last) <= most, `update ${i} moved the look ${now - last}`);
+        last = now;
+    }
+    near(last, -3, 'across', 1e-3);
+});
+
+test('jiggling does not flip it', () =>
+{
+    const { run, ahead } = looking('vec2(3, 0)', 0);
+    run(`walk(.1, 0, 20); for (let i = 0; i < 10; ++i) { walk(-.3, 0, 1); walk(.3, 0, 1); }`);
+    near(ahead()[0], 3, 'ahead');
+});
+
+test('the look works on y the same', () =>
+{
+    const { run, ahead } = looking('vec2(0, 2)', 0);
+    run(`walk(0, .1, 20);`);
+    near(ahead()[1], 2, 'above');
+    near(ahead()[0], 0, 'no look across');
+});
+
+test('snap puts the look on at once', () =>
+{
+    const { run, ahead } = looking('vec2(3, 0)', .5);
+    run(`walk(.1, 0, 5);`);
+    assert.ok(ahead()[0] < 3, 'still sliding');
+    run(`camera.snap();`);
+    near(ahead()[0], 3, 'ahead');
+});
