@@ -186,6 +186,7 @@ export
     Light3D,
     DirectionalLight3D,
     CameraControl3D,
+    ThirdPersonCamera3D,
     FirstPersonCamera3D,
     ParticleEmitter3D,
     Trail3D,

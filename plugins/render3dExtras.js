@@ -814,6 +814,208 @@ class CameraControl3D extends EngineObject3D
 
 ///////////////////////////////////////////////////////////////////////////////
 /**
+ * ThirdPersonCamera3D - A camera on a pole from the player, swinging around behind it as it moves
+ * - The pole starts at a pivot, pivotOffset from the target, usually its head, turns by yaw and pitch, and the camera
+ *   sits at its end, distance away, looking back at the pivot
+ * - autoSwing, on by default, swings it around behind the way the target moves across the ground, eased by
+ *   swingSmoothing, only while the target moves faster than swingSpeed; useFacing swings it behind the target's own
+ *   facing instead, for a player that turns
+ * - The mouse, dragging dragButton or with the pointer locked, and a gamepad stick turn it by hand when
+ *   manualControl is on, and turning by hand holds the swing for swingDelay seconds; turn() does the same for a
+ *   game's own controls
+ * - A wall between the pivot and the camera pulls it in, in front of the wall, and it eases back out once clear
+ * - A camera of the camera plugin: the newest made drives the view, after the objects move each update
+ * - Destroy it to hand the camera back
+ * @extends EngineObject3D
+ * @memberof Render3D
+ * @example
+ * const camera = new ThirdPersonCamera3D(player); // follow the player from 6 units back
+ * camera.autoSwing = false;                       // a shooter turns it only by hand
+ */
+class ThirdPersonCamera3D extends EngineObject3D
+{
+    /** Make a third person camera, the view goes to it at once
+     *  @param {EngineObject3D|Vector3} [target] - What to follow, an object or a position
+     *  @param {number} [distance] - How long the pole is
+     *  @param {number} [pitch] - Angle of the pole above level, PI/2 looks straight down */
+    constructor(target, distance=6, pitch=.3)
+    {
+        ASSERT(!target || target instanceof EngineObject3D || isVector3(target),
+            'ThirdPersonCamera3D: target must be an EngineObject3D or a vec3', target);
+        super(render3D.camera.pos);
+        this.size3D = vec3(); // not a solid thing to pick or collect
+
+        /** @property {EngineObject3D|Vector3|undefined} - What it follows; destroyed or undefined, the camera holds
+         *  @type {EngineObject3D|Vector3|undefined} */
+        this.target = target;
+        /** @property {Vector3} - Where the pole starts from the target, usually its head */
+        this.pivotOffset = vec3(0, 1, 0);
+        /** @property {number} - How long the pole is */
+        this.distance = distance;
+        /** @property {number} - Angle of the pole around the target, 0 puts the camera on the +Z side looking -Z */
+        this.yaw = 0;
+        /** @property {number} - Angle of the pole above level */
+        this.pitch = pitch;
+        /** @property {Vector2} - Lowest and highest pitch */
+        this.pitchRange = vec2(-.4, 1.2);
+        /** @property {number} - Seconds the pivot takes to close most of the gap to the target, 0 sticks to it */
+        this.smoothing = .05;
+        /** @property {boolean} - Swing around behind the way the target moves */
+        this.autoSwing = true;
+        /** @property {number} - Seconds the swing takes to close most of the gap, how tight it is */
+        this.swingSmoothing = .6;
+        /** @property {number} - World units a second the target must move across the ground for it to swing */
+        this.swingSpeed = 1;
+        /** @property {number} - Seconds after turning by hand before it swings on its own again */
+        this.swingDelay = 1;
+        /** @property {boolean} - Swing behind the target's own facing, its getForward3D, instead of the way it moves */
+        this.useFacing = false;
+        /** @property {boolean} - The mouse and a gamepad stick turn it */
+        this.manualControl = true;
+        /** @property {number} - Mouse button that turns it while held, 0 is left and 2 is right */
+        this.dragButton = 2;
+        /** @property {boolean} - Capture the mouse on a press of dragButton, so turning needs no button held */
+        this.lockPointer = false;
+        /** @property {number} - How far a pixel of mouse movement turns it */
+        this.lookSpeed = .003;
+        /** @property {number} - Which gamepad stick turns it, 1 is usually the right one */
+        this.stick = 1;
+        /** @property {number} - Radians a second a stick pushed all the way turns it */
+        this.stickSpeed = 3;
+        /** @property {boolean} - Pull in, in front of a wall between the pivot and the camera */
+        this.collideWalls = true;
+        /** @property {number} - How far in front of a wall it stays */
+        this.wallMargin = .2;
+        /** @property {number} - Seconds it takes to ease most of the way back out once clear of a wall */
+        this.wallSmoothing = .2;
+
+        this.cameraNew = true;          // made this update, see cameraUpdatePost
+        this.pivot = vec3();            // where the pole starts now, eased toward the target
+        this.poleLength = distance;     // how long the pole is now, shorter at a wall
+        this.targetFrom = undefined;    // where the target was last update, to see which way it moves
+        this.turnTime = -Infinity;      // when it was last turned by hand
+        this.activate();
+        this.snap();
+    }
+
+    /** Make this the camera that drives the view */
+    activate() { cameraActivate(this); }
+
+    /** Taking over from another camera, it turns to look the way that one did */
+    takeView()
+    {
+        this.yaw = render3D.camera.rotation.y;
+        this.pitch = clamp(-render3D.camera.rotation.x, this.pitchRange.x, this.pitchRange.y);
+    }
+
+    /** Turn it by hand, as the mouse and stick do, which holds the swing for swingDelay seconds
+     *  @param {number} yaw - Radians to turn around the target
+     *  @param {number} [pitch] - Radians to tilt the pole up */
+    turn(yaw, pitch=0)
+    {
+        this.yaw += yaw;
+        this.pitch = clamp(this.pitch + pitch, this.pitchRange.x, this.pitchRange.y);
+        this.turnTime = time;
+    }
+
+    /** Put the camera on the target at once, with no easing, for a level start or a teleport */
+    snap()
+    {
+        const pos = this.getTargetPos();
+        if (pos)
+        {
+            this.pivot = pos.add(this.pivotOffset);
+            this.targetFrom = pos.copy();
+        }
+        this.poleLength = this.getPoleLimit();
+        this.placeCamera();
+    }
+
+    /** Turn, swing and pull in, and set the camera, called by the camera plugin after the objects update */
+    updateCamera()
+    {
+        // by hand, the mouse and a stick
+        if (this.manualControl)
+        {
+            if (this.lockPointer && mouseWasPressed(this.dragButton))
+                pointerLockRequest();
+            const d = mouseDeltaScreen, stick = gamepadStick(this.stick);
+            if ((pointerLockIsActive() || mouseIsDown(this.dragButton)) && (d.x || d.y))
+                this.turn(-d.x * this.lookSpeed, d.y * this.lookSpeed);
+            if (stick.x || stick.y)
+                this.turn(-stick.x * this.stickSpeed * timeDelta, -stick.y * this.stickSpeed * timeDelta);
+        }
+        this.pitch = clamp(this.pitch, this.pitchRange.x, this.pitchRange.y);
+
+        const pos = this.getTargetPos();
+        if (pos)
+        {
+            // swing behind the way it moves across the ground, or its facing, the short way round
+            const target = this.target, from = this.targetFrom || pos;
+            this.targetFrom = pos.copy();
+            if (this.autoSwing && time - this.turnTime >= this.swingDelay)
+            {
+                const move = pos.subtract(from);
+                const way = this.useFacing && target instanceof EngineObject3D ? target.getForward3D() :
+                    hypot(move.x, move.z) > this.swingSpeed * timeDelta ? move : undefined;
+                if (way && (way.x || way.z))
+                {
+                    const turn = atan2(-way.x, -way.z) - this.yaw;
+                    this.yaw += (mod(turn + PI, 2*PI) - PI) * cameraSmoothFactor(this.swingSmoothing);
+                }
+            }
+            this.pivot = this.pivot.lerp(pos.add(this.pivotOffset), cameraSmoothFactor(this.smoothing));
+        }
+
+        // a wall pulls the pole in at once, and it eases back out
+        const limit = this.getPoleLimit();
+        this.poleLength = limit < this.poleLength ? limit :
+            this.poleLength + (limit - this.poleLength) * cameraSmoothFactor(this.wallSmoothing);
+        this.placeCamera();
+    }
+
+    // where the target is, undefined with none or a destroyed one
+    getTargetPos()
+    {
+        const target = this.target;
+        if (!target || target instanceof EngineObject3D && target.destroyed) return;
+        return target instanceof EngineObject3D ? target.getWorldPos3D() : target;
+    }
+
+    // the way the pole goes from the pivot, one unit long
+    getPoleDirection()
+    {
+        const c = cos(this.pitch);
+        return vec3(sin(this.yaw) * c, sin(this.pitch), cos(this.yaw) * c);
+    }
+
+    // how long the pole can be, short of the nearest wall along it, not counting the target, its parts or this
+    getPoleLimit()
+    {
+        if (!this.collideWalls) return this.distance;
+        const target = this.target, own = (o)=>
+        {
+            for (let p = o; p; p = p.parent)
+                if (p === target || p === this) return true;
+        };
+        const hit = render3D.pick(new Ray3D(this.pivot, this.getPoleDirection()), engineObjects.filter((o)=> !own(o)));
+        return hit && hit.distance < this.distance + this.wallMargin ?
+            max(0, hit.distance - this.wallMargin) : this.distance;
+    }
+
+    // set the camera at the pole's end, looking at the pivot
+    placeCamera()
+    {
+        render3D.camera.orbit(this.pivot, this.poleLength, this.yaw, this.pitch);
+        this.pos3D = render3D.camera.pos.copy();
+    }
+
+    /** Camera controls draw nothing */
+    render3D() {}
+}
+
+///////////////////////////////////////////////////////////////////////////////
+/**
  * FirstPersonCamera3D - Look around with the mouse and move with the keys, with the camera at its position
  * - Click to capture the mouse so looking needs no button held, Esc lets it go; holding the button looks too, for touch
  * - WASD or the arrow keys walk level, or move the way it looks when fly is set

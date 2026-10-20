@@ -1374,6 +1374,19 @@ render3D.camera.orbit(target, distance, yaw, pitch=.5) // put the camera on an o
 new CameraControl3D(target, distance, pitch=.4, idleSpin=0) // an object that orbits the camera around its pos3D:
                                // drag to turn, wheel to zoom; fields for dragButton, dragSpeed, zoomSpeed, zoomRange,
                                // pitchRange, yaw and idleSpin; destroy it to hand the camera back
+new ThirdPersonCamera3D(target, distance=6, pitch=.3) // a pole from a pivot over the target, pivotOffset = vec3(0,1,0),
+                               // turned by yaw and pitch, the camera at its end looking back; follows an
+                               // EngineObject3D or a vec3; the view goes to it at once
+camera.autoSwing = true        // swing behind the way the target moves across the ground, over swingSmoothing = .6
+                               // seconds, once it moves faster than swingSpeed = 1 a second; useFacing = false swings
+                               // behind the target's getForward3D instead
+camera.manualControl = true    // the mouse dragging dragButton = 2 (lockPointer to capture it) and gamepad stick 1 turn
+                               // it, holding the swing for swingDelay = 1 second; camera.turn(yaw, pitch) does the same
+camera.collideWalls = true     // a wall between pulls it in, wallMargin = .2 in front, easing back out over
+                               // wallSmoothing = .2 seconds; the target and its parts are never the wall
+camera.smoothing = .05         // seconds the pivot trails the target; pitchRange = vec2(-.4, 1.2); snap() at once
+// the 3D cameras are cameras of the camera plugin: the newest made drives render3D.camera after the objects move,
+// and destroying it hands the view to the one before
 new FirstPersonCamera3D(pos3D, yaw, pitch) // mouse look and WASD or arrows to move, the camera at its pos3D;
                                // click captures the mouse, Esc lets it go; each defaults to where the camera is now,
                                // so it takes over without a jump; fields for moveSpeed, lookSpeed, pitchRange,
