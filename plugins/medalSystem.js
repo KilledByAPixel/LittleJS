@@ -125,6 +125,7 @@ function medalsRender()
 /**
  *  @callback MedalCallbackFunction - Function that processes a medal
  *  @param {Medal} medal
+ *  @return {void}
  *  @memberof Medals
  */
 

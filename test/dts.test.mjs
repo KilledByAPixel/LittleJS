@@ -67,3 +67,31 @@ test('render3D.drawSky is typed void, so a subclass may override it as void', ()
 {
     assert.match(readFileSync('dist/littlejs.d.ts', 'utf8'), /drawSky\(\): void;/);
 });
+
+test('dist/littlejs.d.ts has no more any types than it had, so a new one is typed instead', () =>
+{
+    // counted in the types, not the doc comments; what is left is user data (save data, JSON, a level object's
+    // properties), input checks, and the objects of Box2D, three.js and the platforms' APIs, which have no types here;
+    // lower the ceiling when a change takes some away
+    const ceiling = 115;
+    let count = 0, inComment = false;
+    for (const line of readFileSync('dist/littlejs.d.ts', 'utf8').split('\n').map(line => line.trim()))
+    {
+        if (line.startsWith('/*')) { inComment = !line.includes('*/'); continue; }
+        if (inComment) { inComment = !line.includes('*/'); continue; }
+        if (line.startsWith('*')) continue;
+        count += (line.match(/\bany\b/g) || []).length;
+    }
+    assert.ok(count <= ceiling, `${count} any types in the d.ts, more than the ${ceiling} allowed; give the new one a type`);
+});
+
+test('the ParticleEffectSettings typedef lists every setting the particle effects plugin has', () =>
+{
+    // the settings are a table made at run time, the typedef is written out for the types, so the two are compared
+    const source = readFileSync('plugins/particleEffects.js', 'utf8');
+    const settings = [...source.matchAll(/particleEffectAddSetting\('(\w+)'/g)].map(m => m[1]);
+    const typedef = source.slice(source.indexOf('@typedef {Object} ParticleEffectSettings'));
+    const listed = [...typedef.slice(0, typedef.indexOf('*/')).matchAll(/@property \{[^}]+\} \[(\w+)\]/g)].map(m => m[1]);
+    assert.ok(settings.length > 30, 'the settings are found');
+    assert.deepEqual(listed, settings);
+});

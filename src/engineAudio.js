@@ -183,7 +183,7 @@ function audioEffectNode(effectOrNode, key)
 
 // a value for an audio param, which throws on one that is not finite, so a release build, with no asserts to stop it,
 // takes NaN or Infinity as the value given in its place: silent, centered or the normal rate
-const audioFinite = (value, otherwise)=> isFinite(value) ? value : otherwise;
+const audioFinite = (/** @type {number} */ value, /** @type {number} */ otherwise)=> isFinite(value) ? value : otherwise;
 
 // ramp an audio param to a value, cancelling anything already scheduled so stacked calls don't fight;
 // returns when the ramp ends
@@ -208,6 +208,7 @@ function audioParamRamp(param, value, fadeTime=0)
 /**
  * @callback SoundLoadCallback - Function called once a sound has loaded, or failed to, which sound.isLoaded() tells
  * @param {Sound} sound
+ * @return {void}
  * @memberof Audio
  */
 
@@ -480,7 +481,7 @@ class Sound
     
     /** Loads a sound from a URL and decodes it into sample data
     *  @param {string} filename
-    *  @return {Promise} */
+    *  @return {Promise<void>} */
     async loadSound(filename)
     {
         const response = await loadFetch(filename, 'loadSound'); // named, with the hint for a page opened from disk
@@ -803,11 +804,12 @@ function getNoteFrequency(semitoneOffset, rootFrequency=220)
 /**
  * @callback AudioEndedCallback - Function called when a sound ends
  * @param {AudioBufferSourceNode} source
+ * @return {void}
  * @memberof Audio
  */
 
 /** Play cached audio samples with given settings
- *  @param {Array}    sampleChannels - Array of arrays of samples to play (for stereo playback)
+ *  @param {Array<Array<number>|Float32Array>} sampleChannels - Array of arrays of samples to play (for stereo playback)
  *  @param {number}   [volume] - How much to scale volume by
  *  @param {number}   [rate] - The playback rate to use
  *  @param {number}   [pan] - How much to apply stereo panning
@@ -838,7 +840,7 @@ function playSamples(sampleChannels, volume=1, rate=1, pan=0, loop=false, sample
 }
 
 /** Copy arrays of samples into a new audio buffer
- *  @param {Array}  sampleChannels - Array of arrays of samples (for stereo playback)
+ *  @param {Array<Array<number>|Float32Array>} sampleChannels - Array of arrays of samples (for stereo playback)
  *  @param {number} [sampleRate=audioDefaultSampleRate] - Sample rate for the sound
  *  @return {AudioBuffer} - The audio buffer holding the samples
  *  @memberof Audio */
@@ -921,7 +923,7 @@ function playAudioBuffer(buffer, volume=1, rate=1, pan=0, loop=false, gainNode, 
 /** Generate and play a ZzFX sound
  *
  *  <a href=https://killedbyapixel.github.io/ZzFX/>Create sounds using the ZzFX Sound Designer.</a>
- *  @param {Array} zzfxSound - Array of ZzFX parameters, ex. [.5,.5]
+ *  @param {...(number|undefined)} zzfxSound - ZzFX parameters, ex. [.5,.5]
  *  @return {AudioBufferSourceNode|undefined} - The audio node of the sound played, undefined if play fails
  *  @memberof Audio */
 function zzfx(...zzfxSound) { return playSamples([zzfxG(...zzfxSound)]); }

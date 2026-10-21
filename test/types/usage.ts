@@ -53,6 +53,29 @@ voxels.raycast(new Ray3D(vec3(), vec3(0, 1, 0))).distance;
 import { particleEffect, particleEffect3D } from 'littlejsengine';
 particleEffect('fire', vec2(), {scale: 2, hue: .3, emitTime: .5, speed: .1});
 particleEffect3D('fire', vec3(), {flatten: true, emitRate: 30});
+particleEffect('fire', vec2(), {emitSize: vec2(2, 1), shape: 'spark', colorStartA: hsl(0, 1, .5)});
+// @ts-expect-error
+particleEffect('fire', vec2(), {emitRat: 30});
+// @ts-expect-error
+particleEffect('fire', vec2(), {shape: 'sparkle'});
+
+// an effect is plain data, typed: its settings, its behaviors, and what comes back from the library
+import { particleEffectsAdd, particleEffectsGet, ParticleEffect } from 'littlejsengine';
+const sparks: ParticleEffect = {name: 'sparks', settings: {emitRate: 50, additive: true, colorEndA: [1, 1, 0, 0]},
+    behaviors: [{name: 'swirl', strength: .5}]};
+particleEffectsAdd(sparks);
+const sparkRate: number | undefined = particleEffectsGet('sparks')?.settings.emitRate;
+// @ts-expect-error
+particleEffectsAdd({name: 'bad', settings: {emitRate: 'lots'}});
+
+// a 3D level is typed down to its objects and blocks
+import { level3DLoad, Level3D } from 'littlejsengine';
+const level3D: Level3D = {littlejs3D: 1, objects: [{type: 'Box', pos: [0, 1, 0], properties: {solid: true}}],
+    scene: {sky: ['#88f', '#fff', '#444'], fog: [10, 50]}, terrain: {size: [20, 20], heights: [[0, 1], [1, 0]]}};
+level3DLoad(level3D);
+// @ts-expect-error
+level3DLoad({objects: [{pos: [0, 1, 0]}]});
+export { sparkRate };
 
 // a level editor of the game's own: a class with the hooks as methods, and keys, buttons and tools added to it
 import { LevelEditor, levelEditor, setLevelEditor } from 'littlejsengine';
@@ -75,6 +98,10 @@ levelEditor.onRestart = ()=> {};
 levelEditor.onPlayFrom = (pos)=> pos;
 levelEditor.edit3D?.strokeEnd();
 levelEditor.edit2D.paint(vec2(), 5);
+levelEditor.edit2D.paint(vec2(), 5, 1, true);
+levelEditor.edit2D.changeObjects((objects)=> objects.forEach((o)=> o.x += 16));
+levelEditor.edit3D?.change((objects)=> objects[0].type);
+levelEditor.addTool('Pick', {onPress(at) { return !!at.pos; }});
 const editing: boolean = levelEditor.isOpen && levelEditor.is3D;
 // @ts-expect-error
 levelEditor.addKey('k');

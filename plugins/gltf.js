@@ -99,6 +99,17 @@ class GLTFPart
  * @memberof GLTF
  */
 
+/** What one channel of an animation moves, as the loader reads it
+ *  @typedef {Object} GLTFChannel
+ *  @property {number} node - The index of the node it moves
+ *  @property {'translation'|'rotation'|'scale'} path - Which of the node's transform
+ *  @property {'LINEAR'|'STEP'|'CUBICSPLINE'} interpolation - How to go between keys
+ *  @property {ArrayLike<number>} times - The key times in seconds
+ *  @property {ArrayLike<number>} values - The key values, components numbers each, and an in and out tangent
+ *    around each with CUBICSPLINE
+ *  @property {number} components - 4 for a rotation, 3 otherwise
+ *  @memberof GLTF */
+
 /**
  * GLTFAnimation - One animation of a model: keys that move, turn and scale its nodes over time
  * - Play it through the GLTFObject that model.createObject makes
@@ -107,14 +118,14 @@ class GLTFPart
 class GLTFAnimation
 {
     /** Make an animation from its channels, as the loader does
-     *  @param {string} name @param {Array<Object>} channels */
+     *  @param {string} name @param {Array<GLTFChannel>} channels */
     constructor(name, channels)
     {
         /** @property {string} - Its name in the file, or 'animation' and its number when it has none */
         this.name = name;
         /** @property {Array<Object>} - What it moves: for each, a node, which of its translation, rotation or scale,
          *  the key times and values, and how to go between keys, LINEAR, STEP or CUBICSPLINE
-         *  @type {Array<Object>} */
+         *  @type {Array<GLTFChannel>} */
         this.channels = channels;
         /** @property {number} - Length in seconds, the time of its last key
          *  @type {number} */

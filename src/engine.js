@@ -347,6 +347,7 @@ class EnginePlugin
 
 /**
  * @callback PluginCallback - Update or render function for a plugin
+ * @return {void}
  * @memberof Engine
  */
 
@@ -436,10 +437,12 @@ function engineLoadingScreenDraw(elapsed)
 /**
  * @callback LoadingScreenCallback - Draws the loading screen on mainContext, each frame while the game loads
  * @param {number} progress - The part of the loads done, 0 to 1
+ * @return {void}
  * @memberof Engine
  */
 /**
  * @callback GameCallback - Update or render function for the game
+ * @return {void}
  * @memberof Engine
  */
 
@@ -1126,6 +1129,7 @@ function engineObjectsCollect(pos, size, objects=engineObjects, testCenters=fals
 /**
  * @callback ObjectCallbackFunction - Function that processes an object
  * @param {EngineObject} object
+ *  @return {void}
  *  @memberof Engine
  */
 

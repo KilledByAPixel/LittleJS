@@ -287,7 +287,7 @@ const postProcessValueKey = (values)=> Object.entries(values).map(([name, v])=> 
 
 // the code the pass shades with: none passes the frame through, and code with no mainImage of its own, an effect like
 // postProcessVignette() given alone, is a piece that postProcessEffects joins into one
-function postProcessShaderCode(shaderCode)
+function postProcessShaderCode(/** @type {string|undefined} */ shaderCode)
 {
     ASSERT(!shaderCode || typeof shaderCode === 'string', 'shader code must be a string');
     return !shaderCode ? postProcessEffects() :

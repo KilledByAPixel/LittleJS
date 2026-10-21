@@ -23,8 +23,8 @@
  *  @property {number} height - Cells up
  *  @property {number} [tilewidth] - A tile's width in pixels
  *  @property {number} [tileheight] - A tile's height in pixels
- *  @property {Array<Object>} layers - Tile layers, object layers and groups of them, bottom first
- *  @property {Array<Object>} [tilesets] - The first one's margin, spacing and columns are read
+ *  @property {Array<TiledLayer>} layers - Tile layers, object layers and groups of them, bottom first
+ *  @property {Array<TiledTileset>} [tilesets] - The first one's margin, spacing and columns are read
  *  @property {number} [nextlayerid]
  *  @property {number} [nextobjectid]
  *  @property {string} [orientation]
@@ -35,7 +35,69 @@
  *  @property {string} [tiledversion]
  *  @property {number} [compressionlevel]
  *  @property {string} [backgroundcolor]
- *  @property {Array<Object>} [properties]
+ *  @property {Array<TiledProperty>} [properties]
+ *  @memberof TileLayers */
+
+/** A layer of a Tiled map: a tile layer, an object layer or a group of layers, by its type
+ *  @typedef {Object} TiledLayer
+ *  @property {'tilelayer'|'objectgroup'|'group'} [type] - A tile layer when left out
+ *  @property {string} [name]
+ *  @property {number} [id]
+ *  @property {Array<number>} [data] - A tile layer's tiles, row by row from the top, each 0 for none or a tile number
+ *    plus 1, with Tiled's flip flags in its top bits
+ *  @property {number} [width] - A tile layer's cells across
+ *  @property {number} [height] - A tile layer's cells up
+ *  @property {Array<TiledObject>} [objects] - An object layer's objects
+ *  @property {Array<TiledLayer>} [layers] - A group's layers
+ *  @property {boolean} [visible] - A hidden layer is loaded, its collision too, but not drawn
+ *  @property {number} [opacity]
+ *  @property {string} [tintcolor] - A hex color
+ *  @property {number} [x]
+ *  @property {number} [y]
+ *  @property {Array<TiledProperty>} [properties]
+ *  @memberof TileLayers */
+
+/** An object of a Tiled object layer, made by the type objectLayersAddType added for its type
+ *  @typedef {Object} TiledObject
+ *  @property {number} id
+ *  @property {string} [type] - Its type, class in files from Tiled 1.9 on
+ *  @property {string} [class]
+ *  @property {string} [name]
+ *  @property {number} x - In pixels from the map's top left
+ *  @property {number} y
+ *  @property {number} [width]
+ *  @property {number} [height]
+ *  @property {number} [rotation] - In degrees, clockwise
+ *  @property {number} [gid] - A tile object's tile
+ *  @property {boolean} [visible]
+ *  @property {boolean} [point]
+ *  @property {boolean} [ellipse]
+ *  @property {Array<{x: number, y: number}>} [polygon]
+ *  @property {Array<{x: number, y: number}>} [polyline]
+ *  @property {Array<TiledProperty>} [properties]
+ *  @memberof TileLayers */
+
+/** A custom property of a Tiled map, layer or object
+ *  @typedef {Object} TiledProperty
+ *  @property {string} name
+ *  @property {string} [type] - string, int, float, bool, color, file or object, string when left out
+ *  @property {any} value
+ *  @memberof TileLayers */
+
+/** A tileset of a Tiled map
+ *  @typedef {Object} TiledTileset
+ *  @property {number} [firstgid] - The tile number of its first tile, plus 1
+ *  @property {number} [columns]
+ *  @property {number} [margin] - Pixels around the edge of the image
+ *  @property {number} [spacing] - Pixels between tiles
+ *  @property {number} [tilewidth]
+ *  @property {number} [tileheight]
+ *  @property {number} [tilecount]
+ *  @property {string} [image]
+ *  @property {number} [imagewidth]
+ *  @property {number} [imageheight]
+ *  @property {string} [name]
+ *  @property {string} [source] - An external tileset file
  *  @memberof TileLayers */
 
 /** Keep track of all tile layers with collision
@@ -268,7 +330,7 @@ function tileLayersLoad(tileMapData, tileInfo=tileLayerDefaultTile(), renderOrde
     }
 
     // flatten group layers in order, a group's color and visibility carry to the layers inside it
-    /** @type {Array<{dataLayer: Object, color?: Color, visible?: boolean}>} */
+    /** @type {Array<{dataLayer: TiledLayer, color?: Color, visible?: boolean}>} */
     const layers = [];
     const addLayers = (dataLayers, groupColor, groupVisible)=>
     {

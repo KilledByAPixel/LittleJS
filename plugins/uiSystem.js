@@ -42,6 +42,7 @@ function uiSetDebug(debugMode)
 /**
  * @callback DragAndDropCallback - Callback for drag and drop events
  * @param {DragEvent} event - The drag event
+ * @return {void}
  * @memberof UISystem
  */
 

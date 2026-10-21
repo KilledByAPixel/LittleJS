@@ -389,6 +389,7 @@ function isArray(a) { return Array.isArray(a); }
 /**
  * @callback LineTestFunction - Checks if a position is colliding
  * @param {Vector2} pos
+ * @return {unknown} - Truthy where it collides, which ends the cast
  * @memberof Math
  */
 

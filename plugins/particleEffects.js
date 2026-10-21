@@ -22,10 +22,74 @@ const particleEffectGroups = ['Emitter', 'Particles', 'Color', 'Motion', 'Collis
 /** Every setting an effect has: its name, kind (number, checkbox, color or shape), default, the range the designer's
  *  slider covers (min, max, step), the hard limits a typed value is clamped to, and whether it is set after the
  *  emitter is made rather than passed to its constructor (extra)
- *  @type {Array<{group:string, name:string, kind:string, value:any, min:number, max:number, step:number,
+ *  @type {Array<{group:string, name:string, kind:('number'|'checkbox'|'color'|'shape'),
+ *  value:(number|boolean|string|Array<number>), min:number, max:number, step:number,
  *  description:string, hardMin:number, hardMax:number, extra:boolean}>}
  *  @memberof ParticleEffects */
 const particleEffectSettings = [];
+
+/** An effect: what particleEffect plays, the designer edits and a library file holds; plain data, so it saves as JSON
+ *  @typedef {Object} ParticleEffect
+ *  @property {string} [name] - Its name, any case, 'Effect' when not given
+ *  @property {ParticleEffectSettings} settings - What it sets on an emitter, each one left out taking its default
+ *  @property {Array<ParticleEffectBehavior>} [behaviors] - Pushes on every particle every update
+ *  @memberof ParticleEffects */
+
+/** A behavior an effect uses, by name, with how strong it is
+ *  @typedef {Object} ParticleEffectBehavior
+ *  @property {string} name - One of particleEffectBehaviors, or one added with particleEffectsAddBehavior
+ *  @property {number} [strength] - How strong, the behavior's own value when not given
+ *  @memberof ParticleEffects */
+
+/** The settings of an effect, each optional, the default when left out; colors are a Color or [r, g, b, a], and an
+ *  effect that comes back sanitized has them as channels; a test checks this list against particleEffectSettings
+ *  @typedef {Object} ParticleEffectSettings
+ *  @property {number} [emitRate] - Particles per second, 0 emits none
+ *  @property {number} [emitTime] - Seconds to emit for, 0 is forever
+ *  @property {number} [emitSize] - Diameter, or width when rectangular
+ *  @property {boolean} [emitRect] - Rectangle emitter, off is a circle
+ *  @property {number} [emitHeight] - Rectangle height
+ *  @property {number} [emitConeAngle] - Half angle particles move in, PI is all ways
+ *  @property {number} [angle] - Emitter angle, 0 points up
+ *  @property {number} [particleTime] - Seconds each particle lives
+ *  @property {number} [sizeStart] - Size at the start of life
+ *  @property {number} [sizeEnd] - Size at the end of life
+ *  @property {number} [fadeRate] - Share of life spent fading in and out
+ *  @property {number} [randomness] - How much each particle varies
+ *  @property {number} [particleConeAngle] - Half angle of start rotation, PI is any
+ *  @property {number} [trailScale] - Stretch along the motion, 0 is off
+ *  @property {boolean} [additive] - Glow with additive blending
+ *  @property {Color|Array<number>} [colorStartA] - Start color, each particle picks between A and B
+ *  @property {Color|Array<number>} [colorStartB] - Second start color
+ *  @property {Color|Array<number>} [colorEndA] - End color, each particle picks between A and B
+ *  @property {Color|Array<number>} [colorEndB] - Second end color
+ *  @property {boolean} [randomColorLinear] - Pick along A to B, off picks each channel
+ *  @property {number} [speed] - Start speed, world units per frame
+ *  @property {number} [angleSpeed] - Spin speed, radians per frame
+ *  @property {number} [damping] - Speed kept each frame, 1 keeps it all
+ *  @property {number} [angleDamping] - Spin kept each frame
+ *  @property {number} [gravityScale] - How much gravity pulls
+ *  @property {number} [gravity] - Its own fall each frame, the same in any game
+ *  @property {number} [velocityInheritance] - Share of emitter motion passed on
+ *  @property {boolean} [localSpace] - Particles move with the emitter
+ *  @property {boolean} [collideLevel] - Hit tiles
+ *  @property {number} [restitution] - Bounce when hitting tiles
+ *  @property {number} [friction] - Speed kept sliding along tiles
+ *  @property {''|'dot'|'soft'|'glow'|'smoke'|'spark'|'square'|'triangle'|'ring'|'star'|'plus'} [shape] - Built-in
+ *            shape, '' uses the tile
+ *  @property {number} [tileIndex] - Tile in texture 0 when no shape, -1 is untextured
+ *  @property {number} [tileSize] - Tile size in texture pixels
+ *  @property {number} [tilePadding] - Pixels of padding around each tile
+ *  @memberof ParticleEffects */
+
+/** What a play of an effect can change: any setting, replacing the effect's own for this play, and scale, which grows
+ *  the whole effect, the built-ins fitting a one unit object at 1; hue, which turns its colors around the color wheel,
+ *  1 all the way; saturation, which multiplies it, 0 gray; angle, its direction, 0 up; tileInfo, the game's own art in
+ *  place of the shape, tinted by its colors, a TextureInfo drawn whole; and in 3D flatten, a flat spawn area across
+ *  the way it emits; emitSize may be a vec2, a rectangle
+ *  @typedef {Omit<ParticleEffectSettings, 'emitSize'> & {scale?: number, hue?: number, saturation?: number, angle?: number,
+ *  tileInfo?: TileInfo|TextureInfo, flatten?: boolean, emitSize?: number|Vector2}} ParticleEffectOptions
+ *  @memberof ParticleEffects */
 let particleEffectSettingGroup; // the group settings are being added to
 
 // the slider covers min to max, typed values may go out to hardMin and hardMax
@@ -153,8 +217,9 @@ function particleEffectColor(value)
 }
 
 /** Any input into a whole effect: missing fields take their defaults, bad ones are dropped or clamped
- *  @param {Object} [raw] - {name, settings, behaviors}, from a library file, the designer or code
- *  @return {{name:string, settings:Object, behaviors:Array<{name:string, strength:number}>}}
+ *  @param {Object} [raw] - {name, settings, behaviors}, from a library file, the designer or code, checked as it
+ *    may be anything
+ *  @return {{name:string, settings:ParticleEffectSettings, behaviors:Array<{name:string, strength:number}>}}
  *  @memberof ParticleEffects */
 function particleEffectSanitize(raw)
 {
@@ -173,7 +238,7 @@ function particleEffectSanitize(raw)
         if (setting.kind === 'checkbox')
             settings[setting.name] = typeof value === 'boolean' ? value : value === 0 || value === 1 ? !!value : fallback;
         else if (setting.kind === 'color')
-            settings[setting.name] = particleEffectColor(value) || fallback.slice();
+            settings[setting.name] = particleEffectColor(value) || /** @type {Array<number>} */ (fallback).slice();
         else if (setting.kind === 'shape')
             settings[setting.name] = value === '' || particleEffectShapes.includes(value) ? value : fallback;
         else if (isNumber(value))
@@ -213,10 +278,10 @@ function particleEffectSanitize(raw)
 
 /** A copy of an effect with its four colors turned around the color wheel and their saturation scaled; lightness and
  *  alpha stay, and gray and white have no hue to turn
- *  @param {Object} effect
+ *  @param {ParticleEffect} effect
  *  @param {number} [hue] - How far around the wheel, 1 is all the way
  *  @param {number} [saturation] - Multiplies the saturation, 0 is gray, clamped to 1
- *  @return {Object}
+ *  @return {ParticleEffect}
  *  @memberof ParticleEffects */
 function particleEffectRecolor(effect, hue=0, saturation=1)
 {
@@ -238,7 +303,7 @@ function particleEffectRecolor(effect, hue=0, saturation=1)
 const particleEffectsByName = new Map;
 
 /** Add effects to play by name, sanitized; one with the name of an effect already there replaces it
- *  @param {Array<Object>|Object} effects
+ *  @param {Array<ParticleEffect>|ParticleEffect} effects
  *  @memberof ParticleEffects */
 function particleEffectsAdd(effects)
 {
@@ -251,13 +316,13 @@ function particleEffectsAdd(effects)
 
 /** The effect with a name, any case, undefined if there is none
  *  @param {string} name
- *  @return {Object|undefined}
+ *  @return {ParticleEffect|undefined}
  *  @memberof ParticleEffects */
 function particleEffectsGet(name) { return particleEffectsByName.get(String(name).toLowerCase()); }
 
 /** A library file, or one effect, into sanitized effects; throws on bad input
  *  @param {string} text
- *  @return {Array<Object>}
+ *  @return {Array<ParticleEffect>}
  *  @memberof ParticleEffects */
 function particleEffectsParse(text) { return particleEffectsFromData(JSON.parse(text)); }
 
@@ -271,14 +336,14 @@ function particleEffectsFromData(data)
 }
 
 /** The text of a library file with these effects, what particleEffectsLoad and the designer read
- *  @param {Array<Object>} effects
+ *  @param {Array<ParticleEffect>} effects
  *  @return {string}
  *  @memberof ParticleEffects */
 function particleEffectsText(effects) { return JSON.stringify({version:1, effects}, undefined, 1); }
 
 /** Load a library file the particle designer saved and add its effects
  *  @param {string} url
- *  @return {Promise<Array<Object>>} - The effects it had
+ *  @return {Promise<Array<ParticleEffect>>} - The effects it had
  *  @memberof ParticleEffects */
 async function particleEffectsLoad(url)
 {
@@ -456,7 +521,7 @@ function particleEffectTileInfo(s)
 
 /** Set a 2D emitter to an effect, live, so a running one keeps its particles
  *  @param {ParticleEmitter} emitter
- *  @param {Object} effect
+ *  @param {ParticleEffect} effect
  *  @memberof ParticleEffects */
 function particleEffectApply(emitter, effect)
 {
@@ -535,9 +600,9 @@ function particleEffectResolve(nameOrEffect, options)
  *  - Any setting in the options replaces the effect's own for this play: {emitTime: .5} for a burst of a continuous
  *    effect, {emitTime: 0, emitRate: 30} to keep a one-shot going, or speed, particleTime and the rest
  *  - Attach it to an object with addChild to follow it
- *  @param {string|Object} nameOrEffect - A built-in or added effect's name, or an effect
+ *  @param {string|ParticleEffect} nameOrEffect - A built-in or added effect's name, or an effect
  *  @param {Vector2} [pos]
- *  @param {Object} [options] - What to change for this play, each left out when not wanted:
+ *  @param {ParticleEffectOptions} [options] - What to change for this play, each left out when not wanted:
  *    scale grows the whole effect, the built-ins fit a one unit object at 1;
  *    hue turns its colors around the color wheel, 1 is all the way;
  *    saturation multiplies its saturation, 0 is gray;
@@ -569,7 +634,7 @@ function particleEffect(nameOrEffect, pos=vec2(), options={})
  *  from additive; a finished emitter's emit time is the time it emitted for
  *  @param {ParticleEmitter} emitter
  *  @param {string} [name]
- *  @return {Object}
+ *  @return {ParticleEffect}
  *  @memberof ParticleEffects */
 function particleEffectFromEmitter(emitter, name='Effect')
 {
@@ -625,7 +690,7 @@ function particleEffectFromEmitter(emitter, name='Effect')
 
 /** Set a 3D emitter to an effect, live, so a running one keeps its particles; its place, scale and flatten stay
  *  @param {ParticleEmitter3D} emitter
- *  @param {Object} effect
+ *  @param {ParticleEffect} effect
  *  @memberof ParticleEffects */
 function particleEffectApply3D(emitter, effect)
 {
@@ -661,9 +726,9 @@ function particleEffectSet3D(emitter, effect)
  *    sheet; a trail becomes a streak of the same length, and the settings the 3D emitter lacks (particleConeAngle,
  *    randomColorLinear, velocityInheritance, localSpace) are left out; the stick behavior becomes the emitter's
  *    stick, its grip where a particle lands
- *  @param {string|Object} nameOrEffect - A built-in or added effect's name, or an effect
+ *  @param {string|ParticleEffect} nameOrEffect - A built-in or added effect's name, or an effect
  *  @param {Vector3} [pos3D]
- *  @param {Object} [options] - scale, hue, saturation, angle, tileInfo and any setting as particleEffect; angle turns it
+ *  @param {ParticleEffectOptions} [options] - scale, hue, saturation, angle, tileInfo and any setting as particleEffect; angle turns it
  *    about z, so 0 is up; flatten makes the spawn area flat across the way it emits
  *  @return {ParticleEmitter3D|undefined} - undefined when there is no such effect
  *  @memberof ParticleEffects */
@@ -678,8 +743,8 @@ function particleEffect3D(nameOrEffect, pos3D=vec3(), options={})
         e.rotation3D = vec3(0, 0, -options.angle);
     e.scale3D = vec3(options.scale ?? 1);
     e.emitFlat = !!options.flatten; // a sphere a disc, a box a sheet, across the way it emits
-    if (options.tileInfo)
-        e.tileInfo = options.tileInfo;
+    if (options.tileInfo) // a whole texture too, the 3D emitter draws one as a tile
+        e.tileInfo = /** @type {TileInfo} */ (options.tileInfo);
     return e;
 }
 

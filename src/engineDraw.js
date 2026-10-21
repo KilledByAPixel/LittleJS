@@ -1250,6 +1250,7 @@ function drawCircleGradient(pos, size=1, colorInner=WHITE, colorOuter=CLEAR_WHIT
 /**
  * @callback Canvas2DDrawFunction - A function that draws to a 2D canvas context
  * @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} context
+ * @return {void}
  * @memberof Draw
  */
 

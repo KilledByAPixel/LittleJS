@@ -461,11 +461,22 @@ function textureSheetQueueJob(name, job, failed)
     });
 }
 
+/** A frame of an atlas, as parseAtlas reads it, in pixels
+ *  @typedef {Object} AtlasFrame
+ *  @property {string} name - Its name in the atlas, without the file extension
+ *  @property {Vector2} pos - Its place in the image
+ *  @property {Vector2} size - Its size in the image, trimmed
+ *  @property {Vector2} offset - Where the trimmed frame sits in the untrimmed one
+ *  @property {Vector2} sourceSize - Its size before it was trimmed
+ *  @property {boolean} rotated - The packer turned it
+ *  @property {number} [groupIndex] - Its number in an animation named like run_0, run_1
+ *  @memberof TextureSheets */
+
 /** Parse atlas json into a list of named frame groups, used by loadAtlas
  *  - Accepts TexturePacker json (hash and array) and Aseprite json
  *  - Frames tagged in Aseprite or named like run_0, run_1 group into animations
  *  @param {Object} data - Parsed atlas json data
- *  @return {Array<{name: string, frames: Array<Object>}>} List of {name, frames} groups in atlas order
+ *  @return {Array<{name: string, frames: Array<AtlasFrame>}>} List of {name, frames} groups in atlas order
  *  @memberof TextureSheets */
 function parseAtlas(data)
 {
@@ -542,7 +553,7 @@ function parseAtlasNamesCheck(groups)
 }
 
 /** Wait for everything started by loadSprite and loadAtlas to finish packing
- *  @return {Promise}
+ *  @return {Promise<void>}
  *  @example
  *  async function gameInit()
  *  {

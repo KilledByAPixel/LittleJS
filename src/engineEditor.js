@@ -14,12 +14,14 @@
 
 /**
  *  @callback EditorPlayFromCallback - Puts the player at a world position, for the level editor's Play from mouse
- *  @param {any} pos - Where to start playing, a Vector2 from the 2D editor and a Vector3 from the 3D one
+ *  @param {Vector2|Vector3} pos - Where to start playing, a Vector2 from the 2D editor and a Vector3 from the 3D one
+ *  @return {void}
  *  @memberof Editor
  */
 
 /**
  *  @callback EditorRestartCallback - Rebuilds the level from the map the level editor changed
+ *  @return {void}
  *  @memberof Editor
  */
 
@@ -28,6 +30,7 @@
  *  @param {TileLayer} layer - The layer painted
  *  @param {Vector2} pos - The cell's position in the layer
  *  @param {number|undefined} tile - The tile painted, undefined when erased
+ *  @return {void}
  *  @memberof Editor
  */
 
@@ -50,58 +53,119 @@
  *    type of its pos, as EditorToolAt has it
  *  @property {string} [key] - The key that picks it, as addKey spells one
  *  @property {string} [hint] - The hint line while it is on
- *  @property {function(EditorToolAt<P>): any} [onPress] - The left button went down in the level; returning false
- *    says the press was not the tool's
- *  @property {function(EditorToolAt<P>): any} [onDrag] - Each frame it is held
- *  @property {function(EditorToolAt<P>): any} [onRelease] - It was let go
- *  @property {function(EditorToolAt<P>): any} [onDraw] - Each frame the tool is on, to draw its cursor or preview
+ *  @property {function(EditorToolAt<P>): boolean|void} [onPress] - The left button went down in the level; returning
+ *    false says the press was not the tool's
+ *  @property {function(EditorToolAt<P>): void} [onDrag] - Each frame it is held
+ *  @property {function(EditorToolAt<P>): void} [onRelease] - It was let go
+ *  @property {function(EditorToolAt<P>): void} [onDraw] - Each frame the tool is on, to draw its cursor or preview
  *  @memberof Editor
  */
 
 /**
  *  @typedef {Object} EditorEdit2D - The 2D level editor's edit functions, levelEditor.edit2D
- *  @property {Object|undefined} map - The Tiled map of the selected layer
+ *  @property {TiledMap|undefined} map - The Tiled map of the selected layer
  *  @property {TileLayer|undefined} layer - The selected tile layer, undefined on an object layer
- *  @property {Array<Object>} objects - A copy of the selected object layer's objects, as Tiled has them
+ *  @property {Array<TiledObject>} objects - A copy of the selected object layer's objects, as Tiled has them
  *  @property {Vector2|undefined} hover - The cell under the mouse on the selected tile layer
  *  @property {Set<number>} selection - The selected objects' ids
- *  @property {function(Vector2, number, ...any): boolean} paint - Set a cell of the selected tile layer
+ *  @property {(cell: Vector2, tile: number, direction?: number, mirror?: boolean) => boolean} paint - Set a cell of the
+ *    selected tile layer
  *    to a tile index, -1 erases, with a direction 0 to 3 and a mirror; false off the layer or with none
- *  @property {function(function(Array<Object>): void): boolean} changeObjects - Edit a copy of the selected object
+ *  @property {function(function(Array<TiledObject>): void): boolean} changeObjects - Edit a copy of the selected object
  *    layer's objects; false when nothing changed
  *  @property {function(): void} strokeEnd - End the edit: one undo step, and the autosave
  *  @property {function(): void} strokeCancel - Take the edit being made back
  *  @property {function(function(): void): void} bulk - Many paints with one redraw a layer
- *  @property {function(...any): any} undo - Undo, or redo with true
+ *  @property {(redo?: boolean) => void} undo - Undo, or redo with true
  *  @property {function(): string} toJSON - The map as the text Save writes
  *  @memberof Editor
  */
 
+/** A 3D level as it is saved, what level3DLoad takes and the 3D level editor edits
+ *  @typedef {Object} Level3D
+ *  @property {number} [littlejs3D] - The format's version, 1
+ *  @property {Array<Level3DObject>} objects - What it places
+ *  @property {Level3DScene} [scene] - The sky, sun, fog and the rest it sets
+ *  @property {Level3DVoxels} [voxels] - A block map
+ *  @property {Level3DTerrain} [terrain] - A height map
+ *  @property {Object<string, Level3DPrefab>} [prefabs] - The level's own prefabs by name
+ *  @memberof Level3D */
+
+/** An object a 3D level places, see level3DLoad
+ *  @typedef {Object} Level3DObject
+ *  @property {string} type - The name its type was added with
+ *  @property {number} [id] - Its id in the level, the editor gives each one
+ *  @property {[number, number, number]} [pos] - Where it is, 0, 0, 0 when left out
+ *  @property {[number, number, number]} [rotation] - Pitch, yaw and roll in degrees
+ *  @property {[number, number, number]} [scale] - Times the scale its type makes it with
+ *  @property {Object<string, any>} [properties] - What differs from its type's defaults; a Color is a hex string and a
+ *    vector an array
+ *  @memberof Level3D */
+
+/** A 3D level's scene block, what it sets of the renderer; a setting left out stays as the game set it
+ *  @typedef {Object} Level3DScene
+ *  @property {[string, string, string]} [sky] - Hex colors straight up, at the horizon and straight down
+ *  @property {number} [ambient] - How much the sky lights the scene, .5 when not given
+ *  @property {[number, number, number]} [sunDirection] - Pointing toward the sun
+ *  @property {string} [sunColor] - A hex color
+ *  @property {[number, number]} [fog] - Where it starts and ends
+ *  @property {string} [fogColor] - A hex color, the sky's horizon when not given
+ *  @property {boolean} [shadows]
+ *  @property {boolean} [lensFlare] - The sun's lens flare
+ *  @property {Array<string>} [skyBox] - Six image urls, as loadCubeMap takes them
+ *  @property {Array<string>} [environment] - Six image urls for reflections
+ *  @memberof Level3D */
+
+/** A 3D level's block map, made a VoxelMap
+ *  @typedef {Object} Level3DVoxels
+ *  @property {[number, number, number]} [pos] - Its corner
+ *  @property {[number, number, number]} size - Its cells along x, y and z
+ *  @property {Array<number>} [blocks] - Runs of a count and a type, along x, then y, then z
+ *  @memberof Level3D */
+
+/** A 3D level's terrain, made a HeightMap
+ *  @typedef {Object} Level3DTerrain
+ *  @property {[number, number, number]} [pos] - Its center
+ *  @property {[number, number]} size - Its size in the world along x and z
+ *  @property {number} [height] - How tall a full height is, 1 when not given
+ *  @property {string} [color] - A hex color
+ *  @property {Array<Array<number>>} heights - Rows of 0 to 1 from -z to +z, each from -x to +x
+ *  @property {{colors: Array<string>, cells: Array<number>}} [paint] - Hex colors, and runs of a count and a color
+ *    along the rows, 0 the terrain's own color and 1 the first of the list
+ *  @memberof Level3D */
+
+/** A prefab, a small level placed many times, see level3DAddPrefab
+ *  @typedef {Object} Level3DPrefab
+ *  @property {Array<Level3DObject>} objects - About its own origin
+ *  @property {boolean} [attached] - Its parts are children of the instance, moving with it as one body
+ *  @memberof Level3D */
+
 /**
  *  @typedef {Object} EditorEdit3D - The 3D level editor's edit functions, levelEditor.edit3D; a position, a
  *    rotation and a scale are Vector3, the rotation in degrees
- *  @property {Object|undefined} level - The level object being edited
- *  @property {Array<Object>} objects - Its objects, the list in the level: read it, edit through change
+ *  @property {Level3D|undefined} level - The level object being edited
+ *  @property {Array<Level3DObject>} objects - Its objects, the list in the level: read it, edit through change
  *  @property {Set<number>} selection - The selected objects' ids
- *  @property {function(): Array<Object>} selected - The selected objects
+ *  @property {function(): Array<Level3DObject>} selected - The selected objects
  *  @property {function(number): any} made - What the game made for an object's id
- *  @property {function(function(Array<Object>): void): boolean} change - Edit a copy of the object list; false
+ *  @property {function(function(Array<Level3DObject>): void): boolean} change - Edit a copy of the object list; false
  *    when nothing changed
  *  @property {function(string, function(any): any): boolean} changePart - Edit the level's scene, voxels, terrain
  *    or prefabs block
  *  @property {function(): void} strokeEnd - End the edit: one undo step, and the autosave
  *  @property {function(): void} strokeCancel - Take the edit being made back
- *  @property {function(string, any): number|undefined} place - Add an object of a type at a position, selected;
+ *  @property {function(string, Vector3): number|undefined} place - Add an object of a type at a position, selected;
  *    its id, undefined when there is no such type or the level can not be edited
- *  @property {function(Object, ...any): void} setTransform - Write a place, a rotation and a scale on an
+ *  @property {(object: Level3DObject, pos3D?: Vector3, rotation?: Vector3, scale3D?: Vector3) => void} setTransform -
+ *    Write a place, a rotation and a scale on an
  *    object of the list given to change; one left out is kept
- *  @property {function(Object, string, any): void} setProperty - Write a property on an object of the list given
+ *  @property {function(Level3DObject, string, any): void} setProperty - Write a property on an object of the list given
  *    to change, left out of the file when it is the type's default
- *  @property {function(Object): any} pos - An object's position
- *  @property {function(Object): any} rotation - Its rotation, in degrees
- *  @property {function(Object): any} scale - Its scale
- *  @property {function(): any} mousePoint - Where the mouse is on the level or the ground, undefined over the panel
- *  @property {function(...any): boolean} undo - Undo, or redo with true
+ *  @property {function(Level3DObject): Vector3} pos - An object's position
+ *  @property {function(Level3DObject): Vector3} rotation - Its rotation, in degrees
+ *  @property {function(Level3DObject): Vector3} scale - Its scale
+ *  @property {function(): Vector3|undefined} mousePoint - Where the mouse is on the level or the ground, undefined over the panel
+ *  @property {(redo?: boolean) => boolean} undo - Undo, or redo with true
  *  @property {function(): string} toJSON - The level as the text Save writes
  *  @memberof Editor
  */
@@ -143,7 +207,7 @@ class LevelEditor
          *  @type {string|undefined} */
         this.tool = undefined;
         // what the game added: its keys by how they are spelled, its panel buttons and its tools by name
-        /** @type {Object<string, {action: function(boolean): any, help: string|undefined, warned: boolean}>} */
+        /** @type {Object<string, {action: function(boolean): boolean|void, help: string|undefined, warned: boolean}>} */
         this.keys = {};
         /** @type {Array<{label: string, onClick: Function, title: string}>} */
         this.buttons = [];
@@ -165,7 +229,7 @@ class LevelEditor
 
     /** Put the player at a position, a Vector2 in the 2D editor and a Vector3 in the 3D one; set it or override it
      *  and the editor has Play from mouse, which starts play there
-     *  @param {any} pos - A Vector2 from the 2D editor, a Vector3 from the 3D one */
+     *  @param {Vector2|Vector3} pos - A Vector2 from the 2D editor, a Vector3 from the 3D one */
     onPlayFrom(pos) {}
 
     /** Called when the editor opens, to set or override */
@@ -218,7 +282,7 @@ class LevelEditor
      *    the action
      *  @param {string} key - A letter or digit, 'k', or a key's name in any case, 'Delete', 'F2', 'Enter', 'Space';
      *    'ctrl+k' with Ctrl or Cmd
-     *  @param {function(boolean): any} action - Called with whether Shift is held; returning false says it did
+     *  @param {function(boolean): boolean|void} action - Called with whether Shift is held; returning false says it did
      *    nothing, and the key is left to the browser
      *  @param {string} [helpLine] - A line for the editor's help */
     addKey(key, action, helpLine)

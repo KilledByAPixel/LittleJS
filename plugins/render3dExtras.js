@@ -1193,6 +1193,7 @@ function render3DParticleView(emitter)
 /**
  * @callback Particle3DCallback - A function a ParticleEmitter3D calls with one of its particles
  * @param {Particle3D} particle
+ * @return {void}
  * @memberof Render3D
  */
 

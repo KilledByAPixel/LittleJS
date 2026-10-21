@@ -35,7 +35,7 @@ const tweakPathRegex = /^[A-Za-z_$][\w$]*(\.[A-Za-z_$][\w$]*)*$/;
  *  @property {number} [max] - Highest value on the slider
  *  @property {number} [step] - Step for the slider and number box, a thousandth of the range by default
  *  @property {string} [label] - Name to show in place of the path, and the name it is saved by with an object
- *  @property {Object} [object] - Object the path is a field of, in place of a global, for an ES module game
+ *  @property {object} [object] - Object the path is a field of, in place of a global, for an ES module game
  *  @memberof Tweakables */
 
 /** Add a value to the tweakables panel, so it can be changed while the game runs

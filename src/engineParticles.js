@@ -16,6 +16,7 @@
 /**
  *  @callback ParticleCallback - Function that processes a particle
  *  @param {Particle} particle
+ *  @return {void}
  *  @memberof Particles
  */
 

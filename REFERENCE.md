@@ -881,6 +881,8 @@ particleEffectsBuiltIn                  // the built-in names: fire, torch, smok
 'blood'      // hue 0, red, one-shot
 'confetti'   // hue 0 and .6, mixed, one-shot
 'splash'     // hue .58, one-shot
+// an effect is plain data, typed ParticleEffect: {name, settings, behaviors}, settings a ParticleEffectSettings,
+// each optional, and a play's options a ParticleEffectOptions, the settings with scale, hue and the rest
 particleEffectApply(emitter, effect)    // set a live 2D emitter to an effect
 particleEffectApply3D(emitter, effect)  // the same for a ParticleEmitter3D, its particles, place and scale kept
 particleEffectFromEmitter(emitter, name='Effect') // a 2D emitter's settings as an effect, to save or build in 3D

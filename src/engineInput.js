@@ -405,7 +405,7 @@ function inputGetGamepads()
 ///////////////////////////////////////////////////////////////////////////////
 
 /** Pulse the vibration hardware if it exists
- *  @param {number|Array} [pattern] - single value in ms or vibration interval array
+ *  @param {number|Array<number>} [pattern] - single value in ms or vibration interval array
  *  @memberof Input */
 function vibrate(pattern=100)
 {

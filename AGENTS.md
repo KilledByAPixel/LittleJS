@@ -122,6 +122,8 @@ isVector3(v)  // true if valid Vector3 (3D math plugin)
 isColor(c)    // true if valid Color
 ```
 
+[test/dts.test.mjs](test/dts.test.mjs) caps how many `any` types the d.ts has, so a new one is typed instead; lower the ceiling when a change takes some away. A JSDoc `{Object}` is `any` there: describe the shape with a `@typedef`, as `ParticleEffect` and `Level3D` do. An optional parameter in a function type is written as an arrow type, `(cell: Vector2, mirror?: boolean) => boolean`, since `function(boolean=)` comes out required.
+
 A field that starts as `undefined` reaches `dist/littlejs.d.ts` as `any`, because tsc infers field types from their assignments. Give it a `@type` tag beside its `@property` tag, the way `fogColor` and `obj.shader` do:
 ```javascript
 /** @property {Shader|undefined} - Custom shader to render with

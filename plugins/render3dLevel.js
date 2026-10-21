@@ -15,16 +15,7 @@
 
 const LEVEL3D_VERSION = 1; // the format a level's littlejs3D names
 
-/** A 3D level as it is saved, what level3DLoad takes and the 3D level editor edits
- *  @typedef {Object} Level3D
- *  @property {number} [littlejs3D] - The format's version, 1
- *  @property {Array<Object>} objects - Each {id, type, pos, rotation, scale, properties}, all but type optional
- *  @property {Object} [scene] - The scene block: sky, ambient, sunDirection, sunColor, fog, fogColor, shadows, lensFlare,
- *    skyBox, environment
- *  @property {Object} [voxels] - A block map: {pos, size, blocks}
- *  @property {Object} [terrain] - A height map: {pos, size, height, color, heights, paint}
- *  @property {Object} [prefabs] - The level's own prefabs by name, each {objects, attached}
- *  @memberof Level3D */
+// the level format, Level3D and its parts, is typed in src/engineEditor.js, where the editor's own types see it
 
 // the types a level's objects are made from, by name
 const level3DTypes = new Map;
@@ -493,7 +484,7 @@ function level3DSpawn(type, pos3D=vec3(), rotation3D=vec3(), scale3D=vec3(1), pr
 // the prefabs by name: how an instance is built, its objects, fromLevel, true for one a level's own prefabs
 // block added, which one the game adds takes the place of, and source, the object it was added from, which the
 // level editor knows a level that is a prefab by
-/** @type {Map<string, {attached: boolean, objects: Array<Object>, fromLevel: boolean, source: Object}>} */
+/** @type {Map<string, {attached: boolean, objects: Array<Level3DObject>, fromLevel: boolean, source: Object}>} */
 const level3DPrefabs = new Map;
 
 // how many prefabs deep an instance being made is, a prefab that holds itself is stopped; and how many of those
@@ -514,8 +505,7 @@ const level3DPrefabMaking = [];
  *    by hand does
  *  - Adding a name again replaces it
  *  @param {string} name - The type its instances have in a level
- *  @param {{objects: Array<Object>, attached?: boolean}} prefab - Its objects, about its own origin, and whether
- *    they are attached
+ *  @param {Level3DPrefab} prefab - Its objects, about its own origin, and whether they are attached
  *  @memberof Level3D
  *  @example
  *  level3DAddPrefab('Tower', {objects: [{type: 'Box', pos: [0, 1, 0], scale: [2, 2, 2]},
@@ -596,7 +586,7 @@ class Prefab3D extends EngineObject3D
          *  separate parts, and for an attached prefab the middle of the box around its parts, where its handle
          *  is, as an object's place is the middle of its body */
         this.originOffset = vec3();
-        /** @type {Array<{id?: number, type: string, pos?: Array<number>, rotation?: Array<number>, scale?: Array<number>|number, properties?: Object}>} */
+        /** @type {Array<Level3DObject>} */
         this.partObjects = []; // the prefab's object of each part
         this.partsPlaced = ''; // where the handle was when its parts were last placed, undefined parts not made
         this.partsMade = false;
