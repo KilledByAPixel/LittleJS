@@ -398,9 +398,10 @@ worldToScreenDelta(worldDelta)  // Convert a world space delta to screen space
 screenToWorldTransform(screenPos, screenSize, screenAngle=0) // Convert a whole transform
 getCameraSize()          // Get the camera's visible area in world space
 cameraFit(center, size, worldMargin, screenInset) // Fit the camera to a world space rectangle
-cameraShake(amount=.5)   // Shake for a hit: adds to a shake that fades by itself, only what is drawn moves,
-                         // cameraPos and cameraAngle stay the game's own; in 2D and 3D, held while paused or
-                         // at time scale 0
+cameraShake(amount=.5, direction=vec2(1)) // Shake for a hit: adds to a shake that fades by itself,
+                         // only what is drawn moves, cameraPos and cameraAngle stay the game's own; in 2D and
+                         // 3D, held while paused or at time scale 0; direction weights each axis, vec2(0, 1)
+                         // shakes only up and down, and each axis fades on its own
 cameraShakeDistance = .5 // How far a full shake moves the view, world units; setCameraShakeDistance(distance)
 cameraShakeAngle = .05   // How far a full shake turns the view, radians; setCameraShakeAngle(angle)
 cameraShakeDecay = 1     // How much shake fades a second, 1 is a full shake gone in a second; setCameraShakeDecay(decay)
@@ -1012,6 +1013,7 @@ camera.scale               // the cameraScale it eases to over scaleSmoothing = 
 camera.snap()              // straight to the target, for a level start or a teleport
 camera.activate()          // make it the camera that drives the view, from where the view is
 camera.pos                 // the middle of the view it sets, before shake
+                           // the debug overlay (Esc) shows its dead zone, offset, look ahead, focus and bounds
 ```
 
 ## LittleJS PathFinding System

@@ -84,3 +84,33 @@ test('a camera set while a frame draws shaken is kept, not put back', () =>
         setCameraPos(vec2(9, 9)); cameraAngle = .5; cameraShakeEnd();`);
     assert.deepEqual(JSON.parse(run(`JSON.stringify([cameraPos.x, cameraPos.y, cameraAngle])`)), [9, 9, .5]);
 });
+
+test('a shake with a direction moves the view only along its axes, and the turn by the larger', () =>
+{
+    const { run } = loadEngine();
+    const offsets = JSON.parse(run(`cameraShake(1, vec2(0, 1)); const list = [];
+        for (let i = 0; i < 50; ++i) { time = i * .01; const o = cameraShakeOffset(); list.push([o.pos.x, o.pos.y, o.angle]); }
+        JSON.stringify(list)`));
+    assert.ok(offsets.every(o => o[0] === 0), 'nothing along x');
+    assert.ok(offsets.some(o => o[1] !== 0), 'it moves along y');
+    assert.ok(offsets.some(o => o[2] !== 0), 'it turns');
+});
+
+test('each axis takes its own share and fades on its own, and the whole shake is never less than either', () =>
+{
+    const { run } = loadEngine();
+    run(`cameraShake(.4, vec2(1, .5)); cameraShake(.4, vec2(0, 1));`);
+    const [x, y, trauma] = JSON.parse(run(`JSON.stringify([cameraShakeAxes.x, cameraShakeAxes.y, cameraShakeTrauma])`));
+    assert.ok(Math.abs(x - .4) < 1e-12 && Math.abs(y - .6) < 1e-12 && Math.abs(trauma - .8) < 1e-12, `${x} ${y} ${trauma}`);
+    run(`timeDelta = 1/60; for (let i = 0; i < 30; ++i) cameraShakeUpdate();`);
+    const after = JSON.parse(run(`JSON.stringify([cameraShakeAxes.x, cameraShakeAxes.y, cameraShakeTrauma])`));
+    assert.equal(after[0], 0);
+    assert.ok(Math.abs(after[1] - .1) < 1e-9 && Math.abs(after[2] - .3) < 1e-9, `${after}`);
+});
+
+test('with no direction both axes take all of it, as before', () =>
+{
+    const { run } = loadEngine();
+    assert.deepEqual(JSON.parse(run(`cameraShake(.3);
+        JSON.stringify([cameraShakeAxes.x, cameraShakeAxes.y, cameraShakeTrauma])`)), [.3, .3, .3]);
+});

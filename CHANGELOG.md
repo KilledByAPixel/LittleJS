@@ -5,7 +5,9 @@ What changed in each release, newest first. Releases before 1.20.0 are on the
 
 ## Unreleased
 
-Nothing yet.
+### New Changes
+- `cameraShake(amount, direction)` takes a direction, a vec2 that weights each axis, `vec2(0, 1)` to shake only up and down for a heavy landing; each axis fades on its own, so a shake along one does not add to the other, and the view turns by the larger; with no direction it shakes as before
+- A `FollowCamera` shows its settings on the debug overlay: its dead zone, its offset and look ahead from the target to where the view wants its middle, and the sides of its bounds
 
 ## 1.28.0 - 2026-10-20
 

@@ -215,3 +215,20 @@ test('snap on a camera that is not driving leaves the view alone', () =>
         target.pos = vec2(-5, 0); a.snap();`);
     assert.deepEqual(view(), [20, 0]);
 });
+
+test('renderDebugInfo draws the dead zone, the offset and look to the focus, and only the closed sides of the bounds',
+() =>
+{
+    const { run } = engine();
+    const calls = JSON.parse(run(`var calls = [];
+        debugRect = (pos, size, color)=> calls.push(['rect', pos.x, pos.y, size?.x, size?.y]);
+        debugLine = (a, b)=> calls.push(['line', a.x, a.y, b.x, b.y]);
+        target.pos = vec2(2, 0); var camera = new FollowCamera(target, 0);
+        camera.deadZone = vec2(4, 2); camera.offset = vec2(0, 1);
+        camera.boundsMin = vec2(-20, -Infinity); camera.boundsMax = vec2(Infinity, 30);
+        step(); calls.length = 0; camera.renderDebugInfo(); JSON.stringify(calls)`));
+    assert.deepEqual(calls[0], ['rect', 2, 0, 4, 2], 'the dead zone around the view middle, which holds it');
+    assert.deepEqual(calls[1], ['line', 2, 0, 2, 1], 'the offset from the target');
+    const sides = calls.filter(c => c[0] === 'line').slice(2);
+    assert.deepEqual(sides.map(c => c[1] === c[3] ? 'x' + c[1] : 'y' + c[2]), ['x-20', 'y30']);
+});

@@ -1657,8 +1657,11 @@ function cameraFit(center, size, worldMargin, screenInset)
 ///////////////////////////////////////////////////////////////////////////////
 // Camera shake
 
-// how much shake is left, 0 to 1, cameraShake adds to it and it fades by cameraShakeDecay a second
+// how much shake is left, 0 to 1, cameraShake adds to it and it fades by cameraShakeDecay a second; it turns the view,
+// and is never less than either axis, since every shake adds to it the most it adds to one
 let cameraShakeTrauma = 0;
+// how much shake is left on each axis, the part of it that moves the view along x and along y
+let cameraShakeAxes = vec2();
 // noise steps a second, how fast the shaken view wanders
 const CAMERA_SHAKE_FREQUENCY = 15;
 // the game's own cameraPos and cameraAngle, kept while a frame draws shaken, and the shaken ones set in their place
@@ -1669,12 +1672,20 @@ let cameraShakeSavedPos, cameraShakeSavedAngle = 0, cameraShakeShakenPos, camera
  *    up to cameraShakeDistance and cameraShakeAngle
  *  - It moves only what is drawn, in 2D and in 3D: cameraPos and cameraAngle are the game's own between frames
  *  - It holds while the game is paused or at a time scale of 0
+ *  - A direction puts the shake more on one axis, vec2(0, 1) for a heavy landing; each axis fades on its own, so a
+ *    shake on one does not change the other's, and the turn is the larger of the two
  *  @param {number} [amount] - How much to add, the shake is at most 1
+ *  @param {Vector2} [direction] - How much of it goes to each axis, 0 to 1
+ *  @example
+ *  cameraShake(.6, vec2(.2, 1)); // a heavy landing, mostly up and down
  *  @memberof Draw */
-function cameraShake(amount=.5)
+function cameraShake(amount=.5, direction=vec2(1))
 {
     ASSERT(isNumber(amount) && amount >= 0, 'cameraShake: amount must be a number, 0 or more', amount);
-    cameraShakeTrauma = min(1, cameraShakeTrauma + amount);
+    ASSERT(isVector2(direction), 'cameraShake: direction must be a vec2', direction);
+    const x = abs(direction.x), y = abs(direction.y);
+    cameraShakeAxes = vec2(min(1, cameraShakeAxes.x + amount * x), min(1, cameraShakeAxes.y + amount * y));
+    cameraShakeTrauma = min(1, cameraShakeTrauma + amount * max(x, y));
 }
 
 // how far the shake moves and turns the view now, nothing at all when there is no shake
@@ -1682,16 +1693,19 @@ function cameraShakeOffset()
 {
     if (!cameraShakeTrauma)
         return {pos: vec2(), angle: 0};
-    const k = cameraShakeTrauma ** 2, t = time * CAMERA_SHAKE_FREQUENCY;
+    const t = time * CAMERA_SHAKE_FREQUENCY, axes = cameraShakeAxes;
     const wander = (seed)=> noise1D(t + seed) * 2 - 1;
-    return {pos: vec2(wander(0), wander(100)).scale(k * cameraShakeDistance), angle: wander(200) * k * cameraShakeAngle};
+    const pos = vec2(wander(0) * axes.x ** 2, wander(100) * axes.y ** 2).scale(cameraShakeDistance);
+    return {pos, angle: wander(200) * cameraShakeTrauma ** 2 * cameraShakeAngle};
 }
 
 // fade the shake, called by the engine each update after gameUpdatePost
 function cameraShakeUpdate()
 {
-    if (!paused && !engineFrozenTick) // held while paused or at time scale 0, a hit stop
-        cameraShakeTrauma = max(0, cameraShakeTrauma - cameraShakeDecay * timeDelta);
+    if (!cameraShakeTrauma || paused || engineFrozenTick) return; // held while paused or at time scale 0, a hit stop
+    const fade = cameraShakeDecay * timeDelta, axes = cameraShakeAxes;
+    cameraShakeTrauma = max(0, cameraShakeTrauma - fade);
+    cameraShakeAxes = vec2(max(0, axes.x - fade), max(0, axes.y - fade));
 }
 
 // shake the view for the draw, called by the engine before a frame renders

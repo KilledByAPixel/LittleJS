@@ -69,6 +69,7 @@ function cameraSmoothFactor(smoothing) { return smoothing > 0 ? 1 - Math.exp(-ti
  * - boundsMin and boundsMax keep the view over the level, centered where the level is smaller than the view;
  *   they go by the view's size without cameraAngle
  * - Its pos is the middle of the view, before any cameraShake
+ * - The debug overlay shows its dead zone, offset, look ahead and bounds, to tune them by eye
  * - The newest camera made drives the view; a game can still change cameraPos in gameUpdatePost for that frame
  * - Destroy it to stop it driving the view, which stays where it was; engineObjectsDestroy removes it as it does any
  *   object, so make a new one after, or set persistent to keep it
@@ -233,4 +234,31 @@ class FollowCamera extends EngineObject
 
     /** A camera draws nothing */
     render() {}
+
+    /** Show the settings on the debug overlay: the dead zone in yellow around the view middle, the offset in cyan and
+     *  the look ahead in green from the target to the focus, a cross where the view wants its middle, and the bounds
+     *  in orange */
+    renderDebugInfo()
+    {
+        if (!debug) return;
+        const width = debugLineWidth / cameraScale, half = getCameraSize().scale(.5);
+        if (this.deadZone.x || this.deadZone.y)
+            debugRect(this.pos, this.deadZone, '#ff08', 0, 0, false, false);
+        const target = this.getTargetPos();
+        if (target)
+        {
+            const offset = target.add(this.offset), focus = offset.add(this.lookOffset);
+            debugLine(target, offset, '#0ff8', width, 0, false);
+            debugLine(offset, focus, '#0f08', width, 0, false);
+            debugPoint(focus, '#fff8', 0, PI/4, false);
+        }
+
+        // each side of the bounds is a line across the view, so an open side shows nothing
+        const low = this.boundsMin, high = this.boundsMax, color = '#f808';
+        const sideX = (x)=> Number.isFinite(x) &&
+            debugLine(vec2(x, cameraPos.y - half.y), vec2(x, cameraPos.y + half.y), color, width, 0, false);
+        const sideY = (y)=> Number.isFinite(y) &&
+            debugLine(vec2(cameraPos.x - half.x, y), vec2(cameraPos.x + half.x, y), color, width, 0, false);
+        sideX(low?.x); sideX(high?.x); sideY(low?.y); sideY(high?.y);
+    }
 }

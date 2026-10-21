@@ -55,6 +55,8 @@ something is not thrown off by it. It works the same with a
 - A heavier shake: in `gameInit` add `setCameraShakeDistance(2);`.
 - A long rumble: add `setCameraShakeDecay(.3);`.
 - Move without turning: add `setCameraShakeAngle(0);`.
+- A heavy landing, mostly up and down: change `cameraShake(.8)` to
+  `cameraShake(.8, vec2(.2, 1))`.
 - Shake on every frame a key is held: change `keyWasPressed` to
   `keyIsDown` and `.3` to `.05`.
 
