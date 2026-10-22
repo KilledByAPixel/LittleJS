@@ -19,6 +19,26 @@
 let threeJS;
 
 ///////////////////////////////////////////////////////////////////////////////
+/** The three.js module; three.js is the game's own and untyped here, so it is any, named for what it is
+ *  @typedef {any} ThreeModule
+ *  @memberof ThreeJS */
+
+/** A three.js WebGLRenderer; three.js is the game's own and untyped here, so it is any, named for what it is
+ *  @typedef {any} ThreeRenderer
+ *  @memberof ThreeJS */
+
+/** A three.js Scene; three.js is the game's own and untyped here, so it is any, named for what it is
+ *  @typedef {any} ThreeScene
+ *  @memberof ThreeJS */
+
+/** A three.js PerspectiveCamera; three.js is the game's own and untyped here, so it is any, named for what it is
+ *  @typedef {any} ThreeCamera
+ *  @memberof ThreeJS */
+
+/** A three.js Object3D, a mesh or a group; three.js is the game's own and untyped here, so it is any, named for what it is
+ *  @typedef {any} ThreeObject3D
+ *  @memberof ThreeJS */
+
 /**
  * ThreeJS Plugin - Renders a three.js scene behind the LittleJS canvas
  * @example
@@ -30,7 +50,7 @@ let threeJS;
 class ThreeJSPlugin
 {
     /** Set up the three.js rendering layer, call in gameInit
-     *  @param {Object} THREE - The three.js module, supplied by the user
+     *  @param {ThreeModule} THREE - The three.js module, supplied by the user
      *  @param {number} [cameraFOV] - Vertical field of view in degrees */
     constructor(THREE, cameraFOV=60)
     {
@@ -40,13 +60,17 @@ class ThreeJSPlugin
         ASSERT(mainCanvas, 'ThreeJS plugin must be created after engineInit, call in gameInit');
         ASSERT(THREE && THREE.WebGLRenderer, 'three.js module must be passed in');
 
-        /** @property {Object} - The three.js module passed into the constructor */
+        /** @property {ThreeModule} - The three.js module passed into the constructor
+         *  @type {ThreeModule} */
         this.THREE = THREE;
-        /** @property {Object} - The three.js renderer */
+        /** @property {ThreeRenderer} - The three.js renderer
+         *  @type {ThreeRenderer} */
         this.renderer = new THREE.WebGLRenderer({antialias: true});
-        /** @property {Object} - The three.js scene, add lights and meshes here */
+        /** @property {ThreeScene} - The three.js scene, add lights and meshes here
+         *  @type {ThreeScene} */
         this.scene = new THREE.Scene();
-        /** @property {Object} - The three.js perspective camera */
+        /** @property {ThreeCamera} - The three.js perspective camera
+         *  @type {ThreeCamera} */
         this.camera = new THREE.PerspectiveCamera(cameraFOV, 1, .1, 1e3);
         /** @property {boolean} - Lock the camera to the LittleJS 2D camera so the z=0 plane matches world space */
         this.cameraAlign2D = true;
@@ -134,14 +158,15 @@ class ThreeJSObject extends EngineObject
     /** Create an engine object that drives a three.js mesh
      *  @param {Vector2} [pos] - World space position
      *  @param {Vector2} [size] - World space size
-     *  @param {Object} [mesh] - The three.js object3d to drive
+     *  @param {ThreeObject3D} [mesh] - The three.js object3d to drive
      *  @param {number} [z] - Mesh height above the 2D plane */
     constructor(pos, size, mesh, z=0)
     {
         super(pos, size);
         ASSERT(threeJS, 'ThreeJS plugin must be initialized first');
 
-        /** @property {Object} - The three.js object3d this object drives */
+        /** @property {ThreeObject3D} - The three.js object3d this object drives
+         *  @type {ThreeObject3D} */
         this.mesh = mesh;
         /** @property {number} - Mesh height above the 2D plane */
         this.z = z;

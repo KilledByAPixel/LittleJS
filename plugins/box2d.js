@@ -30,6 +30,38 @@ let box2d;
  *  @memberof Box2D */
 let box2dDebug = false;
 
+/** The box2d.js module, what Box2D() gives and box2d.instance holds; box2d.js has no types, so it is any, named for what it is
+ *  @typedef {any} Box2dModule
+ *  @memberof Box2D */
+
+/** A Box2D world; box2d.js has no types, so it is any, named for what it is
+ *  @typedef {any} b2World
+ *  @memberof Box2D */
+
+/** A Box2D body; box2d.js has no types, so it is any, named for what it is
+ *  @typedef {any} b2Body
+ *  @memberof Box2D */
+
+/** A Box2D fixture, a shape attached to a body; box2d.js has no types, so it is any, named for what it is
+ *  @typedef {any} b2Fixture
+ *  @memberof Box2D */
+
+/** A Box2D shape: b2CircleShape, b2EdgeShape, b2PolygonShape or b2ChainShape; box2d.js has no types, so it is any, named for what it is
+ *  @typedef {any} b2Shape
+ *  @memberof Box2D */
+
+/** A Box2D joint; box2d.js has no types, so it is any, named for what it is
+ *  @typedef {any} b2Joint
+ *  @memberof Box2D */
+
+/** A Box2D joint definition, what a joint is made from; box2d.js has no types, so it is any, named for what it is
+ *  @typedef {any} b2JointDef
+ *  @memberof Box2D */
+
+/** A Box2D vector; box2d.js has no types, so it is any, named for what it is
+ *  @typedef {any} b2Vec2
+ *  @memberof Box2D */
+
 // Box2D copies every vector it is given, so the plugin hands it these two instead of making a new one each call,
 // which the binding would keep; a call that takes two vectors uses both
 let box2dTempVectors;
@@ -401,7 +433,8 @@ class Box2dObject extends EngineObject
         bodyDef.set_position(box2dTemp(pos));
         bodyDef.set_angle(-angle);
         
-        /** @property {Object} - The Box2d body, undefined once it is destroyed */
+        /** @property {b2Body} - The Box2d body, undefined once it is destroyed
+         *  @type {b2Body} */
         this.body = box2d.world.CreateBody(bodyDef);
         box2d.instance.destroy(bodyDef);
         /** @property {Color} - Line color used for default box2d drawing */
@@ -519,8 +552,8 @@ class Box2dObject extends EngineObject
      *    their mass and how it is spread: a stick heavy at its ends hits harder than one heavy in the middle,
      *    spinning at the same speed
      *  @param {Box2dObject} otherObject
-     *  @param {Object} [fixture] - This object's fixture that touched
-     *  @param {Object} [otherFixture] - The other object's fixture that touched
+     *  @param {b2Fixture} [fixture] - This object's fixture that touched
+     *  @param {b2Fixture} [otherFixture] - The other object's fixture that touched
      *  @param {number} [impactSpeed] - How fast they were closing as they touched
      *  @param {Box2dContact} [contact] - Where they touched and how hard they hit */
     beginContact(otherObject, fixture, otherFixture, impactSpeed, contact) {}
@@ -528,8 +561,8 @@ class Box2dObject extends EngineObject
     /** Called when a contact ends, while the world steps or a body is destroyed: a destroy or a setter waits
      *  until the step is done, and creating objects, fixtures or joints must wait until after the step
      *  @param {Box2dObject} otherObject
-     *  @param {Object} [fixture] - This object's fixture that touched
-     *  @param {Object} [otherFixture] - The other object's fixture that touched */
+     *  @param {b2Fixture} [fixture] - This object's fixture that touched
+     *  @param {b2Fixture} [otherFixture] - The other object's fixture that touched */
     endContact(otherObject, fixture, otherFixture) {}
 
     /** Called before Box2D solves a contact, each step while they touch, for an object that overrides it, while the
@@ -539,8 +572,8 @@ class Box2dObject extends EngineObject
      *  - A sleeping body's contacts are not solved, so wake it with setAwake for this to be called, as for a player
      *    standing still on a platform it drops through
      *  @param {Box2dObject} otherObject
-     *  @param {Object} [fixture] - This object's fixture that touches
-     *  @param {Object} [otherFixture] - The other object's fixture that touches
+     *  @param {b2Fixture} [fixture] - This object's fixture that touches
+     *  @param {b2Fixture} [otherFixture] - The other object's fixture that touches
      *  @param {Box2dPreSolveContact} [contact] - Where they touch and how they collide
      *  @example
      *  // drop down through a one way platform
@@ -555,12 +588,12 @@ class Box2dObject extends EngineObject
     // physics fixtures and shapes
 
     /** Add a shape fixture to the body
-     *  @param {Object} shape
+     *  @param {b2Shape} shape
      *  @param {number}  [density]
      *  @param {number}  [friction]
      *  @param {number}  [restitution]
      *  @param {boolean} [isSensor]
-     *  @return {Object} - The fixture made, Box2D's own */
+     *  @return {b2Fixture} - The fixture made, Box2D's own */
     addShape(shape, density=1, friction=.2, restitution=0, isSensor=false)
     {
         ASSERT(isNumber(density), 'density must be a number');
@@ -590,7 +623,7 @@ class Box2dObject extends EngineObject
      *  @param {number}  [friction]
      *  @param {number}  [restitution]
      *  @param {boolean} [isSensor]
-     *  @return {Object|undefined} - The fixture made, Box2D's own, undefined for a shape too small to make */
+     *  @return {b2Fixture|undefined} - The fixture made, Box2D's own, undefined for a shape too small to make */
     addBox(size=vec2(1), offset=vec2(), angle=0, density, friction, restitution, isSensor)
     {
         ASSERT(isVector2(size), 'size must be a Vector2');
@@ -616,7 +649,7 @@ class Box2dObject extends EngineObject
      *  @param {number}  [friction]
      *  @param {number}  [restitution]
      *  @param {boolean} [isSensor]
-     *  @return {Object|undefined} - The fixture made, Box2D's own, undefined for a shape too small to make */
+     *  @return {b2Fixture|undefined} - The fixture made, Box2D's own, undefined for a shape too small to make */
     addPoly(points, density, friction, restitution, isSensor)
     {
         ASSERT(isArray(points), 'points must be an array');
@@ -664,7 +697,7 @@ class Box2dObject extends EngineObject
      *  @param {number}  [friction]
      *  @param {number}  [restitution]
      *  @param {boolean} [isSensor]
-     *  @return {Object|undefined} - The fixture made, Box2D's own, undefined for a shape too small to make */
+     *  @return {b2Fixture|undefined} - The fixture made, Box2D's own, undefined for a shape too small to make */
     addRegularPoly(diameter=1, sides=8, density, friction, restitution, isSensor)
     {
         ASSERT(isNumber(diameter) && diameter>0, 'diameter must be a positive number');
@@ -685,7 +718,7 @@ class Box2dObject extends EngineObject
      *  @param {number}  [friction]
      *  @param {number}  [restitution]
      *  @param {boolean} [isSensor]
-     *  @return {Object|undefined} - The fixture made, Box2D's own, undefined for a shape too small to make */
+     *  @return {b2Fixture|undefined} - The fixture made, Box2D's own, undefined for a shape too small to make */
     addRandomPoly(diameter=1, density, friction, restitution, isSensor)
     {
         ASSERT(isNumber(diameter) && diameter>0, 'diameter must be a positive number');
@@ -705,7 +738,7 @@ class Box2dObject extends EngineObject
      *  @param {number}  [friction]
      *  @param {number}  [restitution]
      *  @param {boolean} [isSensor]
-     *  @return {Object|undefined} - The fixture made, Box2D's own, undefined for a circle too big to make */
+     *  @return {b2Fixture|undefined} - The fixture made, Box2D's own, undefined for a circle too big to make */
     addCircle(diameter=1, offset=vec2(), density, friction, restitution, isSensor)
     {
         ASSERT(isNumber(diameter) && diameter>0 && isFinite(diameter), 'diameter must be a positive number');
@@ -727,7 +760,7 @@ class Box2dObject extends EngineObject
      *  @param {number}  [friction]
      *  @param {number}  [restitution]
      *  @param {boolean} [isSensor]
-     *  @return {Object} - The fixture made, Box2D's own */
+     *  @return {b2Fixture} - The fixture made, Box2D's own */
     addEdge(point1, point2, density, friction, restitution, isSensor)
     {
         ASSERT(isVector2(point1), 'point1 must be a Vector2');
@@ -746,7 +779,7 @@ class Box2dObject extends EngineObject
      *  @param {number}  [friction]
      *  @param {number}  [restitution]
      *  @param {boolean} [isSensor]
-     *  @return {Array<Object>} - The fixtures made, Box2D's own */
+     *  @return {Array<b2Fixture>} - The fixtures made, Box2D's own */
     addEdgeList(points, density, friction, restitution, isSensor)
     {
         ASSERT(isArray(points), 'points must be an array');
@@ -780,7 +813,7 @@ class Box2dObject extends EngineObject
      *  @param {number}  [friction]
      *  @param {number}  [restitution]
      *  @param {boolean} [isSensor]
-     *  @return {Array<Object>} - The fixtures made, Box2D's own */
+     *  @return {Array<b2Fixture>} - The fixtures made, Box2D's own */
     addEdgeLoop(points, density, friction, restitution, isSensor)
     {
         ASSERT(isArray(points), 'points must be an array');
@@ -808,7 +841,7 @@ class Box2dObject extends EngineObject
     }
 
     /** Destroy a fixture from the body, from a contact callback once the step is done
-     *  @param {Object} fixture */
+     *  @param {b2Fixture} fixture */
     destroyFixture(fixture)
     {
         const pointer = box2d.instance.getPointer(fixture);
@@ -1152,7 +1185,7 @@ class Box2dObject extends EngineObject
     hasFixtures() { return !box2d.isNull(this.body.GetFixtureList()); }
 
     /** Get list of fixtures for this object
-     *  @return {Array<Object>} */
+     *  @return {Array<b2Fixture>} */
     getFixtureList()
     {
         const fixtures = [];
@@ -1170,7 +1203,7 @@ class Box2dObject extends EngineObject
     
     /** Get list of joints for this object, the Box2dJoint for each one made through LittleJS,
      *  and the Box2D joint, cast to its type, for any made on the world directly
-     *  @return {Array<Box2dJoint|Object>} */
+     *  @return {Array<Box2dJoint|b2Joint>} */
     getJointList()
     {
         // the body keeps a list of edges, each holding a joint and the next edge
@@ -1324,7 +1357,7 @@ class Box2dTileLayer extends Box2dStaticObject
 class Box2dRaycastResult
 {
     /** Create a raycast result
-     *  @param {Object}  fixture
+     *  @param {b2Fixture} fixture
      *  @param {Vector2} point
      *  @param {Vector2} normal
      *  @param {number}  fraction */
@@ -1333,7 +1366,8 @@ class Box2dRaycastResult
         /** @property {Box2dObject} - The box2d object
          *  @type {Box2dObject} */
         this.object   = fixture.GetBody().object;
-        /** @property {Object} - The fixture that was hit */
+        /** @property {b2Fixture} - The fixture that was hit
+         *  @type {b2Fixture} */
         this.fixture  = fixture;
         /** @property {Vector2} - The hit point */
         this.point    = point;
@@ -1355,7 +1389,7 @@ class Box2dRaycastResult
 class Box2dJoint
 {
     /** Create a box2d joint, the base class is not intended to be used directly
-     *  @param {Object} jointDef - Freed once the joint is made, Box2D copies it */
+     *  @param {b2JointDef} jointDef - Freed once the joint is made, Box2D copies it */
     constructor(jointDef)
     {
         ASSERT(!box2d.world.IsLocked(), 'cannot create Box2D joints during a contact callback');
@@ -1365,7 +1399,8 @@ class Box2dJoint
         const twoObjects = !bothLive || box2d.instance.getPointer(bodyA) !== box2d.instance.getPointer(bodyB);
         ASSERT(twoObjects, 'a joint needs two different objects');
 
-        /** @property {Object} - The Box2d joint, 0 once it is destroyed, as it is when either object is */
+        /** @property {b2Joint} - The Box2d joint, 0 once it is destroyed, as it is when either object is
+         *  @type {b2Joint} */
         this.box2dJoint = 0;
         if (!bothLive || !twoObjects)
         {
@@ -2280,15 +2315,17 @@ class Box2dMotorJoint extends Box2dJoint
 class Box2dPlugin
 {
     /** Create the global Box2D plugin object, box2dInit does this
-     *  @param {Object} instance */
+     *  @param {Box2dModule} instance */
     constructor(instance)
     {
         ASSERT(!box2d, 'Box2D already initialized');
         box2d = this;
 
-        /** @property {Object} - The Box2d instance */
+        /** @property {Box2dModule} - The Box2d instance
+         *  @type {Box2dModule} */
         this.instance = instance;
-        /** @property {Object} - The Box2d world */
+        /** @property {b2World} - The Box2d world
+         *  @type {b2World} */
         this.world = new box2d.instance.b2World();
         /** @property {Array<Box2dObject>} - List of all Box2d objects, a destroyed one stays until the next step
          *  with its body undefined
@@ -2598,7 +2635,7 @@ class Box2dPlugin
     // drawing
 
     /** draws a fixture
-     *  @param {Object} fixture
+     *  @param {b2Fixture} fixture
      *  @param {Vector2} pos
      *  @param {number} angle
      *  @param {Color} [color]
@@ -2639,7 +2676,7 @@ class Box2dPlugin
     // helper functions
 
     /** converts a box2d vec2 to a Vector2
-     *  @param {Object} v
+     *  @param {b2Vec2} v
      *  @return {Vector2} */
     vec2From(v)
     {
@@ -2648,7 +2685,7 @@ class Box2dPlugin
     }
 
     /** converts a box2d vec2 pointer to a Vector2
-     *  @param {Object} vp
+     *  @param {number} vp
      *  @return {Vector2} */
     vec2FromPointer(vp)
     {
@@ -2659,7 +2696,7 @@ class Box2dPlugin
     /** converts a Vector2 to a new box2d vec2, which stays until destroyed with box2d.instance.destroy;
      *  the plugin itself passes Box2D reused ones, since Box2D copies every vector it is given
      *  @param {Vector2} v
-     *  @return {Object} - A Box2D vector, its b2Vec2 */
+     *  @return {b2Vec2} - A Box2D vector */
     vec2dTo(v)
     {
         ASSERT(isVector2(v), 'vec2dTo: expected a vec2', v);
@@ -2672,8 +2709,8 @@ class Box2dPlugin
     isNull(o) { return !box2d.instance.getPointer(o); }
 
     /** casts a box2d object to a shape type
-     *  @param {Object} o
-     *  @return {Object} - The shape as its own Box2D type */
+     *  @param {b2Shape} o
+     *  @return {b2Shape} - The shape as its own Box2D type */
     castShapeObject(o)
     {
         switch (o.GetType())
@@ -2692,8 +2729,8 @@ class Box2dPlugin
     }
 
     /** casts a box2d object to a joint type
-     *  @param {Object} o
-     *  @return {Object} - The joint as its own Box2D type */
+     *  @param {b2Joint} o
+     *  @return {b2Joint} - The joint as its own Box2D type */
     castJointObject(o)
     {
         switch (o.GetType())
