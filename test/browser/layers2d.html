@@ -19,7 +19,7 @@ smokeRun(async ()=>
     setCanvasClearColor(rgb(0, 0, 1));
     setTilesPixelated(true);
     const pixel = (x, y)=> smokePixel(.5 + x / 8, .5 + y / 8);
-    let hard, smooth;
+    let hard, smooth, later;
     // two images for a tile set: one yellow tile, and a sheet of two, magenta then cyan
     const image = (...colors)=>
     {
@@ -45,6 +45,15 @@ smokeRun(async ()=>
         [0, 1, 2].forEach((t)=> set.setData(vec2(t, 0), new TileLayerData(t)));
         set.redraw();
         window.tileCount = tiles.tiles.length;
+
+        // at the top left: a layer the game never redraws, one whose cells are set after its first draw, and
+        // one only painted on by hand
+        const auto = new TileLayer(vec2(-4, 2), vec2(1), tile(0, 16));
+        auto.setData(vec2(), new TileLayerData(1));
+        later = new TileLayer(vec2(-4, 0), vec2(2, 1), tile(0, 16));
+        later.redraw();
+        const painted = new TileLayer(vec2(-2, 2), vec2(1), tile(0, 16));
+        painted.drawTile(vec2(-1.5, 2.5), vec2(1), tile(1, 16));
 
         // particles of the red tile at the top right, still, opaque and as big as two tiles
         const white = [1, 1, 1, 1];
@@ -77,6 +86,14 @@ smokeRun(async ()=>
     // a little left of the middle of each, where the hard one is still black and the smooth one is on its way to white
     check3('a pixelated texture has a hard edge', pixel(1.8, -1.5), (r)=> r < 20);
     check3('a smooth texture blends across it', pixel(1.8, -3), (r)=> r > 40 && r < 215);
+    check3('a tile layer the game never redraws draws its tiles', pixel(-3.5, 2.5),
+        (r, g, b)=> g > 200 && r < 50 && b < 50);
+    check3('paint on a layer never redrawn is kept', pixel(-1.5, 2.5), (r, g, b)=> g > 200 && r < 50 && b < 50);
+    later.setData(vec2(0, 0), new TileLayerData(0));
+    later.setData(vec2(1, 0), new TileLayerData(0), false);
+    engineStep(1);
+    check3('a cell set later shows on the next render', pixel(-3.5, .5), (r, g, b)=> r > 200 && g < 50 && b < 50);
+    check3('and one set with false stays as drawn', pixel(-2.5, .5), (r, g, b)=> b > 200 && r < 50 && g < 50);
 
     // a redraw whose onRedraw throws still hands back the camera, the canvas and the target
     const saved = [cameraPos.copy(), cameraScale, drawContext, glRenderTarget];

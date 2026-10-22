@@ -62,9 +62,9 @@ skipped and stay empty. A cell that gets a tile takes three calls:
   collision are separate, so a tile can be drawn and not solid, or solid
   and not drawn.
 
-`tileLayer.redraw()` then draws every tile into the layer's image. The
-tiles do not show until it is called, and it is only needed again when
-tiles change.
+`tileLayer.redraw()` then draws every tile into the layer's image now.
+Without it the layer draws itself the first time it shows, and a cell
+changed later with `setData` is drawn on the next frame.
 
 ### The sparks
 `mouseWasPressed(0)` is true on the frame the left button goes down, and
