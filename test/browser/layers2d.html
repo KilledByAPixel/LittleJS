@@ -47,12 +47,13 @@ smokeRun(async ()=>
         window.tileCount = tiles.tiles.length;
 
         // at the top left: a layer the game never redraws, one whose cells are set after its first draw, and
-        // one only painted on by hand
+        // one painted on by hand over a red tile it was given first
         const auto = new TileLayer(vec2(-4, 2), vec2(1), tile(0, 16));
         auto.setData(vec2(), new TileLayerData(1));
         later = new TileLayer(vec2(-4, 0), vec2(2, 1), tile(0, 16));
         later.redraw();
         const painted = new TileLayer(vec2(-2, 2), vec2(1), tile(0, 16));
+        painted.setData(vec2(), new TileLayerData(0));
         painted.drawTile(vec2(-1.5, 2.5), vec2(1), tile(1, 16));
 
         // particles of the red tile at the top right, still, opaque and as big as two tiles
@@ -88,7 +89,7 @@ smokeRun(async ()=>
     check3('a smooth texture blends across it', pixel(1.8, -3), (r)=> r > 40 && r < 215);
     check3('a tile layer the game never redraws draws its tiles', pixel(-3.5, 2.5),
         (r, g, b)=> g > 200 && r < 50 && b < 50);
-    check3('paint on a layer never redrawn is kept', pixel(-1.5, 2.5), (r, g, b)=> g > 200 && r < 50 && b < 50);
+    check3('paint over a tile set before it is kept', pixel(-1.5, 2.5), (r, g, b)=> g > 200 && r < 50 && b < 50);
     later.setData(vec2(0, 0), new TileLayerData(0));
     later.setData(vec2(1, 0), new TileLayerData(0), false);
     engineStep(1);

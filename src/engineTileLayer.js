@@ -286,12 +286,12 @@ function tileLayerTileInfo(t, tile)
  *   visibility carry to the layers inside it
  * - An object or image layer keeps its index, with its slot in the returned array left empty
  * - A hidden layer (visible false) is loaded, its collision included, but not drawn; its render
- *   is a no-op, delete that and call redraw() to show it
+ *   is a no-op, delete that to show it
  *  @param {TiledMap} [tileMapData] - Level data from exported data, a 50 by 50 empty level when left out
  *  @param {TileInfo} [tileInfo] - Default tile info (used for size and texture), tile() by default, none when no image is loaded
  *  @param {number}   [renderOrder] - Render order of the top layer
  *  @param {number|string} [collisionLayer] - Layer to use for collision if any, by its index or its name
- *  @param {boolean}  [draw] - Should the layer be drawn automatically
+ *  @param {boolean}  [draw] - Draw the layers now, false leaves them for the game's own redraw or their first render
  *  @return {Array<TileCollisionLayer>} - It throws for a map that is not whole cells, or a layer whose tiles do not
  *    fill it, before it makes any layer
  *  @memberof TileLayers */
@@ -401,7 +401,7 @@ function tileLayersLoad(tileMapData, tileInfo=tileLayerDefaultTile(), renderOrde
                 const [direction, mirror] = tileLayersTiledFlips[data >>> 29];
                 const tileIndex = (data & 0x0fffffff) - 1; // bit 28, a hexagonal turn, is not read
                 const layerData = new TileLayerData(tileIndex, direction, !!mirror, layerColor);
-                tileLayer.setData(pos, layerData);
+                tileLayer.setData(pos, layerData, false); // the whole layer draws, now or on its first render
 
                 // set collision for top layer
                 if (layerIndex === collisionLayer)
@@ -931,23 +931,10 @@ class TileLayer extends CanvasLayer
     {
         ASSERT(drawContext !== this.context, 'must call redrawEnd() after drawing tiles!');
 
-        // redraw here, not in update, which does not run while paused: a layer nothing has drawn into yet draws
-        // whole, one drawn before draws whole again if WebGL was turned off or lost, or came back
-        this.drawn ? this.redrawIfSwitched() : this.redraw();
-
-        // then the cells setData changed since, all in one pass
-        if (this.dirtyCells.size)
-        {
-            const width = this.size.x;
-            this.redrawStart();
-            try
-            {
-                for (const i of this.dirtyCells)
-                    this.drawTileData(vec2(i % width, i / width | 0));
-            }
-            finally { this.redrawEnd(); }
-            this.dirtyCells.clear();
-        }
+        // redraw here, not in update, which does not run while paused, if WebGL was turned off or lost, or came
+        // back, then what is waiting to be drawn
+        this.redrawIfSwitched();
+        this.drawPending();
 
         const size = this.drawSize || this.size;
         const pos = this.pos.add(size.scale(.5));
@@ -976,6 +963,26 @@ class TileLayer extends CanvasLayer
         this.dirtyCells.clear();
     }
 
+    // draw what is waiting before anything goes on top: the whole layer if nothing has drawn into it yet, or the
+    // cells setData changed since, all in one pass
+    drawPending()
+    {
+        if (!this.context || drawContext === this.context) return; // inside this layer's own redraw it waits
+        if (!this.drawn) return this.redraw();
+        if (!this.dirtyCells.size) return;
+
+        // taken first, so the redrawStart below finds nothing waiting and a tile that throws is not tried again
+        const cells = [...this.dirtyCells], width = this.size.x;
+        this.dirtyCells.clear();
+        this.redrawStart();
+        try
+        {
+            for (const i of cells)
+                this.drawTileData(vec2(i % width, i / width | 0));
+        }
+        finally { this.redrawEnd(); }
+    }
+
     // draw the whole layer again if the side that holds it is not the one in use now
     redrawIfSwitched()
     {
@@ -990,8 +997,13 @@ class TileLayer extends CanvasLayer
     {
         if (!this.context) return;
         ASSERT(drawContext !== this.context, 'redrawStart: already started, call redrawEnd() first');
+        if (!clear)
+        {
+            // a partial redraw goes on top of the whole layer on the side in use, and of what was waiting
+            this.drawPending();
+            this.redrawIfSwitched();
+        }
         this.drawn = true;
-        clear || this.redrawIfSwitched(); // a partial redraw goes on top of the whole layer on the side in use
         
         // save current render settings
         /** @type {[CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D, Vector2, Vector2, number, number, Color, Shader|undefined]} */
@@ -1123,7 +1135,8 @@ class TileLayer extends CanvasLayer
      *  @param {boolean}  [mirror] */
     drawTile(pos, size=vec2(1), tileInfo, color=new Color, angle=0, mirror=false)
     {
-        this.drawn = true; // what is drawn by hand is kept, the first render does not draw over it
+        this.drawPending(); // what was set before goes under what is drawn now
+        this.drawn = true;
         const tileSize = this.tileInfo?.size ?? vec2(1); // a layer made without a tile info draws a pixel a cell
         pos = pos.subtract(this.pos).multiply(tileSize);
         size = size.multiply(tileSize);

@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { TileLayer, TileLayerData, tile, vec2 } from '../dist/littlejs.esm.js';
+import { TileLayer, TileLayerData, tile, vec2, tileLayersLoad } from '../dist/littlejs.esm.js';
 
 // a tile layer draws itself: whole on its first render when nothing has drawn into it, and the cells set with no
 // redraw argument on the next render; headless stubs the drawing on the instance, so the layer gets its own
@@ -46,10 +46,11 @@ test('a layer redrawn by the game is not drawn again on its first render', () =>
 test('drawing by hand counts as drawn', () =>
 {
     const { layer, counts } = makeLayer();
-    layer.hasWebGL = ()=> false; // no canvas resize and no GL target, so the real start and end run headless
+    layer.hasWebGL = ()=> false; // no GL target and a canvas stand in, so the real start and end run headless
+    layer.canvas = {};
     layer.redrawStart = TileLayer.prototype.redrawStart;
     layer.redrawEnd = TileLayer.prototype.redrawEnd;
-    layer.redrawStart();
+    layer.redrawStart(true);
     layer.redrawEnd();
     layer.render();
     assert.equal(counts.full, 0, 'what was drawn by hand is kept');
@@ -134,4 +135,53 @@ test('a layer with no canvas records nothing', () =>
     layer.context = undefined;
     layer.setData(vec2(0, 0), new TileLayerData(1));
     assert.equal(layer.dirtyCells.size, 0);
+});
+
+// the real start and end around a paint, which run headless with no WebGL and a canvas stand in
+function paintByHand(layer, counts)
+{
+    layer.hasWebGL = ()=> false;
+    layer.canvas = {};
+    layer.redrawStart = TileLayer.prototype.redrawStart;
+    layer.redrawEnd = TileLayer.prototype.redrawEnd;
+    layer.redrawStart();
+    counts.cells.push('paint');
+    layer.redrawEnd();
+}
+
+test('paint on a layer never drawn goes over its tiles, which draw first', () =>
+{
+    const { layer, counts } = makeLayer();
+    layer.setData(vec2(0, 0), new TileLayerData(1));
+    paintByHand(layer, counts);
+    layer.render();
+    assert.equal(counts.full, 1);
+    assert.equal(counts.cells.at(-1), 'paint', 'nothing draws over the paint');
+});
+
+test('paint goes over a cell set before it, which draws first', () =>
+{
+    const { layer, counts } = makeLayer();
+    layer.redraw();
+    counts.cells.length = 0;
+    layer.setData(vec2(1, 0), new TileLayerData(1));
+    paintByHand(layer, counts);
+    layer.render();
+    assert.deepEqual(counts.cells, ['1,0', 'paint']);
+});
+
+test('tileLayersLoad leaves no cell pending, the layer draws whole or is hidden', () =>
+{
+    const calls = [], setData = TileLayer.prototype.setData;
+    TileLayer.prototype.setData = function(pos, data, redraw) { calls.push(redraw); return setData.call(this, pos, data, redraw); };
+    try
+    {
+        const map = { width: 2, height: 1, tilewidth: 8, tileheight: 8,
+            layers: [{ type: 'tilelayer', name: 'a', width: 2, height: 1, data: [1, 2] },
+                     { type: 'tilelayer', name: 'b', width: 2, height: 1, data: [1, 0], visible: false }] };
+        for (const layer of tileLayersLoad(map, tile(0, 8))) layer.destroy();
+    }
+    finally { TileLayer.prototype.setData = setData; }
+    assert.equal(calls.length, 3);
+    assert.ok(calls.every((r)=> r === false), 'each cell set with false: ' + calls);
 });
