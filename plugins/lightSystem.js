@@ -161,6 +161,21 @@ class LightSystemPlugin
         this.directionalPrograms = {}; // its programs and their vertex arrays, by name
         this.shadowMapSizeAllocated = 0;     // sizes the textures were made at, to remake them on a change
         this.shadowTextureSizeAllocated = 0;
+        /** @property {boolean} - Shade objects by their normalMap: each frame every object draws into a normal buffer,
+         *  its normal map turned with it or flat without one, and the lights shade by it with their height; off by
+         *  default and free when off; it about doubles the scene's draw work, and since every surface is shaded, lights
+         *  fall off faster than with it off */
+        this.normalMaps = false;
+        /** @property {boolean} - True while the normal pass runs, read only, so a render() can skip parts */
+        this.normalPass = false;
+        /** @property {WebGLTexture|undefined} - The normal buffer, the lightmap's size, each pixel's normal facing the
+         *  screen as a color, made while normalMaps is on, read only
+         *  @type {WebGLTexture|undefined} */
+        this.normalTexture = undefined;
+        /** @type {Vector2|undefined} */
+        this.normalTextureSize = undefined; // the size it was made at, to make it again on a change
+        /** @type {Shader|undefined} */
+        this.normalShader = undefined; // turns a normal map's texel to face the screen, the color left out
 
         // a full texture quad, the vertex shader of the shadow and directional programs
         const quadVertex =
@@ -233,6 +248,10 @@ class LightSystemPlugin
                 'uniform sampler2D gelTexture;'+
                 'uniform vec4 gelRect;'+   // the gel's tile in its texture, corner and size
                 'uniform bool useGel;'+
+                'uniform bool useNormals;'+
+                'uniform sampler2D normalTexture;'+ // each pixel's normal facing the screen, the lightmap's size
+                'uniform float height;'+   // how far the light is above the scene
+                'uniform vec2 screenTurn;'+ // cos and sin of the turn from the world to the screen
                 'in vec2 vWorldPos;'+
                 'in vec2 vUV;'+
                 'out vec4 c;'+
@@ -249,6 +268,11 @@ class LightSystemPlugin
                 'if(useGel){'+
                 'vec2 g=clamp(vec2(dot(d,vec2(forward.y,-forward.x)),dot(d,forward))/(radius*2.)+.5,0.,1.);'+
                 'c.rgb*=texture(gelTexture,gelRect.xy+vec2(g.x,1.-g.y)*gelRect.zw).rgb;}'+
+                // the normal map: how much the surface faces the light, standing its height above the scene
+                'if(useNormals){'+
+                'vec3 n=normalize(texelFetch(normalTexture,ivec2(gl_FragCoord.xy),0).rgb*2.-1.);'+
+                'vec2 s=-d;s=vec2(s.x*screenTurn.x-s.y*screenTurn.y,s.x*screenTurn.y+s.y*screenTurn.x);'+
+                'c.rgb*=max(dot(n,normalize(vec3(s,height))),0.);}'+
                 '}'
             );
             if (lightSystemShadersFailed(lightSystem.lightShader)) return;
@@ -256,6 +280,22 @@ class LightSystemPlugin
             glContext.useProgram(lightSystem.lightShader);
             glContext.uniform1i(glUniformLocation(lightSystem.lightShader, 'shadowTexture'), 1);
             glContext.uniform1i(glUniformLocation(lightSystem.lightShader, 'gelTexture'), 2);
+            glContext.uniform1i(glUniformLocation(lightSystem.lightShader, 'normalTexture'), 3);
+
+            // the normal pass's shader: a normal map's texel turned to face the screen, the way the texture runs on
+            // screen worked out from how its uv changes from pixel to pixel, so a turned, mirrored or scaled sprite and
+            // a turned camera need nothing more; kept through a lost context, the engine builds its program again
+            lightSystem.normalShader ||= new Shader(
+                'void mainImage(out vec4 c,vec2 uv){'+
+                'vec4 n=texture(iChannel0,uv);'+
+                'if(premultipliedTexture&&n.a>0.)n.rgb/=n.a;'+ // a smooth image is uploaded premultiplied
+                'vec3 m=n.rgb*2.-1.;'+                         // right, up the image, out of it
+                'vec2 du=dFdx(uv),dv=dFdy(uv);'+               // how the uv changes a pixel along x and along y
+                'float det=du.x*dv.y-dv.x*du.y;'+              // its inverse says where +u and +v run on screen
+                'vec2 right=vec2(dv.y,-du.y)/det,down=vec2(-dv.x,du.x)/det;'+ // v runs down the image
+                'vec3 s=abs(det)>0.?vec3(m.x*normalize(right)-m.y*normalize(down),m.z):vec3(0,0,1);'+
+                'c=vec4(normalize(s)*.5+.5,n.a);}');
+            lightSystem.normalShader.noTint = true;
 
             // composite shader: fullscreen quad, samples the lightmap
             lightSystem.compositeShader = glCreateProgram(
@@ -691,6 +731,73 @@ class LightSystemPlugin
             gl.bindFramebuffer(gl.FRAMEBUFFER, null);
             gl.enable(gl.BLEND);
         }
+        // draw every object into the normal buffer, in the order they draw: one with a normal map loaded draws it in
+        // place of its textures through the normal shader, the rest flat, facing the screen, at their own alpha, so
+        // what is in front hides what is behind; additive draws add light and hide nothing, so they are left out
+        function lightSystemNormalPass()
+        {
+            const gl = glContext, ls = lightSystem, size = ls.textureSize;
+            if (!ls.normalTexture || ls.normalTextureSize.x !== size.x || ls.normalTextureSize.y !== size.y)
+            {
+                gl.deleteTexture(ls.normalTexture);
+                ls.normalTexture = gl.createTexture();
+                gl.bindTexture(gl.TEXTURE_2D, ls.normalTexture);
+                gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, size.x, size.y, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+                gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+                glActiveTexture && gl.bindTexture(gl.TEXTURE_2D, glActiveTexture);
+                ls.normalTextureSize = size.copy();
+            }
+
+            // bound as the lightmap is, at its size with no flip, so the lights read it pixel for pixel
+            gl.bindFramebuffer(gl.FRAMEBUFFER, glFramebuffer);
+            gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, ls.normalTexture, 0);
+            gl.viewport(0, 0, size.x, size.y);
+            gl.clearColor(.5, .5, 1, 1); // flat
+            gl.clear(gl.COLOR_BUFFER_BIT);
+            glSetInstancedMode(true);
+
+            const saved = [drawContext, glCustomShader, glAdditive];
+            drawContext = ls.shadowContext; // Canvas2D draws go to the 1x1 canvas, as in the shadow pass
+            glSkipScreenSpace = true;
+            glSkipAdditive = true;
+            glRenderTargetBase = [ls.normalTexture, size];
+            ls.normalPass = true;
+            try
+            {
+                for (const o of engineObjects)
+                {
+                    if (o.destroyed) continue;
+                    const texture = o.normalMap?.glTexture; // not there until its image has loaded, flat till then
+                    glColorMask = 0xff000000;                // only the draw's own alpha
+                    glColorAdditive = texture ? 0 : 0xff8080; // the flat normal, red in the low byte, in place of its colors
+                    glTextureOverride = texture;
+                    setShader(texture ? ls.normalShader : undefined);
+                    glAdditive && setAdditiveBlendMode(false);
+                    o.renderNormal();
+                }
+                glFlush();
+            }
+            finally
+            {
+                // hand everything back even when a render threw, what it queued is let go of
+                glBatchCount = 0;
+                ls.normalPass = false;
+                glTextureOverride = undefined;
+                glSkipAdditive = glSkipScreenSpace = false;
+                glColorMask = -1;
+                glColorAdditive = 0;
+                glRenderTargetBase = undefined;
+                [drawContext] = saved;
+                setShader(saved[1]);
+                setAdditiveBlendMode(saved[2]);
+                gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+                gl.viewport(0, 0, glCanvas.width, glCanvas.height);
+                glActiveTexture && gl.bindTexture(gl.TEXTURE_2D, glActiveTexture);
+            }
+        }
         function lightSystemRender()
         {
             if (headlessMode || !glEnable || lightSystem.shadersFailed) return;
@@ -742,6 +849,15 @@ class LightSystemPlugin
                     glContext.bindTexture(glContext.TEXTURE_2D, glActiveTexture);
             }
 
+            // 1d. the normal pass, at the lightmap's size, when normal maps are on; its buffer goes when they are off
+            if (lightSystem.normalMaps)
+                lightSystemNormalPass();
+            else if (lightSystem.normalTexture)
+            {
+                glContext.deleteTexture(lightSystem.normalTexture);
+                lightSystem.normalTexture = undefined;
+            }
+
             // 2. bind lightmap as render target, clear to ambientColor
             const ac = lightSystem.ambientColor;
             glContext.bindFramebuffer(glContext.FRAMEBUFFER, glFramebuffer);
@@ -750,6 +866,11 @@ class LightSystemPlugin
             glContext.viewport(0, 0, lightSystem.textureSize.x, lightSystem.textureSize.y);
             glContext.clearColor(ac.r, ac.g, ac.b, ac.a);
             glContext.clear(glContext.COLOR_BUFFER_BIT);
+
+            // the normal buffer on unit 3 while the lights draw, the engine's tracked texture stays on unit 0
+            glContext.activeTexture(glContext.TEXTURE3);
+            glContext.bindTexture(glContext.TEXTURE_2D, lightSystem.normalTexture || null);
+            glContext.activeTexture(glContext.TEXTURE0);
 
             // 3. walk engineObjects calling renderLight() — additive blend
             //    (lightmap accumulates raw additive color contributions)
@@ -844,6 +965,9 @@ class LightSystemPlugin
             finally
             {
                 glRenderTargetBase = undefined;
+                glContext.activeTexture(glContext.TEXTURE3);
+                glContext.bindTexture(glContext.TEXTURE_2D, null);
+                glContext.activeTexture(glContext.TEXTURE0);
             }
 
             // 4. drain any sprite-batched draws (e.g. drawTile inside a
@@ -891,6 +1015,7 @@ class LightSystemPlugin
             lightSystem.compositeShader = undefined;
             lightSystem.lightVAO = undefined;
             lightSystem.compositeVAO = undefined;
+            lightSystem.normalTexture = undefined;
             clearShadows();
             clearDirectional();
             LOG('LightSystemPlugin: WebGL context lost');
@@ -961,6 +1086,11 @@ class LightSystemPlugin
         glContext.uniform2f(glUniformLocation(ls, 'cone'), coneFactor, coneEdge);
         const gel = lightSystemGel(light);
         glContext.uniform1i(glUniformLocation(ls, 'useGel'), gel ? 1 : 0);
+
+        // the normal map, its buffer on unit 3 for the pass, read facing the screen, so the light turns with the camera
+        glContext.uniform1i(glUniformLocation(ls, 'useNormals'), this.normalTexture ? 1 : 0);
+        glContext.uniform1f(glUniformLocation(ls, 'height'), light.height);
+        glContext.uniform2f(glUniformLocation(ls, 'screenTurn'), cos(cameraAngle), sin(cameraAngle));
         glContext.activeTexture(glContext.TEXTURE2);
         glContext.bindTexture(glContext.TEXTURE_2D, gel ? gel.texture : null);
         glContext.activeTexture(glContext.TEXTURE0);
@@ -1131,6 +1261,9 @@ class Light extends EngineObject
          *  a TileInfo's own tile, or a whole TextureInfo; shadows still fall through it
          *  @type {TileInfo|TextureInfo|undefined} */
         this.gel = undefined;
+        /** @property {number} - With lightSystem.normalMaps on, how far the light is above the scene in world units,
+         *  how steeply it falls on normal mapped surfaces; it changes nothing else */
+        this.height = 1;
     }
 
     /** Lights are invisible in the main render pass — they only contribute

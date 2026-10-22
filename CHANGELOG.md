@@ -6,6 +6,7 @@ What changed in each release, newest first. Releases before 1.20.0 are on the
 ## Unreleased
 
 ### New Changes
+- Normal maps for the 2D light system: give an object a `normalMap`, an image laid out like its sheet, turn on `lightSystem.normalMaps`, and every light shades it, point lights from their `height` above the scene and the sun from its `height` (1 is 45 degrees); turned, mirrored and animated sprites shade as they should, and what is drawn in front hides the normals behind it. Every object draws into a normal buffer once a frame while it is on, flat without a normal map, so it about doubles the scene's draws and every surface is shaded; off, nothing changes. The Normal Maps short shows it
 - A tile layer shows its tiles without `redraw()`: one nothing has drawn into draws whole on its first render, and a cell changed with `setData` or `clearData` and no `redraw` argument is drawn on the next render, all the changed cells in one pass; `true` still draws the cell at once, and `false` leaves it as drawn, the old default, for a game that paints its cells by hand
 - `cameraShake(amount, direction)` takes a direction, a vec2 that weights each axis, `vec2(0, 1)` to shake only up and down for a heavy landing; each axis fades on its own, so a shake along one does not add to the other, and the view turns by the larger; with no direction it shakes as before
 - A `FollowCamera` shows its settings on the debug overlay: its dead zone, its offset and look ahead from the target to where the view wants its middle, and the sides of its bounds

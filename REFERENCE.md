@@ -1175,6 +1175,15 @@ layer.shadowSolidOnly = true          // a TileCollisionLayer casts only from it
 obj.renderShadow()                    // draws the shadow shape, render() by default, screen space draws skipped;
                                       // a figure draws a blob at its feet
                                       // to stay lit; additive draws add black so glows cast nothing; WebGL draws only
+// Normal maps: once a frame every object draws into a normal buffer, and the lights shade by it
+lightSystem.normalMaps = false        // on to shade objects by their normalMap; every object draws its normal map, or
+                                      // flat without one, so what is in front hides it; about doubles the scene's
+                                      // draws, off costs nothing; every surface is shaded, so lights fall off faster;
+                                      // an image the game lays out, not one packed by loadSprite or loadAtlas; an
+                                      // object's own shader is not used in the pass, additive draws hide nothing
+lightSystem.normalPass                // read only: true while objects draw into the normal buffer
+lightSystem.normalTexture             // read only: the normal buffer, the lightmap's size, while normalMaps is on
+light.height = 1                      // how far the light is above the scene, how steeply it falls on normal maps
 obj.normalMap = undefined             // a TextureInfo the lights shade it by with lightSystem.normalMaps on: an image
                                       // laid out like its sheet, read where its tile is, green up, as 3D's normalMap
 obj.renderNormal()                    // draws it into the normal buffer, render() by default, its normalMap in place

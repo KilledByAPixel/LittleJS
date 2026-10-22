@@ -1,0 +1,21 @@
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { loadEngine } from './vmEngine.mjs';
+
+// the light system's normal maps are opt in, and its lights stand a height above the scene for them
+
+test('normal maps are off until a game turns them on, and make no buffer', () =>
+{
+    const { run } = loadEngine();
+    run(`setHeadlessMode(true); new LightSystemPlugin;`);
+    assert.equal(run(`lightSystem.normalMaps`), false);
+    assert.equal(run(`lightSystem.normalPass`), false);
+    assert.equal(run(`lightSystem.normalTexture`), undefined);
+});
+
+test('a light stands 1 unit above the scene', () =>
+{
+    const { run } = loadEngine();
+    run(`setHeadlessMode(true); new LightSystemPlugin;`);
+    assert.equal(run(`new Light(vec2(), 3).height`), 1);
+});

@@ -1,0 +1,121 @@
+<!DOCTYPE html><meta charset=utf-8>
+<title>LittleJS smoke: 2D normal maps</title>
+<script src=../../dist/littlejs.js></script>
+<script src=smoke.js></script>
+<pre id=result>PENDING</pre>
+<script>
+'use strict';
+
+// a normal mapped ramp, every texel leaning toward the right of its image, in the middle of a white floor; a light 2
+// units to its left or right, so the ramp faces one and not the other; the view is 8 units across, so (x, y) is at
+// (.5 + x / 8, .5 + y / 8) of the canvas, and every value is read at the ramp's middle
+smokeRun(async ()=>
+{
+    setShowSplashScreen(false);
+    setDebugWatermark(false);
+    setEngineManualStep(true);
+    setCanvasFixedSize(vec2(128));
+    setCanvasClearColor(rgb(0, 0, 0));
+    const middle = ()=> smokePixel(.5, .5);
+    let light, ramp;
+    const lit = (x, channel=0)=> { light.pos = vec2(x, 0); engineStep(3); return middle()[channel]; };
+    const leftRight = (channel)=> [lit(-2, channel), lit(2, channel)];
+
+    // a 16 by 16 image of one color, for the ramp's color and its normal map
+    const image = (color)=>
+    {
+        const canvas = document.createElement('canvas'), context = canvas.getContext('2d');
+        canvas.width = canvas.height = 16;
+        context.fillStyle = color;
+        context.fillRect(0, 0, 16, 16);
+        return new TextureInfo(canvas, true, false, true);
+    };
+    const colorTexture = image('#fff');
+    const rampTexture = image('rgb(218,128,218)'); // normalize(1, 0, 1) as a normal map writes it
+
+    await engineInit(()=>
+    {
+        setCameraScale(16);
+        new LightSystemPlugin;
+        light = new Light(vec2(-2, 0), 6, rgb(1, 1, 1));
+        ramp = new EngineObject(vec2(), vec2(2), new TileInfo(vec2(), vec2(16), colorTexture));
+        ramp.normalMap = rampTexture;
+    }, ()=> {}, ()=> {}, ()=>
+    {
+        drawTile(vec2(), vec2(8), tile(1, 16)); // a white floor over the whole view
+    }, ()=> {}, [smokeSheet('#888', '#fff')]);
+
+    let [left, right] = leftRight();
+    check('off: the scene reads as before, the same from either side', Math.abs(left - right) <= 2, [left, right]);
+
+    lightSystem.normalMaps = true;
+    [left, right] = leftRight();
+    check('on: a normal mapped surface faces its light', right > left + 40, [left, right]);
+    const white = [left, right];
+
+    ramp.angle = PI;
+    [left, right] = leftRight();
+    check('turned: its normals turn with it', left > right + 40, [left, right]);
+    ramp.angle = 0;
+
+    ramp.mirror = true;
+    [left, right] = leftRight();
+    check('mirrored: and flip with it', left > right + 40, [left, right]);
+    ramp.mirror = false;
+
+    cameraAngle = PI/2;
+    [left, right] = leftRight();
+    check('camera turned: the shading stays with the world', right > left + 40, [left, right]);
+    cameraAngle = 0;
+
+    // blue, which a color step would turn into a normal leaning the other way, the red of it gone
+    ramp.color = hsl(2/3, 1, .5);
+    [left, right] = leftRight(2);
+    const tinted = left / max(right, 1), plain = white[0] / max(white[1], 1);
+    check('tinted: the color does not change the normal', right > left + 40 && Math.abs(tinted - plain) < .15,
+        [left, right, white]);
+    ramp.color = WHITE;
+
+    const cover = new EngineObject(vec2(), vec2(2), tile(1, 16));
+    cover.renderOrder = 1;
+    [left, right] = leftRight();
+    check('in front: a plain sprite hides the normals behind it', Math.abs(left - right) <= 4, [left, right]);
+    cover.destroy();
+    [left, right] = leftRight();
+    check('and they shade again once it is gone', right > left + 40, [left, right]);
+
+    const glow = new EngineObject(vec2(), vec2(2), tile(1, 16));
+    glow.renderOrder = 1;
+    glow.render = function() { setAdditiveBlendMode(true); EngineObject.prototype.render.call(this); setAdditiveBlendMode(false); };
+    [left, right] = leftRight();
+    check('additive in front: hides nothing', right > left + 40, [left, right]);
+    glow.destroy();
+
+    ramp.normalMap = /** @type {TextureInfo} */ ({glTexture: undefined});
+    let thrown;
+    try { [left, right] = leftRight(); } catch (e) { thrown = e.message; }
+    check('not loaded: a normal map with no texture yet draws flat', !thrown && Math.abs(left - right) <= 4,
+        [left, right, thrown]);
+    ramp.normalMap = rampTexture;
+
+    lightSystem.normalMaps = false;
+    engineStep(1);
+    const freed = lightSystem.normalTexture === undefined;
+    lightSystem.normalMaps = true;
+    [left, right] = leftRight();
+    check('off then on: the buffer is freed and made again', freed && right > left + 40, [freed, left, right]);
+
+    // a renderNormal that throws hands everything back
+    const gl = glContext, thrower = new EngineObject(vec2(3));
+    thrower.normalMap = rampTexture;
+    thrower.renderNormal = ()=> { throw Error('on purpose'); };
+    thrown = undefined;
+    try { engineStep(); } catch (e) { thrown = e.message; }
+    check('a render that throws hands everything back', thrown == 'on purpose' && glTextureOverride === undefined &&
+        !glSkipAdditive && glColorMask === -1 && glColorAdditive === 0 && !lightSystem.normalPass &&
+        gl.getParameter(gl.FRAMEBUFFER_BINDING) === null && drawContext === mainContext,
+        [thrown, glTextureOverride, glSkipAdditive, glColorMask, glColorAdditive]);
+    thrower.destroy();
+    checkGLError();
+});
+</script>
