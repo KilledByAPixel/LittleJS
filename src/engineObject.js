@@ -229,6 +229,11 @@ class EngineObject
          *  renderEmissive, as 3D's emissive. Exact for solid pixels; a partly transparent one is self lit by its alpha
          *  too, so a half alpha pixel shows at a quarter and a fading emissive sprite fades a little faster */
         this.emissive = 0;
+        /** @property {TextureInfo|undefined} - With the light system's normalMaps on, a normal map the lights shade
+         *  it by: an image laid out like its tile sheet, read at the same place as whatever tile it draws, so an
+         *  animation's frames keep their normals, green up the image as 3D's normalMap has it
+         *  @type {TextureInfo|undefined} */
+        this.normalMap = undefined;
         /** @property {boolean} - Should the rendered tile flip along the y axis. Affects rendering and the local→world transform of attached children (a mirrored parent flips its children's localPos.x and localAngle). Does not affect this object's own physics, collision, or localToWorld/worldToLocal. */
         this.mirror = false;
         /** @property {boolean} - Has object been destroyed? */
@@ -714,6 +719,11 @@ class EngineObject
      *  0; what it draws shows in its own colors that much brighter. Calls render() by default so the whole object
      *  glows; override to glow a part, like a robot's eyes */
     renderEmissive() { this.render(); }
+
+    /** Draw this object into the light system's normal buffer, called for every object during its normal pass when
+     *  normalMaps is on: with its normalMap in place of its textures, or flat, facing the screen, without one. Calls
+     *  render() by default; screen space WebGL draws in render() are skipped during the pass */
+    renderNormal() { this.render(); }
 
     /** Destroy this object, destroy its children, detach its parent, and mark it for removal
      *  @param {boolean} [immediate] - true removes attached effects like particle emitters at once, false lets them finish first */

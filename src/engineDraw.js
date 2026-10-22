@@ -580,6 +580,7 @@ class Shader
         /** @property {WebGLProgram|undefined} - The 3D program, compiled by the 3D plugin the same way, read only
          *  @type {WebGLProgram|undefined} */
         this.program3D = undefined;
+        this.noTint = false; // its 2D program writes the texel with the draw's alpha, no color step; set before it draws
         glShaderObjects.push(this); // a lost context drops the programs of every one
     }
 

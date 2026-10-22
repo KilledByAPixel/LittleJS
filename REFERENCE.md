@@ -1175,6 +1175,10 @@ layer.shadowSolidOnly = true          // a TileCollisionLayer casts only from it
 obj.renderShadow()                    // draws the shadow shape, render() by default, screen space draws skipped;
                                       // a figure draws a blob at its feet
                                       // to stay lit; additive draws add black so glows cast nothing; WebGL draws only
+obj.normalMap = undefined             // a TextureInfo the lights shade it by with lightSystem.normalMaps on: an image
+                                      // laid out like its sheet, read where its tile is, green up, as 3D's normalMap
+obj.renderNormal()                    // draws it into the normal buffer, render() by default, its normalMap in place
+                                      // of its textures, or flat without one; screen space draws skipped
 
 // Lights are EngineObjects — auto-register, destroy() to remove
 new Light(pos, radius, color=WHITE, fadeRange=radius)

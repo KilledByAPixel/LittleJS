@@ -60,6 +60,12 @@ let glRenderTargetBase;
 // WebGL draw in a render() is skipped instead of landing somewhere in the world
 let glSkipScreenSpace = false;
 
+// a texture bound in place of every one asked for, the light system's normal pass draws an object's normal map with it
+let glTextureOverride;
+
+// additive batches are dropped, not drawn, the light system's normal pass sets it, since what adds light hides nothing
+let glSkipAdditive = false;
+
 // WebGL internal constants
 const gl_ARRAY_BUFFER_SIZE = 5e5;
 const gl_INDICES_PER_INSTANCE = 11;
@@ -395,6 +401,7 @@ function glClearCanvas()
 function glSetTexture(texture)
 {
     if (!glContext) return;
+    texture = glTextureOverride || texture;
     if (texture !== glActiveTexture)
     {
         // must flush cache with the old texture to set a new one
@@ -518,7 +525,9 @@ function glShaderProgram(shader)
         'in vec2 v,l;in vec4 d,e;out vec4 c;' +
         // main first, the snippet's mainImage declared for it, so a define in the snippet can not reach main's names
         'void mainImage(out vec4,vec2);' +
-        'void main(){vec4 t;mainImage(t,v);' + gl_FRAGMENT_TINT_SOURCE + '}\n' + // a define needs its own line
+        'void main(){vec4 t;mainImage(t,v);' + (shader.noTint ?
+            'c=vec4(t.rgb,t.a*d.a);if(premultipliedTexture)c.rgb*=c.a;' : // the texel as it is, with the draw's alpha
+            gl_FRAGMENT_TINT_SOURCE) + '}\n' + // a define needs its own line
         '#define localUV l\n' +
         shader.fragmentCode + '\n');
     return glFailedPrograms.has(program) ? glShader : program;
@@ -689,6 +698,8 @@ function glUnregisterTextureInfo(textureInfo)
  *  @memberof WebGL */
 function glFlush()
 {
+    if (glSkipAdditive && glBatchAdditive)
+        glBatchCount = 0; // left out of the light system's normal pass
     if (glEnable && glContext && glBatchCount)
     {
         // a render target holds premultiplied color, a batch drawing one takes its color as it is
