@@ -164,8 +164,10 @@ class LightSystemPlugin
         /** @property {boolean} - Shade objects by their normalMap: each frame every object draws into a normal buffer,
          *  its normal map turned with it or flat without one, and the lights shade by it with their height; off by
          *  default and free when off; it about doubles the scene's draw work, and since every surface is shaded, lights
-         *  fall off faster than with it off */
+         *  fall off faster than with it off; a textureSize given that is not the canvas's shape skews a turned
+         *  sprite's normals a little */
         this.normalMaps = false;
+        this.normalMapsWarned = false; // a debug build has said a normalMap does nothing with normalMaps off
         /** @property {boolean} - True while the normal pass runs, read only, so a render() can skip parts */
         this.normalPass = false;
         /** @property {WebGLTexture|undefined} - The normal buffer, the lightmap's size, each pixel's normal facing the
@@ -857,10 +859,19 @@ class LightSystemPlugin
             // 1d. the normal pass, at the lightmap's size, when normal maps are on; its buffer goes when they are off
             if (lightSystem.normalMaps)
                 lightSystemNormalPass();
-            else if (lightSystem.normalTexture)
+            else
             {
-                glContext.deleteTexture(lightSystem.normalTexture);
-                lightSystem.normalTexture = undefined;
+                if (lightSystem.normalTexture)
+                {
+                    glContext.deleteTexture(lightSystem.normalTexture);
+                    lightSystem.normalTexture = undefined;
+                }
+                // a normal map that does nothing says why, once, in a debug build
+                if (debug && !lightSystem.normalMapsWarned && engineObjects.some((o)=> o.normalMap && !o.destroyed))
+                {
+                    console.warn('LightSystemPlugin: an object has a normalMap, turn on lightSystem.normalMaps to see it');
+                    lightSystem.normalMapsWarned = true;
+                }
             }
 
             // 2. bind lightmap as render target, clear to ambientColor
@@ -1098,7 +1109,7 @@ class LightSystemPlugin
 
         // the normal map, its buffer on unit 3 for the pass, read facing the screen, so the light turns with the camera
         glContext.uniform1i(glUniformLocation(ls, 'useNormals'), this.normalTexture ? 1 : 0);
-        glContext.uniform1f(glUniformLocation(ls, 'height'), light.height);
+        glContext.uniform1f(glUniformLocation(ls, 'height'), max(light.height, 1e-4)); // the pixel under it has a direction
         glContext.uniform2f(glUniformLocation(ls, 'screenTurn'), cos(cameraAngle), sin(cameraAngle));
         glContext.activeTexture(glContext.TEXTURE2);
         glContext.bindTexture(glContext.TEXTURE_2D, gel ? gel.texture : null);
@@ -1273,6 +1284,13 @@ class Light extends EngineObject
         /** @property {number} - With lightSystem.normalMaps on, how far the light is above the scene in world units,
          *  how steeply it falls on normal mapped surfaces; it changes nothing else */
         this.height = 1;
+    }
+
+    /** Check its settings, called automatically each frame */
+    update()
+    {
+        super.update();
+        ASSERT(isNumber(this.height) && this.height >= 0, 'Light: height is 0 or more', this.height);
     }
 
     /** Lights are invisible in the main render pass — they only contribute

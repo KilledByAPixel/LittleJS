@@ -45,13 +45,27 @@ smokeRun(async ()=>
         drawTile(vec2(), vec2(8), tile(1, 16)); // a white floor over the whole view
     }, ()=> { afterRender?.(); }, [smokeSheet('#888', '#fff')]);
 
+    // a normal map with normal maps off says why it does nothing, once, in a debug build
+    const warnings = [], warn = console.warn;
+    console.warn = (...args)=> warnings.push(args.join(' '));
     let [left, right] = leftRight();
+    console.warn = warn;
     check('off: the scene reads as before, the same from either side', Math.abs(left - right) <= 2, [left, right]);
+    const said = warnings.filter((text)=> text.includes('normalMaps'));
+    check('off: a normal map with normal maps off is warned of once', said.length == 1, warnings);
 
     lightSystem.normalMaps = true;
     [left, right] = leftRight();
     check('on: a normal mapped surface faces its light', right > left + 40, [left, right]);
     const white = [left, right];
+
+    // a ramp leaning up the image faces a light above it, the green of a normal map
+    const upTexture = image('rgb(128,218,218)');
+    ramp.normalMap = upTexture;
+    const litY = (y)=> { light.pos = vec2(0, y); engineStep(3); return middle()[0]; };
+    const [below, above] = [litY(-2), litY(2)];
+    check('up: green leans a normal up the image', above > below + 40, [below, above]);
+    ramp.normalMap = rampTexture;
 
     ramp.angle = PI;
     [left, right] = leftRight();

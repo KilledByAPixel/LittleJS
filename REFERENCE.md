@@ -330,6 +330,8 @@ new Shader(fragmentCode)          // fragmentCode defines void mainImage(out vec
                                   // void mainNormal(inout vec3 n), the world normal after the normal map, to bend
                                   // it per pixel (waves, ripples) for the lighting, specular and reflection
 obj.shader = shader               // any EngineObject or EngineObject3D; draws that share a Shader share a batch
+shader.noTint = false             // 2D: write mainImage's color as it is with the draw's alpha, no tint, for data
+                                  // like normals; set before it first draws
 shader.dispose()                  // frees its programs and takes it off the engine's list, which keeps every Shader
                                   // for a lost context; for one made each time a scene starts; drawn again it
                                   // compiles again, so let go of only one nothing draws with
@@ -1180,7 +1182,8 @@ lightSystem.normalMaps = false        // on to shade objects by their normalMap;
                                       // flat without one, so what is in front hides it; about doubles the scene's
                                       // draws, off costs nothing; every surface is shaded, so lights fall off faster;
                                       // an image the game lays out, not one packed by loadSprite or loadAtlas; an
-                                      // object's own shader is not used in the pass, additive draws hide nothing
+                                      // object's own shader is not used in the pass, additive draws hide nothing; a
+                                      // textureSize not the canvas's shape skews a turned sprite's normals a little
 lightSystem.normalPass                // read only: true while objects draw into the normal buffer
 lightSystem.normalTexture             // read only: the normal buffer, the lightmap's size, while normalMaps is on
 light.height = 1                      // how far the light is above the scene, how steeply it falls on normal maps

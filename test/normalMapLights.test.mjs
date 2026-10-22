@@ -26,3 +26,11 @@ test('the sun is 45 degrees up, a height of 1', () =>
     run(`setHeadlessMode(true); new LightSystemPlugin;`);
     assert.equal(run(`new DirectionalLight(vec2(1, 0)).height`), 1);
 });
+
+test('a light below the scene is caught in a debug build', () =>
+{
+    const { run } = loadEngine();
+    run(`setHeadlessMode(true); new LightSystemPlugin; var light = new Light(vec2(), 3); light.height = -1;`);
+    assert.throws(()=> run(`light.update()`), /height/);
+    run(`light.height = 0; light.update();`); // on the scene is fine
+});

@@ -79,7 +79,7 @@ function gameInit()
 function gameUpdate()
 {
     mouseLight.pos = mousePos;
-    mouseLight.height = clamp(mouseLight.height - mouseWheel*.5, 0, 10);
+    mouseLight.height = clamp(mouseLight.height - mouseWheel*.5, .1, 10);
     spinners.forEach((spinner, i)=> spinner.angle = time * (i+1) * .3);
     cover.pos = vec2(sin(time*.5)*10, 0);
 
@@ -128,7 +128,7 @@ works the same way, laid out like the sprite's sheet.
 object draws into a normal buffer: one with a normal map draws its
 normals, turned and mirrored with it, and everything else draws flat.
 So the square passing in front hides the normals behind it, and the
-floor is shaded as a flat surface.
+background is shaded as a flat surface.
 
 The normals are read where the object's tile is, so an animated sprite
 keeps its normals frame by frame. The color tints only the color: the
