@@ -80,6 +80,7 @@ test('turning WebGL off and back on redraws a tile layer when it renders, paused
     layer.hasWebGL = ()=> glEnable; // headless has no texture, the layer follows the setting
     layer.redraw = ()=> { ++redraws; layer.tilesInWebGL = layer.hasWebGL(); }; // headless stubs it, count the calls
     layer.tilesInWebGL = true; // as if it had been drawn into its WebGL texture
+    layer.drawn = true;
     layer.draw = ()=> {};
     layer.context = {}; // not the draw context, which render checks
     const render = ()=> TileLayer.prototype.render.call(layer); // headless stubs render on the layer

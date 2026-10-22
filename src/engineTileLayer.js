@@ -812,6 +812,8 @@ function tileLayerDefaultTile() { return textureInfos[0]?.size.x ? tile() : unde
  * Tile Layer - cached rendering system for tile layers
  * - Tiles are drawn once into a texture, a WebGL render target, or the layer's canvas when WebGL is off
  *   or useWebGL is false, and the layer draws that as one image
+ * - It draws itself: whole on its first render if nothing has drawn into it, and the cells setData changed
+ *   on the next render; redraw() draws the whole layer now
  * - Some devices like mobile phones are limited to 4k textures, which with 16x16 tiles limits a layer to 256x256
  * - Tile layers are centered on their corner, so normal levels are at (0,0)
  * @extends CanvasLayer
@@ -846,6 +848,11 @@ class TileLayer extends CanvasLayer
         // which side holds the whole layer, set by a full redraw, undefined before the first one; a partial redraw
         // or a render that finds WebGL turned on or off since then draws it all again on the side now in use
         this.tilesInWebGL = undefined;
+        // set once anything draws into the layer, until then its first render draws it whole
+        this.drawn = false;
+        // the cells setData changed with no redraw argument, as indices into data, drawn on the next render
+        /** @type {Set<number>} */
+        this.dirtyCells = new Set;
         /** @property {boolean} - Show this layer's bounds and values when the debug overlay's Debug Tiles is on,
          *  turn it off for layers that only add noise */
         this.debugShow = true;
@@ -882,16 +889,19 @@ class TileLayer extends CanvasLayer
     /** Set data at a given position in the array
      *  @param {Vector2}       layerPos - Local position in array
      *  @param {TileLayerData} data - Data to set
-     *  @param {boolean}       [redraw] - Force the tile to redraw if true */
-    setData(layerPos, data, redraw=false)
+     *  @param {boolean}       [redraw] - True draws the cell now, false leaves it as drawn, left out draws it
+     *                                     on the next render */
+    setData(layerPos, data, redraw)
     {
         ASSERT(isVector2(layerPos), 'layerPos must be a Vector2');
         ASSERT(data instanceof TileLayerData, 'data must be a TileLayerData');
         layerPos = layerPos.floor();
 
         if (!layerPos.arrayCheck(this.size)) return;
-        this.data[(layerPos.y|0)*this.size.x + (layerPos.x|0)] = data;
+        const i = (layerPos.y|0)*this.size.x + (layerPos.x|0);
+        this.data[i] = data;
 
+        redraw === undefined ? this.context && this.dirtyCells.add(i) : this.dirtyCells.delete(i);
         if (!redraw) return;
         const isRedraw = drawContext === this.context;
         isRedraw ? this.drawTileData(layerPos) : this.redrawTileData(layerPos);
@@ -899,8 +909,9 @@ class TileLayer extends CanvasLayer
 
     /** Clear data at a given position in the array
      *  @param {Vector2} layerPos - Local position in array
-     *  @param {boolean} [redraw] - Force the tile to redraw if true */
-    clearData(layerPos, redraw=false)
+     *  @param {boolean} [redraw] - True draws the cell now, false leaves it as drawn, left out draws it on the
+     *                               next render */
+    clearData(layerPos, redraw)
     { this.setData(layerPos, new TileLayerData, redraw) }
 
     /** Get data at a given position in the array
@@ -920,8 +931,23 @@ class TileLayer extends CanvasLayer
     {
         ASSERT(drawContext !== this.context, 'must call redrawEnd() after drawing tiles!');
 
-        // redraw here, not in update, which does not run while paused, if WebGL was turned off or lost, or came back
-        this.redrawIfSwitched();
+        // redraw here, not in update, which does not run while paused: a layer nothing has drawn into yet draws
+        // whole, one drawn before draws whole again if WebGL was turned off or lost, or came back
+        this.drawn ? this.redrawIfSwitched() : this.redraw();
+
+        // then the cells setData changed since, all in one pass
+        if (this.dirtyCells.size)
+        {
+            const width = this.size.x;
+            this.redrawStart();
+            try
+            {
+                for (const i of this.dirtyCells)
+                    this.drawTileData(vec2(i % width, i / width | 0));
+            }
+            finally { this.redrawEnd(); }
+            this.dirtyCells.clear();
+        }
 
         const size = this.drawSize || this.size;
         const pos = this.pos.add(size.scale(.5));
@@ -947,6 +973,7 @@ class TileLayer extends CanvasLayer
         }
         finally { this.redrawEnd(); }
         this.tilesInWebGL = this.isUsingWebGL;
+        this.dirtyCells.clear();
     }
 
     // draw the whole layer again if the side that holds it is not the one in use now
@@ -963,6 +990,7 @@ class TileLayer extends CanvasLayer
     {
         if (!this.context) return;
         ASSERT(drawContext !== this.context, 'redrawStart: already started, call redrawEnd() first');
+        this.drawn = true;
         clear || this.redrawIfSwitched(); // a partial redraw goes on top of the whole layer on the side in use
         
         // save current render settings
@@ -1095,6 +1123,7 @@ class TileLayer extends CanvasLayer
      *  @param {boolean}  [mirror] */
     drawTile(pos, size=vec2(1), tileInfo, color=new Color, angle=0, mirror=false)
     {
+        this.drawn = true; // what is drawn by hand is kept, the first render does not draw over it
         const tileSize = this.tileInfo?.size ?? vec2(1); // a layer made without a tile info draws a pixel a cell
         pos = pos.subtract(this.pos).multiply(tileSize);
         size = size.multiply(tileSize);

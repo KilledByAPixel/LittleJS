@@ -749,11 +749,11 @@ CanvasLayer.draw(pos, size, color=WHITE, angle=0, mirror=false, additiveColor, s
 
 // LittleJS Layer System
 TileLayer(pos, size, tileInfo, renderOrder=0, useWebGL=true) // Create a tile layer object
-TileLayer.setData(layerPos, data, redraw)      // Set data at position
-TileLayer.clearData(layerPos, redraw)          // Clear data at position
+TileLayer.setData(layerPos, data, redraw)      // Set data at position, drawn on the next render; redraw true draws now, false never
+TileLayer.clearData(layerPos, redraw)          // Clear data at position, drawn as setData draws
 TileLayer.getData(layerPos)                    // Get data at position
 TileLayer.debugShow = true                     // Shown by the debug overlay's 2: Debug Tiles, off to leave a layer out
-TileLayer.redraw()                             // Draw to an offscreen canvas
+TileLayer.redraw()                             // Draw the whole layer now, a layer never drawn draws on its first render
 TileLayer.redrawStart(clear=false)             // Start drawing to the layer, for updating parts of it
 TileLayer.redrawEnd()                          // Finish drawing to the layer
 TileLayer.drawTileData(layerPos, clear=true)   // Draw the tile, inside redrawStart/End
