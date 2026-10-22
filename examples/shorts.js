@@ -250,6 +250,7 @@ const exampleList =
     new ExampleInfo('Post Effects', 'postEffects.js', 'The built in effects: TV, scanlines, vignette, glow and more', false, 'post process, tv, crt, scanlines, noise, vignette, curve, chromatic, bloom, glow, effect'),
     new ExampleInfo('Object Shaders', 'shaders.js', 'Custom shaders on sprites and draws', false, 'webgl, visual, effect, Shader, setShader'),
     new ExampleInfo('Light System', 'lightSystem.js', 'Soft additive 2D lights and a searchlight cone', false, 'webgl, visual, lighting, additive, color, glow, cone, coneAngle, spotlight, searchlight, flashlight, headlight'),
+    new ExampleInfo('Normal Maps', 'lightNormalMaps.js', 'Sprites that catch 2D lights with normal maps', false, 'webgl, lighting, normal map, bump, normalMap, height, sun, shading, depth'),
     new ExampleInfo('Light Shadows', 'lightShadows.js', 'Lights blocked by walls, tinted by glass and shone through a gel', false, 'webgl, visual, lighting, shadow, shadows, glass, castShadow, emissive, directional, sun, gel, cookie, gobo, projector'),
     new ExampleInfo('Tweakables', 'tweakables.js', 'Change values live from a debug panel', false, 'debug, tweak, slider, tuning, panel'),
     new ExampleInfo('Level Editor', 'levelEditor.js', 'Paint a level and place objects, then play it', false, 'debug, editor, tiled, tile layer, objects, level, map'),
