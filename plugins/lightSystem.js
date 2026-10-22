@@ -590,7 +590,11 @@ class LightSystemPlugin
                 // small the map or turned the camera
                 'in vec2 g;out vec2 uv;void main(){uv=g*3.-1.;gl_Position=m*vec4(origin+uv*worldSize,1,1);}',
                 header + 'uniform sampler2D s;uniform vec4 color;'+
-                'void main(){c=vec4(texture(s,uv).rgb*color.rgb*color.a,1);}');
+                // with normal maps, how much each pixel faces the sun, toLight its direction facing the screen
+                'uniform bool useNormals;uniform sampler2D normalTexture;uniform vec3 toLight;'+
+                'void main(){c=vec4(texture(s,uv).rgb*color.rgb*color.a,1);'+
+                'if(useNormals)c.rgb*=max(dot(normalize(texelFetch(normalTexture,ivec2(gl_FragCoord.xy),0).rgb*2.-1.),'+
+                'toLight),0.);}');
 
             if (lightSystemShadersFailed(p.seed, p.shadow, p.leak, p.combine, p.add)) return;
             p.seedVAO = createQuadVAO(p.seed, 'p');
@@ -610,6 +614,7 @@ class LightSystemPlugin
             units(p.leak, ['s']);
             units(p.combine, ['s', 't', 'f']);
             units(p.add, ['s']);
+            gl.uniform1i(glUniformLocation(p.add, 'normalTexture'), 3); // the normal buffer, bound for the light pass
         }
         // let go of the textures a directional light made, its work textures and the background map; its programs
         // stay, small, so a sun made again, as a day and night or a level with its own does, compiles nothing
@@ -912,6 +917,10 @@ class LightSystemPlugin
                     gl.uniform2f(glUniformLocation(as, 'origin'), lightSystem.shadowMapOrigin.x, lightSystem.shadowMapOrigin.y);
                     gl.uniform1f(glUniformLocation(as, 'worldSize'), lightSystem.shadowMapWorldSize);
                     gl.uniform4f(glUniformLocation(as, 'color'), c.r, c.g, c.b, c.a);
+                    // toward the sun, turned to face the screen as the normals do, its height above for each unit across
+                    const d = sun.sunDirection.normalize().rotate(-cameraAngle), k = 1 / hypot(1, sun.height);
+                    gl.uniform1i(glUniformLocation(as, 'useNormals'), lightSystem.normalTexture ? 1 : 0);
+                    gl.uniform3f(glUniformLocation(as, 'toLight'), d.x*k, d.y*k, sun.height*k);
                     gl.activeTexture(gl.TEXTURE1);
                     gl.bindTexture(gl.TEXTURE_2D, lightSystem.directionalTexture);
                     gl.activeTexture(gl.TEXTURE0);
@@ -1331,6 +1340,10 @@ class DirectionalLight extends EngineObject
         this.shadowLength = 20;
         /** @property {number} - World units the light gets into a background area from its edges facing it */
         this.backgroundDepth = 3;
+        /** @property {number} - With lightSystem.normalMaps on, how far the sun rises for each unit across, how
+         *  steeply it falls on normal mapped surfaces: 1 is 45 degrees, 0 flat along the ground, larger nearly
+         *  straight down; it changes nothing else */
+        this.height = 1;
         // castShadow is EngineObject's, true: foreground casters throw long shadows; it draws nothing, so never casts
         // in a release build, with no assert, a second takes over and the first goes, not left alive doing nothing
         lightSystem?.directionalLight?.destroy();
@@ -1345,6 +1358,7 @@ class DirectionalLight extends EngineObject
         ASSERT(this.shadowLength >= 0 && this.backgroundDepth >= 0,
             'DirectionalLight: shadowLength and backgroundDepth are world units, 0 or more', this.shadowLength,
             this.backgroundDepth);
+        ASSERT(isNumber(this.height) && this.height >= 0, 'DirectionalLight: height is 0 or more', this.height);
     }
 
     /** A directional light draws nothing of its own, it is added into the lightmap by the plugin */

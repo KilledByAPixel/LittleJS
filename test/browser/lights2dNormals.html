@@ -116,6 +116,18 @@ smokeRun(async ()=>
         gl.getParameter(gl.FRAMEBUFFER_BINDING) === null && drawContext === mainContext,
         [thrown, glTextureOverride, glSkipAdditive, glColorMask, glColorAdditive]);
     thrower.destroy();
+
+    // the sun toward the right, casting no shadows so the ramp is lit all over: it faces it, and mirrored it does not
+    light.destroy();
+    const sun = new DirectionalLight(vec2(1, 0));
+    sun.castShadow = false;
+    const facing = ()=> { ramp.mirror = false; engineStep(3); const a = middle()[0];
+        ramp.mirror = true; engineStep(3); const b = middle()[0]; ramp.mirror = false; return [a, b]; };
+    let [toward, away] = facing();
+    check('the sun shades a normal map', toward > away + 40, [toward, away]);
+    lightSystem.normalMaps = false;
+    [toward, away] = facing();
+    check('with normal maps off the sun is as before', Math.abs(toward - away) <= 2, [toward, away]);
     checkGLError();
 });
 </script>

@@ -1211,6 +1211,8 @@ sun.castShadow = true      // foreground casters (castShadow) throw long shadows
 sun.shadowLength = 20      // world units a long shadow reaches before it has faded out; a caster casts from inside
                            // the shadow map only, (shadowMapScale - 1) / 2 of a view past the screen
 sun.backgroundDepth = 3    // world units the light gets into a background area from its edges facing it
+sun.height = 1             // with lightSystem.normalMaps, how far it rises for each unit across: 1 is 45 degrees,
+                           // 0 flat along the ground, larger nearly straight down
 lightSystem.directionalLight          // the one there is, or undefined; a second one asserts, destroy the first
                                       // (a release build destroys the first itself)
 lightSystem.directionalTextureSize = 512 // pixels across its work textures, which cover the shadow map's area; a

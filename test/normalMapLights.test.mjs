@@ -19,3 +19,10 @@ test('a light stands 1 unit above the scene', () =>
     run(`setHeadlessMode(true); new LightSystemPlugin;`);
     assert.equal(run(`new Light(vec2(), 3).height`), 1);
 });
+
+test('the sun is 45 degrees up, a height of 1', () =>
+{
+    const { run } = loadEngine();
+    run(`setHeadlessMode(true); new LightSystemPlugin;`);
+    assert.equal(run(`new DirectionalLight(vec2(1, 0)).height`), 1);
+});
