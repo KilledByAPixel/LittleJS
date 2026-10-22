@@ -526,7 +526,8 @@ function glShaderProgram(shader)
         // main first, the snippet's mainImage declared for it, so a define in the snippet can not reach main's names
         'void mainImage(out vec4,vec2);' +
         'void main(){vec4 t;mainImage(t,v);' + (shader.noTint ?
-            'c=vec4(t.rgb,t.a*d.a);if(premultipliedTexture)c.rgb*=c.a;' : // the texel as it is, with the draw's alpha
+            // the texel as it is with the draw's alpha, or for an untextured draw, its color in the additive slot
+            'c=d.a>0.?vec4(t.rgb,t.a*d.a):e;if(premultipliedTexture)c.rgb*=c.a;' :
             gl_FRAGMENT_TINT_SOURCE) + '}\n' + // a define needs its own line
         '#define localUV l\n' +
         shader.fragmentCode + '\n');

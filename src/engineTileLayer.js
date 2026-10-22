@@ -1011,10 +1011,13 @@ class TileLayer extends CanvasLayer
         setShader(); // the tiles are drawn plain, a layer's own Shader applies when the layer is drawn
         // a redraw from inside another target's pass, like the light system's shadow map, draws the tiles in color
         // and hands that target back after
-        this.savedRenderTarget = [glRenderTarget, glColorMask, glColorAdditive, glSkipScreenSpace];
+        this.savedRenderTarget = [glRenderTarget, glColorMask, glColorAdditive, glSkipScreenSpace, glTextureOverride,
+            glSkipAdditive];
         glColorMask = -1;
         glColorAdditive = 0;
         glSkipScreenSpace = false; // screen space is the layer's own pixels here
+        glTextureOverride = undefined; // its own tiles, not the normal map of the light system's normal pass
+        glSkipAdditive = false;
 
         // set the draw canvas and context to this layer
         // use camera settings to match this layer's canvas
@@ -1051,12 +1054,14 @@ class TileLayer extends CanvasLayer
 
         // set stuff back to normal, the camera first, so a target that was drawing before gets its own transform back
         [drawContext, mainCanvasSize, cameraPos, cameraScale, cameraAngle, canvasClearColor, glCustomShader] = this.savedRenderSettings;
-        const [target, colorMask, colorAdditive, skipScreenSpace] = this.savedRenderTarget;
+        const [target, colorMask, colorAdditive, skipScreenSpace, textureOverride, skipAdditive] = this.savedRenderTarget;
         if (this.isUsingWebGL)
             glSetRenderTarget(target);
         glColorMask = colorMask;
         glColorAdditive = colorAdditive;
         glSkipScreenSpace = skipScreenSpace;
+        glTextureOverride = textureOverride;
+        glSkipAdditive = skipAdditive;
     }
 
     /** Draw the tile at a given position in the tile layer
@@ -1148,9 +1153,12 @@ class TileLayer extends CanvasLayer
         // in color and handing back a target that was drawing before, like the light system's shadow map
         const oldMainCanvasSize = mainCanvasSize, oldTarget = glRenderTarget, oldColorMask = glColorMask;
         const oldSkip = glSkipScreenSpace, oldColorAdditive = glColorAdditive, oldShader = glCustomShader;
+        const oldOverride = glTextureOverride, oldSkipAdditive = glSkipAdditive;
         mainCanvasSize = vec2(this.canvas.width, this.canvas.height);
         glColorMask = -1;
         glColorAdditive = 0;
+        glTextureOverride = undefined; // its own tile, as a redraw draws
+        glSkipAdditive = false;
         setShader(); // plain, as a redraw draws, a layer's own Shader applies when the layer is drawn
         glSkipScreenSpace = false; // its screen space is the layer's own canvas
         const useWebGL = this.hasWebGL();
@@ -1162,6 +1170,8 @@ class TileLayer extends CanvasLayer
         glColorMask = oldColorMask;
         glColorAdditive = oldColorAdditive;
         glSkipScreenSpace = oldSkip;
+        glTextureOverride = oldOverride;
+        glSkipAdditive = oldSkipAdditive;
         setShader(oldShader);
     }
 

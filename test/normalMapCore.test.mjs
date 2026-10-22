@@ -29,7 +29,8 @@ test('a Shader with noTint ends without the color step, others keep it', () =>
     const plain = run(`var tinted = new Shader(code); glShaderProgram(tinted); source`);
     assert.ok(plain.includes('c=t*d+e'), 'a Shader keeps the color step');
     const untinted = run(`var normal = new Shader(code); normal.noTint = true; glShaderProgram(normal); source`);
-    assert.ok(untinted.includes('c=vec4(t.rgb,t.a*d.a)'), 'noTint writes the texel with the draw alpha');
+    assert.ok(untinted.includes('c=d.a>0.?vec4(t.rgb,t.a*d.a):e'),
+        'noTint writes the texel with the draw alpha, or an untextured draw its additive color');
     assert.ok(!untinted.includes('c=t*d+e'), 'and no color step');
 });
 

@@ -777,7 +777,7 @@ class LightSystemPlugin
                     if (o.destroyed) continue;
                     const texture = o.normalMap?.glTexture; // not there until its image has loaded, flat till then
                     glColorMask = 0xff000000;                // only the draw's own alpha
-                    glColorAdditive = texture ? 0 : 0xff8080; // the flat normal, red in the low byte, in place of its colors
+                    glColorAdditive = 0xff8080;              // the flat normal, red in the low byte, for what has no texture
                     glTextureOverride = texture;
                     setShader(texture ? ls.normalShader : undefined);
                     glAdditive && setAdditiveBlendMode(false);

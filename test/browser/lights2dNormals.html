@@ -17,7 +17,7 @@ smokeRun(async ()=>
     setCanvasFixedSize(vec2(128));
     setCanvasClearColor(rgb(0, 0, 0));
     const middle = ()=> smokePixel(.5, .5);
-    let light, ramp;
+    let light, ramp, afterRender; // afterRender runs in gameRenderPost, after the scene is drawn
     const lit = (x, channel=0)=> { light.pos = vec2(x, 0); engineStep(3); return middle()[channel]; };
     const leftRight = (channel)=> [lit(-2, channel), lit(2, channel)];
 
@@ -43,7 +43,7 @@ smokeRun(async ()=>
     }, ()=> {}, ()=> {}, ()=>
     {
         drawTile(vec2(), vec2(8), tile(1, 16)); // a white floor over the whole view
-    }, ()=> {}, [smokeSheet('#888', '#fff')]);
+    }, ()=> { afterRender?.(); }, [smokeSheet('#888', '#fff')]);
 
     let [left, right] = leftRight();
     check('off: the scene reads as before, the same from either side', Math.abs(left - right) <= 2, [left, right]);
@@ -97,6 +97,33 @@ smokeRun(async ()=>
     check('not loaded: a normal map with no texture yet draws flat', !thrown && Math.abs(left - right) <= 4,
         [left, right, thrown]);
     ramp.normalMap = rampTexture;
+
+    // what a normal mapped object draws that is not a texture, a rect or a circle over its middle, is flat
+    ramp.render = function() { EngineObject.prototype.render.call(this); drawRect(this.pos, vec2(1), WHITE); };
+    [left, right] = leftRight();
+    check('inside: a rect a normal mapped object draws is flat', Math.abs(left - right) <= 4, [left, right]);
+    ramp.render = function() { EngineObject.prototype.render.call(this); drawCircle(this.pos, 1, WHITE); };
+    [left, right] = leftRight();
+    check('inside: and so is a circle', Math.abs(left - right) <= 4 && left > 20, [left, right]);
+    delete ramp.render;
+
+    // a tile layer with a normal map whose cell changes after the scene is drawn draws it in the normal pass; its
+    // own picture must keep its tile's color, not take the normal map's
+    const layer = new TileLayer(vec2(2, 2), vec2(2), tile(1, 16));
+    layer.normalMap = rampTexture;
+    layer.castShadow = false;
+    let changed = false;
+    afterRender = ()=> { if (!changed) layer.setData(vec2(0, 0), new TileLayerData(0)), changed = true; };
+    engineStep(3);
+    afterRender = undefined;
+    lightSystem.normalMaps = false;
+    light.pos = vec2(2.5, 2.5);
+    engineStep(3);
+    const cell = smokePixel(.5 + 2.5 / 8, .5 + 2.5 / 8);
+    check('a tile layer drawn in the pass keeps its own picture', Math.abs(cell[0] - cell[1]) <= 8 && cell[0] > 20,
+        cell);
+    layer.destroy();
+    lightSystem.normalMaps = true;
 
     lightSystem.normalMaps = false;
     engineStep(1);
