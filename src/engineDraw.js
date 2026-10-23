@@ -204,7 +204,8 @@ class TileInfo
     { return new TileInfo(this.pos.add(offset), this.size, this.textureInfo, this.padding, this.bleed, this.columns); }
 
     /** Returns a copy of this tile offset by a number of animation frames
-    *  Frames wrap down to the next row if columns is set
+    *  - Frames step along the row and carry on at the start of the next row of the texture, counted as tile() counts
+    *  - With columns set they wrap down by that many frames from this one instead
     *  @param {number} frame - Offset to apply in animation frames
     *  @return {TileInfo}
     */
@@ -213,8 +214,16 @@ class TileInfo
         ASSERT(typeof frame === 'number', 'TileInfo.frame: frame must be a number', frame);
         const w = this.size.x + this.padding*2;
         const h = this.size.y + this.padding*2;
-        const x = (this.columns ? frame % this.columns : frame) * w;
-        const y = (this.columns ? frame / this.columns | 0 : 0) * h;
+        let x = (this.columns ? frame % this.columns : frame) * w;
+        let y = (this.columns ? frame / this.columns | 0 : 0) * h;
+        const across = this.textureInfo?.size.x / w | 0; // tiles across the texture
+        if (!this.columns && across && this.pos.x + x + this.size.x > this.textureInfo.size.x)
+        {
+            // past the edge: on along the texture's grid, rows down, as tile() counts its index
+            const column = this.pos.x / w | 0, count = column + frame;
+            x = (count % across - column) * w;
+            y = (count / across | 0) * h;
+        }
         ASSERT(!this.textureInfo || this.pos.x + x + this.size.x <= this.textureInfo.size.x, 'frame extends beyond texture width!');
         ASSERT(!this.textureInfo || this.pos.y + y + this.size.y <= this.textureInfo.size.y, 'frame extends beyond texture height!');
         return this.offset(new Vector2(x, y));
@@ -344,7 +353,7 @@ class TextureInfo
  * - Read tileInfo each frame for the frame to draw, from an object's update or before a drawTile
  * - loop, play and pingPong each start over from the first frame; stop holds the current one
  * - play(onEnd) calls onEnd once the play ends, on the first read after it, since there is no update to call it
- * - Frames follow each other along the row, as tileInfo.frame counts them
+ * - Frames follow each other along the row and on into the next row of the sheet, as tileInfo.frame counts them
  * - SpriteAnimator switches between a character's animations by name
  * @example
  * const walk = new SpriteAnimation(tile(0, 16), 4, .1); // four frames, a tenth of a second each
@@ -362,7 +371,7 @@ class SpriteAnimation
     {
         ASSERT(tileInfo instanceof TileInfo, 'the first frame must be a TileInfo');
         ASSERT(frameCount >= 1 && frameTime > 0, 'an animation needs at least one frame and a positive frame time');
-        /** @property {TileInfo} - The first frame, the others follow it along the row */
+        /** @property {TileInfo} - The first frame, the others follow it as tileInfo.frame counts them */
         this.firstTile = tileInfo;
         /** @property {number} - How many frames */
         this.frameCount = frameCount;

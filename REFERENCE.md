@@ -131,7 +131,7 @@ vec2(x=0, y=x)                                // Create a 2D vector with Vector 
 rgb(r=1, g=1, b=1, a=1)                       // Create a color object with RGBA values
 hsl(h=0, s=0, l=1, a=1)                       // Create a color object with HSLA values
 tile(index=0, size=(16,16), texture=0, padding=0, bleed=0) // Create a tile info object
-tileInfo.frame(n)                             // Tile offset by n animation frames
+tileInfo.frame(n)                             // Tile offset by n animation frames, on into the next row of the sheet
 tileInfo.setColumns(columns)                  // Frames per row, so frame() wraps to the next row
 
 // Helper functions 
@@ -347,7 +347,7 @@ TileInfo.pos            // Top left corner of tile in pixels
 TileInfo.size           // Size of tile in pixels
 TileInfo.padding        // How many pixels padding around tiles
 TileInfo.offset(offset) // Offset this tile by a certain amount in pixels
-TileInfo.frame(frame)   // Offset this tile by a number of animation frames
+TileInfo.frame(frame)   // Offset this tile by a number of animation frames, past the sheet's edge on the next row
 TileInfo.textureInfo    // The texture info for this tile
 
 // Sprite Animation Object - steps a tile through the frames along its row over time, paused with the game

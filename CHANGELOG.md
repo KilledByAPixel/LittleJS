@@ -15,6 +15,9 @@ What changed in each release, newest first. Releases before 1.20.0 are on the
 ### Breaking Changes
 - `setData` and `clearData` with no `redraw` argument now draw the cell on the next render, where before it stayed as drawn: a game that changed cells after the first draw without redrawing them, to keep what it painted there, passes `false`; and a tile layer the game never redraws, which stayed blank, now shows its tiles
 
+### Fixes
+- An animation can cross a row of its sheet: `tileInfo.frame(n)`, and so `SpriteAnimation`, carries on at the start of the next row when a frame would go past the texture's edge, counted as `tile()` counts its index, so `new SpriteAnimation(tile(8, 8), 6)` on a sheet 10 tiles across plays tiles 8 to 13; before, it asserted. A tile with `columns` set wraps by them as before
+
 ## 1.28.0 - 2026-10-20
 
 ### New Changes
