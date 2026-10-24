@@ -1,0 +1,73 @@
+<!DOCTYPE html><meta charset=utf-8>
+<title>LittleJS smoke: scrolling a canvas layer</title>
+<script src=../../dist/littlejs.js></script>
+<script src=smoke.js></script>
+<pre id=result>PENDING</pre>
+<script>
+'use strict';
+
+// layer.scroll(offset) moves a CanvasLayer through the world while what is drawn in it stays where it is in the
+// world, snapped to whole pixels: the strip that comes into view is empty, across and up and down, on the GPU and on
+// a Canvas2D layer
+// the view is 8 units across with the origin in the middle, a unit 16 pixels, so a place (x, y) is at
+// (.5 + x / 8, .5 + y / 8) of the canvas
+smokeRun(async ()=>
+{
+    setShowSplashScreen(false);
+    setDebugWatermark(false);
+    setEngineManualStep(true);
+    setCanvasFixedSize(vec2(128));
+    setCanvasClearColor(rgb(0, 0, 1));
+    setTilesPixelated(false); // smooth, so a scroll that resampled would blur
+    const pixel = (x, y)=> smokePixel(.5 + x / 8, .5 + y / 8);
+    const red = rgb(1, 0, 0), green = rgb(0, 1, 0);
+    let across, down, canvas2d, moved, spare;
+    await engineInit(()=>
+    {
+        setCameraScale(16);
+
+        // 4 by 2 units at 16 pixels a unit, green with a red mark, scrolled a little over a unit right
+        across = new CanvasLayer(vec2(-2, 2), vec2(4, 2), 0, 0, vec2(64, 32));
+        across.drawRect(across.pos, across.size, green);
+        across.drawRect(vec2(-2.5, 2), vec2(.5), red);
+        moved = across.scroll(vec2(1.03, 0)); // 16.5 pixels, snapped to 16, one unit
+        spare = across.scrollTextureInfo;
+        across.scroll(vec2(0, 0)); // nothing to move
+        across.scroll(vec2(-1, 0)); // and back, the spare used again
+        across.scroll(vec2(1, 0));
+
+        // 2 by 4 units, green with a red mark, scrolled a unit down
+        down = new CanvasLayer(vec2(2.5, -1.5), vec2(2, 4), 0, 0, vec2(32, 64));
+        down.drawRect(down.pos, down.size, green);
+        down.drawRect(vec2(2.5, -1), vec2(.5), red);
+        down.scroll(vec2(0, -1));
+
+        // a Canvas2D layer, 2 by 2 units at 16 pixels a unit, a red mark at its top left, scrolled half a unit right
+        canvas2d = new CanvasLayer(vec2(-2, -2), vec2(2), 0, 0, vec2(32), false);
+        canvas2d.drawRect(vec2(-2.5, -1.5), vec2(.5), red);
+        canvas2d.scroll(vec2(.5, 0));
+
+    }, ()=> {}, ()=> {}, ()=> {}, ()=> {}, [smokeSheet('#f00', '#0f0')]);
+
+    engineStep(2);
+    const exactly = (p, [r, g, b])=> p[0] == r && p[1] == g && p[2] == b;
+    check('scroll snaps to whole pixels and moves the layer by that', moved.x == 1 && moved.y == 0 &&
+        across.pos.x == -1 && across.pos.y == 2, [moved, across.pos]);
+    check('the spare texture is made on the first scroll and used after', !!spare &&
+        across.scrollTextureInfo == spare, !!spare);
+    check('what was drawn stays at its world place, unblurred', exactly(pixel(-2.5, 2), [255, 0, 0]) &&
+        exactly(pixel(-2.3, 2), [255, 0, 0]) && exactly(pixel(-1.5, 2), [0, 255, 0]),
+        [pixel(-2.5, 2), pixel(-2.3, 2), pixel(-1.5, 2)]);
+    check('the strip scrolled into view across is empty', exactly(pixel(.5, 2), [0, 0, 255]), pixel(.5, 2));
+    check('scrolling down keeps what was drawn in place', exactly(pixel(2.5, -1), [255, 0, 0]) &&
+        exactly(pixel(2.5, -2), [0, 255, 0]), [pixel(2.5, -1), pixel(2.5, -2)]);
+    check('the strip scrolled into view below is empty', exactly(pixel(2.5, -4 + 1/16), [0, 0, 255]),
+        pixel(2.5, -4 + 1/16));
+
+    // the mark was 8 pixels in from the canvas's left, half a unit later it is at its left edge
+    const layerPixel = (x, y)=> [...canvas2d.context.getImageData(x, y, 1, 1).data];
+    check('a Canvas2D layer scrolls its canvas', exactly(layerPixel(2, 4), [255, 0, 0]) && layerPixel(12, 4)[3] == 0 &&
+        layerPixel(28, 4)[3] == 0, [layerPixel(2, 4), layerPixel(12, 4), layerPixel(28, 4)]);
+    checkGLError();
+});
+</script>

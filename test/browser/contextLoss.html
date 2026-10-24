@@ -14,12 +14,18 @@ smokeRun(async ()=>
     setEngineManualStep(true);
     setCanvasFixedSize(vec2(64));
     setCanvasClearColor(rgb(0, 0, 0));
-    let texture, restoredLayer;
+    let texture, restoredLayer, scrolled;
     await engineInit(()=>
     {
         // a canvas layer is told when the context comes back, so a game can draw into it again
         const layer = new CanvasLayer(vec2(), vec2(1), 0, 0, vec2(8));
         layer.onContextRestored = ()=> restoredLayer = layer;
+
+        // a canvas layer that has scrolled, a pixel a unit below the middle, filled again when the context is back
+        scrolled = new CanvasLayer(vec2(0, -24), vec2(16, 8), 0, 0, vec2(16, 8));
+        scrolled.scroll(vec2(4, 0));
+        scrolled.scroll(vec2(-4, 0));
+        scrolled.onContextRestored = ()=> scrolled.drawRect(scrolled.pos, scrolled.size, rgb(1, 1, 0));
 
         setCameraScale(1);
         const canvas = new OffscreenCanvas(8, 8), context = canvas.getContext('2d');
@@ -69,6 +75,10 @@ smokeRun(async ()=>
     engineStep(2);
     drawsAll('after the context came back');
     check('a canvas layer is told the context came back', !!restoredLayer);
+    scrolled.scroll(vec2(4, 0));
+    engineStep();
+    checkPixel('a canvas layer scrolls after the context came back', .5, .125, [255, 255, 0, 255]);
+    checkPixel('and the strip it scrolled into is empty', .5 + 10/64, .125, [0, 0, 0, 255]);
     checkGLError();
 });
 </script>

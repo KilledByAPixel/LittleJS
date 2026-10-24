@@ -758,6 +758,11 @@ CanvasLayer.drawLayerTile(pos, size=(1,1), tileInfo, color=WHITE, angle=0, mirro
                             // layer pixels, up from its bottom left, inside redrawStart/End
 CanvasLayer.drawLayerRect(pos, size, color, angle=0) // Draw a rectangle in layer pixels, inside redrawStart/End
 CanvasLayer.clearLayerRect(pos, size) // Clear a rectangle in layer pixels, inside redrawStart/End
+CanvasLayer.scroll(offset)  // Move the layer through the world while what is drawn stays where it is in the world,
+                            // snapped to its whole pixels, returns the offset moved: a picture that follows
+                            // something, like decals around a car; what scrolls off is gone, the strip coming into
+                            // view is empty to draw; one GPU draw into a second texture kept from the first scroll
+                            // (as big as the layer's), the canvas drawn onto itself without WebGL; not on a TileLayer
 CanvasLayer.onContextRestored() // Called when a lost WebGL context comes back, does nothing by default: what was
                             // drawn into the layer's texture is gone, draw it again here to keep it
 

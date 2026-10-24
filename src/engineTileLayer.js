@@ -756,6 +756,9 @@ class CanvasLayer extends EngineObject
         this.mass = 0;
         /** @property {boolean} - Is this layer drawing into its WebGL texture, set by redrawStart */
         this.isUsingWebGL = false;
+        // the second texture scroll draws into, made on the first scroll
+        /** @type {TextureInfo|undefined} */
+        this.scrollTextureInfo = undefined;
 
         if (headlessMode)
         {
@@ -777,6 +780,7 @@ class CanvasLayer extends EngineObject
         if (this.destroyed) return;
 
         this.textureInfo.destroyWebGLTexture();
+        this.scrollTextureInfo?.destroyWebGLTexture();
         super.destroy(immediate);
     }
 
@@ -1002,6 +1006,68 @@ class CanvasLayer extends EngineObject
             glClearRect(x, y, size.x, size.y);
         else
             this.context.clearRect(x, y, size.x, size.y);
+    }
+
+    /** Move the layer through the world by offset while what is drawn in it stays where it is in the world, for a
+     *  picture that follows something across a world bigger than it, like decals around a car
+     *  - The offset is snapped to whole pixels of the layer, so the picture never blurs, and the snapped one is
+     *    returned
+     *  - What scrolls off an edge is gone, and the strip that comes into view is empty for the game to draw
+     *  - With WebGL it is one draw on the GPU, into a second texture as big as the layer's, kept from its first
+     *    scroll; with WebGL off or useWebGL false the canvas is drawn onto itself, which is slower
+     *  - A picture kept on the canvas and copied up with updateWebGL is not moved on a WebGL layer, only its texture
+     *  - A TileLayer can not scroll, its grid would draw over the picture
+     *  @param {Vector2} offset - World units to move the layer by
+     *  @return {Vector2} - The offset it moved by, snapped to its pixels */
+    scroll(offset)
+    {
+        ASSERT(isVector2(offset), 'scroll: offset must be a Vector2', offset);
+        ASSERT(!(this instanceof TileLayer), 'scroll is for a CanvasLayer, a TileLayer would draw its grid over it');
+        if (!this.context)
+        {
+            // headless, there is no picture to move
+            this.pos = this.pos.add(offset);
+            return offset.copy();
+        }
+
+        // the offset in the layer's whole pixels, through its turn and mirror, up from its bottom left
+        const local = offset.rotate(-this.angle);
+        if (this.mirror)
+            local.x = -local.x;
+        const pixels = vec2(this.canvas.width / this.size.x, this.canvas.height / this.size.y);
+        const shift = vec2(round(local.x * pixels.x), round(local.y * pixels.y));
+        if (!shift.x && !shift.y)
+            return vec2();
+
+        if (this.hasWebGL())
+        {
+            // the spare takes the picture and the layer's own texture is drawn again from it moved over, so the old
+            // texture is the spare for the next scroll and nothing is copied back
+            const info = this.textureInfo;
+            this.scrollTextureInfo ||= new TextureInfo(this.canvas, true, info.wrap, info.pixelated);
+            const spare = this.scrollTextureInfo;
+            [info.glTexture, spare.glTexture] = [spare.glTexture, info.glTexture];
+            this.redrawStart(true);
+            try { this.drawLayerTile(shift.scale(-1), info.size, new TileInfo().setFullImage(spare)); }
+            finally { this.redrawEnd(); }
+        }
+        else
+        {
+            // the canvas onto itself, copy leaving what it does not cover empty; canvas rows go down
+            const context = this.context;
+            context.save();
+            context.globalCompositeOperation = 'copy';
+            context.drawImage(this.canvas, -shift.x, shift.y);
+            context.restore();
+        }
+
+        // the layer moves by the snapped offset, back into the world
+        const moved = vec2(shift.x / pixels.x, shift.y / pixels.y);
+        if (this.mirror)
+            moved.x = -moved.x;
+        const world = moved.rotate(this.angle);
+        this.pos = this.pos.add(world);
+        return world;
     }
 }
 
