@@ -710,12 +710,15 @@ class TileLayerData
 
 ///////////////////////////////////////////////////////////////////////////////
 /**
- * Canvas Layer - cached off screen rendering system
- * - Contains an offscreen canvas that can be rendered to
- * - WebGL rendering is optional, call updateWebGL to enable/update
- * - A TileLayer using WebGL redraws into its texture and leaves this canvas blank, so drawing on its context
- *   only shows on a layer made with useWebGL=false (or with WebGL off); use drawLayerTile/drawLayerRect inside
- *   redrawStart/End for drawing that works both ways
+ * Canvas Layer - a picture placed in the world, drawn into once and shown as one image
+ * - drawRect and drawTile draw into it in world space, where they show in the world, on the GPU into its
+ *   WebGL texture, or onto its canvas when WebGL is off or useWebGL is false; drawLayerRect and drawLayerTile
+ *   draw in its pixels inside redrawStart/End
+ * - A world unit is as many pixels as its canvas has across its size, so a bigger canvas is a sharper picture
+ * - Its pos is its middle, it turns by its angle and flips with mirror
+ * - Drawing into its WebGL texture leaves its canvas blank, so drawing on its context only shows on a layer made
+ *   with useWebGL=false (or with WebGL off), and updateWebGL copies the canvas into the texture
+ * - What it holds on the GPU is lost with the WebGL context, onContextRestored is the place to draw it again
  * @extends EngineObject
  * @memberof TileLayers
  * @example
@@ -751,6 +754,20 @@ class CanvasLayer extends EngineObject
 
         // disable physics by default
         this.mass = 0;
+        /** @property {boolean} - Is this layer drawing into its WebGL texture, set by redrawStart */
+        this.isUsingWebGL = false;
+
+        if (headlessMode)
+        {
+            // nothing to draw into in headless mode
+            this.redrawStart    = ()=> {};
+            this.redrawEnd      = ()=> {};
+            this.drawLayerTile  = ()=> {};
+            this.drawLayerRect  = ()=> {};
+            this.drawTile       = ()=> {};
+            this.drawRect       = ()=> {};
+            this.clearLayerRect = ()=> {};
+        }
     }
 
     /** Destroy this canvas layer
@@ -802,6 +819,190 @@ class CanvasLayer extends EngineObject
      *  @return {boolean} */
     hasWebGL()
     { return glEnable && this.textureInfo.hasWebGL(); }
+
+    /** Called when the WebGL context comes back after it was lost, does nothing by default
+     *  - What was drawn into the layer's texture is gone with the context, draw it again here to keep it; a
+     *    TileLayer draws its tiles again on its own before this */
+    onContextRestored() {}
+
+    // the layer's bottom left corner in the world, before its turn: its pos is its middle
+    getLayerCorner() { return this.pos.subtract(this.size.scale(.5)); }
+
+    // a world position in the layer's own space, world units from its bottom left corner, through its turn and mirror
+    /** @ignore
+     *  @param {Vector2} pos
+     *  @return {Vector2} */
+    worldToLayer(pos)
+    {
+        if (!this.angle && !this.mirror)
+            return pos.subtract(this.getLayerCorner());
+        const half = this.size.scale(.5), local = pos.subtract(this.getLayerCorner().add(half)).rotate(-this.angle);
+        if (this.mirror)
+            local.x = -local.x;
+        return local.add(half);
+    }
+
+    /** Call to start the redraw process
+     *  - This can be used to manually update parts of the level
+     *  @param {boolean} [clear] - Should it clear the canvas before drawing */
+    redrawStart(clear=false)
+    {
+        if (!this.context) return;
+        ASSERT(drawContext !== this.context, 'redrawStart: already started, call redrawEnd() first');
+
+        // save current render settings
+        /** @type {[CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D, Vector2, Vector2, number, number, Color, Shader|undefined]} */
+        this.savedRenderSettings = [drawContext, mainCanvasSize, cameraPos, cameraScale, cameraAngle, canvasClearColor, glCustomShader];
+        setShader(); // the tiles are drawn plain, a layer's own Shader applies when the layer is drawn
+        // a redraw from inside another target's pass, like the light system's shadow map, draws the tiles in color
+        // and hands that target back after
+        this.savedRenderTarget = [glRenderTarget, glColorMask, glColorAdditive, glSkipScreenSpace, glTextureOverride,
+            glSkipAdditive];
+        glColorMask = -1;
+        glColorAdditive = 0;
+        glSkipScreenSpace = false; // screen space is the layer's own pixels here
+        glTextureOverride = undefined; // its own tiles, not the normal map of the light system's normal pass
+        glSkipAdditive = false;
+
+        // set the draw canvas and context to this layer
+        // use camera settings to match this layer's canvas, a pixel a unit
+        drawContext = this.context;
+        mainCanvasSize = vec2(this.canvas.width, this.canvas.height);
+        canvasClearColor = CLEAR_BLACK;
+        cameraPos = mainCanvasSize.scale(.5);
+        cameraScale = 1;
+        cameraAngle = 0; // drawn flat, the world camera turns the whole layer later
+
+        // set render target to this layer
+        this.isUsingWebGL = this.hasWebGL();
+        if (this.isUsingWebGL)
+            glSetRenderTarget(this.textureInfo.glTexture, clear);
+        else
+        {
+            if (clear)
+            {
+                // setting the size clears the canvas
+                this.canvas.width  = mainCanvasSize.x;
+                this.canvas.height = mainCanvasSize.y;
+            }
+            // disable smoothing for pixel art, after the resize which resets it
+            this.context.imageSmoothingEnabled = !tilesPixelated;
+        }
+    }
+
+    /** Call to end the redraw process */
+    redrawEnd()
+    {
+        if (!this.context) return;
+        ASSERT(drawContext === this.context, 'redrawEnd: call redrawStart() first');
+
+        // set stuff back to normal, the camera first, so a target that was drawing before gets its own transform back
+        [drawContext, mainCanvasSize, cameraPos, cameraScale, cameraAngle, canvasClearColor, glCustomShader] = this.savedRenderSettings;
+        const [target, colorMask, colorAdditive, skipScreenSpace, textureOverride, skipAdditive] = this.savedRenderTarget;
+        if (this.isUsingWebGL)
+            glSetRenderTarget(target);
+        glColorMask = colorMask;
+        glColorAdditive = colorAdditive;
+        glSkipScreenSpace = skipScreenSpace;
+        glTextureOverride = textureOverride;
+        glSkipAdditive = skipAdditive;
+    }
+
+    /** Draw textured tile in layer space
+     *  @param {Vector2}  pos - Position in pixel coordinates
+     *  @param {Vector2}  [size=vec2(1)] - Size of the tile
+     *  @param {TileInfo} [tileInfo] - Tile info to use, untextured if undefined
+     *  @param {Color}    [color=WHITE] - Color to modulate with
+     *  @param {number}   [angle] - Angle to rotate by
+     *  @param {boolean}  [mirror] - Is the image flipped left to right?
+     *  @param {Color}    [additiveColor] - Additive color to be applied if any */
+    drawLayerTile(pos, size=vec2(1), tileInfo, color=WHITE,
+    angle=0, mirror, additiveColor)
+    {
+        const drawPos = pos.add(size.scale(.5));
+        drawTile(drawPos, size, tileInfo, color, angle, mirror, additiveColor, this.isUsingWebGL, false);
+    }
+
+    /** Draw a rectangle in layer space
+     *  @param {Vector2} pos
+     *  @param {Vector2} size
+     *  @param {Color} [color=WHITE] - Color to modulate with
+     *  @param {number} [angle] - Angle to rotate by
+     */
+    drawLayerRect(pos, size, color, angle=0)
+    { this.drawLayerTile(pos, size, undefined, color, angle); }
+
+    /** Draw a tile onto the layer in world space, where it shows in the world, whatever the layer's place, turn and
+     *  mirror
+     *  @param {Vector2}  pos
+     *  @param {Vector2}  [size=vec2(1)]
+     *  @param {TileInfo} [tileInfo]
+     *  @param {Color}    [color=WHITE]
+     *  @param {number}   [angle]
+     *  @param {boolean}  [mirror] */
+    drawTile(pos, size=vec2(1), tileInfo, color=new Color, angle=0, mirror=false)
+    {
+        // into the layer's own space, then its pixels, as many a world unit as its canvas has across its size
+        pos = this.worldToLayer(pos);
+        angle -= this.angle;
+        if (this.mirror)
+            angle = -angle, mirror = !mirror;
+        const pixels = vec2(this.canvas.width / this.size.x, this.canvas.height / this.size.y);
+        pos = pos.multiply(pixels);
+        size = size.multiply(pixels);
+        // a screen position is the center of a pixel, so the layer pixel coordinate moves back half a pixel
+        pos.x -= .5;
+        pos.y = this.canvas.height - pos.y - .5;
+
+        // draw the tile onto the layer canvas
+        // in color and handing back a target that was drawing before, like the light system's shadow map
+        const oldMainCanvasSize = mainCanvasSize, oldTarget = glRenderTarget, oldColorMask = glColorMask;
+        const oldSkip = glSkipScreenSpace, oldColorAdditive = glColorAdditive, oldShader = glCustomShader;
+        const oldOverride = glTextureOverride, oldSkipAdditive = glSkipAdditive;
+        mainCanvasSize = vec2(this.canvas.width, this.canvas.height);
+        glColorMask = -1;
+        glColorAdditive = 0;
+        glTextureOverride = undefined; // its own tile, as a redraw draws
+        glSkipAdditive = false;
+        setShader(); // plain, as a redraw draws, a layer's own Shader applies when the layer is drawn
+        glSkipScreenSpace = false; // its screen space is the layer's own canvas
+        const useWebGL = this.hasWebGL();
+        useWebGL && glSetRenderTarget(this.textureInfo.glTexture);
+        const drawContext = useWebGL ? undefined : this.context;
+        drawTile(pos, size, tileInfo, color, angle, mirror, undefined, useWebGL, true, drawContext);
+        mainCanvasSize = oldMainCanvasSize;
+        useWebGL && glSetRenderTarget(oldTarget);
+        glColorMask = oldColorMask;
+        glColorAdditive = oldColorAdditive;
+        glSkipScreenSpace = oldSkip;
+        glTextureOverride = oldOverride;
+        glSkipAdditive = oldSkipAdditive;
+        setShader(oldShader);
+    }
+
+    /** Draw a rectangle onto the layer in world space, where it shows in the world
+     *  @param {Vector2} pos
+     *  @param {Vector2} [size=vec2(1)]
+     *  @param {Color}   [color=WHITE]
+     *  @param {number}  [angle] */
+    drawRect(pos, size, color, angle)
+    { this.drawTile(pos, size, undefined, color, angle); }
+
+    /** Clear a rectangle in layer space
+     *  @param {Vector2} pos - position in pixel coordinates
+     *  @param {Vector2} size
+     */
+    clearLayerRect(pos, size)
+    {
+        ASSERT(drawContext === this.context, 'must call redrawStart() before clearing tiles');
+
+        const x = pos.x, y = this.canvas.height - pos.y - size.y;
+        const useWebGL = this.hasWebGL();
+        if (useWebGL)
+            glClearRect(x, y, size.x, size.y);
+        else
+            this.context.clearRect(x, y, size.x, size.y);
+    }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -843,8 +1044,6 @@ class TileLayer extends CanvasLayer
         this.tileInfo = undefined;
         /** @property {Array<TileLayerData>} - Array of tile data for the layer */
         this.data = [];
-        /** @property {boolean} - Is this layer using a webgl texture? */
-        this.isUsingWebGL = false;
         // which side holds the whole layer, set by a full redraw, undefined before the first one; a partial redraw
         // or a render that finds WebGL turned on or off since then draws it all again on the side now in use
         this.tilesInWebGL = undefined;
@@ -874,15 +1073,8 @@ class TileLayer extends CanvasLayer
             // disable rendering in headless mode
             this.render         = ()=> {};
             this.redraw         = ()=> {};
-            this.redrawStart    = ()=> {};
-            this.redrawEnd      = ()=> {};
             this.drawTileData   = ()=> {};
             this.redrawTileData = ()=> {};
-            this.drawLayerTile  = ()=> {};
-            this.drawLayerRect  = ()=> {};
-            this.drawTile       = ()=> {};
-            this.drawRect       = ()=> {};
-            this.clearLayerRect = ()=> {};
         }
     }
 
@@ -990,7 +1182,10 @@ class TileLayer extends CanvasLayer
             this.redraw();
     }
 
-    /** Call to start the redraw process
+    // a tile layer is placed by its bottom left corner
+    getLayerCorner() { return this.pos; }
+
+    /** Call to start the redraw process, after what is waiting is drawn
      *  - This can be used to manually update parts of the level
      *  @param {boolean} [clear] - Should it clear the canvas before drawing */
     redrawStart(clear=false)
@@ -1004,64 +1199,21 @@ class TileLayer extends CanvasLayer
             this.redrawIfSwitched();
         }
         this.drawn = true;
-        
-        // save current render settings
-        /** @type {[CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D, Vector2, Vector2, number, number, Color, Shader|undefined]} */
-        this.savedRenderSettings = [drawContext, mainCanvasSize, cameraPos, cameraScale, cameraAngle, canvasClearColor, glCustomShader];
-        setShader(); // the tiles are drawn plain, a layer's own Shader applies when the layer is drawn
-        // a redraw from inside another target's pass, like the light system's shadow map, draws the tiles in color
-        // and hands that target back after
-        this.savedRenderTarget = [glRenderTarget, glColorMask, glColorAdditive, glSkipScreenSpace, glTextureOverride,
-            glSkipAdditive];
-        glColorMask = -1;
-        glColorAdditive = 0;
-        glSkipScreenSpace = false; // screen space is the layer's own pixels here
-        glTextureOverride = undefined; // its own tiles, not the normal map of the light system's normal pass
-        glSkipAdditive = false;
-
-        // set the draw canvas and context to this layer
-        // use camera settings to match this layer's canvas
-        drawContext = this.context;
-        const tileSize = this.tileInfo?.size ?? vec2(1);
-        mainCanvasSize = this.size.multiply(tileSize);
-        canvasClearColor = CLEAR_BLACK;
-        cameraPos = this.size.multiply(tileSize).scale(.5);
-        cameraScale = 1;
-        cameraAngle = 0; // the tiles are drawn flat, the world camera turns the whole layer later
-
-        // set render target to this layer
-        this.isUsingWebGL = this.hasWebGL();
-        if (this.isUsingWebGL)
-            glSetRenderTarget(this.textureInfo.glTexture, clear);
-        else
-        {
-            if (clear)
-            {
-                // clear and set size
-                this.canvas.width  = mainCanvasSize.x;
-                this.canvas.height = mainCanvasSize.y;
-            }
-            // disable smoothing for pixel art, after the resize which resets it
-            this.context.imageSmoothingEnabled = !tilesPixelated;
-        }
+        super.redrawStart(clear);
     }
 
-    /** Call to end the redraw process */
-    redrawEnd()
+    /** Draw a tile onto the layer in world space, over the cells waiting to be drawn
+     *  @param {Vector2}  pos
+     *  @param {Vector2}  [size=vec2(1)]
+     *  @param {TileInfo} [tileInfo]
+     *  @param {Color}    [color=WHITE]
+     *  @param {number}   [angle]
+     *  @param {boolean}  [mirror] */
+    drawTile(pos, size, tileInfo, color, angle, mirror)
     {
-        if (!this.context) return;
-        ASSERT(drawContext === this.context, 'redrawEnd: call redrawStart() first');
-
-        // set stuff back to normal, the camera first, so a target that was drawing before gets its own transform back
-        [drawContext, mainCanvasSize, cameraPos, cameraScale, cameraAngle, canvasClearColor, glCustomShader] = this.savedRenderSettings;
-        const [target, colorMask, colorAdditive, skipScreenSpace, textureOverride, skipAdditive] = this.savedRenderTarget;
-        if (this.isUsingWebGL)
-            glSetRenderTarget(target);
-        glColorMask = colorMask;
-        glColorAdditive = colorAdditive;
-        glSkipScreenSpace = skipScreenSpace;
-        glTextureOverride = textureOverride;
-        glSkipAdditive = skipAdditive;
+        this.drawPending(); // what was set before goes under what is drawn now
+        this.drawn = true;
+        super.drawTile(pos, size, tileInfo, color, angle, mirror);
     }
 
     /** Draw the tile at a given position in the tile layer
@@ -1107,97 +1259,6 @@ class TileLayer extends CanvasLayer
         finally { this.redrawEnd(); }
     }
 
-    /** Draw textured tile in layer space
-     *  @param {Vector2}  pos - Position in pixel coordinates
-     *  @param {Vector2}  [size=vec2(1)] - Size of the tile
-     *  @param {TileInfo} [tileInfo] - Tile info to use, untextured if undefined
-     *  @param {Color}    [color=WHITE] - Color to modulate with
-     *  @param {number}   [angle] - Angle to rotate by
-     *  @param {boolean}  [mirror] - Is the image flipped left to right?
-     *  @param {Color}    [additiveColor] - Additive color to be applied if any */
-    drawLayerTile(pos, size=vec2(1), tileInfo, color=WHITE,
-    angle=0, mirror, additiveColor)
-    {
-        const drawPos = pos.add(size.scale(.5));
-        drawTile(drawPos, size, tileInfo, color, angle, mirror, additiveColor, this.isUsingWebGL, false);
-    }
-
-    /** Draw a rectangle in layer space
-     *  @param {Vector2} pos
-     *  @param {Vector2} size
-     *  @param {Color} [color=WHITE] - Color to modulate with
-     *  @param {number} [angle] - Angle to rotate by
-     */
-    drawLayerRect(pos, size, color, angle=0)
-    { this.drawLayerTile(pos, size, undefined, color, angle); }
-
-    /** Draw a tile onto the layer canvas in world space
-     *  @param {Vector2}  pos
-     *  @param {Vector2}  [size=vec2(1)]
-     *  @param {TileInfo} [tileInfo]
-     *  @param {Color}    [color=WHITE]
-     *  @param {number}   [angle]
-     *  @param {boolean}  [mirror] */
-    drawTile(pos, size=vec2(1), tileInfo, color=new Color, angle=0, mirror=false)
-    {
-        this.drawPending(); // what was set before goes under what is drawn now
-        this.drawn = true;
-        const tileSize = this.tileInfo?.size ?? vec2(1); // a layer made without a tile info draws a pixel a cell
-        pos = pos.subtract(this.pos).multiply(tileSize);
-        size = size.multiply(tileSize);
-        // a screen position is the center of a pixel, so the layer pixel coordinate moves back half a pixel
-        pos.x -= .5;
-        pos.y = this.canvas.height - pos.y - .5;
-
-        // draw the tile onto the layer canvas
-        // in color and handing back a target that was drawing before, like the light system's shadow map
-        const oldMainCanvasSize = mainCanvasSize, oldTarget = glRenderTarget, oldColorMask = glColorMask;
-        const oldSkip = glSkipScreenSpace, oldColorAdditive = glColorAdditive, oldShader = glCustomShader;
-        const oldOverride = glTextureOverride, oldSkipAdditive = glSkipAdditive;
-        mainCanvasSize = vec2(this.canvas.width, this.canvas.height);
-        glColorMask = -1;
-        glColorAdditive = 0;
-        glTextureOverride = undefined; // its own tile, as a redraw draws
-        glSkipAdditive = false;
-        setShader(); // plain, as a redraw draws, a layer's own Shader applies when the layer is drawn
-        glSkipScreenSpace = false; // its screen space is the layer's own canvas
-        const useWebGL = this.hasWebGL();
-        useWebGL && glSetRenderTarget(this.textureInfo.glTexture);
-        const drawContext = useWebGL ? undefined : this.context;
-        drawTile(pos, size, tileInfo, color, angle, mirror, undefined, useWebGL, true, drawContext);
-        mainCanvasSize = oldMainCanvasSize;
-        useWebGL && glSetRenderTarget(oldTarget);
-        glColorMask = oldColorMask;
-        glColorAdditive = oldColorAdditive;
-        glSkipScreenSpace = oldSkip;
-        glTextureOverride = oldOverride;
-        glSkipAdditive = oldSkipAdditive;
-        setShader(oldShader);
-    }
-
-    /** Draw a rectangle onto the layer canvas in world space
-     *  @param {Vector2} pos
-     *  @param {Vector2} [size=vec2(1)]
-     *  @param {Color}   [color=WHITE]
-     *  @param {number}  [angle] */
-    drawRect(pos, size, color, angle)
-    { this.drawTile(pos, size, undefined, color, angle); }
-
-    /** Clear a rectangle in layer space
-     *  @param {Vector2} pos - position in pixel coordinates
-     *  @param {Vector2} size
-     */
-    clearLayerRect(pos, size)
-    {
-        ASSERT(drawContext === this.context, 'must call redrawStart() before clearing tiles');
-
-        const x = pos.x, y = this.canvas.height - pos.y - size.y;
-        const useWebGL = this.hasWebGL();
-        if (useWebGL)
-            glClearRect(x, y, size.x, size.y);
-        else
-            this.context.clearRect(x, y, size.x, size.y);
-    }
 }
 
 ///////////////////////////////////////////////////////////////////////////////

@@ -205,6 +205,7 @@ const exampleList =
     new ExampleInfo('Particle Effects', 'particleEffects.js', 'Every built-in particle effect, one line each', false, 'particles, effects, fire, smoke, explosion, sparks, magic, rain, snow, hue'),
     new ExampleInfo('Particle Options', 'particleOptions.js', 'One effect, and what each option does to it', false, 'particles, effects, options, scale, hue, saturation, tile, burst'),
     new ExampleInfo('Tile Layer', 'tileLayer.js', 'Tile layer rendering system', false, 'level, map, grid, particles'),
+    new ExampleInfo('Decals', 'decals.js', 'Paint trails and splats drawn into a canvas layer on the GPU', false, 'decals, paint, splat, canvas layer, CanvasLayer, drawRect, picture'),
     new ExampleInfo('Low Resolution Output', 'lowRes.js', 'Crisp low resolution rendering', false, 'pixelated, retro, canvasFixedSize, pixel art'),
     new ExampleInfo('Clock', 'clock.js', 'Animated analog clock', false, 'time, rotation, lines, rectangle'),
     new ExampleInfo('Starfield', 'starfield.js', 'Animated parallax starfield', false, 'space, movement, depth, rectangle'),

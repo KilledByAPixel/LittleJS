@@ -179,9 +179,12 @@ function glInit(rootElement)
             info.glTexture = glCreateTexture(info.image, info.wrap, info.pixelated);
         pluginList.forEach(plugin=>plugin.glContextRestored?.());
 
-        // a tile layer drawn on the GPU only had its tiles in the lost texture, it draws them again
+        // a tile layer drawn on the GPU only had its tiles in the lost texture, it draws them again, then every canvas
+        // layer can draw what it held again
         for (const o of engineObjects)
             o instanceof TileLayer && o.isUsingWebGL && !o.destroyed && o.redraw();
+        for (const o of engineObjects)
+            o instanceof CanvasLayer && o.hasWebGL() && !o.destroyed && o.onContextRestored();
     });
 
     function initWebGL()

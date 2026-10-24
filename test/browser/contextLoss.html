@@ -14,9 +14,13 @@ smokeRun(async ()=>
     setEngineManualStep(true);
     setCanvasFixedSize(vec2(64));
     setCanvasClearColor(rgb(0, 0, 0));
-    let texture;
+    let texture, restoredLayer;
     await engineInit(()=>
     {
+        // a canvas layer is told when the context comes back, so a game can draw into it again
+        const layer = new CanvasLayer(vec2(), vec2(1), 0, 0, vec2(8));
+        layer.onContextRestored = ()=> restoredLayer = layer;
+
         setCameraScale(1);
         const canvas = new OffscreenCanvas(8, 8), context = canvas.getContext('2d');
         context.fillStyle = '#0f0';
@@ -64,6 +68,7 @@ smokeRun(async ()=>
     await new Promise((resolve)=> setTimeout(resolve)); // the engine's own handler is through
     engineStep(2);
     drawsAll('after the context came back');
+    check('a canvas layer is told the context came back', !!restoredLayer);
     checkGLError();
 });
 </script>

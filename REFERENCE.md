@@ -748,6 +748,18 @@ CanvasLayer.context         // The 2D context of the canvas, read it back with c
 CanvasLayer.updateWebGL()   // Creates or updates WebGL texture
 CanvasLayer.draw(pos, size, color=WHITE, angle=0, mirror=false, additiveColor, screenSpace=drawScreenSpace, context)
                             // Draw the layer centered at pos
+CanvasLayer.drawRect(pos, size, color, angle) // Draw a rectangle into the layer in world space, where it shows in
+                            // the world whatever the layer's place, angle and mirror; on the GPU into its WebGL
+                            // texture, a cheap picture layer for decals, paint or fog of war with no tile grid
+CanvasLayer.drawTile(pos, size=(1,1), tileInfo, color, angle, mirror) // Draw a tile into the layer in world space
+                            // a world unit is as many pixels as the canvas has across the layer's size
+CanvasLayer.redrawStart(clear=false) // Start drawing in layer pixels; redrawEnd() finishes
+CanvasLayer.drawLayerTile(pos, size=(1,1), tileInfo, color=WHITE, angle=0, mirror, additiveColor) // Draw a tile in
+                            // layer pixels, up from its bottom left, inside redrawStart/End
+CanvasLayer.drawLayerRect(pos, size, color, angle=0) // Draw a rectangle in layer pixels, inside redrawStart/End
+CanvasLayer.clearLayerRect(pos, size) // Clear a rectangle in layer pixels, inside redrawStart/End
+CanvasLayer.onContextRestored() // Called when a lost WebGL context comes back, does nothing by default: what was
+                            // drawn into the layer's texture is gone, draw it again here to keep it
 
 // LittleJS Layer System
 TileLayer(pos, size, tileInfo, renderOrder=0, useWebGL=true) // Create a tile layer object
@@ -756,18 +768,12 @@ TileLayer.clearData(layerPos, redraw)          // Clear data at position, drawn 
 TileLayer.getData(layerPos)                    // Get data at position
 TileLayer.debugShow = true                     // Shown by the debug overlay's 2: Debug Tiles, off to leave a layer out
 TileLayer.redraw()                             // Draw the whole layer now, a layer never drawn draws on its first render
-TileLayer.redrawStart(clear=false)             // Start drawing to the layer, for updating parts of it
-TileLayer.redrawEnd()                          // Finish drawing to the layer
 TileLayer.drawTileData(layerPos, clear=true)   // Draw the tile, inside redrawStart/End
-TileLayer.drawLayerTile(pos, size=(1,1), tileInfo, color=WHITE, angle=0, mirror, additiveColor) // Draw a tile in
-                                               // layer pixels, inside redrawStart/End
-TileLayer.drawLayerRect(pos, size, color, angle=0) // Draw a rectangle in layer pixels, inside redrawStart/End
-TileLayer.drawRect(pos, size, color, angle)    // Draw a rectangle onto the layer canvas in world space
-TileLayer.drawTile(pos, size=(1,1), tileInfo, color, angle, mirror) // Draw a tile onto the layer in world space
-TileLayer.clearLayerRect(pos, size)            // Clear a rectangle in layer pixels, inside redrawStart/End
+// a TileLayer is a CanvasLayer placed by its corner, with all of its drawing: drawRect, drawTile and redrawStart draw
+// the cells waiting to be drawn first, so what is drawn goes on top of them
 // to draw on a layer made with useWebGL=false (or with WebGL off), pass its context to drawCanvas2D:
 // drawCanvas2D(pos, size, angle, mirror, drawFunction, screenSpace, layer.context)
-// on a WebGL layer use drawLayerTile/drawLayerRect inside redrawStart/End, its canvas is not shown
+// on a WebGL layer use drawRect/drawTile, or drawLayerTile/drawLayerRect inside redrawStart/End, its canvas is not shown
 
 // Tile Layer Data Object
 TileLayerData(tile, direction=0, mirror=false, color=WHITE) // Create tile data object, tile from 0 like tile(),
