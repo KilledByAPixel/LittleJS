@@ -567,6 +567,8 @@ touchPinch                            // Pinch of two fingers this frame in whee
 touchPinchWheel = true                // Add touchPinch to mouseWheel? A second finger then lets go of the button
                                       // the first pressed; setTouchPinchWheel(false) leaves the first finger the
                                       // mouse, for a game with its own use for two fingers
+mouseScreenTransform                  // Bends each mouse and touch position as it comes in, for a picture bent after
+                                      // it is drawn; setMouseScreenTransform(transform), undefined for none
 mouseIsDown(button)                   // Is mouse button down?
 mouseWasPressed(button)               // Was mouse button pressed this frame?
 mouseWasReleased(button)              // Was mouse button released this frame?
@@ -1278,6 +1280,8 @@ postProcessScanlines(strength=.5, spacing=6) // lines across the screen, spacing
 postProcessNoise(strength=.1, size=2)        // static that changes every frame, size of a speck in pixels
 postProcessVignette(strength=1, falloff=3)   // darker toward the corners, a higher falloff only the corners
 postProcessCurve(strength=.1)                // the bulged glass of an old TV, black past the corners
+postProcessCurveMouse(strength=.1)           // the mouse bent the same way, for setMouseScreenTransform, so clicks
+                                             // land on what is drawn under them
 postProcessChromatic(strength=.005)          // red and blue split apart toward the edges
 postProcessGlow(threshold=.6, strength=1, size=6) // the bloom as a piece
 postProcessOutline(color=BLACK, thickness=1, threshold=.02) // lines where the 3D depth jumps, needs

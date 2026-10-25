@@ -795,7 +795,8 @@ function inputInit()
         const rect = mainCanvas.getBoundingClientRect();
         const px = percent(mousePos.x, rect.left, rect.right);
         const py = percent(mousePos.y, rect.top, rect.bottom);
-        return vec2(px*mainCanvasSize.x, py*mainCanvasSize.y);
+        const pos = vec2(px*mainCanvasSize.x, py*mainCanvasSize.y);
+        return mouseScreenTransform ? mouseScreenTransform(pos) : pos; // bent once, as it comes in
     }
 }
 

@@ -515,6 +515,28 @@ function postProcessCurve(strength=.1)
 }
 
 /**
+ * The mouse bent as postProcessCurve bends the picture, for setMouseScreenTransform, so it points at what is drawn
+ * under it at any screen size
+ * @param {number} [strength] - The same strength given postProcessCurve
+ * @return {MouseScreenTransform}
+ * @example
+ * new PostProcessPlugin(postProcessEffects(postProcessCurve(.1)));
+ * setMouseScreenTransform(postProcessCurveMouse(.1));
+ * @memberof PostProcess
+ */
+function postProcessCurveMouse(strength=.1)
+{
+    ASSERT(isNumber(strength), 'postProcessCurveMouse takes the curve strength as a number', strength);
+    return (pos)=>
+    {
+        // as the shader does: the screen from -1 to 1, pushed out by how far from the middle it is
+        const d = vec2(pos.x / mainCanvasSize.x * 2 - 1, pos.y / mainCanvasSize.y * 2 - 1);
+        const k = 1 + strength * d.dot(d);
+        return vec2((d.x * k + 1) / 2 * mainCanvasSize.x, (d.y * k + 1) / 2 * mainCanvasSize.y);
+    };
+}
+
+/**
  * Split red and blue apart toward the edges, like a cheap lens; put it before what shades the picture
  * @param {number|string} [strength] - How far apart at the edge, as a part of the screen
  * @return {string}

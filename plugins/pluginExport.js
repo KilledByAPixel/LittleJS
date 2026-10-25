@@ -40,6 +40,7 @@ export
     postProcessNoise,
     postProcessVignette,
     postProcessCurve,
+    postProcessCurveMouse,
     postProcessChromatic,
     postProcessOutline,
     postProcessTiltShift,

@@ -340,6 +340,20 @@ let touchGamepadPassthrough = false;
  *  @memberof Settings */
 let touchPinchWheel = true;
 
+/** Bends each mouse and touch position as it comes in, for a game that bends the picture after it is drawn, like a
+ *  curved screen, so the mouse points at what is drawn under it: given a screen position, it returns the screen
+ *  position of what shows there; undefined leaves positions as they are
+ *  @type {MouseScreenTransform|undefined}
+ *  @memberof Settings */
+let mouseScreenTransform;
+
+/**
+ * @callback MouseScreenTransform - Where on the screen the picture shown at a screen position is drawn
+ * @param {Vector2} pos - The mouse or touch position on the screen
+ * @return {Vector2}
+ * @memberof Settings
+ */
+
 /** Size of center button if touch gamepad should have start button in the center
  *  - Prevents activating when pressed near virtual stick or face buttons
  *  - When the game is paused, any touch will press the button
@@ -802,6 +816,17 @@ function setTouchGamepadEnable(enable) { touchGamepadEnable = enable; }
  *  @param {boolean} enable
  *  @memberof Settings */
 function setTouchPinchWheel(enable) { touchPinchWheel = enable; }
+
+/** Set how mouse and touch positions are bent as they come in, to match a picture bent after it is drawn
+ *  @param {MouseScreenTransform} [transform] - Undefined leaves positions as they are
+ *  @example
+ *  setMouseScreenTransform(postProcessCurveMouse(.1)); // the mouse follows postProcessCurve(.1)
+ *  @memberof Settings */
+function setMouseScreenTransform(transform)
+{
+    ASSERT(!transform || typeof transform == 'function', 'setMouseScreenTransform takes a function or undefined');
+    mouseScreenTransform = transform;
+}
 
 /** Set if touches outside the gamepad controls should still drive mouse/touch input
  *  @param {boolean} passthrough
