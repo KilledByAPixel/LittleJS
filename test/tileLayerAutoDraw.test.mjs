@@ -170,6 +170,34 @@ test('paint goes over a cell set before it, which draws first', () =>
     assert.deepEqual(counts.cells, ['1,0', 'paint']);
 });
 
+test("a game's own redraw that calls redrawStart draws once on the first render, not again from inside it", () =>
+{
+    const { layer, counts } = makeLayer();
+    paintByHand(layer, counts); // the real start and end
+    layer.drawn = false;
+    counts.cells.length = counts.full = 0;
+    layer.redraw = ()=> { ++counts.full; layer.redrawStart(); counts.cells.push('own'); layer.redrawEnd(); };
+    layer.render();
+    assert.equal(counts.full, 1);
+    assert.deepEqual(counts.cells, ['own']);
+});
+
+test('a cell onRedraw sets waits for the next render', () =>
+{
+    const { layer } = makeLayer();
+    layer.onRedraw = ()=> layer.setData(vec2(1, 1), new TileLayerData(2));
+    layer.redraw();
+    assert.equal(layer.dirtyCells.size, 1);
+});
+
+test('a canvas copied up with updateWebGL counts as drawn', () =>
+{
+    const { layer, counts } = makeLayer();
+    layer.updateWebGL();
+    layer.render();
+    assert.equal(counts.full, 0, 'the picture on the canvas is kept');
+});
+
 test('tileLayersLoad leaves no cell pending, the layer draws whole or is hidden', () =>
 {
     const calls = [], setData = TileLayer.prototype.setData;

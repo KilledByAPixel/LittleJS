@@ -663,6 +663,45 @@ function glSetTextureData(texture, image, pixelated=tilesPixelated)
     glContext.bindTexture(glContext.TEXTURE_2D, glActiveTexture);
 }
 
+/** Set part of a WebGL texture's data, its size unchanged, restores the active texture when done
+ *  - x and y are texture pixels from the top left, as a tile's pos is
+ *  - Uploaded premultiplied or straight as the whole texture was, and its mipmaps are made again the next time
+ *    it is drawn from
+ *  @param {WebGLTexture} texture
+ *  @param {Uint8Array|Uint8ClampedArray|ImageData|HTMLImageElement|HTMLCanvasElement|OffscreenCanvas|ImageBitmap} pixels -
+ *    RGBA bytes, width * height * 4 of them, or an image put in at its own size
+ *  @param {number} x
+ *  @param {number} y
+ *  @param {number} width - Width of a byte array's rectangle
+ *  @param {number} height - Height of a byte array's rectangle
+ *  @memberof WebGL */
+function glSetTextureSubData(texture, pixels, x, y, width, height)
+{
+    if (!glContext) return;
+
+    // after drawing what was queued with the old pixels, or into the texture as the target
+    (texture === glActiveTexture || texture === glRenderTarget) && glFlush();
+    glContext.bindTexture(glContext.TEXTURE_2D, texture);
+    if (typeof ImageBitmap != 'undefined' && pixels instanceof ImageBitmap)
+    {
+        // a bitmap ignores the unpack flag, as in glSetTextureData
+        const context = createCanvasContext(pixels.width, pixels.height);
+        context.drawImage(pixels, 0, 0);
+        pixels = context.canvas;
+    }
+    glContext.pixelStorei(glContext.UNPACK_PREMULTIPLY_ALPHA_WEBGL, glPremultipliedTextures.has(texture));
+    if (ArrayBuffer.isView(pixels))
+        glContext.texSubImage2D(glContext.TEXTURE_2D, 0, x, y, width, height,
+            glContext.RGBA, glContext.UNSIGNED_BYTE, pixels);
+    else
+        glContext.texSubImage2D(glContext.TEXTURE_2D, 0, x, y, glContext.RGBA, glContext.UNSIGNED_BYTE, pixels);
+    glContext.pixelStorei(glContext.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
+    glMipmappedTextures.has(texture) && glMipmapsStale.add(texture);
+
+    // rebind active texture
+    glContext.bindTexture(glContext.TEXTURE_2D, glActiveTexture);
+}
+
 /** Internal: tells WebGL to create or update the glTexture and start tracking it, TextureInfo calls it
  *  @param {TextureInfo} textureInfo
  *  @ignore */

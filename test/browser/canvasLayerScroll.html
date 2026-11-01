@@ -68,6 +68,26 @@ smokeRun(async ()=>
     const layerPixel = (x, y)=> [...canvas2d.context.getImageData(x, y, 1, 1).data];
     check('a Canvas2D layer scrolls its canvas', exactly(layerPixel(2, 4), [255, 0, 0]) && layerPixel(12, 4)[3] == 0 &&
         layerPixel(28, 4)[3] == 0, [layerPixel(2, 4), layerPixel(12, 4), layerPixel(28, 4)]);
+
+    // a turned layer and a mirrored one, green with a red mark where the layer is before and after, scrolled a unit
+    // right in the world: the mark stays, and the strip that comes into view on the right is empty
+    engineObjectsDestroy();
+    const scrolled = (pos, angle, mirror)=>
+    {
+        const layer = new CanvasLayer(pos, vec2(2), angle, 0, vec2(32));
+        layer.mirror = mirror;
+        layer.drawRect(pos, vec2(2), green);
+        layer.drawRect(pos.add(vec2(.5, .5)), vec2(.5), red);
+        layer.scroll(vec2(1, 0));
+        return layer;
+    };
+    const turned = scrolled(vec2(-2, 0), PI/2, false), mirrored = scrolled(vec2(2, 0), 0, true);
+    engineStep(2);
+    for (const [name, layer, x] of [['turned', turned, -2], ['mirrored', mirrored, 2]])
+        check('a ' + name + ' layer scrolls through the world with what it holds in place', layer.pos.x == x + 1 &&
+            exactly(pixel(x + .5, .5), [255, 0, 0]) && exactly(pixel(x + .5, -.5), [0, 255, 0]) &&
+            exactly(pixel(x + 1.5, 0), [0, 0, 255]), [layer.pos, pixel(x + .5, .5), pixel(x + .5, -.5),
+            pixel(x + 1.5, 0)]);
     checkGLError();
 });
 </script>

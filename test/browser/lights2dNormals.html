@@ -98,6 +98,14 @@ smokeRun(async ()=>
     [left, right] = leftRight();
     check('and they shade again once it is gone', right > left + 40, [left, right]);
 
+    // a sprite in front whose own Shader cuts it all away hides nothing, in the normal pass as on the screen
+    const cutAway = new EngineObject(vec2(), vec2(2), tile(1, 16));
+    cutAway.renderOrder = 1;
+    cutAway.shader = new Shader('void mainImage(out vec4 c, vec2 uv) { c = vec4(0); }');
+    [left, right] = leftRight();
+    check('in front, cut away by its own Shader: hides nothing', right > left + 40, [left, right]);
+    cutAway.destroy();
+
     const glow = new EngineObject(vec2(), vec2(2), tile(1, 16));
     glow.renderOrder = 1;
     glow.render = function() { setAdditiveBlendMode(true); EngineObject.prototype.render.call(this); setAdditiveBlendMode(false); };

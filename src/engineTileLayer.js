@@ -40,11 +40,11 @@
 
 /** A layer of a Tiled map: a tile layer, an object layer or a group of layers, by its type
  *  @typedef {Object} TiledLayer
- *  @property {'tilelayer'|'objectgroup'|'group'} [type] - A tile layer when left out
+ *  @property {string} [type] - 'tilelayer', 'objectgroup', 'group' or 'imagelayer', a tile layer when left out
  *  @property {string} [name]
  *  @property {number} [id]
- *  @property {Array<number>} [data] - A tile layer's tiles, row by row from the top, each 0 for none or a tile number
- *    plus 1, with Tiled's flip flags in its top bits
+ *  @property {ArrayLike<number>} [data] - A tile layer's tiles, a list or a typed array, row by row from the top,
+ *    each 0 for none or a tile number plus 1, with Tiled's flip flags in its top bits
  *  @property {number} [width] - A tile layer's cells across
  *  @property {number} [height] - A tile layer's cells up
  *  @property {Array<TiledObject>} [objects] - An object layer's objects
@@ -52,6 +52,7 @@
  *  @property {boolean} [visible] - A hidden layer is loaded, its collision too, but not drawn
  *  @property {number} [opacity]
  *  @property {string} [tintcolor] - A hex color
+ *  @property {Color} [color] - A layer built in code, its tint when it has no tintcolor
  *  @property {number} [x]
  *  @property {number} [y]
  *  @property {Array<TiledProperty>} [properties]
@@ -709,12 +710,20 @@ class TileLayerData
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+
+// the layers between redrawStart and redrawEnd, innermost last, so a frame that throws in the middle of one can close
+// it, or every frame after would draw into the layer with its camera
+const canvasLayerRedraws = [];
+
+///////////////////////////////////////////////////////////////////////////////
 /**
  * Canvas Layer - a picture placed in the world, drawn into once and shown as one image
  * - drawRect and drawTile draw into it in world space, where they show in the world, on the GPU into its
  *   WebGL texture, or onto its canvas when WebGL is off or useWebGL is false; drawLayerRect and drawLayerTile
  *   draw in its pixels inside redrawStart/End
  * - A world unit is as many pixels as its canvas has across its size, so a bigger canvas is a sharper picture
+ * - A draw turned in the world turns in those pixels, so it keeps its shape only when the canvas has the shape of
+ *   the size, as many pixels a unit up as across; on any other layer it comes out skewed, which a debug build warns of
  * - Its pos is its middle, it turns by its angle and flips with mirror
  * - Drawing into its WebGL texture leaves its canvas blank, so drawing on its context only shows on a layer made
  *   with useWebGL=false (or with WebGL off), and updateWebGL copies the canvas into the texture
@@ -722,7 +731,7 @@ class TileLayerData
  * @extends EngineObject
  * @memberof TileLayers
  * @example
- * const canvasLayer = new CanvasLayer(vec2(), vec2(200,100));
+ * const canvasLayer = new CanvasLayer(vec2(), vec2(200,100), 0, 0, vec2(400,200)); // 2 pixels a unit both ways
  */
 class CanvasLayer extends EngineObject
 {
@@ -832,7 +841,10 @@ class CanvasLayer extends EngineObject
     // the layer's bottom left corner in the world, before its turn: its pos is its middle
     getLayerCorner() { return this.pos.subtract(this.size.scale(.5)); }
 
-    // a world position in the layer's own space, world units from its bottom left corner, through its turn and mirror
+    // the size the layer shows at in the world, which a world draw into it goes by
+    getLayerDrawSize() { return this.size; }
+
+    // a world position in the layer as it shows, world units from its bottom left corner, through its turn and mirror
     /** @ignore
      *  @param {Vector2} pos
      *  @return {Vector2} */
@@ -840,14 +852,14 @@ class CanvasLayer extends EngineObject
     {
         if (!this.angle && !this.mirror)
             return pos.subtract(this.getLayerCorner());
-        const half = this.size.scale(.5), local = pos.subtract(this.getLayerCorner().add(half)).rotate(-this.angle);
+        const half = this.getLayerDrawSize().scale(.5);
+        const local = pos.subtract(this.getLayerCorner().add(half)).rotate(-this.angle);
         if (this.mirror)
             local.x = -local.x;
         return local.add(half);
     }
 
-    /** Call to start the redraw process
-     *  - This can be used to manually update parts of the level
+    /** Call to start the redraw process, drawing into the layer until redrawEnd
      *  @param {boolean} [clear] - Should it clear the canvas before drawing */
     redrawStart(clear=false)
     {
@@ -877,6 +889,8 @@ class CanvasLayer extends EngineObject
         cameraScale = 1;
         cameraAngle = 0; // drawn flat, the world camera turns the whole layer later
 
+        canvasLayerRedraws.push(this);
+
         // set render target to this layer
         this.isUsingWebGL = this.hasWebGL();
         if (this.isUsingWebGL)
@@ -899,6 +913,8 @@ class CanvasLayer extends EngineObject
     {
         if (!this.context) return;
         ASSERT(drawContext === this.context, 'redrawEnd: call redrawStart() first');
+        const open = canvasLayerRedraws.lastIndexOf(this);
+        open < 0 || canvasLayerRedraws.splice(open, 1);
 
         // set stuff back to normal, the camera first, so a target that was drawing before gets its own transform back
         [drawContext, mainCanvasSize, cameraPos, cameraScale, cameraAngle, canvasClearColor, glCustomShader] = this.savedRenderSettings;
@@ -946,12 +962,21 @@ class CanvasLayer extends EngineObject
      *  @param {boolean}  [mirror] */
     drawTile(pos, size=vec2(1), tileInfo, color=new Color, angle=0, mirror=false)
     {
-        // into the layer's own space, then its pixels, as many a world unit as its canvas has across its size
+        // into the layer's own space, then its pixels, as many a world unit as its canvas has across the size it
+        // shows at
         pos = this.worldToLayer(pos);
         angle -= this.angle;
         if (this.mirror)
             angle = -angle, mirror = !mirror;
-        const pixels = vec2(this.canvas.width / this.size.x, this.canvas.height / this.size.y);
+        const drawSize = this.getLayerDrawSize();
+        const pixels = vec2(this.canvas.width / drawSize.x, this.canvas.height / drawSize.y);
+        if (debug && !this.skewWarned && abs(sin(angle)) > 1e-6 && abs(pixels.x - pixels.y) > 1e-6 * pixels.x)
+        {
+            // a tile turns in the layer's pixels, which this layer stretches on one axis more than the other
+            console.warn('CanvasLayer: a turned draw comes out skewed, the layer has more pixels a unit on one axis ' +
+                'than the other; give its canvas the shape of its size');
+            this.skewWarned = true;
+        }
         pos = pos.multiply(pixels);
         size = size.multiply(pixels);
         // a screen position is the center of a pixel, so the layer pixel coordinate moves back half a pixel
@@ -963,25 +988,32 @@ class CanvasLayer extends EngineObject
         const oldMainCanvasSize = mainCanvasSize, oldTarget = glRenderTarget, oldColorMask = glColorMask;
         const oldSkip = glSkipScreenSpace, oldColorAdditive = glColorAdditive, oldShader = glCustomShader;
         const oldOverride = glTextureOverride, oldSkipAdditive = glSkipAdditive;
-        mainCanvasSize = vec2(this.canvas.width, this.canvas.height);
-        glColorMask = -1;
-        glColorAdditive = 0;
-        glTextureOverride = undefined; // its own tile, as a redraw draws
-        glSkipAdditive = false;
-        setShader(); // plain, as a redraw draws, a layer's own Shader applies when the layer is drawn
-        glSkipScreenSpace = false; // its screen space is the layer's own canvas
         const useWebGL = this.hasWebGL();
-        useWebGL && glSetRenderTarget(this.textureInfo.glTexture);
-        const drawContext = useWebGL ? undefined : this.context;
-        drawTile(pos, size, tileInfo, color, angle, mirror, undefined, useWebGL, true, drawContext);
-        mainCanvasSize = oldMainCanvasSize;
-        useWebGL && glSetRenderTarget(oldTarget);
-        glColorMask = oldColorMask;
-        glColorAdditive = oldColorAdditive;
-        glSkipScreenSpace = oldSkip;
-        glTextureOverride = oldOverride;
-        glSkipAdditive = oldSkipAdditive;
-        setShader(oldShader);
+        // all of it handed back even when the draw throws, as a failed assert does
+        try
+        {
+            mainCanvasSize = vec2(this.canvas.width, this.canvas.height);
+            glColorMask = -1;
+            glColorAdditive = 0;
+            glTextureOverride = undefined; // its own tile, as a redraw draws
+            glSkipAdditive = false;
+            setShader(); // plain, as a redraw draws, a layer's own Shader applies when the layer is drawn
+            glSkipScreenSpace = false; // its screen space is the layer's own canvas
+            useWebGL && glSetRenderTarget(this.textureInfo.glTexture);
+            const drawContext = useWebGL ? undefined : this.context;
+            drawTile(pos, size, tileInfo, color, angle, mirror, undefined, useWebGL, true, drawContext);
+        }
+        finally
+        {
+            mainCanvasSize = oldMainCanvasSize;
+            useWebGL && glSetRenderTarget(oldTarget);
+            glColorMask = oldColorMask;
+            glColorAdditive = oldColorAdditive;
+            glSkipScreenSpace = oldSkip;
+            glTextureOverride = oldOverride;
+            glSkipAdditive = oldSkipAdditive;
+            setShader(oldShader);
+        }
     }
 
     /** Draw a rectangle onto the layer in world space, where it shows in the world
@@ -1023,6 +1055,8 @@ class CanvasLayer extends EngineObject
     {
         ASSERT(isVector2(offset), 'scroll: offset must be a Vector2', offset);
         ASSERT(!(this instanceof TileLayer), 'scroll is for a CanvasLayer, a TileLayer would draw its grid over it');
+        if (this instanceof TileLayer)
+            return vec2(); // stays where it is in a release build too
         if (!this.context)
         {
             // headless, there is no picture to move
@@ -1046,6 +1080,8 @@ class CanvasLayer extends EngineObject
             const info = this.textureInfo;
             this.scrollTextureInfo ||= new TextureInfo(this.canvas, true, info.wrap, info.pixelated);
             const spare = this.scrollTextureInfo;
+            if (spare.size.x !== info.size.x || spare.size.y !== info.size.y)
+                spare.createWebGLTexture(); // the canvas was resized since, the spare is made again at its size
             [info.glTexture, spare.glTexture] = [spare.glTexture, info.glTexture];
             this.redrawStart(true);
             try { this.drawLayerTile(shift.scale(-1), info.size, new TileInfo().setFullImage(spare)); }
@@ -1208,6 +1244,7 @@ class TileLayer extends CanvasLayer
     {
         // the camera, canvas and target are the game's again even when a tile draw or onRedraw throws
         this.redrawStart(true);
+        this.dirtyCells.clear(); // all drawn below, a cell onRedraw changes waits for the next render
         try
         {
             for (let x = this.size.x; x--;)
@@ -1218,7 +1255,6 @@ class TileLayer extends CanvasLayer
         }
         finally { this.redrawEnd(); }
         this.tilesInWebGL = this.isUsingWebGL;
-        this.dirtyCells.clear();
     }
 
     // draw what is waiting before anything goes on top: the whole layer if nothing has drawn into it yet, or the
@@ -1226,7 +1262,12 @@ class TileLayer extends CanvasLayer
     drawPending()
     {
         if (!this.context || drawContext === this.context) return; // inside this layer's own redraw it waits
-        if (!this.drawn) return this.redraw();
+        if (!this.drawn)
+        {
+            // marked first, so a redraw of a game's own that calls redrawStart does not come back here
+            this.drawn = true;
+            return this.redraw();
+        }
         if (!this.dirtyCells.size) return;
 
         // taken first, so the redrawStart below finds nothing waiting and a tile that throws is not tried again
@@ -1250,6 +1291,17 @@ class TileLayer extends CanvasLayer
 
     // a tile layer is placed by its bottom left corner
     getLayerCorner() { return this.pos; }
+
+    // and drawn at drawSize when it is set, stretched from its size
+    getLayerDrawSize() { return this.drawSize || this.size; }
+
+    /** Create WebGL texture if necessary and copy layer canvas to it, which counts as drawn, so a picture the game
+     *  drew onto the canvas is not drawn over with the tiles on the first render */
+    updateWebGL()
+    {
+        this.drawn = true;
+        super.updateWebGL();
+    }
 
     /** Call to start the redraw process, after what is waiting is drawn
      *  - This can be used to manually update parts of the level

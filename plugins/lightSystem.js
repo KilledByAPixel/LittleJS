@@ -168,6 +168,7 @@ class LightSystemPlugin
          *  sprite's normals a little */
         this.normalMaps = false;
         this.normalMapsWarned = false; // a debug build has said a normalMap does nothing with normalMaps off
+        this.normalMapsChecks = 0;     // renders with normalMaps off, a debug build looks for one every 60
         /** @property {boolean} - True while the normal pass runs, read only, so a render() can skip parts */
         this.normalPass = false;
         /** @property {WebGLTexture|undefined} - The normal buffer, the lightmap's size, each pixel's normal facing the
@@ -509,7 +510,7 @@ class LightSystemPlugin
                     if (!ls.backgroundMap)
                     {
                         ls.backgroundMap = createTexture(size);
-                        glActiveTexture && glContext.bindTexture(glContext.TEXTURE_2D, glActiveTexture);
+                        glContext.bindTexture(glContext.TEXTURE_2D, glActiveTexture);
                     }
                     drawMap(ls.backgroundMap, (o)=> o.castBackgroundShadow);
                 }
@@ -532,7 +533,7 @@ class LightSystemPlugin
             ls.directionalTextureA = createTexture(size);
             ls.directionalTextureB = createTexture(size);
             ls.directionalTextureSizeAllocated = size;
-            glActiveTexture && gl.bindTexture(gl.TEXTURE_2D, glActiveTexture);
+            gl.bindTexture(gl.TEXTURE_2D, glActiveTexture);
         }
         function freeDirectionalTextures()
         {
@@ -734,7 +735,7 @@ class LightSystemPlugin
             // hand the engine its state back: unit 0 active with its texture, no framebuffer
             bind(1, null); bind(2, null); bind(3, null);
             gl.activeTexture(gl.TEXTURE0);
-            glActiveTexture && gl.bindTexture(gl.TEXTURE_2D, glActiveTexture);
+            gl.bindTexture(gl.TEXTURE_2D, glActiveTexture);
             gl.bindFramebuffer(gl.FRAMEBUFFER, null);
             gl.enable(gl.BLEND);
         }
@@ -754,7 +755,8 @@ class LightSystemPlugin
                 gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
                 gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
                 gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-                glActiveTexture && gl.bindTexture(gl.TEXTURE_2D, glActiveTexture);
+                // unbound when there is no active texture, or a draw with none reads what it draws into
+                gl.bindTexture(gl.TEXTURE_2D, glActiveTexture);
                 ls.normalTextureSize = size.copy();
             }
 
@@ -781,7 +783,7 @@ class LightSystemPlugin
                     glColorMask = 0xff000000;                // only the draw's own alpha
                     glColorAdditive = 0xff8080;              // the flat normal, red in the low byte, for what has no texture
                     glTextureOverride = texture;
-                    setShader(texture ? ls.normalShader : undefined);
+                    setShader(texture ? ls.normalShader : o.shader); // its own Shader as in the shadow pass, so its holes show what is behind
                     glAdditive && setAdditiveBlendMode(false);
                     o.renderNormal();
                 }
@@ -802,7 +804,7 @@ class LightSystemPlugin
                 setAdditiveBlendMode(saved[2]);
                 gl.bindFramebuffer(gl.FRAMEBUFFER, null);
                 gl.viewport(0, 0, glCanvas.width, glCanvas.height);
-                glActiveTexture && gl.bindTexture(gl.TEXTURE_2D, glActiveTexture);
+                gl.bindTexture(gl.TEXTURE_2D, glActiveTexture);
             }
         }
         function lightSystemRender()
@@ -866,8 +868,10 @@ class LightSystemPlugin
                     glContext.deleteTexture(lightSystem.normalTexture);
                     lightSystem.normalTexture = undefined;
                 }
-                // a normal map that does nothing says why, once, in a debug build
-                if (debug && !lightSystem.normalMapsWarned && engineObjects.some((o)=> o.normalMap && !o.destroyed))
+                // a normal map that does nothing says why, once, in a debug build, looked for once a second, not
+                // every frame; a 3D object's normalMap is its material's, which this does not draw
+                if (debug && !lightSystem.normalMapsWarned && !(lightSystem.normalMapsChecks++ % 60) &&
+                    engineObjects.some((o)=> o.normalMap && !('pos3D' in o) && !o.destroyed))
                 {
                     console.warn('LightSystemPlugin: an object has a normalMap, turn on lightSystem.normalMaps to see it');
                     lightSystem.normalMapsWarned = true;
@@ -977,7 +981,7 @@ class LightSystemPlugin
                 try { glFlush(); } catch (e) {}
                 glContext.bindFramebuffer(glContext.FRAMEBUFFER, null);
                 glContext.viewport(0, 0, glCanvas.width, glCanvas.height);
-                glActiveTexture && glContext.bindTexture(glContext.TEXTURE_2D, glActiveTexture);
+                glContext.bindTexture(glContext.TEXTURE_2D, glActiveTexture);
                 glSetInstancedMode(true);
                 setAdditiveBlendMode(prevAdditive);
                 throw error;

@@ -349,6 +349,7 @@ export
     glCreateTexture,
     glDeleteTexture,
     glSetTextureData,
+    glSetTextureSubData,
     glFlush,
     glCopyToContext,
     glSetAntialias,

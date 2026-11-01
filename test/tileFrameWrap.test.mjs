@@ -30,6 +30,12 @@ test('padded tiles wrap on the padded grid', () =>
     assert.deepEqual(at(tile(8, 8, padded, 1).frame(2)), at(tile(10, 8, padded, 1)));
 });
 
+test('a frame wraps where tile() wraps, on a sheet whose last right padding was trimmed', () =>
+{
+    const trimmed = new TextureInfo({width: 99, height: 90}, false); // 9 padded columns, the 10th one pixel short
+    assert.deepEqual(at(tile(8, 8, trimmed, 1).frame(1)), at(tile(9, 8, trimmed, 1)));
+});
+
 test('an animation crosses a row', () =>
 {
     const run = new SpriteAnimation(tile(8, 8, sheet), 6, .1);

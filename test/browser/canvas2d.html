@@ -16,7 +16,7 @@ smokeRun(async ()=>
     setCanvasFixedSize(vec2(64));
     setCanvasClearColor(rgb(0, 0, 1));
     setGLEnable(false);
-    let halfClear;
+    let halfClear, patched;
 
     // the color at a place on the main canvas, y up, as smokePixel reads the WebGL one
     const pixel = (x, y)=>
@@ -29,11 +29,18 @@ smokeRun(async ()=>
         // a tinted tile, white made red, and after it a tinted texture of the same size with its left half clear
         drawTile(vec2(0, 8), vec2(8), tile(2, 16), rgb(1, 0, 0));
         drawTile(vec2(0, -8), vec2(8), halfClear, rgb(0, 1, 0));
+        drawTile(vec2(-24, -4), vec2(8), patched); // white with its left half put in green by updateData
     }, ()=> {}, [smokeSheet('#f00', '#0f0', '#fff')]);
     const canvas = new OffscreenCanvas(16, 16), context = canvas.getContext('2d');
     context.fillStyle = '#fff';
     context.fillRect(8, 0, 8, 16);
     halfClear = new TileInfo(vec2(), vec2(16), new TextureInfo(canvas));
+    const white = new OffscreenCanvas(8, 8), whiteContext = white.getContext('2d');
+    whiteContext.fillStyle = '#fff';
+    whiteContext.fillRect(0, 0, 8, 8);
+    const patchedTexture = new TextureInfo(white);
+    patchedTexture.updateData(new Uint8Array(4 * 8 * 4).map((_, i)=> i % 4 == 0 || i % 4 == 2 ? 0 : 255), 0, 0, 4, 8);
+    patched = new TileInfo(vec2(), vec2(8), patchedTexture);
     check('WebGL is off', !glEnable);
     engineStep(2);
     const near = (name, p, color)=> check(name, smokeNear(p, color), p);
@@ -43,6 +50,7 @@ smokeRun(async ()=>
     near('a tinted tile draws in its tint', pixel(0, 8), [255, 0, 0, 255]);
     near('a tinted texture draws where it has texels', pixel(2, -8), [0, 255, 0, 255]);
     near('and leaves what is behind where it has none, nothing of the tile tinted before it', pixel(-2, -8), [0, 0, 255, 255]);
+    near('updateData writes into the canvas', pixel(-26, -4), [0, 255, 0, 255]);
     // somewhere on the X there is yellow: any pixel of the square it is drawn in, since where its strokes are
     // goes by the machine's font, and one place read on a thin stroke is half the background's
     const size = 24, x0 = (.5 + 16 / 64) * mainCanvas.width - size / 2 | 0;

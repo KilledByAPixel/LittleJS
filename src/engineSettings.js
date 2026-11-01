@@ -342,7 +342,8 @@ let touchPinchWheel = true;
 
 /** Bends each mouse and touch position as it comes in, for a game that bends the picture after it is drawn, like a
  *  curved screen, so the mouse points at what is drawn under it: given a screen position, it returns the screen
- *  position of what shows there; undefined leaves positions as they are
+ *  position of what shows there; undefined leaves positions as they are; not applied while a level editor is open,
+ *  which draws flat over the picture
  *  @type {MouseScreenTransform|undefined}
  *  @memberof Settings */
 let mouseScreenTransform;
@@ -689,6 +690,12 @@ function setGLEnable(enable)
         console.warn('Can not enable WebGL if it was disabled on start.');
         return;
     }
+    if (glContext?.isContextLost())
+    {
+        // it has no textures till the context comes back, which turns WebGL on or off as asked here
+        glEnableBeforeLoss = enable;
+        return;
+    }
     glEnable = enable;
     if (glCanvas) // hide glCanvas if WebGL is disabled
         glCanvas.style.display = enable ? '' : 'none';
@@ -818,6 +825,8 @@ function setTouchGamepadEnable(enable) { touchGamepadEnable = enable; }
 function setTouchPinchWheel(enable) { touchPinchWheel = enable; }
 
 /** Set how mouse and touch positions are bent as they come in, to match a picture bent after it is drawn
+ *  - Only what is drawn into the bent picture lines up with the mouse; what is drawn flat over it, the debug overlay
+ *    among them, does not, and the level editors, which draw flat too, get the mouse unbent
  *  @param {MouseScreenTransform} [transform] - Undefined leaves positions as they are
  *  @example
  *  setMouseScreenTransform(postProcessCurveMouse(.1)); // the mouse follows postProcessCurve(.1)

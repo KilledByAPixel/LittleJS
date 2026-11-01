@@ -67,6 +67,10 @@ particleEffectsAdd(sparks);
 const sparkRate: number | undefined = particleEffectsGet('sparks')?.settings.emitRate;
 // @ts-expect-error
 particleEffectsAdd({name: 'bad', settings: {emitRate: 'lots'}});
+// a library read from JSON has its strings widened, a shape among them, and may leave settings out
+const shapeFromJSON: string = 'spark';
+particleEffectsAdd({name: 'fromJSON', settings: {shape: shapeFromJSON}});
+particleEffectsAdd({name: 'defaults'});
 
 // a 3D level is typed down to its objects and blocks
 import { level3DLoad, Level3D } from 'littlejsengine';
@@ -75,6 +79,17 @@ const level3D: Level3D = {littlejs3D: 1, objects: [{type: 'Box', pos: [0, 1, 0],
 level3DLoad(level3D);
 // @ts-expect-error
 level3DLoad({objects: [{pos: [0, 1, 0]}]});
+// a level or a map read from JSON has arrays of numbers and strings where the format has three of them, and loads
+const levelJSON = {objects: [{type: 'Box', pos: [0, 1, 0] as number[]}], scene: {fog: [10, 50] as number[]}};
+level3DLoad(levelJSON);
+level3DLoad({});
+// a prefab is a level as the editor saves it, its objects left out an empty one
+import { level3DAddPrefab } from 'littlejsengine';
+level3DAddPrefab('crate', level3D);
+level3DAddPrefab('empty', {attached: true});
+import { tileLayersLoad } from 'littlejsengine';
+const mapJSON = {width: 2, height: 1, layers: [{type: 'tilelayer' as string, width: 2, height: 1, data: [1, 0]}]};
+tileLayersLoad(mapJSON);
 export { sparkRate };
 
 // a level editor of the game's own: a class with the hooks as methods, and keys, buttons and tools added to it

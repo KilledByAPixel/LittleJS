@@ -50,6 +50,14 @@ smokeRun(async ()=>
         // a define of the engine's vertex color C, which must not reach its own code
         shaded.shader = new Shader('#define C vec4(0)\nvoid mainImage(out vec4 c, vec2 uv) { c = vec4(1., 0., 1., 1.); }');
 
+        // a green box in front of the red one whose Shader puts its depth 6 units behind where it is, so the red
+        // box hides it
+        const behind = new EngineObject3D(vec3(.6, -.6, 3), buildBox(), undefined, rgb(0, 1, 0));
+        behind.scale3D = vec3(.5);
+        behind.emissive = 1;
+        behind.shader = new Shader('void mainImage(out vec4 c, vec2 uv) { c = texture(iChannel0, uv);' +
+            'vec4 p = viewProjection * vec4(worldPos - vec3(0, 0, 6), 1.); gl_FragDepth = p.z / p.w * .5 + .5; }');
+
         // two lit white boxes whose front faces turn mostly away from the sun, the right one's Shader bending its
         // normal to face the sun, which lights it fully
         const white = 'void mainImage(out vec4 c, vec2 uv) { c = vec4(1); }';
@@ -93,6 +101,9 @@ smokeRun(async ()=>
     check('the sun lights the ground and casts the shadow of a box on it', lit > 150 && shadowed < lit - 40,
         [shadowed, lit]);
     pixel('an object draws with its own Shader', at(0, 3.2), (p)=> smokeNear(p, [255, 0, 255, 255]));
+    // the green box at z 3 shows at 10 / 7 of its place
+    pixel("a Shader sets its depth through viewProjection", at(.6 * 10 / 7, -.6 * 10 / 7),
+        (p)=> smokeNear(p, [255, 0, 0, 255]));
     const plainLight = smokePixel(...at(-5, 1.2))[0], bentLight = smokePixel(...at(5, 1.2))[0];
     check("a Shader's mainNormal bends the normal the lighting uses", bentLight > plainLight + 40,
         [plainLight, bentLight]);

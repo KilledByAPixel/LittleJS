@@ -35,6 +35,10 @@ const particleEffectSettings = [];
  *  @property {Array<ParticleEffectBehavior>} [behaviors] - Pushes on every particle every update
  *  @memberof ParticleEffects */
 
+/** An effect as particleEffectsAdd takes it, its settings left out for every default
+ *  @typedef {Omit<ParticleEffect, 'settings'> & {settings?: ParticleEffectSettings}} ParticleEffectInput
+ *  @memberof ParticleEffects */
+
 /** A behavior an effect uses, by name, with how strong it is
  *  @typedef {Object} ParticleEffectBehavior
  *  @property {string} name - One of particleEffectBehaviors, or one added with particleEffectsAddBehavior
@@ -75,8 +79,9 @@ const particleEffectSettings = [];
  *  @property {boolean} [collideLevel] - Hit tiles
  *  @property {number} [restitution] - Bounce when hitting tiles
  *  @property {number} [friction] - Speed kept sliding along tiles
- *  @property {''|'dot'|'soft'|'glow'|'smoke'|'spark'|'square'|'triangle'|'ring'|'star'|'plus'} [shape] - Built-in
- *            shape, '' uses the tile
+ *  @property {string} [shape] - Built-in shape: dot, soft, glow, smoke, spark, square, triangle, ring, star or
+ *            plus, '' uses the tile; any string, so a library read from JSON passes, a name it does not know drawing the
+ *            default
  *  @property {number} [tileIndex] - Tile in texture 0 when no shape, -1 is untextured
  *  @property {number} [tileSize] - Tile size in texture pixels
  *  @property {number} [tilePadding] - Pixels of padding around each tile
@@ -86,9 +91,11 @@ const particleEffectSettings = [];
  *  the whole effect, the built-ins fitting a one unit object at 1; hue, which turns its colors around the color wheel,
  *  1 all the way; saturation, which multiplies it, 0 gray; angle, its direction, 0 up; tileInfo, the game's own art in
  *  place of the shape, tinted by its colors, a TextureInfo drawn whole; and in 3D flatten, a flat spawn area across
- *  the way it emits; emitSize may be a vec2, a rectangle
- *  @typedef {Omit<ParticleEffectSettings, 'emitSize'> & {scale?: number, hue?: number, saturation?: number, angle?: number,
- *  tileInfo?: TileInfo|TextureInfo, flatten?: boolean, emitSize?: number|Vector2}} ParticleEffectOptions
+ *  the way it emits; emitSize may be a vec2, a rectangle; shape is one of the built-in names, so a misspelled one is
+ *  caught, where an effect's settings, read from JSON, take any string
+ *  @typedef {Omit<ParticleEffectSettings, 'emitSize'|'shape'> & {scale?: number, hue?: number, saturation?: number,
+ *  angle?: number, tileInfo?: TileInfo|TextureInfo, flatten?: boolean, emitSize?: number|Vector2,
+ *  shape?: ''|'dot'|'soft'|'glow'|'smoke'|'spark'|'square'|'triangle'|'ring'|'star'|'plus'}} ParticleEffectOptions
  *  @memberof ParticleEffects */
 let particleEffectSettingGroup; // the group settings are being added to
 
@@ -302,8 +309,9 @@ function particleEffectRecolor(effect, hue=0, saturation=1)
 // the effects by lower case name, the built-ins and any a game adds or loads
 const particleEffectsByName = new Map;
 
-/** Add effects to play by name, sanitized; one with the name of an effect already there replaces it
- *  @param {Array<ParticleEffect>|ParticleEffect} effects
+/** Add effects to play by name, sanitized; one with the name of an effect already there replaces it, and one with no
+ *  settings takes every default
+ *  @param {Array<ParticleEffectInput>|ParticleEffectInput} effects
  *  @memberof ParticleEffects */
 function particleEffectsAdd(effects)
 {

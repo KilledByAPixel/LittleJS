@@ -565,7 +565,7 @@ function randomWeighted(items, weights, value)
     ASSERT(isArray(items) || items instanceof Set, 'pick from an array or a Set', items);
     const list = isArray(items) ? items : [...items];
     ASSERT(isArray(weights) && weights.length === list.length, 'one weight for each item', weights);
-    ASSERT(weights.every((w)=> isNumber(w) && w >= 0), 'weights are numbers, 0 or more', weights);
+    ASSERT(weights.every((w)=> isNumber(w) && w >= 0 && w < Infinity), 'weights are finite numbers, 0 or more', weights);
     let total = 0;
     for (const w of weights) total += w;
     if (!(total > 0)) return;

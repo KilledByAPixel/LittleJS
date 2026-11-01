@@ -517,10 +517,15 @@ function postProcessCurve(strength=.1)
 /**
  * The mouse bent as postProcessCurve bends the picture, for setMouseScreenTransform, so it points at what is drawn
  * under it at any screen size
+ * - Only what is drawn into the curved picture lines up: the WebGL canvas, and the main canvas with
+ *   includeMainCanvas on, which takes what is drawn on it by the time the post process runs; a UI on the main
+ *   canvas, like UISystemPlugin's, needs includeMainCanvas and its plugin made before the PostProcessPlugin, since
+ *   plugins render in the order they were made
  * @param {number} [strength] - The same strength given postProcessCurve
  * @return {MouseScreenTransform}
  * @example
- * new PostProcessPlugin(postProcessEffects(postProcessCurve(.1)));
+ * new UISystemPlugin; // first, so its UI is drawn by the time the main canvas is curved
+ * new PostProcessPlugin(postProcessEffects(postProcessCurve(.1)), true);
  * setMouseScreenTransform(postProcessCurveMouse(.1));
  * @memberof PostProcess
  */

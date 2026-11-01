@@ -1745,8 +1745,9 @@ const RENDER3D_VERTEX_SOURCE =
 
 // the names a Shader's snippet can use in 3D, over the plugin's own uniforms and varyings
 const RENDER3D_SNIPPET_NAMES =
-    'uniform float iTime;uniform vec3 iResolution;\n' +
+    'uniform float iTime;uniform vec3 iResolution;uniform mat4 viewProj;\n' + // viewProj the vertex stage's, shared
     '#define iChannel0 tex\n' +
+    '#define viewProjection viewProj\n' +
     '#define localUV L\n' +
     '#define worldPos P\n' +
     '#define worldNormal N\n' +

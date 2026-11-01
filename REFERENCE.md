@@ -375,6 +375,8 @@ hero.tileInfo           // the frame to draw now; also hero.frame, hero.isDone, 
 TextureInfo(image, useWebGL=true, wrap=false, pixelated) // Created automatically for each image; pixelated makes
                         // this texture hard edged or smooth on its own, undefined follows tilesPixelated
 TextureInfo.setPixelated(pixelated) // Hard edged or smooth for this texture alone, a soft glow in a pixel art game
+TextureInfo.updateData(pixels, x=0, y=0, width, height) // Put RGBA bytes or an image into part of the texture,
+                        // uploading only that rectangle; x and y from the top left, as a tile's pos is
 TextureInfo.image       // Image source
 TextureInfo.size        // Size of the image
 TextureInfo.glTexture   // WebGL texture
@@ -774,7 +776,7 @@ CanvasLayer.onContextRestored() // Called when a lost WebGL context comes back, 
 
 // LittleJS Layer System
 TileLayer(pos, size, tileInfo, renderOrder=0, useWebGL=true) // Create a tile layer object
-TileLayer.setData(layerPos, data, redraw)      // Set data at position, drawn on the next render; redraw true draws now, false never
+TileLayer.setData(layerPos, data, redraw)      // Set data at position, drawn on the next render; redraw true draws now, false leaves it as drawn until a redraw()
 TileLayer.clearData(layerPos, redraw)          // Clear data at position, drawn as setData draws
 TileLayer.getData(layerPos)                    // Get data at position
 TileLayer.debugShow = true                     // Shown by the debug overlay's 2: Debug Tiles, off to leave a layer out
@@ -901,7 +903,9 @@ particleEffectsBuiltIn                  // the built-in names: fire, torch, smok
 'confetti'   // hue 0 and .6, mixed, one-shot
 'splash'     // hue .58, one-shot
 // an effect is plain data, typed ParticleEffect: {name, settings, behaviors}, settings a ParticleEffectSettings,
-// each optional, and a play's options a ParticleEffectOptions, the settings with scale, hue and the rest
+// each optional, and a play's options a ParticleEffectOptions, the settings with scale, hue and the rest;
+// particleEffectsAdd takes a ParticleEffectInput, its settings optional, and an effect's shape is any string,
+// where a play's options take only the built-in names
 particleEffectApply(emitter, effect)    // set a live 2D emitter to an effect
 particleEffectApply3D(emitter, effect)  // the same for a ParticleEmitter3D, its particles, place and scale kept
 particleEffectFromEmitter(emitter, name='Effect') // a 2D emitter's settings as an effect, to save or build in 3D
@@ -1567,7 +1571,9 @@ render3D.shader = undefined           // a Shader for the next draws, set from e
                                       // worldPos, worldNormal, cameraPos, sunDirection (toward the sun), sunColor,
                                       // ambientColor, ambientGroundColor, lightCount, lights[i] (xyz position, or
                                       // direction toward a directional one, w radius, negative when directional),
-                                      // lightColors[i] (rgb, a strength) and shadow(), the sun shadow 0 to 1 here
+                                      // lightColors[i] (rgb, a strength) and shadow(), the sun shadow 0 to 1 here;
+                                      // viewProjection, world to screen, for a snippet that sets gl_FragDepth,
+                                      // which shadows and sceneDepth do not see
 render3D.cullBackFaces render3D.mirrored // set from each mesh as it draws: its doubleSided, and whether its
                                // transform mirrors it; strips leave both off
 render3D.depthTest = true; render3D.depthWrite = true // the transparent stage turns depth writes off, so see-through

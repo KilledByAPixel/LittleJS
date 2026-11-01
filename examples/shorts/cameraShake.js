@@ -61,6 +61,6 @@ something is not thrown off by it. It works the same with a
   `keyIsDown` and `.3` to `.05`.
 
 ## See also
-Top Down follows a player with a `FollowCamera`, and Camera Mouse Drag
-moves the camera by hand. 3D Third Person has a camera in 3D.
+Top Down Game follows a player with a `FollowCamera`, and Camera Mouse
+Drag moves the camera by hand. 3D Third Person has a camera in 3D.
 */

@@ -53,7 +53,7 @@
  *    type of its pos, as EditorToolAt has it
  *  @property {string} [key] - The key that picks it, as addKey spells one
  *  @property {string} [hint] - The hint line while it is on
- *  @property {function(EditorToolAt<P>): boolean|void} [onPress] - The left button went down in the level; returning
+ *  @property {function(EditorToolAt<P>): unknown} [onPress] - The left button went down in the level; returning
  *    false says the press was not the tool's
  *  @property {function(EditorToolAt<P>): void} [onDrag] - Each frame it is held
  *  @property {function(EditorToolAt<P>): void} [onRelease] - It was let go
@@ -84,7 +84,7 @@
 /** A 3D level as it is saved, what level3DLoad takes and the 3D level editor edits
  *  @typedef {Object} Level3D
  *  @property {number} [littlejs3D] - The format's version, 1
- *  @property {Array<Level3DObject>} objects - What it places
+ *  @property {Array<Level3DObject>} [objects] - What it places, none when left out
  *  @property {Level3DScene} [scene] - The sky, sun, fog and the rest it sets
  *  @property {Level3DVoxels} [voxels] - A block map
  *  @property {Level3DTerrain} [terrain] - A height map
@@ -95,20 +95,20 @@
  *  @typedef {Object} Level3DObject
  *  @property {string} type - The name its type was added with
  *  @property {number} [id] - Its id in the level, the editor gives each one
- *  @property {[number, number, number]} [pos] - Where it is, 0, 0, 0 when left out
- *  @property {[number, number, number]} [rotation] - Pitch, yaw and roll in degrees
- *  @property {[number, number, number]} [scale] - Times the scale its type makes it with
+ *  @property {Array<number>} [pos] - Where it is, 0, 0, 0 when left out
+ *  @property {Array<number>} [rotation] - Pitch, yaw and roll in degrees
+ *  @property {Array<number>} [scale] - Times the scale its type makes it with
  *  @property {Object<string, any>} [properties] - What differs from its type's defaults; a Color is a hex string and a
  *    vector an array
  *  @memberof Level3D */
 
 /** A 3D level's scene block, what it sets of the renderer; a setting left out stays as the game set it
  *  @typedef {Object} Level3DScene
- *  @property {[string, string, string]} [sky] - Hex colors straight up, at the horizon and straight down
+ *  @property {Array<string>} [sky] - Hex colors straight up, at the horizon and straight down
  *  @property {number} [ambient] - How much the sky lights the scene, .5 when not given
- *  @property {[number, number, number]} [sunDirection] - Pointing toward the sun
+ *  @property {Array<number>} [sunDirection] - Pointing toward the sun
  *  @property {string} [sunColor] - A hex color
- *  @property {[number, number]} [fog] - Where it starts and ends
+ *  @property {Array<number>} [fog] - Where it starts and ends
  *  @property {string} [fogColor] - A hex color, the sky's horizon when not given
  *  @property {boolean} [shadows]
  *  @property {boolean} [lensFlare] - The sun's lens flare
@@ -118,15 +118,15 @@
 
 /** A 3D level's block map, made a VoxelMap
  *  @typedef {Object} Level3DVoxels
- *  @property {[number, number, number]} [pos] - Its corner
- *  @property {[number, number, number]} size - Its cells along x, y and z
+ *  @property {Array<number>} [pos] - Its corner
+ *  @property {Array<number>} size - Its cells along x, y and z
  *  @property {Array<number>} [blocks] - Runs of a count and a type, along x, then y, then z
  *  @memberof Level3D */
 
 /** A 3D level's terrain, made a HeightMap
  *  @typedef {Object} Level3DTerrain
- *  @property {[number, number, number]} [pos] - Its center
- *  @property {[number, number]} size - Its size in the world along x and z
+ *  @property {Array<number>} [pos] - Its center
+ *  @property {Array<number>} size - Its size in the world along x and z
  *  @property {number} [height] - How tall a full height is, 1 when not given
  *  @property {string} [color] - A hex color
  *  @property {Array<Array<number>>} heights - Rows of 0 to 1 from -z to +z, each from -x to +x
@@ -136,7 +136,7 @@
 
 /** A prefab, a small level placed many times, see level3DAddPrefab
  *  @typedef {Object} Level3DPrefab
- *  @property {Array<Level3DObject>} objects - About its own origin
+ *  @property {Array<Level3DObject>} [objects] - About its own origin
  *  @property {boolean} [attached] - Its parts are children of the instance, moving with it as one body
  *  @memberof Level3D */
 
@@ -207,7 +207,7 @@ class LevelEditor
          *  @type {string|undefined} */
         this.tool = undefined;
         // what the game added: its keys by how they are spelled, its panel buttons and its tools by name
-        /** @type {Object<string, {action: function(boolean): boolean|void, help: string|undefined, warned: boolean}>} */
+        /** @type {Object<string, {action: function(boolean): unknown, help: string|undefined, warned: boolean}>} */
         this.keys = {};
         /** @type {Array<{label: string, onClick: Function, title: string}>} */
         this.buttons = [];
@@ -282,7 +282,7 @@ class LevelEditor
      *    the action
      *  @param {string} key - A letter or digit, 'k', or a key's name in any case, 'Delete', 'F2', 'Enter', 'Space';
      *    'ctrl+k' with Ctrl or Cmd
-     *  @param {function(boolean): boolean|void} action - Called with whether Shift is held; returning false says it did
+     *  @param {function(boolean): unknown} action - Called with whether Shift is held; returning false says it did
      *    nothing, and the key is left to the browser
      *  @param {string} [helpLine] - A line for the editor's help */
     addKey(key, action, helpLine)

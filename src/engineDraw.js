@@ -204,7 +204,8 @@ class TileInfo
     { return new TileInfo(this.pos.add(offset), this.size, this.textureInfo, this.padding, this.bleed, this.columns); }
 
     /** Returns a copy of this tile offset by a number of animation frames
-    *  - Frames step along the row and carry on at the start of the next row of the texture, counted as tile() counts
+    *  - Frames step along the row and carry on at the start of the next row of the texture, counted as tile() counts,
+    *    for a tile on the texture's grid as tile() makes them
     *  - With columns set they wrap down by that many frames from this one instead
     *  @param {number} frame - Offset to apply in animation frames
     *  @return {TileInfo}
@@ -216,11 +217,13 @@ class TileInfo
         const h = this.size.y + this.padding*2;
         let x = (this.columns ? frame % this.columns : frame) * w;
         let y = (this.columns ? frame / this.columns | 0 : 0) * h;
-        const across = this.textureInfo?.size.x / w | 0; // tiles across the texture
-        if (!this.columns && across && this.pos.x + x + this.size.x > this.textureInfo.size.x)
+        const across = this.textureInfo?.size.x / w | 0; // tiles across the texture, as tile() counts them
+        const onGrid = (this.pos.x - this.padding) % w === 0; // where tile() puts one, not a packed sheet's
+        const column = this.pos.x / w | 0, count = column + frame;
+        if (!this.columns && onGrid && column < across && count >= across)
         {
-            // past the edge: on along the texture's grid, rows down, as tile() counts its index
-            const column = this.pos.x / w | 0, count = column + frame;
+            // past the last column tile() counts: on along the texture's grid, rows down, as tile() counts its index,
+            // even where a last column whose right padding was trimmed would still fit
             x = (count % across - column) * w;
             y = (count / across | 0) * h;
         }
@@ -310,6 +313,54 @@ class TextureInfo
             this.sizeInverse = vec2(1/image.width, 1/image.height);
         }
         glRegisterTextureInfo(this);
+    }
+
+    /** Put new pixels into part of the texture without uploading all of it, for a texture that changes as the game
+     *  runs, like an atlas decoded every frame where only a few tiles changed; what was batched with the old pixels
+     *  is drawn first
+     *  - x and y are image pixels from the top left, as a tile's pos is, and the rectangle must be inside the image
+     *  - With WebGL only the texture changes, so a lost context brings back the image as it was: keep the image up to
+     *    date too, or put the pixels in again from a plugin's glContextRestored
+     *  - Without WebGL the image is what is drawn, so it must be a canvas, and the pixels are written into it
+     *  - Call it outside the 3D pass, which may still hold draws that read the old pixels
+     *  @param {Uint8Array|Uint8ClampedArray|ImageData|HTMLImageElement|HTMLCanvasElement|OffscreenCanvas|ImageBitmap} pixels -
+     *    RGBA bytes, width * height * 4 of them, or an image put in at its own size
+     *  @param {number} [x]
+     *  @param {number} [y]
+     *  @param {number} [width] - Width of a byte array's rectangle, the whole image by default
+     *  @param {number} [height] - Height of a byte array's rectangle, the whole image by default */
+    updateData(pixels, x=0, y=0, width=this.size.x, height=this.size.y)
+    {
+        const isBytes = pixels instanceof Uint8Array || pixels instanceof Uint8ClampedArray;
+        if (!isBytes) // an image goes in at its own size, not the size it is laid out at
+        {
+            const image = /** @type {HTMLImageElement} */ (pixels); // naturalWidth is an img's own, undefined on the rest
+            width = image.naturalWidth || pixels.width, height = image.naturalHeight || pixels.height;
+        }
+        ASSERT(isBytes || !ArrayBuffer.isView(pixels) && width > 0 && height > 0,
+            'updateData needs RGBA bytes, a Uint8Array or Uint8ClampedArray, or an image');
+        ASSERT(!isBytes || pixels.length >= width * height * 4, 'updateData needs width * height * 4 bytes');
+        ASSERT(x >= 0 && y >= 0 && x + width <= this.size.x && y + height <= this.size.y,
+            'updateData rectangle must be inside the texture');
+        if (headlessMode) return;
+        if (glEnable && this.glTexture)
+            return glSetTextureSubData(this.glTexture, pixels, x, y, width, height);
+
+        // without WebGL the canvas itself is drawn
+        const image = this.image, context = image && 'getContext' in image ? image.getContext('2d') : undefined;
+        ASSERT(!!context, 'updateData without WebGL needs a canvas image');
+        if (!context) return;
+        if (isBytes || pixels instanceof ImageData)
+        {
+            const data = isBytes ? new ImageData(new Uint8ClampedArray(pixels.buffer, pixels.byteOffset,
+                width * height * 4), width, height) : pixels;
+            context.putImageData(data, x, y);
+        }
+        else
+        {
+            context.clearRect(x, y, width, height); // replaced, not drawn over
+            context.drawImage(pixels, x, y);
+        }
     }
 
     /** Destroys the WebGL texture */
@@ -556,7 +607,10 @@ class SpriteAnimator
  * - Names in both renderers: iChannel0 the texture, iTime, iResolution, premultipliedTexture, and localUV, 0 to 1
  *   across the sprite or the mesh's own uv
  * - Names in 3D only: worldPos, worldNormal, cameraPos, sunDirection, sunColor, ambientColor, ambientGroundColor,
- *   lightCount, lights[i], lightColors[i] and shadow()
+ *   lightCount, lights[i], lightColors[i] and shadow(), and viewProjection, the camera's matrix from the world to
+ *   the screen, for a snippet that sets its own depth: vec4 c = viewProjection * vec4(p, 1.); gl_FragDepth =
+ *   c.z / c.w * .5 + .5 puts it at world point p; only on the screen, the shadow map and sceneDepth draw the mesh
+ *   where it is
  * - In 3D the snippet may also define void mainNormal(inout vec3 n), given the normal facing the camera after the
  *   normal map, in world space, to bend it per pixel for waves or ripples; the lighting, specular, reflection and
  *   fog then all use it, as they use a normal map
@@ -1687,7 +1741,8 @@ let cameraShakeSavedPos, cameraShakeSavedAngle = 0, cameraShakeShakenPos, camera
  *  - It moves only what is drawn, in 2D and in 3D: cameraPos and cameraAngle are the game's own between frames
  *  - It holds while the game is paused or at a time scale of 0
  *  - A direction puts the shake more on one axis, vec2(0, 1) for a heavy landing; each axis fades on its own, so a
- *    shake on one does not change the other's, and the turn is the larger of the two
+ *    shake on one does not change the other's, and the turn adds the most each shake puts on one axis, so it is never
+ *    less than either
  *  @param {number} [amount] - How much to add, the shake is at most 1
  *  @param {Vector2} [direction] - How much of it goes to each axis, 0 to 1
  *  @example

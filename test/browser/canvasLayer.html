@@ -20,7 +20,7 @@ smokeRun(async ()=>
     setTilesPixelated(true);
     const pixel = (x, y)=> smokePixel(.5 + x / 8, .5 + y / 8);
     const red = rgb(1, 0, 0), green = rgb(0, 1, 0);
-    let canvas2d;
+    let canvas2d, reference;
     await engineInit(()=>
     {
         setCameraScale(16);
@@ -45,7 +45,7 @@ smokeRun(async ()=>
         // a tile layer, by its corner, draws in world space as before
         const tiles = new TileLayer(vec2(2, -4), vec2(2), tile(0, 16));
         tiles.drawRect(vec2(2.5, -3.5), vec2(.5), red);
-    }, ()=> {}, ()=> {}, ()=> {}, ()=> {}, [smokeSheet('#f00', '#0f0')]);
+    }, ()=> {}, ()=> {}, ()=> { reference?.(); }, ()=> {}, [smokeSheet('#f00', '#0f0')]);
 
     engineStep(2);
     const isRed = ([r, g, b])=> r > 200 && g < 50 && b < 50;
@@ -63,6 +63,25 @@ smokeRun(async ()=>
     check('a canvas layer draws in layer pixels inside redrawStart and redrawEnd',
         pixel(-.75, -3.25)[1] > 200 && isBlue(pixel(-1.25, -3.75)), [pixel(-.75, -3.25), pixel(-1.25, -3.75)]);
     where('a tile layer still draws a rect at its world place', [2.5, -3.5], [3.5, -2.5]);
+
+    // a turned bar, which a wrong turn or flip of the tile itself would show along the other diagonal: drawn into
+    // a turned layer and a mirrored one, it lies as the same bar drawn straight into the world does
+    engineObjectsDestroy();
+    const bar = (draw, at)=> draw(at, vec2(1.6, .3), red, PI/4);
+    const turned = new CanvasLayer(vec2(-2, -1), vec2(3), PI/2, 0, vec2(48));
+    bar((...a)=> turned.drawRect(...a), vec2(-2, -1));
+    const mirrored = new CanvasLayer(vec2(2, -1), vec2(3), 0, 0, vec2(48));
+    mirrored.mirror = true;
+    bar((...a)=> mirrored.drawRect(...a), vec2(2, -1));
+    reference = ()=> bar(drawRect, vec2(0, 2.5));
+    engineStep(2);
+    const lies = (x, y)=> [isRed(pixel(x + .3, y + .3)), isRed(pixel(x + .3, y - .3))];
+    const straight = lies(0, 2.5);
+    check('the bar drawn straight lies along one diagonal', straight[0] != straight[1], straight);
+    check('a turned canvas layer turns a turned draw with it', '' + lies(-2, -1) == '' + straight,
+        [lies(-2, -1), straight]);
+    check('a mirrored canvas layer keeps a turned draw as it shows', '' + lies(2, -1) == '' + straight,
+        [lies(2, -1), straight]);
     checkGLError();
 });
 </script>

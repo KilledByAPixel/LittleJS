@@ -515,8 +515,8 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
         // update time keeping
         let frameTimeDeltaMS = frameTimeMS - frameTimeLastMS;
         // skip delta on the very first frame so timeReal doesn't jump
-        // by ~page-load-time when RAF starts handing real timestamps
-        if (!frameTimeLastMS) frameTimeDeltaMS = 0;
+        // by ~page-load-time when RAF starts handing real timestamps; engineStep's first is a whole frame from 0
+        if (!frameTimeLastMS && !manualStepAtStart) frameTimeDeltaMS = 0;
         frameTimeLastMS = frameTimeMS;
         // the first frame's rate seeds the average, so it does not start out climbing from 0; a gap of over a
         // second, a hidden tab coming back, is not a frame
@@ -564,9 +564,10 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
             frameTimeBufferMS += frozen ? frameTimeDeltaUnscaledMS : frameTimeDeltaMS;
             frameTimeBufferMS = min(frameTimeBufferMS, 50 * (frozen ? 1 : max(1, combinedScale))); // clamp min framerate
 
-            // apply time delta smoothing, improves smoothness of framerate in some browsers
+            // apply time delta smoothing, improves smoothness of framerate in some browsers; engineStep's frames are
+            // exact and wait for no refresh, held back they would leave a step under a time scale a tick short
             let deltaSmooth = 0;
-            if (frameTimeBufferMS < 0 && frameTimeBufferMS > -9)
+            if (!engineManualStep && frameTimeBufferMS < 0 && frameTimeBufferMS > -9)
             {
                 // force at least one update each frame since it is waiting for refresh
                 deltaSmooth = frameTimeBufferMS;
@@ -899,6 +900,11 @@ function engineFrameFailed(error)
     const text = String(error);
     text === engineFrameErrorLast || console.error(error);
     engineFrameErrorLast = text;
+    // what the frame queued is let go of, and a layer redraw it left open is closed, the innermost first, so the next
+    // frame draws to the screen with its own camera
+    glBatchCount = 0;
+    for (let layer; layer = canvasLayerRedraws.pop();)
+        try { layer.redrawEnd(); } catch (e) {} // the frame's own error is the one that counts
     // the frame's input is cleared as its tick would have, or a key press that threw would be pressed again
     inputUpdatePost();
     engineScheduleFrame();

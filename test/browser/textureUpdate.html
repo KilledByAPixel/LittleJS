@@ -1,0 +1,77 @@
+<!DOCTYPE html><meta charset=utf-8>
+<title>LittleJS smoke: TextureInfo.updateData</title>
+<script src=../../dist/littlejs.js></script>
+<script src=smoke.js></script>
+<pre id=result>PENDING</pre>
+<script>
+'use strict';
+
+// updateData puts new pixels into part of a texture: a rectangle of bytes lands where its x and y say, a smooth
+// texture takes them premultiplied as it was uploaded, a draw batched before it keeps the old pixels, and a
+// mipmapped texture drawn small shows the new ones
+// the view is 64 units across, a unit a pixel, so a place (x, y) is at (.5 + x / 64, .5 + y / 64) of the canvas
+smokeRun(async ()=>
+{
+    setShowSplashScreen(false);
+    setDebugWatermark(false);
+    setEngineManualStep(true);
+    setCanvasFixedSize(vec2(64));
+    setCanvasClearColor(rgb(0, 0, 1));
+    const at = (x, y)=> [.5 + x / 64, .5 + y / 64];
+    const green = (size)=>
+    {
+        const canvas = new OffscreenCanvas(size, size), context = canvas.getContext('2d');
+        context.fillStyle = '#0f0';
+        context.fillRect(0, 0, size, size);
+        return canvas;
+    };
+    const bytes = (count, r, g, b, a)=>
+    {
+        const data = new Uint8Array(count * 4);
+        for (let i = 0; i < data.length; i += 4)
+            data.set([r, g, b, a], i);
+        return data;
+    };
+    let corner, smooth, batched, small;
+    await engineInit(()=>
+    {
+        setCameraScale(1);
+
+        // the top left 4 by 4 of a hard edged 8 by 8 green texture made red
+        corner = new TextureInfo(green(8), true, false, true);
+        corner.updateData(bytes(16, 255, 0, 0, 255), 0, 0, 4, 4);
+
+        // a smooth texture made half see through red
+        smooth = new TextureInfo(green(8), true, false, false);
+        smooth.updateData(bytes(64, 255, 0, 0, 128));
+
+        // drawn green, made red in the middle of the frame, drawn again
+        batched = new TextureInfo(green(8), true, false, true);
+
+        // a smooth 64 by 64 texture, with mipmaps, made red from a canvas
+        small = new TextureInfo(green(64), true, false, false);
+        const red = new OffscreenCanvas(64, 64), context = red.getContext('2d');
+        context.fillStyle = '#f00';
+        context.fillRect(0, 0, 64, 64);
+        small.updateData(red);
+    }, ()=> {}, ()=> {}, ()=>
+    {
+        const whole = (texture)=> new TileInfo(vec2(), texture.size, texture);
+        drawTile(vec2(-16, 16), vec2(16), whole(corner));
+        drawTile(vec2(16, 16), vec2(16), whole(smooth));
+        drawTile(vec2(-24, -16), vec2(8, 16), whole(batched));
+        batched.updateData(bytes(64, 255, 0, 0, 255));
+        drawTile(vec2(-8, -16), vec2(8, 16), whole(batched));
+        drawTile(vec2(16, -16), vec2(2), whole(small)); // 32 times smaller, read from a small mipmap
+    }, ()=> {});
+    check('WebGL is on', glEnable && !!glContext);
+    engineStep();
+    checkPixel('a rectangle of bytes lands at its x and y, from the top left', ...at(-20, 20), [255, 0, 0, 255]);
+    checkPixel('and leaves the rest of the texture as it was', ...at(-12, 12), [0, 255, 0, 255]);
+    checkPixel('a smooth texture takes the bytes premultiplied', ...at(16, 16), [128, 0, 128, 255]);
+    checkPixel('a draw batched before the update keeps the old pixels', ...at(-24, -16), [0, 255, 0, 255]);
+    checkPixel('and one after it has the new ones', ...at(-8, -16), [255, 0, 0, 255]);
+    checkPixel('a mipmapped texture drawn small shows the new pixels', ...at(16, -16), [255, 0, 0, 255]);
+    checkGLError();
+});
+</script>

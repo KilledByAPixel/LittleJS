@@ -800,7 +800,8 @@ function inputInit()
         const px = percent(mousePos.x, rect.left, rect.right);
         const py = percent(mousePos.y, rect.top, rect.bottom);
         const pos = vec2(px*mainCanvasSize.x, py*mainCanvasSize.y);
-        return mouseScreenTransform ? mouseScreenTransform(pos) : pos; // bent once, as it comes in
+        // bent once, as it comes in, but not while a level editor is open, which draws over the bent picture flat
+        return mouseScreenTransform && !levelEditor.isOpen ? mouseScreenTransform(pos) : pos;
     }
 }
 
