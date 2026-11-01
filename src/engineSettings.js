@@ -485,6 +485,14 @@ let soundDefaultTaper = .7;
  *  @memberof Settings */
 let soundPauseWhenHidden = true;
 
+/** Pause all sound while the window does not have focus, and pick up where it was when it comes back
+ *  - The game keeps running behind another window, only its sound stops
+ *  - Off by default, since many players like the music to play on while they look at something else
+ *  @type {boolean}
+ *  @default
+ *  @memberof Settings */
+let soundPauseWhenBlurred = false;
+
 ///////////////////////////////////////////////////////////////////////////////
 // Setters for global variables
 
@@ -964,6 +972,11 @@ function setSoundDefaultTaper(taper) { soundDefaultTaper = taper; }
  *  @param {boolean} pause
  *  @memberof Settings */
 function setSoundPauseWhenHidden(pause) { soundPauseWhenHidden = pause; }
+
+/** Set if all sound pauses while the window does not have focus
+ *  @param {boolean} pause
+ *  @memberof Settings */
+function setSoundPauseWhenBlurred(pause) { soundPauseWhenBlurred = pause; }
 
 /** Set if watermark with FPS should be shown
  *  @param {boolean} show

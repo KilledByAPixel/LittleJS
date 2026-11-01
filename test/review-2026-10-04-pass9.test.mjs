@@ -47,9 +47,9 @@ test('with no AudioContext a zzfx sound and the page hiding do nothing, where th
     const { run, context } = loadEngine({ AudioContext: undefined });
     assert.doesNotThrow(()=> run('soundEnable = true; zzfx(1)'));
     context.document.hidden = true;
-    assert.doesNotThrow(()=> run('audioVisibilityChange()'));
+    assert.doesNotThrow(()=> run('audioPageChange()'));
     context.document.hidden = false;
-    assert.doesNotThrow(()=> run('audioVisibilityChange()'));
+    assert.doesNotThrow(()=> run('audioPageChange()'));
 });
 
 test('the d.ts takes an old Tiled version as a number, and tileLayersLoad with no map', ()=>

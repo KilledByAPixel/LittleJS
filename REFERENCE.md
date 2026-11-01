@@ -516,6 +516,7 @@ soundDefaultRange = 40  // Default range where sound no longer plays
 soundDefaultTaper = .7  // Default range percent to taper off sound (0-1)
 soundPauseWhenHidden = true // Pause all sound while the page is hidden, the way the game stops; off keeps
                             // music playing in a background tab
+soundPauseWhenBlurred = false // Pause all sound while the window does not have focus, the game runs on
 
 // Audio globals
 audioContext            // The shared Web Audio context

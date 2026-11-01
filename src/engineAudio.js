@@ -63,7 +63,9 @@ function audioInit()
     if (!soundEnable || headlessMode) return;
 
     audioSetSession();
-    document.addEventListener('visibilitychange', audioVisibilityChange);
+    document.addEventListener('visibilitychange', audioPageChange);
+    addEventListener('blur', audioPageChange); // the window's, focus moving to another window or the page's frame
+    addEventListener('focus', audioPageChange);
 }
 
 // on an iPhone the silent switch mutes the page's sound, unless soundIgnoreSilentSwitch has it play as media,
@@ -75,21 +77,23 @@ function audioSetSession()
         session.type = soundIgnoreSilentSwitch ? 'playback' : 'auto';
 }
 
-// a hidden page stops the game, so its sound stops too, and the audio clock with it so every sound picks up
-// exactly where it was; only a suspend made here is undone, not one the browser holds until the first input
-let audioSuspendedWhenHidden = false;
-function audioVisibilityChange()
+// a hidden page stops the game, so its sound stops too, and with soundPauseWhenBlurred a window without focus, and
+// the audio clock with it so every sound picks up exactly where it was; only a suspend made here is undone, not one
+// the browser holds until the first input
+let audioSuspendedByPage = false;
+function audioPageChange()
 {
     if (!audioContext) return; // a browser with no audio has none to pause
-    if (document.hidden)
+    const pause = soundPauseWhenHidden && document.hidden || soundPauseWhenBlurred && !document.hasFocus();
+    if (pause)
     {
-        if (!soundPauseWhenHidden || audioContext.state != 'running') return;
-        audioSuspendedWhenHidden = true;
+        if (audioSuspendedByPage || audioContext.state != 'running') return;
+        audioSuspendedByPage = true;
         audioContext.suspend();
     }
-    else if (audioSuspendedWhenHidden)
+    else if (audioSuspendedByPage)
     {
-        audioSuspendedWhenHidden = false;
+        audioSuspendedByPage = false;
         audioResume();
     }
 }
@@ -829,8 +833,8 @@ function playSamples(sampleChannels, volume=1, rate=1, pan=0, loop=false, sample
     if (!audioIsRunning())
     {
         // fix stalled audio, don't build a buffer that can't be played;
-        // but a context suspended because the page is hidden stays suspended until it shows
-        if (!audioSuspendedWhenHidden)
+        // but a context suspended because the page is hidden or blurred stays suspended until it comes back
+        if (!audioSuspendedByPage)
             audioResume();
         return;
     }
@@ -874,8 +878,8 @@ function playAudioBuffer(buffer, volume=1, rate=1, pan=0, loop=false, gainNode, 
     if (!audioIsRunning())
     {
         // fix stalled audio, this sound won't be able to play;
-        // but a context suspended because the page is hidden stays suspended until it shows
-        if (!audioSuspendedWhenHidden)
+        // but a context suspended because the page is hidden or blurred stays suspended until it comes back
+        if (!audioSuspendedByPage)
             audioResume();
         return;
     }
