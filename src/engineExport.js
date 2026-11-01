@@ -251,6 +251,8 @@ export
     randInCircle,
     randVec2,
     randColor,
+    randPick,
+    randWeighted,
 
     // Utility Classes
     RandomGenerator,

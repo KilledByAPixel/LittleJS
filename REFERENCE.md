@@ -189,6 +189,8 @@ randSign()                           // Randomly either -1 or 1
 randVec2(length=1)                   // Random Vector2 with the passed in length
 randInCircle(radius=1, minRadius=0)  // Random Vector2 within a circle
 randColor(colorA, colorB, linear)    // Random color between values
+randPick(items)                      // Random element of an array or a Set, undefined when empty
+randWeighted(items, weights)         // Random element picked in proportion to its weight, one weight per item
 
 // 2D vector math
 Vector2(x=0, y=0)                         // Create a 2D vector
@@ -263,6 +265,8 @@ RandomGenerator.angle()                   // Random angle between -PI and PI
 RandomGenerator.vec2(valueA=1, valueB=0)  // Random Vector2, each component between values
 RandomGenerator.direction(length=1)       // Random Vector2 with the passed in length, like randVec2
 RandomGenerator.randColor(colorA=WHITE, colorB=BLACK, linear=false) // Random color between values
+RandomGenerator.pick(items)          // Seeded random element of an array or a Set
+RandomGenerator.weighted(items, weights) // Seeded random element by weight
 RandomGenerator.mutateColor(color, amount=.05, alphaAmount=0) // Copy of a color randomly diverged
 
 // Time tracking system

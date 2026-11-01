@@ -531,6 +531,53 @@ function randInCircle(radius=1, minRadius=0)
     return randVec2(radius * rand(ratio*ratio, 1)**.5);
 }
 
+/** Returns a random element of an array or a Set, each as likely, undefined when it is empty
+ *  @template T
+ *  @param {Array<T>|Set<T>} items
+ *  @return {T|undefined}
+ *  @example
+ *  const enemy = randPick(['slime', 'bat', 'ghost']);
+ *  @memberof Random */
+function randPick(items) { return randomPick(items, rand()); }
+
+/** Returns a random element of an array or a Set, each picked in proportion to its weight, undefined when none has
+ *  any weight
+ *  @template T
+ *  @param {Array<T>|Set<T>} items
+ *  @param {Array<number>} weights - One for each item in order, 0 or more, 0 never picked
+ *  @return {T|undefined}
+ *  @example
+ *  const drop = randWeighted(['coin', 'heart', 'gem'], [10, 3, 1]); // a gem 1 time in 14
+ *  @memberof Random */
+function randWeighted(items, weights) { return randomWeighted(items, weights, rand()); }
+
+// the element of a list at a random value from 0 to 1, as randPick and RandomGenerator.pick take it
+function randomPick(items, value)
+{
+    ASSERT(isArray(items) || items instanceof Set, 'pick from an array or a Set', items);
+    const list = isArray(items) ? items : [...items];
+    return list[value * list.length | 0];
+}
+
+// the element of a list a random value from 0 to 1 lands on, each taking a share as large as its weight
+function randomWeighted(items, weights, value)
+{
+    ASSERT(isArray(items) || items instanceof Set, 'pick from an array or a Set', items);
+    const list = isArray(items) ? items : [...items];
+    ASSERT(isArray(weights) && weights.length === list.length, 'one weight for each item', weights);
+    ASSERT(weights.every((w)=> isNumber(w) && w >= 0), 'weights are numbers, 0 or more', weights);
+    let total = 0;
+    for (const w of weights) total += w;
+    if (!(total > 0)) return;
+    let at = value * total;
+    for (let i = 0; i < list.length; ++i)
+        if ((at -= weights[i]) < 0)
+            return list[i];
+    for (let i = list.length; i--;) // a value of exactly the total, past the last by rounding
+        if (weights[i] > 0)
+            return list[i];
+}
+
 /** Returns a random color between the two passed in colors, combine components if linear
  *  @param {Color}   [colorA=WHITE]
  *  @param {Color}   [colorB=BLACK]
@@ -631,6 +678,19 @@ class RandomGenerator
     *  @param {number} [length]
     *  @return {Vector2} */
     direction(length=1) { return new Vector2().setAngle(this.float(2*PI), length); }
+
+    /** Returns a seeded random element of an array or a Set, the twin of randPick
+    *  @template T
+    *  @param {Array<T>|Set<T>} items
+    *  @return {T|undefined} */
+    pick(items) { return randomPick(items, this.float()); }
+
+    /** Returns a seeded random element picked in proportion to its weight, the twin of randWeighted
+    *  @template T
+    *  @param {Array<T>|Set<T>} items
+    *  @param {Array<number>} weights - One for each item in order, 0 or more
+    *  @return {T|undefined} */
+    weighted(items, weights) { return randomWeighted(items, weights, this.float()); }
 
     /** Returns a random color between the two passed in colors, combine components if linear
     *  @param {Color}   [colorA=WHITE]
