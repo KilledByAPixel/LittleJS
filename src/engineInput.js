@@ -420,10 +420,14 @@ function vibrateStop() { vibrate(0); }
 ///////////////////////////////////////////////////////////////////////////////
 // Pointer Lock
 
-/** Request to lock the pointer, for a mouse; a device with only touch refuses it
+/** Request to lock the pointer, for a mouse; a device with only touch refuses it, and a press that came from a
+ *  touch does not ask, since a locked pointer stops the touch gamepad taking its fingers
  *  @memberof Input */
 function pointerLockRequest()
 {
+    if (performance.now() - inputLastTouchTime < 500)
+        return;
+
     // newer browsers return a promise that rejects when the lock is refused, like just after Esc left it,
     // or on a phone; a touchscreen laptop's mouse can still lock
     try { /** @type {any} */ (mainCanvas.requestPointerLock?.())?.catch?.(()=>{}); }
@@ -1452,7 +1456,9 @@ function touchGamepadPointerDown(e, zone)
     // a mouse on a touchscreen laptop clicks the game, the zones are there even while the gamepad is hidden
     if (!touchGamepadEnable || e.pointerType === 'mouse') return;
     e.preventDefault();
-    zone.setPointerCapture(e.pointerId);
+    // the browser refuses a capture while the pointer is locked, or for a pointer it no longer counts as active,
+    // as Chrome's device mode can; the zone still takes the touch, it only stops following a finger that slides off
+    try { zone.setPointerCapture(e.pointerId); } catch { }
     touchGamepadTimer.set();
 
     // resume audio on first interaction

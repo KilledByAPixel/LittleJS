@@ -931,6 +931,8 @@ const engineStepMaxFrames = 36000;
 /** Advance the engine by a number of frames
  *  Requires setEngineManualStep(true), before engineInit or while running; it stops early if an update turns it off
  *  Respects paused exactly as the normal update loop does
+ *  Does nothing until the promise engineInit returns has resolved, which waits for the images, and the sounds
+ *  gameInit made, to load; a test hook steps from that promise's then
  *  @param {number} [frames] - frames of 1/60 of a second to advance, max 36000; timeScale sets how many fixed
  *  updates they run, as in the normal loop, one each at timeScale 1
  *  @example

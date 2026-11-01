@@ -1434,6 +1434,7 @@ new FirstPersonCamera3D(pos3D, yaw, pitch) // mouse look and WASD or arrows to m
                                // so it takes over without a jump; fields for moveSpeed, lookSpeed, pitchRange,
                                // lockPointer, and fly to move the way it looks instead of walking level; give it a
                                // size3D and setCollision() to walk into solids, destroy it to hand the camera back
+camera.stick = 1               // the gamepad stick that looks, stickSpeed = 3 radians a second; moveStick = 0 moves
 camera.jumpSpeed = 0           // above 0, Space or gamepad button 0 jumps while it stands on something: a height map,
                                // a voxel map or a solid, see groundObject
 camera.eyeHeight = 0           // how far above its position the eye is, toward the top of its size3D body

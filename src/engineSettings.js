@@ -639,7 +639,7 @@ function setHeadlessMode(headless) { headlessMode = headless; }
 
 /** Set if the engine only advances when engineStep is called
  *  Set before engineInit for a test or a server; turned on in a running game it stops the loop, and turned off
- *  again it starts the loop from real time
+ *  again it starts the loop from real time; engineStep works once engineInit's promise has resolved
  *  @param {boolean} [enable]
  *  @memberof Settings */
 function setEngineManualStep(enable=true)

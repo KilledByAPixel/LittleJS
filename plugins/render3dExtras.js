@@ -1035,6 +1035,7 @@ class ThirdPersonCamera3D extends EngineObject3D
  * FirstPersonCamera3D - Look around with the mouse and move with the keys, with the camera at its position
  * - Click to capture the mouse so looking needs no button held, Esc lets it go; holding the button looks too, for touch
  * - WASD or the arrow keys walk level, or move the way it looks when fly is set
+ * - A gamepad's left stick moves and its right stick looks, the touch gamepad's too (moveStick, stick)
  * - An EngineObject3D that moves by velocity3D, so give it a size3D and call setCollision to walk into solid
  *   objects instead of through them; walking keeps velocity3D.y, so render3D.gravity can pull it down
  * - Starts from wherever render3D.camera is, so it can take over from another camera without a jump
@@ -1075,6 +1076,12 @@ class FirstPersonCamera3D extends EngineObject3D
         this.fly = false;
         /** @property {boolean} - Capture the mouse on a click, so looking needs no button held */
         this.lockPointer = true;
+        /** @property {number} - Which gamepad stick looks around, 1 is usually the right one, -1 for none */
+        this.stick = 1;
+        /** @property {number} - Which gamepad stick moves it, like the keys, 0 is usually the left one, -1 for none */
+        this.moveStick = 0;
+        /** @property {number} - Radians a second a stick pushed all the way turns the view */
+        this.stickSpeed = 3;
         /** @property {number} - Speed of a jump in world units a frame, 0 for none; Space or gamepad button 0 jumps
          *  while it stands on something, a height map, a voxel map or a solid, see groundObject */
         this.jumpSpeed = 0;
@@ -1129,10 +1136,14 @@ class FirstPersonCamera3D extends EngineObject3D
             this.yaw -= mouseDeltaScreen.x * this.lookSpeed;
             this.pitch -= mouseDeltaScreen.y * this.lookSpeed;
         }
+        // a gamepad stick looks too, the touch gamepad's included, its y up
+        const look = gamepadStick(this.stick);
+        this.yaw -= look.x * this.stickSpeed * timeDelta;
+        this.pitch += look.y * this.stickSpeed * timeDelta;
         this.pitch = clamp(this.pitch, this.pitchRange.x, this.pitchRange.y);
 
-        // the keys move it level, or the way it looks when flying, and walking keeps its fall
-        const input = keyDirection();
+        // the keys or a stick move it level, or the way it looks when flying, and walking keeps its fall
+        const input = keyDirection().add(gamepadStick(this.moveStick));
         const move = vec3(input.x, 0, -input.y).clampLength(1).scale(this.moveSpeed)
             .rotateX(this.fly ? this.pitch : 0).rotateY(this.yaw);
         this.velocity3D = this.fly ? move : vec3(move.x, this.velocity3D.y, move.z);
