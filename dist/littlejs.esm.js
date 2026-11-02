@@ -35,7 +35,7 @@ const engineName = 'LittleJS';
  *  @type {string}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.29.0';
+const engineVersion = '1.29.1';
 
 /** Frames per second to update
  *  @type {number}
@@ -6292,8 +6292,16 @@ class SpriteAnimator
  * - In 3D the snippet may also define void mainNormal(inout vec3 n), given the normal facing the camera after the
  *   normal map, in world space, to bend it per pixel for waves or ripples; the lighting, specular, reflection and
  *   fog then all use it, as they use a normal map
- * - In 3D the shadow map is drawn without the Shader, cut only by the texture's alpha, so a snippet that removes
- *   parts of a surface still shadows with the whole of it
+ * - In 3D the shadow map is drawn without the Shader's fragment code, cut only by the texture's alpha, so a snippet
+ *   that removes parts of a surface still shadows with the whole of it
+ * - In 3D a second snippet, the vertex code, may define void mainVertex(inout vec3 pos, inout vec3 normal), given
+ *   each vertex's place and normal in world space, an instance's own in a batch, to move it for wind, waves or a
+ *   wobble; it runs in the shadow map and the camera's depth too, so a moved vertex casts and hides where it is
+ *   drawn. Its names: iTime, iResolution, cameraPos, iChannel0 (texture or texelFetch in the vertex stage), localUV,
+ *   modelMatrix and vertexColor, the vertex color times the tint, which it may change. The object's bounds are not
+ *   moved with it, so one that moves vertices far needs room to be culled by, like a bigger radius
+ * - A Shader of vertex code alone, new Shader('', vertexCode), keeps the 3D plugin's own look; in 2D a Shader's
+ *   vertex code is not used
  * @example
  * const fade = new Shader(`
  * void mainImage(out vec4 c, vec2 uv)
@@ -6308,19 +6316,30 @@ class SpriteAnimator
  */
 class Shader
 {
-    /** Create a shader from a fragment snippet that defines void mainImage(out vec4 c, vec2 uv)
-     *  @param {string} fragmentCode */
-    constructor(fragmentCode)
+    /** Create a shader from a fragment snippet that defines void mainImage(out vec4 c, vec2 uv), and in 3D a vertex
+     *  snippet that defines void mainVertex(inout vec3 pos, inout vec3 normal)
+     *  @param {string} [fragmentCode] - Left out or empty with vertex code, the 3D plugin's own look
+     *  @param {string} [vertexCode] - 3D only */
+    constructor(fragmentCode='', vertexCode='')
     {
-        ASSERT(isStringLike(fragmentCode) && String(fragmentCode).includes('mainImage'), 'a Shader needs fragment code that defines mainImage');
-        /** @property {string} - The mainImage snippet */
+        ASSERT(isStringLike(fragmentCode) && isStringLike(vertexCode), 'a Shader takes its snippets as strings');
+        ASSERT(String(fragmentCode).includes('mainImage') || !fragmentCode && String(vertexCode).includes('mainVertex'),
+            'a Shader needs fragment code that defines mainImage, or vertex code alone');
+        ASSERT(!vertexCode || String(vertexCode).includes('mainVertex'), 'a Shader\'s vertex code defines mainVertex');
+        /** @property {string} - The mainImage snippet, empty for a 3D Shader of vertex code alone */
         this.fragmentCode = String(fragmentCode);
+        /** @property {string} - The mainVertex snippet, 3D only, empty for none */
+        this.vertexCode = String(vertexCode);
         /** @property {WebGLProgram|undefined} - The 2D program, compiled by the first draw that needs it, read only
          *  @type {WebGLProgram|undefined} */
         this.program = undefined;
         /** @property {WebGLProgram|undefined} - The 3D program, compiled by the 3D plugin the same way, read only
          *  @type {WebGLProgram|undefined} */
         this.program3D = undefined;
+        /** @property {WebGLProgram|undefined} - The 3D depth program a Shader with vertex code draws the shadow map
+         *  and the camera's depth with, so a vertex it moves casts and hides where it is drawn, read only
+         *  @type {WebGLProgram|undefined} */
+        this.shadowProgram3D = undefined;
         /** @property {boolean} - In 2D, write what mainImage gives as it is, with the draw's alpha, leaving out the
          *  draw's color and additive color, for data rather than a picture, as the light system's normal pass does;
          *  set it before the shader first draws, its program is built then */
@@ -13379,6 +13398,7 @@ function glUniformLocation(program, name)
 // color, then the sprite's color and additive color apply as the engine's own fragment shader does
 function glShaderProgram(shader)
 {
+    ASSERT(!!shader.fragmentCode, 'a Shader of vertex code alone is for 3D, 2D draws need its mainImage');
     shader.program || glShaderTrack(shader);
     const program = shader.program ||= glCreateProgram(gl_VERTEX_SOURCE,
         '#version 300 es\n' +
@@ -13412,9 +13432,9 @@ function glShaderDispose(shader)
     const i = glShaderObjects.indexOf(shader);
     i < 0 || glShaderObjects.splice(i, 1);
     if (glContext && !headlessMode)
-        for (const program of [shader.program, shader.program3D])
+        for (const program of [shader.program, shader.program3D, shader.shadowProgram3D])
             program && glContext.deleteProgram(program);
-    shader.program = shader.program3D = undefined;
+    shader.program = shader.program3D = shader.shadowProgram3D = undefined;
 }
 
 /** Create WebGL texture from an image and init the texture settings
@@ -27035,7 +27055,11 @@ function raycastBox(ray, pos, size, rotation)
  *  @memberof Render3D */
 let render3D;
 
-// vertex format: position xyz, normal xyz, uv, rgba bytes
+/** Floats in each vertex of the GPU layout: position xyz, normal xyz, uv, and the color as rgba bytes in the last
+ *  one, what meshWriteVertex writes and mesh.setVertexData takes
+ *  @type {number}
+ *  @default
+ *  @memberof Render3D */
 const RENDER3D_VERTEX_FLOATS = 9;
 const RENDER3D_VERTEX_BYTES = RENDER3D_VERTEX_FLOATS * 4;
 
@@ -27704,7 +27728,11 @@ class Render3DPlugin
         this.currentProgram = undefined; // the program in use during a pass, a Shader's or the main one
         this.lightCount = 0;         // Light3D objects sent this pass
         /** @type {WebGLProgram|undefined} */
-        this.shadowShader = undefined;
+        this.shadowShader = undefined; // the plugin's own depth program
+        /** @type {WebGLProgram|undefined} */
+        this.shadowProgram = undefined; // the depth program in use during a shadow or depth pass, a Shader's or its own
+        /** @type {Matrix4} */
+        this.shadowPassMatrix = this.shadowMatrix; // the matrix the depth pass draws with, the light's or the camera's
         /** @type {WebGLVertexArrayObject|undefined} */
         this.vao = undefined;
         /** @type {Set<CubeMap>} */
@@ -28737,23 +28765,55 @@ const RENDER3D_ATTRIBS = [[0, 3, 5126, false, 0], [1, 3, 5126, false, 12], [2, 2
 // the normal matrix comes from the model matrix here: each column over its squared length, which is the inverse
 // transpose of any rotation and scale, mirrored or not, and skips a 3x3 inverse per draw on the CPU; a sheared
 // matrix, one built by multiplying rotations with scales between them, gets normals that are only close
-const RENDER3D_VERTEX_SOURCE =
-    '#version 300 es\n' +
-    'precision highp float;' +
-    'uniform mat4 viewProj,lightViewProj;' +
-    RENDER3D_VERTEX_INPUTS +
-    'out vec3 P,N;out vec2 T,L;out vec4 C,S;' +
-    'void main(){' +
-    'vec4 w=mat4(m0,m1,m2,m3)*vec4(p,1.);' +
-    'gl_Position=viewProj*w;' +
-    'P=w.xyz;' +
+// the world normal, worked out in the vertex stage of the shaded and the depth programs
+const RENDER3D_VERTEX_NORMAL =
     'vec3 c0=m0.xyz,c1=m1.xyz,c2=m2.xyz;' +
-    'N=mat3(c0/max(dot(c0,c0),1e-20),c1/max(dot(c1,c1),1e-20),c2/max(dot(c2,c2),1e-20))*n;' +
-    'T=uvRect.xy+t*uvRect.zw;' +
-    'L=t;' +
-    'C=c*tint;' +
-    'S=lightViewProj*w;' +
-    '}';
+    'N=mat3(c0/max(dot(c0,c0),1e-20),c1/max(dot(c1,c1),1e-20),c2/max(dot(c2,c2),1e-20))*n;';
+
+// the names a Shader's vertex code can use; the sampler's precision is the stages' default, so it links with the
+// fragment stage's tex, and C is the vertex color the fragment stage gets, in the depth program a global of its own
+const RENDER3D_VERTEX_SNIPPET_NAMES =
+    'uniform float iTime;uniform vec3 iResolution,cameraPos;uniform sampler2D tex;\n' +
+    '#define iChannel0 tex\n' +
+    '#define localUV t\n' +
+    '#define vertexColor C\n' +
+    '#define modelMatrix mat4(m0,m1,m2,m3)\n';
+
+// given a Shader's vertex code, its mainVertex moves the world position and normal after the model matrix, with the
+// color worked out first so it can change it, and the rest uses what it gives; without, the source is as it was
+function render3DVertexSource(vertexCode)
+{
+    return '#version 300 es\n' +
+        'precision highp float;' +
+        'uniform mat4 viewProj,lightViewProj;' +
+        RENDER3D_VERTEX_INPUTS +
+        'out vec3 P,N;out vec2 T,L;out vec4 C,S;' +
+        (vertexCode ?
+            'void mainVertex(inout vec3,inout vec3);' +
+            'void main(){' +
+            'vec4 w=mat4(m0,m1,m2,m3)*vec4(p,1.);' +
+            RENDER3D_VERTEX_NORMAL +
+            'T=uvRect.xy+t*uvRect.zw;' +
+            'L=t;' +
+            'C=c*tint;' +
+            'vec3 q=w.xyz;mainVertex(q,N);w=vec4(q,1.);' +
+            'gl_Position=viewProj*w;' +
+            'P=q;' +
+            'S=lightViewProj*w;' +
+            '}\n' + RENDER3D_VERTEX_SNIPPET_NAMES + vertexCode + '\n'
+        :
+            'void main(){' +
+            'vec4 w=mat4(m0,m1,m2,m3)*vec4(p,1.);' +
+            'gl_Position=viewProj*w;' +
+            'P=w.xyz;' +
+            RENDER3D_VERTEX_NORMAL +
+            'T=uvRect.xy+t*uvRect.zw;' +
+            'L=t;' +
+            'C=c*tint;' +
+            'S=lightViewProj*w;' +
+            '}');
+}
+const RENDER3D_VERTEX_SOURCE = render3DVertexSource();
 
 // the names a Shader's snippet can use in 3D, over the plugin's own uniforms and varyings
 const RENDER3D_SNIPPET_NAMES =
@@ -28910,8 +28970,64 @@ function render3DShaderProgram(shader)
 {
     ASSERT(shader instanceof Shader, 'render3D.shader must be a Shader, not the snippet itself');
     shader.program3D || glShaderTrack(shader); // one let go of and drawn again is kept for a lost context again
-    const program = shader.program3D ||= glCreateProgram(RENDER3D_VERTEX_SOURCE, render3DFragmentSource(shader.fragmentCode));
+    const program = shader.program3D ||= glCreateProgram(render3DVertexSource(shader.vertexCode),
+        render3DFragmentSource(shader.fragmentCode));
     return glFailedPrograms.has(program) ? render3D.program : program; // one that did not build draws as with none
+}
+
+// the depth only program for the shadow map and the camera's depth, same vertex layout; see through pixels cast
+// nothing, so sprites and cut out textures cast their outline, and a blended object faded below half its alpha
+// casts nothing, as it draws; an opaque one draws solid whatever its tint alpha, and casts so; given a Shader's
+// vertex code, its mainVertex moves the vertex as it does on the screen, with the world normal and a color of its own
+function render3DShadowVertexSource(vertexCode)
+{
+    return '#version 300 es\n' +
+        'precision highp float;' +
+        'uniform mat4 viewProj;' +
+        RENDER3D_VERTEX_INPUTS +
+        'out vec2 T;out float A;' +
+        (vertexCode ?
+            'vec3 N;vec4 C;void mainVertex(inout vec3,inout vec3);' +
+            'void main(){T=uvRect.xy+t*uvRect.zw;C=c*tint;' +
+            'vec4 w=mat4(m0,m1,m2,m3)*vec4(p,1.);' + RENDER3D_VERTEX_NORMAL +
+            'vec3 q=w.xyz;mainVertex(q,N);A=C.a;gl_Position=viewProj*vec4(q,1.);}\n' +
+            RENDER3D_VERTEX_SNIPPET_NAMES + vertexCode + '\n'
+        :
+            'void main(){T=uvRect.xy+t*uvRect.zw;A=c.a*tint.a;gl_Position=viewProj*mat4(m0,m1,m2,m3)*vec4(p,1.);}');
+}
+const RENDER3D_SHADOW_FRAGMENT_SOURCE =
+    '#version 300 es\n' +
+    'precision highp float;' +
+    'uniform sampler2D tex;' +
+    'uniform float cut;' + // 1 for a blended batch, cut by its tint and vertex alpha too, 0 by the texture only
+    'in vec2 T;in float A;' +
+    'void main(){if(texture(tex,T).a*mix(1.,A,cut)<.5)discard;}';
+
+// the depth program a draw casts with: a Shader's with vertex code, compiled the first time it casts, or the plugin's
+function render3DShadowProgram(shader)
+{
+    const r = render3D;
+    if (!shader?.vertexCode) return r.shadowShader;
+    shader.shadowProgram3D || glShaderTrack(shader);
+    const program = shader.shadowProgram3D ||= glCreateProgram(render3DShadowVertexSource(shader.vertexCode),
+        RENDER3D_SHADOW_FRAGMENT_SOURCE);
+    return glFailedPrograms.has(program) ? r.shadowShader : program; // one that did not build casts as with none
+}
+
+// make a depth program current for the shadow map or the camera's depth and send it the pass's matrix, plus for a
+// Shader's the names its vertex code reads, the camera's own place so a vertex moves as it does on the screen
+function render3DUseShadowProgram(program)
+{
+    const gl = glContext, r = render3D;
+    gl.useProgram(r.shadowProgram = program);
+    render3DShadowCut = undefined; // the cut is sent to each program
+    gl.uniformMatrix4fv(render3DUniform('viewProj', program), false, r.shadowPassMatrix.m);
+    if (program === r.shadowShader) return;
+    gl.uniform1f(render3DUniform('iTime', program), time);
+    gl.uniform3f(render3DUniform('iResolution', program), glCanvas.width, glCanvas.height, 1);
+    const c = r.camera.pos;
+    gl.uniform3f(render3DUniform('cameraPos', program), c.x, c.y, c.z);
+    gl.uniform1i(render3DUniform('tex', program), 0);
 }
 
 // make a program current for the pass and send it the pass uniforms: the matrices, the camera and the lights,
@@ -28968,24 +29084,8 @@ function render3DInitGL()
     // the shader, see RENDER3D_VERTEX_SOURCE and render3DFragmentSource
     r.program = glCreateProgram(RENDER3D_VERTEX_SOURCE, render3DFragmentSource());
 
-    // the depth only shader for the shadow map, same vertex layout; see through pixels cast nothing, so sprites and
-    // cut out textures cast their outline, and a blended object faded below half its alpha casts nothing, as it
-    // draws; an opaque one draws solid whatever its tint alpha, and casts so
-    r.shadowShader = glCreateProgram(
-        '#version 300 es\n' +
-        'precision highp float;' +
-        'uniform mat4 viewProj;' +
-        RENDER3D_VERTEX_INPUTS +
-        'out vec2 T;out float A;' +
-        'void main(){T=uvRect.xy+t*uvRect.zw;A=c.a*tint.a;gl_Position=viewProj*mat4(m0,m1,m2,m3)*vec4(p,1.);}'
-        ,
-        '#version 300 es\n' +
-        'precision highp float;' +
-        'uniform sampler2D tex;' +
-        'uniform float cut;' + // 1 for a blended batch, cut by its tint and vertex alpha too, 0 by the texture only
-        'in vec2 T;in float A;' +
-        'void main(){if(texture(tex,T).a*mix(1.,A,cut)<.5)discard;}'
-    );
+    // the depth only shader for the shadow map and the camera's depth, see render3DShadowVertexSource
+    r.shadowShader = glCreateProgram(render3DShadowVertexSource(), RENDER3D_SHADOW_FRAGMENT_SOURCE);
 
     // a program that did not build in a release build would fail every draw: 3D stays off, said once, since the pass
     // returns when there is no program, and a lost context that comes back tries again
@@ -29360,11 +29460,11 @@ function render3DDrawSkyBox(cube)
 function render3DContextLost()
 {
     const r = render3D;
-    r.program = r.currentProgram = r.shadowShader = r.vao = r.streamBuffer = r.whiteTexture = undefined;
+    r.program = r.currentProgram = r.shadowShader = r.shadowProgram = r.vao = r.streamBuffer = r.whiteTexture = undefined;
     r.skyBoxProgram = r.skyBoxVao = r.captureFramebuffer = r.captureDepth = undefined;
     r.captureDepthSize = 0;
     for (const shader of glShaderObjects)
-        shader.program3D = undefined; // compiled again by the next draw
+        shader.program3D = shader.shadowProgram3D = undefined; // compiled again by the next draw
     r.lightCount = 0;
     r.instanceBuffers = [];
     r.samplers = new Map;
@@ -29633,10 +29733,13 @@ function render3DSetDrawUniforms(matrix, tileInfo, tint, uvRect, state=render3D)
     render3DBindTexture(tileInfo, state);
     if (r.shadowPass)
     {
-        // the shadow map needs only how to cut: by the alpha it blends with, or the texture's as an opaque draw
+        // the depth program the draw's Shader casts with, and how to cut: by the alpha it blends with, or the
+        // texture's as an opaque draw
+        const program = render3DShadowProgram(state.shader);
+        program === r.shadowProgram || render3DUseShadowProgram(program);
         const cut = state.blend ? 1 : 0;
         if (render3DShadowCut !== cut)
-            glContext.uniform1f(render3DUniform('cut', r.shadowShader), render3DShadowCut = cut);
+            glContext.uniform1f(render3DUniform('cut', program), render3DShadowCut = cut);
         return;
     }
 
@@ -29912,8 +30015,8 @@ function render3DRenderShadowMap()
     gl.bindFramebuffer(gl.FRAMEBUFFER, r.shadowFramebuffer);
     gl.viewport(0, 0, r.shadowTextureSize, r.shadowTextureSize);
     gl.clear(gl.DEPTH_BUFFER_BIT);
-    gl.useProgram(r.shadowShader);
-    gl.uniformMatrix4fv(render3DUniform('viewProj', r.shadowShader), false, r.shadowMatrix.m);
+    r.shadowPassMatrix = r.shadowMatrix;
+    render3DUseShadowProgram(r.shadowShader);
     gl.enable(gl.DEPTH_TEST);
     gl.depthMask(true);
     gl.disable(gl.BLEND);
@@ -29979,8 +30082,8 @@ function render3DRenderDepth()
     gl.bindFramebuffer(gl.FRAMEBUFFER, r.cameraDepthFramebuffer);
     gl.viewport(0, 0, width, height);
     gl.clear(gl.DEPTH_BUFFER_BIT);
-    gl.useProgram(r.shadowShader);
-    gl.uniformMatrix4fv(render3DUniform('viewProj', r.shadowShader), false, r.viewProjection.m);
+    r.shadowPassMatrix = r.viewProjection;
+    render3DUseShadowProgram(r.shadowShader);
     gl.enable(gl.DEPTH_TEST);
     gl.depthMask(true);
     gl.disable(gl.BLEND);
@@ -30131,14 +30234,32 @@ function render3DForEachStripVertex(points, normals, uvs, colors, callback)
     }
 }
 
-// write one vertex into a packed buffer at float index j
-function render3DWriteVertex(floats, ints, j, x, y, z, n, u, v, rgba)
+/** Write one vertex in the GPU layout, RENDER3D_VERTEX_FLOATS floats, for vertex data given to mesh.setVertexData:
+ *  its place, its normal, its uv and its color as RGBA bytes, in numbers so a loop over many makes no objects
+ *  @param {Float32Array} floats - The vertex data
+ *  @param {Uint32Array} ints - A view of the same buffer, for the color
+ *  @param {number} j - The vertex's first float, its number times RENDER3D_VERTEX_FLOATS
+ *  @param {number} x
+ *  @param {number} y
+ *  @param {number} z
+ *  @param {number} nx - The normal, unit length
+ *  @param {number} ny
+ *  @param {number} nz
+ *  @param {number} u - Across the tile, 0 to 1
+ *  @param {number} v - Down the tile, 0 to 1
+ *  @param {number} rgba - The color as color.rgbaInt() gives it
+ *  @memberof Render3D */
+function meshWriteVertex(floats, ints, j, x, y, z, nx, ny, nz, u, v, rgba)
 {
-    floats[j]   = x;   floats[j+1] = y;   floats[j+2] = z;
-    floats[j+3] = n.x; floats[j+4] = n.y; floats[j+5] = n.z;
-    floats[j+6] = u;   floats[j+7] = v;
+    floats[j]   = x;  floats[j+1] = y;  floats[j+2] = z;
+    floats[j+3] = nx; floats[j+4] = ny; floats[j+5] = nz;
+    floats[j+6] = u;  floats[j+7] = v;
     ints[j+8] = rgba;
 }
+
+// write one vertex into a packed buffer at float index j, its normal a vector
+function render3DWriteVertex(floats, ints, j, x, y, z, n, u, v, rgba)
+{ meshWriteVertex(floats, ints, j, x, y, z, n.x, n.y, n.z, u, v, rgba); }
 
 // turn every triangle of an index list the other way round, in place: the authoring form reads counter clockwise
 // from the front and the pass draws clockwise, as a strip's triangles come out after its leading repeat
@@ -30230,6 +30351,29 @@ const render3DMeshBuffers = typeof FinalizationRegistry == 'undefined' ? undefin
         glContext.deleteBuffer(buffer);
         glContext.deleteBuffer(indexBuffer);
     });
+
+// what a mesh given its vertex data with setVertexData says when asked to read or edit its points
+const RENDER3D_VERTEX_DATA_MESH = 'a mesh given its vertex data has no points for ';
+
+// make a mesh's GPU buffers from its packed vertices and its index list, already in the order the pass draws, and
+// keep what a draw, a lost context and the collection of the mesh need
+function render3DMeshSetBuffers(mesh, data, indices, wide)
+{
+    const gl = glContext;
+    mesh.buffer = gl.createBuffer();
+    mesh.indexBuffer = gl.createBuffer();
+    mesh.bufferCount = indices.length;
+    mesh.indexType = wide ? gl.UNSIGNED_INT : gl.UNSIGNED_SHORT;
+    mesh.dirty = mesh.vertexDataPacked = false;
+    gl.bindBuffer(gl.ARRAY_BUFFER, mesh.buffer);
+    gl.bufferData(gl.ARRAY_BUFFER, data, mesh.dynamicDraw && !mesh.vertexData ? gl.DYNAMIC_DRAW : gl.STATIC_DRAW);
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, mesh.indexBuffer);
+    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, indices, gl.STATIC_DRAW);
+    mesh.contextGeneration = render3D.contextGeneration;
+    const buffers = {buffer: mesh.buffer, indexBuffer: mesh.indexBuffer, generation: mesh.contextGeneration};
+    render3DMeshBuffers?.register(mesh, buffers, mesh);
+    gl.bindBuffer(gl.ARRAY_BUFFER, glArrayBuffer); // the engine's 2D batch writes through this binding
+}
 
 // the points at one place, to a hundred thousandth, which smooth normals are summed by: each point's group, numbered
 // from 0, found by a number made from its place and checked against the place, so no text is made for a point
@@ -30372,11 +30516,64 @@ class Mesh
          *  @type {{min: Vector3, max: Vector3}|undefined} */
         this.bounds = undefined;
         this.contextGeneration = 0; // the context the buffer belongs to, see render3D.contextGeneration
+        /** @property {Float32Array|undefined} - The vertices in the GPU layout, given to setVertexData, read only;
+         *  a mesh given them has no points
+         *  @type {Float32Array|undefined} */
+        this.vertexData = undefined;
+        /** @property {Uint32Array|Uint16Array|undefined} - The triangles given to setVertexData, read only
+         *  @type {Uint32Array|Uint16Array|undefined} */
+        this.vertexIndices = undefined;
+        this.vertexDataCount = 0; // the vertices of vertexData in use
     }
 
     /** Number of vertices in the mesh
      *  @return {number} */
-    get vertexCount() { return this.points.length; }
+    get vertexCount() { return this.vertexData ? this.vertexDataCount : this.points.length; }
+
+    /** Make the mesh from vertices already in the GPU layout, for a big mesh a game generates, like terrain: they go
+     *  to the GPU as they are, with no points made and packed again
+     *  - Each vertex is RENDER3D_VERTEX_FLOATS floats, written by meshWriteVertex: its place, its normal, its uv and
+     *    its color as RGBA bytes through a Uint32Array view of the same buffer
+     *  - The triangles are listed counter clockwise seen from the front, as addTriangles takes them
+     *  - The arrays are kept, not copied, and never changed, so a lost context uploads them again; call this again
+     *    after changing them
+     *  - The mesh's points, normals, uvs, colors and indices are emptied, and what edits or reads those, like
+     *    transform, combine and computeNormals, does not take a mesh made this way; it draws, casts shadows, is
+     *    instanced and is picked like any other
+     *  @param {Float32Array} vertexData - At least vertexCount * RENDER3D_VERTEX_FLOATS floats
+     *  @param {Uint32Array|Uint16Array} indices - Three vertex numbers per triangle
+     *  @param {number} [vertexCount] - The vertices in use, all the data holds by default
+     *  @return {Mesh} */
+    setVertexData(vertexData, indices, vertexCount=vertexData.length / RENDER3D_VERTEX_FLOATS | 0)
+    {
+        ASSERT(vertexData instanceof Float32Array, 'setVertexData takes its vertices as a Float32Array');
+        ASSERT(indices instanceof Uint32Array || indices instanceof Uint16Array,
+            'setVertexData takes its triangles as a Uint32Array or Uint16Array');
+        ASSERT(indices.length % 3 === 0, 'setVertexData takes three indices per triangle', indices.length);
+        ASSERT(vertexCount >= 0 && vertexCount % 1 === 0 && vertexCount * RENDER3D_VERTEX_FLOATS <= vertexData.length,
+            'setVertexData: vertexCount must be whole and fit in the data', vertexCount);
+        ASSERT(indices.every(i=> i < vertexCount), 'setVertexData: an index points past the vertices');
+        ASSERT(!this.dynamicDraw, 'a dynamicDraw mesh is made of points, setVertexData uploads once');
+        this.points = [], this.normals = [], this.uvs = [], this.colors = [];
+        this.indices = this.vertexKeys = this.vertexLayout = undefined;
+        this.vertexData = vertexData;
+        this.vertexIndices = indices;
+        this.vertexDataCount = vertexCount;
+
+        // the radius and box measured once here, from the places in the data
+        let r = 0, x0 = Infinity, y0 = Infinity, z0 = Infinity, x1 = -Infinity, y1 = -Infinity, z1 = -Infinity;
+        for (let j = 0; j < vertexCount * RENDER3D_VERTEX_FLOATS; j += RENDER3D_VERTEX_FLOATS)
+        {
+            const x = vertexData[j], y = vertexData[j+1], z = vertexData[j+2];
+            r = max(r, x*x + y*y + z*z);
+            x0 = min(x0, x), y0 = min(y0, y), z0 = min(z0, z);
+            x1 = max(x1, x), y1 = max(y1, y), z1 = max(z1, z);
+        }
+        this.radius = r ** .5;
+        this.bounds = vertexCount ? {min: vec3(x0, y0, z0), max: vec3(x1, y1, z1)} : {min: vec3(), max: vec3()};
+        this.dirty = true;
+        return this;
+    }
 
     /** Add a triangle strip, joined to the previous one by invisible flat triangles so one mesh holds many strips
      *  - Strip order: the first three points make a triangle, then each point makes another with the two before it
@@ -30389,6 +30586,7 @@ class Mesh
      *  @return {Mesh} */
     addStrip(points, normals, uvs, colors)
     {
+        ASSERT(!this.vertexData, RENDER3D_VERTEX_DATA_MESH + 'addStrip');
         if (this.indices)
         {
             // an indexed mesh takes the strip as the triangles it makes
@@ -30418,6 +30616,7 @@ class Mesh
      *  @return {Mesh} */
     addTriangles(points, indices, normals, uvs, colors)
     {
+        ASSERT(!this.vertexData, RENDER3D_VERTEX_DATA_MESH + 'addTriangles');
         ASSERT(isArray(points) && isArray(indices) && indices.length % 3 === 0,
             'addTriangles takes points and three indices per triangle');
         ASSERT(indices.every(i=> i >= 0 && i < points.length && i % 1 === 0), 'an index points past the vertices given');
@@ -30475,6 +30674,8 @@ class Mesh
      *  @return {Mesh} */
     combine(mesh, matrix=RENDER3D_IDENTITY, color=WHITE)
     {
+        ASSERT(!this.vertexData, RENDER3D_VERTEX_DATA_MESH + 'combine');
+        ASSERT(!mesh.vertexData, RENDER3D_VERTEX_DATA_MESH + 'combine, mirror, spin or CSG');
         matrix = render3DMatrix(matrix); // most parts only need moving into place
         const normalMatrix = render3DNormalMatrix(matrix), mirrors = render3DMirrors(matrix);
         let part = mesh, order;
@@ -30572,6 +30773,7 @@ class Mesh
      *  @return {Mesh} */
     scaleUVs(scale)
     {
+        ASSERT(!this.vertexData, RENDER3D_VERTEX_DATA_MESH + 'scaleUVs');
         const s = render3DSize2(scale);
         // new vectors, builders share uv objects between faces
         this.uvs = this.uvs.map(uv=> vec2(uv.x * s.x, uv.y * s.y));
@@ -30584,6 +30786,7 @@ class Mesh
      *  @return {Mesh} */
     transform(matrix)
     {
+        ASSERT(!this.vertexData, RENDER3D_VERTEX_DATA_MESH + 'transform, center or fit');
         matrix = render3DMatrix(matrix);
         const normalMatrix = render3DNormalMatrix(matrix);
         for (let i = 0; i < this.points.length; ++i)
@@ -30601,6 +30804,7 @@ class Mesh
      *  @return {Mesh} */
     flipNormals()
     {
+        ASSERT(!this.vertexData, RENDER3D_VERTEX_DATA_MESH + 'flipNormals');
         render3DFlipWinding(this);
         this.normals = this.normals.map(n=> n.scale(-1));
         this.dirty = true;
@@ -30612,6 +30816,7 @@ class Mesh
      *  @return {Mesh} */
     setColor(color)
     {
+        ASSERT(!this.vertexData, RENDER3D_VERTEX_DATA_MESH + 'setColor');
         // one per point, not one per color already there, so a mesh built by hand with no
         // colors gets them instead of quietly staying white
         this.colors = this.points.map(()=> color);
@@ -30623,6 +30828,8 @@ class Mesh
      *  @return {{min: Vector3, max: Vector3}} */
     getBounds()
     {
+        if (this.vertexData) // measured when it was given
+            return {min: this.bounds.min.copy(), max: this.bounds.max.copy()};
         if (!this.points.length)
             return {min: vec3(), max: vec3()};
         const lo = vec3(Infinity), hi = vec3(-Infinity);
@@ -30657,6 +30864,7 @@ class Mesh
      *  @return {number} */
     computeRadius()
     {
+        if (this.vertexData) return this.radius; // measured when it was given
         let r = 0;
         for (const p of this.points)
             r = max(r, p.lengthSquared());
@@ -30670,6 +30878,7 @@ class Mesh
      *  @return {Mesh} */
     computeNormals(smooth=false)
     {
+        ASSERT(!this.vertexData, RENDER3D_VERTEX_DATA_MESH + 'computeNormals');
         if (this.indices)
         {
             // the triangles are listed: smooth normals add up around each position, weighted by the corner angle
@@ -30768,23 +30977,23 @@ class Mesh
             }
         }
         this.dispose();
-        const {vertices, indices} = this.getTriangles(), count = vertices.length, wide = count > 65535;
-        const data = render3DMeshVertexData(this, vertices);
-        this.vertexLayout = this.dynamicDraw ? {vertices, pointCount: this.points.length, data} : undefined;
+        const data = this.vertexData;
+        if (data)
+        {
+            // given in the GPU layout: sent as it is, the triangles turned round for the pass as they are copied into
+            // the index list's width, the game's arrays never changed
+            const source = this.vertexIndices, count = this.vertexDataCount, wide = count > 65535;
+            const indices = wide ? new Uint32Array(source.length) : new Uint16Array(source.length);
+            for (let t = 0; t + 2 < source.length; t += 3)
+                indices[t] = source[t], indices[t+1] = source[t+2], indices[t+2] = source[t+1];
+            render3DMeshSetBuffers(this, data.subarray(0, count * RENDER3D_VERTEX_FLOATS), indices, wide);
+            return this;
+        }
+        const {vertices, indices} = this.getTriangles(), wide = vertices.length > 65535;
+        const packed = render3DMeshVertexData(this, vertices);
+        this.vertexLayout = this.dynamicDraw ? {vertices, pointCount: this.points.length, data: packed} : undefined;
         this.vertexKeys = undefined; // used once: an edit after this may tell entries apart
-        this.buffer = gl.createBuffer();
-        this.indexBuffer = gl.createBuffer();
-        this.bufferCount = indices.length;
-        this.indexType = wide ? gl.UNSIGNED_INT : gl.UNSIGNED_SHORT;
-        this.dirty = this.vertexDataPacked = false;
-        gl.bindBuffer(gl.ARRAY_BUFFER, this.buffer);
-        gl.bufferData(gl.ARRAY_BUFFER, data, this.dynamicDraw ? gl.DYNAMIC_DRAW : gl.STATIC_DRAW);
-        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer);
-        gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, wide ? new Uint32Array(indices) : new Uint16Array(indices), gl.STATIC_DRAW);
-        this.contextGeneration = render3D.contextGeneration;
-        const buffers = {buffer: this.buffer, indexBuffer: this.indexBuffer, generation: this.contextGeneration};
-        render3DMeshBuffers?.register(this, buffers, this);
-        gl.bindBuffer(gl.ARRAY_BUFFER, glArrayBuffer); // the engine's 2D batch writes through this binding
+        render3DMeshSetBuffers(this, packed, wide ? new Uint32Array(indices) : new Uint16Array(indices), wide);
         return this;
     }
 
@@ -30795,6 +31004,7 @@ class Mesh
      *    vertex; indices are the triangles, three per triangle, into vertices */
     getTriangles()
     {
+        ASSERT(!this.vertexData, RENDER3D_VERTEX_DATA_MESH + 'getTriangles or toIndexed');
         const count = this.points.length, vertices = [];
         if (this.indices)
         {
@@ -31340,7 +31550,7 @@ class EngineObject3D extends EngineObject
          *  @type {Mesh|undefined} */
         this.mesh = mesh;
         // a shared mesh measured since it last changed is not walked again for each object made from it
-        const bounds = mesh && mesh.points.length ? !mesh.dirty && mesh.bounds || mesh.getBounds() : undefined;
+        const bounds = mesh && mesh.vertexCount ? !mesh.dirty && mesh.bounds || mesh.getBounds() : undefined;
         /** @property {Vector3} - Size for solid collision and the collect and callback helpers, and of the sprite when
          *  there is a tileInfo and no mesh; starts at the size of the mesh's box, or 1 with no mesh, and setMesh leaves
          *  it as it is; the box is centered on pos3D, so center() a mesh whose origin is not its middle, like a model
@@ -32207,10 +32417,12 @@ function render3DRaycastObject(ray, o)
 // how far along a ray, in the mesh's own space, its nearest triangle is hit, or undefined: the triangles that face
 // the ray as the pass draws them, clockwise from the front, and the back faces too of a doubleSided mesh; a strip's
 // triangle i is (i-2, i-1, i), the odd ones read the other way, and a join between its pieces has no area and is
-// never hit; nothing is kept between calls, so a mesh that changed is hit as it is now
+// never hit; nothing is kept between calls, so a mesh that changed is hit as it is now; a mesh given its vertex data
+// is read from it, its places the first three floats of each vertex
 function render3DRaycastMesh(ray, mesh)
 {
-    const points = mesh.points, indices = mesh.indices, both = mesh.doubleSided;
+    const points = mesh.points, data = mesh.vertexData, indices = data ? mesh.vertexIndices : mesh.indices;
+    const both = mesh.doubleSided, stride = RENDER3D_VERTEX_FLOATS;
     const ox = ray.origin.x, oy = ray.origin.y, oz = ray.origin.z;
     const dx = ray.direction.x, dy = ray.direction.y, dz = ray.direction.z;
     const count = indices ? indices.length / 3 | 0 : points.length - 2;
@@ -32218,26 +32430,43 @@ function render3DRaycastMesh(ray, mesh)
     for (let i = 0; i < count; ++i)
     {
         // the corners clockwise from the front: an indexed list is written the other way round
-        let a, b, c;
+        let ia, ib, ic, ax, ay, az, bx, by, bz, cx, cy, cz;
         if (indices)
-            a = points[indices[i*3]], b = points[indices[i*3+2]], c = points[indices[i*3+1]];
+            ia = indices[i*3], ib = indices[i*3+2], ic = indices[i*3+1];
         else
-            a = points[i & 1 ? i + 1 : i], b = points[i & 1 ? i : i + 1], c = points[i + 2];
+            ia = i & 1 ? i + 1 : i, ib = i & 1 ? i : i + 1, ic = i + 2;
+        if (data)
+        {
+            ia *= stride, ib *= stride, ic *= stride;
+            ax = data[ia], ay = data[ia+1], az = data[ia+2];
+            bx = data[ib], by = data[ib+1], bz = data[ib+2];
+            cx = data[ic], cy = data[ic+1], cz = data[ic+2];
+        }
+        else
+        {
+            const a = points[ia], b = points[ib], c = points[ic];
+            ax = a.x, ay = a.y, az = a.z, bx = b.x, by = b.y, bz = b.z, cx = c.x, cy = c.y, cz = c.z;
+        }
 
         // Moller and Trumbore: the determinant is the ray along the face's normal, below zero from the front
-        const e1x = b.x - a.x, e1y = b.y - a.y, e1z = b.z - a.z;
-        const e2x = c.x - a.x, e2y = c.y - a.y, e2z = c.z - a.z;
+        const e1x = bx - ax, e1y = by - ay, e1z = bz - az;
+        const e2x = cx - ax, e2y = cy - ay, e2z = cz - az;
         const hx = dy * e2z - dz * e2y, hy = dz * e2x - dx * e2z, hz = dx * e2y - dy * e2x;
         const det = e1x * hx + e1y * hy + e1z * hz;
         if (both ? !det : !(det < 0)) continue;
-        const sx = ox - a.x, sy = oy - a.y, sz = oz - a.z;
+        const sx = ox - ax, sy = oy - ay, sz = oz - az;
         const u = (sx * hx + sy * hy + sz * hz) / det;
         if (!(u >= 0 && u <= 1)) continue;
         const qx = sy * e1z - sz * e1y, qy = sz * e1x - sx * e1z, qz = sx * e1y - sy * e1x;
         const v = (dx * qx + dy * qy + dz * qz) / det;
         if (!(v >= 0 && u + v <= 1)) continue;
         const t = (e2x * qx + e2y * qy + e2z * qz) / det;
-        if (t >= 0 && !(t >= nearest))
+        if (!(t >= 0 && !(t >= nearest))) continue;
+
+        // a sliver, two corners all but one place as at a strip's pole, has a determinant of rounding alone, which
+        // can say anything; its area against its edges says so, measured only for a hit
+        const nx = e1y * e2z - e1z * e2y, ny = e1z * e2x - e1x * e2z, nz = e1x * e2y - e1y * e2x;
+        if (nx*nx + ny*ny + nz*nz > 1e-12 * (e1x*e1x + e1y*e1y + e1z*e1z) * (e2x*e2x + e2y*e2y + e2z*e2z))
             nearest = t;
     }
     return nearest;
@@ -46932,6 +47161,8 @@ export
     Camera3D,
     EngineObject3D,
     Mesh,
+    meshWriteVertex,
+    RENDER3D_VERTEX_FLOATS,
     InstancedMesh3D,
     buildLathe,
     buildCylinder,
