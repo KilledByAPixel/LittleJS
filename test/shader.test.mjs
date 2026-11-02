@@ -18,6 +18,25 @@ test('a Shader needs a snippet that defines mainImage', () =>
     assert.throws(()=> new Shader('void main(){}'));
 });
 
+const vertexCode = 'void mainVertex(inout vec3 pos, inout vec3 normal){pos.y+=1.;}';
+
+test('a Shader takes vertex code for 3D, with fragment code or alone', () =>
+{
+    const both = new Shader(code, vertexCode);
+    assert.equal(both.fragmentCode, code);
+    assert.equal(both.vertexCode, vertexCode);
+    assert.equal(both.shadowProgram3D, undefined);
+    const alone = new Shader('', vertexCode);
+    assert.equal(alone.fragmentCode, '');
+    assert.equal(new Shader(code).vertexCode, '');
+});
+
+test('vertex code must define mainVertex, and a Shader needs one snippet or the other', () =>
+{
+    assert.throws(()=> new Shader(code, 'void main(){}'));
+    assert.throws(()=> new Shader('', ''));
+});
+
 test('setShader takes a Shader or nothing, not the snippet itself', () =>
 {
     const shader = new Shader(code);

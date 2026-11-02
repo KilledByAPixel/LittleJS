@@ -614,8 +614,16 @@ class SpriteAnimator
  * - In 3D the snippet may also define void mainNormal(inout vec3 n), given the normal facing the camera after the
  *   normal map, in world space, to bend it per pixel for waves or ripples; the lighting, specular, reflection and
  *   fog then all use it, as they use a normal map
- * - In 3D the shadow map is drawn without the Shader, cut only by the texture's alpha, so a snippet that removes
- *   parts of a surface still shadows with the whole of it
+ * - In 3D the shadow map is drawn without the Shader's fragment code, cut only by the texture's alpha, so a snippet
+ *   that removes parts of a surface still shadows with the whole of it
+ * - In 3D a second snippet, the vertex code, may define void mainVertex(inout vec3 pos, inout vec3 normal), given
+ *   each vertex's place and normal in world space, an instance's own in a batch, to move it for wind, waves or a
+ *   wobble; it runs in the shadow map and the camera's depth too, so a moved vertex casts and hides where it is
+ *   drawn. Its names: iTime, iResolution, cameraPos, iChannel0 (texture or texelFetch in the vertex stage), localUV,
+ *   modelMatrix and vertexColor, the vertex color times the tint, which it may change. The object's bounds are not
+ *   moved with it, so one that moves vertices far needs room to be culled by, like a bigger radius
+ * - A Shader of vertex code alone, new Shader('', vertexCode), keeps the 3D plugin's own look; in 2D a Shader's
+ *   vertex code is not used
  * @example
  * const fade = new Shader(`
  * void mainImage(out vec4 c, vec2 uv)
@@ -630,19 +638,30 @@ class SpriteAnimator
  */
 class Shader
 {
-    /** Create a shader from a fragment snippet that defines void mainImage(out vec4 c, vec2 uv)
-     *  @param {string} fragmentCode */
-    constructor(fragmentCode)
+    /** Create a shader from a fragment snippet that defines void mainImage(out vec4 c, vec2 uv), and in 3D a vertex
+     *  snippet that defines void mainVertex(inout vec3 pos, inout vec3 normal)
+     *  @param {string} [fragmentCode] - Left out or empty with vertex code, the 3D plugin's own look
+     *  @param {string} [vertexCode] - 3D only */
+    constructor(fragmentCode='', vertexCode='')
     {
-        ASSERT(isStringLike(fragmentCode) && String(fragmentCode).includes('mainImage'), 'a Shader needs fragment code that defines mainImage');
-        /** @property {string} - The mainImage snippet */
+        ASSERT(isStringLike(fragmentCode) && isStringLike(vertexCode), 'a Shader takes its snippets as strings');
+        ASSERT(String(fragmentCode).includes('mainImage') || !fragmentCode && String(vertexCode).includes('mainVertex'),
+            'a Shader needs fragment code that defines mainImage, or vertex code alone');
+        ASSERT(!vertexCode || String(vertexCode).includes('mainVertex'), 'a Shader\'s vertex code defines mainVertex');
+        /** @property {string} - The mainImage snippet, empty for a 3D Shader of vertex code alone */
         this.fragmentCode = String(fragmentCode);
+        /** @property {string} - The mainVertex snippet, 3D only, empty for none */
+        this.vertexCode = String(vertexCode);
         /** @property {WebGLProgram|undefined} - The 2D program, compiled by the first draw that needs it, read only
          *  @type {WebGLProgram|undefined} */
         this.program = undefined;
         /** @property {WebGLProgram|undefined} - The 3D program, compiled by the 3D plugin the same way, read only
          *  @type {WebGLProgram|undefined} */
         this.program3D = undefined;
+        /** @property {WebGLProgram|undefined} - The 3D depth program a Shader with vertex code draws the shadow map
+         *  and the camera's depth with, so a vertex it moves casts and hides where it is drawn, read only
+         *  @type {WebGLProgram|undefined} */
+        this.shadowProgram3D = undefined;
         /** @property {boolean} - In 2D, write what mainImage gives as it is, with the draw's alpha, leaving out the
          *  draw's color and additive color, for data rather than a picture, as the light system's normal pass does;
          *  set it before the shader first draws, its program is built then */

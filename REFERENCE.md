@@ -333,6 +333,10 @@ new Shader(fragmentCode)          // fragmentCode defines void mainImage(out vec
                                   // apply in 2D, and the lighting, shadows and fog in 3D; in 3D it may also define
                                   // void mainNormal(inout vec3 n), the world normal after the normal map, to bend
                                   // it per pixel (waves, ripples) for the lighting, specular and reflection
+new Shader(fragmentCode, vertexCode) // 3D: vertexCode defines void mainVertex(inout vec3 pos, inout vec3 normal),
+                                  // world space, to move vertices (wind, waves), in the shadow map and depth too;
+                                  // names: iTime, iResolution, cameraPos, iChannel0, localUV, modelMatrix and
+                                  // vertexColor, which it may change; new Shader('', vertexCode) keeps the 3D look
 obj.shader = shader               // any EngineObject or EngineObject3D; draws that share a Shader share a batch
 shader.noTint = false             // 2D: write mainImage's color as it is with the draw's alpha, no tint, for data
                                   // like normals; set before it first draws
@@ -2066,7 +2070,8 @@ material.roughness (MeshStandardMaterial)  // obj.roughness, which sets obj.shin
 material.emissiveMap, emissive            // obj.emissiveMap, obj.emissiveMapColor
 material.transparent, blending            // obj.transparent, obj.additive
 new THREE.ShaderMaterial({fragmentShader}) // obj.shader = new Shader(code), a mainImage snippet the engine wraps;
-                                          // set emissive = 1 for the snippet to do its own lighting
+                                          // set emissive = 1 for the snippet to do its own lighting; a
+                                          // vertexShader is new Shader(code, vertexCode) with a mainVertex snippet
 new THREE.AmbientLight(color)             // render3D.ambientColor
 new THREE.HemisphereLight(sky, ground)    // render3D.ambientColor and ambientGroundColor, which setSky sets from its colors
 new THREE.DirectionalLight(color)         // new DirectionalLight3D(pos3D, color), it shines from its position the

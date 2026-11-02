@@ -1,0 +1,60 @@
+<!DOCTYPE html><meta charset=utf-8>
+<title>LittleJS smoke: 3D vertex code</title>
+<script src=../../dist/littlejs.js></script>
+<script src=smoke.js></script>
+<pre id=result>PENDING</pre>
+<script>
+'use strict';
+
+// a Shader's vertex code moves vertices in world space: a box drawn where its mainVertex puts it, one colored by its
+// vertexColor with the plugin's own look, and a box moved away that casts no shadow where it was, since the shadow
+// map runs the same code
+// the camera is at z 10 looking at the origin, the view 11.5 units across at the origin, so a place (x, y) there is
+// at (.5 + x / 11.5, .5 + y / 11.5) of the canvas
+smokeRun(async ()=>
+{
+    setShowSplashScreen(false);
+    setDebugWatermark(false);
+    setEngineManualStep(true);
+    setCanvasFixedSize(vec2(64));
+    setCanvasClearColor(rgb(0, 0, 0));
+    const at = (x, y)=> [.5 + x / 11.5, .5 + y / 11.5];
+    await engineInit(()=>
+    {
+        setCameraScale(1);
+        new Render3DPlugin;
+        render3D.shadows = true;
+        render3D.sunDirection = vec3(0, 1, .2); // nearly overhead, the shadows fall a little away from the camera
+
+        // a red box moved up 3 units by its vertex code
+        const moved = new EngineObject3D(vec3(-3, 0, 0), buildBox(), undefined, rgb(1, 0, 0));
+        moved.scale3D = vec3(1.5);
+        moved.emissive = 1;
+        moved.shader = new Shader('', 'void mainVertex(inout vec3 pos, inout vec3 normal) { pos.y += 3.; }');
+
+        // a white box its vertex code makes green, with no fragment code
+        const colored = new EngineObject3D(vec3(3, 0, 0), buildBox(), undefined, rgb(1, 1, 1));
+        colored.scale3D = vec3(1.5);
+        colored.emissive = 1;
+        colored.shader = new Shader('',
+            'void mainVertex(inout vec3 pos, inout vec3 normal) { vertexColor = vec4(0, 1, 0, 1); }');
+
+        // the ground, seen from just above, and over its middle a box moved far below it, which casts nothing
+        new EngineObject3D(vec3(0, -3.5, 0), buildGrid(vec2(40), 1));
+        const gone = new EngineObject3D(vec3(), buildBox());
+        gone.scale3D = vec3(2);
+        gone.shader = new Shader('', 'void mainVertex(inout vec3 pos, inout vec3 normal) { pos.y -= 100.; }');
+    }, ()=> {}, ()=> {}, ()=> {}, ()=> {});
+    check('the 3D shaders compiled', !!render3D.program);
+    engineStep();
+    const pixel = (name, [x, y], test)=> { const p = smokePixel(x, y); check(name, test(p), p); };
+    pixel('a vertex moved by mainVertex draws where it was moved', at(-3, 3), (p)=> smokeNear(p, [255, 0, 0, 255]));
+    pixel('and not where the object is', at(-3, 0), (p)=> smokeNear(p, [0, 0, 0, 255], 20));
+    pixel('vertexColor colors it, with the plugin look kept', at(3, 0), (p)=> smokeNear(p, [0, 255, 0, 255]));
+    // the ground under the middle, where draw3d's box casts its shadow, is lit as the ground nearer the camera is
+    const lit = smokePixel(.5, .12)[0], under = smokePixel(.5, .215)[0];
+    check('the shadow map moves the vertex too, nothing casts where it was', lit > 150 && under > lit - 20,
+        [under, lit]);
+    checkGLError();
+});
+</script>

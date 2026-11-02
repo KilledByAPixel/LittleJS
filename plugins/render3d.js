@@ -692,7 +692,11 @@ class Render3DPlugin
         this.currentProgram = undefined; // the program in use during a pass, a Shader's or the main one
         this.lightCount = 0;         // Light3D objects sent this pass
         /** @type {WebGLProgram|undefined} */
-        this.shadowShader = undefined;
+        this.shadowShader = undefined; // the plugin's own depth program
+        /** @type {WebGLProgram|undefined} */
+        this.shadowProgram = undefined; // the depth program in use during a shadow or depth pass, a Shader's or its own
+        /** @type {Matrix4} */
+        this.shadowPassMatrix = this.shadowMatrix; // the matrix the depth pass draws with, the light's or the camera's
         /** @type {WebGLVertexArrayObject|undefined} */
         this.vao = undefined;
         /** @type {Set<CubeMap>} */
@@ -1725,23 +1729,55 @@ const RENDER3D_ATTRIBS = [[0, 3, 5126, false, 0], [1, 3, 5126, false, 12], [2, 2
 // the normal matrix comes from the model matrix here: each column over its squared length, which is the inverse
 // transpose of any rotation and scale, mirrored or not, and skips a 3x3 inverse per draw on the CPU; a sheared
 // matrix, one built by multiplying rotations with scales between them, gets normals that are only close
-const RENDER3D_VERTEX_SOURCE =
-    '#version 300 es\n' +
-    'precision highp float;' +
-    'uniform mat4 viewProj,lightViewProj;' +
-    RENDER3D_VERTEX_INPUTS +
-    'out vec3 P,N;out vec2 T,L;out vec4 C,S;' +
-    'void main(){' +
-    'vec4 w=mat4(m0,m1,m2,m3)*vec4(p,1.);' +
-    'gl_Position=viewProj*w;' +
-    'P=w.xyz;' +
+// the world normal, worked out in the vertex stage of the shaded and the depth programs
+const RENDER3D_VERTEX_NORMAL =
     'vec3 c0=m0.xyz,c1=m1.xyz,c2=m2.xyz;' +
-    'N=mat3(c0/max(dot(c0,c0),1e-20),c1/max(dot(c1,c1),1e-20),c2/max(dot(c2,c2),1e-20))*n;' +
-    'T=uvRect.xy+t*uvRect.zw;' +
-    'L=t;' +
-    'C=c*tint;' +
-    'S=lightViewProj*w;' +
-    '}';
+    'N=mat3(c0/max(dot(c0,c0),1e-20),c1/max(dot(c1,c1),1e-20),c2/max(dot(c2,c2),1e-20))*n;';
+
+// the names a Shader's vertex code can use; the sampler's precision is the stages' default, so it links with the
+// fragment stage's tex, and C is the vertex color the fragment stage gets, in the depth program a global of its own
+const RENDER3D_VERTEX_SNIPPET_NAMES =
+    'uniform float iTime;uniform vec3 iResolution,cameraPos;uniform sampler2D tex;\n' +
+    '#define iChannel0 tex\n' +
+    '#define localUV t\n' +
+    '#define vertexColor C\n' +
+    '#define modelMatrix mat4(m0,m1,m2,m3)\n';
+
+// given a Shader's vertex code, its mainVertex moves the world position and normal after the model matrix, with the
+// color worked out first so it can change it, and the rest uses what it gives; without, the source is as it was
+function render3DVertexSource(vertexCode)
+{
+    return '#version 300 es\n' +
+        'precision highp float;' +
+        'uniform mat4 viewProj,lightViewProj;' +
+        RENDER3D_VERTEX_INPUTS +
+        'out vec3 P,N;out vec2 T,L;out vec4 C,S;' +
+        (vertexCode ?
+            'void mainVertex(inout vec3,inout vec3);' +
+            'void main(){' +
+            'vec4 w=mat4(m0,m1,m2,m3)*vec4(p,1.);' +
+            RENDER3D_VERTEX_NORMAL +
+            'T=uvRect.xy+t*uvRect.zw;' +
+            'L=t;' +
+            'C=c*tint;' +
+            'vec3 q=w.xyz;mainVertex(q,N);w=vec4(q,1.);' +
+            'gl_Position=viewProj*w;' +
+            'P=q;' +
+            'S=lightViewProj*w;' +
+            '}\n' + RENDER3D_VERTEX_SNIPPET_NAMES + vertexCode + '\n'
+        :
+            'void main(){' +
+            'vec4 w=mat4(m0,m1,m2,m3)*vec4(p,1.);' +
+            'gl_Position=viewProj*w;' +
+            'P=w.xyz;' +
+            RENDER3D_VERTEX_NORMAL +
+            'T=uvRect.xy+t*uvRect.zw;' +
+            'L=t;' +
+            'C=c*tint;' +
+            'S=lightViewProj*w;' +
+            '}');
+}
+const RENDER3D_VERTEX_SOURCE = render3DVertexSource();
 
 // the names a Shader's snippet can use in 3D, over the plugin's own uniforms and varyings
 const RENDER3D_SNIPPET_NAMES =
@@ -1898,8 +1934,64 @@ function render3DShaderProgram(shader)
 {
     ASSERT(shader instanceof Shader, 'render3D.shader must be a Shader, not the snippet itself');
     shader.program3D || glShaderTrack(shader); // one let go of and drawn again is kept for a lost context again
-    const program = shader.program3D ||= glCreateProgram(RENDER3D_VERTEX_SOURCE, render3DFragmentSource(shader.fragmentCode));
+    const program = shader.program3D ||= glCreateProgram(render3DVertexSource(shader.vertexCode),
+        render3DFragmentSource(shader.fragmentCode));
     return glFailedPrograms.has(program) ? render3D.program : program; // one that did not build draws as with none
+}
+
+// the depth only program for the shadow map and the camera's depth, same vertex layout; see through pixels cast
+// nothing, so sprites and cut out textures cast their outline, and a blended object faded below half its alpha
+// casts nothing, as it draws; an opaque one draws solid whatever its tint alpha, and casts so; given a Shader's
+// vertex code, its mainVertex moves the vertex as it does on the screen, with the world normal and a color of its own
+function render3DShadowVertexSource(vertexCode)
+{
+    return '#version 300 es\n' +
+        'precision highp float;' +
+        'uniform mat4 viewProj;' +
+        RENDER3D_VERTEX_INPUTS +
+        'out vec2 T;out float A;' +
+        (vertexCode ?
+            'vec3 N;vec4 C;void mainVertex(inout vec3,inout vec3);' +
+            'void main(){T=uvRect.xy+t*uvRect.zw;C=c*tint;' +
+            'vec4 w=mat4(m0,m1,m2,m3)*vec4(p,1.);' + RENDER3D_VERTEX_NORMAL +
+            'vec3 q=w.xyz;mainVertex(q,N);A=C.a;gl_Position=viewProj*vec4(q,1.);}\n' +
+            RENDER3D_VERTEX_SNIPPET_NAMES + vertexCode + '\n'
+        :
+            'void main(){T=uvRect.xy+t*uvRect.zw;A=c.a*tint.a;gl_Position=viewProj*mat4(m0,m1,m2,m3)*vec4(p,1.);}');
+}
+const RENDER3D_SHADOW_FRAGMENT_SOURCE =
+    '#version 300 es\n' +
+    'precision highp float;' +
+    'uniform sampler2D tex;' +
+    'uniform float cut;' + // 1 for a blended batch, cut by its tint and vertex alpha too, 0 by the texture only
+    'in vec2 T;in float A;' +
+    'void main(){if(texture(tex,T).a*mix(1.,A,cut)<.5)discard;}';
+
+// the depth program a draw casts with: a Shader's with vertex code, compiled the first time it casts, or the plugin's
+function render3DShadowProgram(shader)
+{
+    const r = render3D;
+    if (!shader?.vertexCode) return r.shadowShader;
+    shader.shadowProgram3D || glShaderTrack(shader);
+    const program = shader.shadowProgram3D ||= glCreateProgram(render3DShadowVertexSource(shader.vertexCode),
+        RENDER3D_SHADOW_FRAGMENT_SOURCE);
+    return glFailedPrograms.has(program) ? r.shadowShader : program; // one that did not build casts as with none
+}
+
+// make a depth program current for the shadow map or the camera's depth and send it the pass's matrix, plus for a
+// Shader's the names its vertex code reads, the camera's own place so a vertex moves as it does on the screen
+function render3DUseShadowProgram(program)
+{
+    const gl = glContext, r = render3D;
+    gl.useProgram(r.shadowProgram = program);
+    render3DShadowCut = undefined; // the cut is sent to each program
+    gl.uniformMatrix4fv(render3DUniform('viewProj', program), false, r.shadowPassMatrix.m);
+    if (program === r.shadowShader) return;
+    gl.uniform1f(render3DUniform('iTime', program), time);
+    gl.uniform3f(render3DUniform('iResolution', program), glCanvas.width, glCanvas.height, 1);
+    const c = r.camera.pos;
+    gl.uniform3f(render3DUniform('cameraPos', program), c.x, c.y, c.z);
+    gl.uniform1i(render3DUniform('tex', program), 0);
 }
 
 // make a program current for the pass and send it the pass uniforms: the matrices, the camera and the lights,
@@ -1956,24 +2048,8 @@ function render3DInitGL()
     // the shader, see RENDER3D_VERTEX_SOURCE and render3DFragmentSource
     r.program = glCreateProgram(RENDER3D_VERTEX_SOURCE, render3DFragmentSource());
 
-    // the depth only shader for the shadow map, same vertex layout; see through pixels cast nothing, so sprites and
-    // cut out textures cast their outline, and a blended object faded below half its alpha casts nothing, as it
-    // draws; an opaque one draws solid whatever its tint alpha, and casts so
-    r.shadowShader = glCreateProgram(
-        '#version 300 es\n' +
-        'precision highp float;' +
-        'uniform mat4 viewProj;' +
-        RENDER3D_VERTEX_INPUTS +
-        'out vec2 T;out float A;' +
-        'void main(){T=uvRect.xy+t*uvRect.zw;A=c.a*tint.a;gl_Position=viewProj*mat4(m0,m1,m2,m3)*vec4(p,1.);}'
-        ,
-        '#version 300 es\n' +
-        'precision highp float;' +
-        'uniform sampler2D tex;' +
-        'uniform float cut;' + // 1 for a blended batch, cut by its tint and vertex alpha too, 0 by the texture only
-        'in vec2 T;in float A;' +
-        'void main(){if(texture(tex,T).a*mix(1.,A,cut)<.5)discard;}'
-    );
+    // the depth only shader for the shadow map and the camera's depth, see render3DShadowVertexSource
+    r.shadowShader = glCreateProgram(render3DShadowVertexSource(), RENDER3D_SHADOW_FRAGMENT_SOURCE);
 
     // a program that did not build in a release build would fail every draw: 3D stays off, said once, since the pass
     // returns when there is no program, and a lost context that comes back tries again
@@ -2348,11 +2424,11 @@ function render3DDrawSkyBox(cube)
 function render3DContextLost()
 {
     const r = render3D;
-    r.program = r.currentProgram = r.shadowShader = r.vao = r.streamBuffer = r.whiteTexture = undefined;
+    r.program = r.currentProgram = r.shadowShader = r.shadowProgram = r.vao = r.streamBuffer = r.whiteTexture = undefined;
     r.skyBoxProgram = r.skyBoxVao = r.captureFramebuffer = r.captureDepth = undefined;
     r.captureDepthSize = 0;
     for (const shader of glShaderObjects)
-        shader.program3D = undefined; // compiled again by the next draw
+        shader.program3D = shader.shadowProgram3D = undefined; // compiled again by the next draw
     r.lightCount = 0;
     r.instanceBuffers = [];
     r.samplers = new Map;
@@ -2621,10 +2697,13 @@ function render3DSetDrawUniforms(matrix, tileInfo, tint, uvRect, state=render3D)
     render3DBindTexture(tileInfo, state);
     if (r.shadowPass)
     {
-        // the shadow map needs only how to cut: by the alpha it blends with, or the texture's as an opaque draw
+        // the depth program the draw's Shader casts with, and how to cut: by the alpha it blends with, or the
+        // texture's as an opaque draw
+        const program = render3DShadowProgram(state.shader);
+        program === r.shadowProgram || render3DUseShadowProgram(program);
         const cut = state.blend ? 1 : 0;
         if (render3DShadowCut !== cut)
-            glContext.uniform1f(render3DUniform('cut', r.shadowShader), render3DShadowCut = cut);
+            glContext.uniform1f(render3DUniform('cut', program), render3DShadowCut = cut);
         return;
     }
 
@@ -2900,8 +2979,8 @@ function render3DRenderShadowMap()
     gl.bindFramebuffer(gl.FRAMEBUFFER, r.shadowFramebuffer);
     gl.viewport(0, 0, r.shadowTextureSize, r.shadowTextureSize);
     gl.clear(gl.DEPTH_BUFFER_BIT);
-    gl.useProgram(r.shadowShader);
-    gl.uniformMatrix4fv(render3DUniform('viewProj', r.shadowShader), false, r.shadowMatrix.m);
+    r.shadowPassMatrix = r.shadowMatrix;
+    render3DUseShadowProgram(r.shadowShader);
     gl.enable(gl.DEPTH_TEST);
     gl.depthMask(true);
     gl.disable(gl.BLEND);
@@ -2967,8 +3046,8 @@ function render3DRenderDepth()
     gl.bindFramebuffer(gl.FRAMEBUFFER, r.cameraDepthFramebuffer);
     gl.viewport(0, 0, width, height);
     gl.clear(gl.DEPTH_BUFFER_BIT);
-    gl.useProgram(r.shadowShader);
-    gl.uniformMatrix4fv(render3DUniform('viewProj', r.shadowShader), false, r.viewProjection.m);
+    r.shadowPassMatrix = r.viewProjection;
+    render3DUseShadowProgram(r.shadowShader);
     gl.enable(gl.DEPTH_TEST);
     gl.depthMask(true);
     gl.disable(gl.BLEND);

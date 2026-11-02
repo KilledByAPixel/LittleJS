@@ -517,6 +517,7 @@ function glUniformLocation(program, name)
 // color, then the sprite's color and additive color apply as the engine's own fragment shader does
 function glShaderProgram(shader)
 {
+    ASSERT(!!shader.fragmentCode, 'a Shader of vertex code alone is for 3D, 2D draws need its mainImage');
     shader.program || glShaderTrack(shader);
     const program = shader.program ||= glCreateProgram(gl_VERTEX_SOURCE,
         '#version 300 es\n' +
@@ -550,9 +551,9 @@ function glShaderDispose(shader)
     const i = glShaderObjects.indexOf(shader);
     i < 0 || glShaderObjects.splice(i, 1);
     if (glContext && !headlessMode)
-        for (const program of [shader.program, shader.program3D])
+        for (const program of [shader.program, shader.program3D, shader.shadowProgram3D])
             program && glContext.deleteProgram(program);
-    shader.program = shader.program3D = undefined;
+    shader.program = shader.program3D = shader.shadowProgram3D = undefined;
 }
 
 /** Create WebGL texture from an image and init the texture settings

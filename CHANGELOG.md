@@ -5,7 +5,8 @@ What changed in each release, newest first. Releases before 1.20.0 are on the
 
 ## Unreleased
 
-Nothing yet.
+### New Changes
+- A 3D `Shader` can move vertices: `new Shader(fragmentCode, vertexCode)`, where the vertex code defines `void mainVertex(inout vec3 pos, inout vec3 normal)`, given each vertex's place and normal in world space, an instance's own in a batch, for wind in grass, waves or a wobble; it runs in the shadow map and the camera's depth too, so a moved vertex casts and hides where it is drawn. It reads `iTime`, `iResolution`, `cameraPos`, `iChannel0`, `localUV` and `modelMatrix`, and may change `vertexColor`, the color the fragment stage gets. `new Shader('', vertexCode)` keeps the plugin's own look; a Shader with no vertex code draws exactly as before. The object's bounds do not move with its vertices, so one moved far needs room to be culled by
 
 ## 1.29.0 - 2026-11-01
 
