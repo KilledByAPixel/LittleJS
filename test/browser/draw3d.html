@@ -58,6 +58,15 @@ smokeRun(async ()=>
         behind.shader = new Shader('void mainImage(out vec4 c, vec2 uv) { c = texture(iChannel0, uv);' +
             'vec4 p = viewProjection * vec4(worldPos - vec3(0, 0, 6), 1.); gl_FragDepth = p.z / p.w * .5 + .5; }');
 
+        // a quad given in the GPU layout, its triangles counter clockwise from the camera, so it is culled if the
+        // upload turned them the wrong way
+        const floats = new Float32Array(4 * RENDER3D_VERTEX_FLOATS), ints = new Uint32Array(floats.buffer);
+        [[-.5, -.5, 0, 1], [.5, -.5, 1, 1], [.5, .5, 1, 0], [-.5, .5, 0, 0]].forEach(([x, y, u, v], i)=>
+            meshWriteVertex(floats, ints, i * RENDER3D_VERTEX_FLOATS, x, y, 0, 0, 0, 1, u, v, WHITE.rgbaInt()));
+        const quad = new EngineObject3D(vec3(-1.8, -2.2, 0),
+            new Mesh().setVertexData(floats, new Uint16Array([0, 1, 2, 0, 2, 3])), undefined, rgb(0, .5, 1));
+        quad.emissive = 1;
+
         // two lit white boxes whose front faces turn mostly away from the sun, the right one's Shader bending its
         // normal to face the sun, which lights it fully
         const white = 'void mainImage(out vec4 c, vec2 uv) { c = vec4(1); }';
@@ -107,6 +116,8 @@ smokeRun(async ()=>
     const plainLight = smokePixel(...at(-5, 1.2))[0], bentLight = smokePixel(...at(5, 1.2))[0];
     check("a Shader's mainNormal bends the normal the lighting uses", bentLight > plainLight + 40,
         [plainLight, bentLight]);
+    pixel('a mesh given its vertex data draws, facing the way its triangles say', at(-1.8, -2.2),
+        (p)=> smokeNear(p, [0, 128, 255, 255]));
     pixel('a voxel map draws its block with its tile', at(5.4, -.5), (p)=> smokeNear(p, [0, 255, 255, 255], 40));
     pixel('a height map draws', at(-5, -.3), (p)=> smokeNear(p, [255, 255, 0, 255], 40));
     pixel('an opaque sprite draws its tile, unlit', at(-5.25, 3), (p)=> smokeNear(p, [255, 136, 0, 255], 40));

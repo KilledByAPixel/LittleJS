@@ -1810,6 +1810,12 @@ mesh.addQuad(a, b, c, d, color, uvs) // corners in loop order, counter clockwise
 mesh.addTriangles(points, indices, normals, uvs, colors) // triangles over their own vertices, the form a model file
                                      // comes in: each vertex once, three indices per triangle counter clockwise from
                                      // the front; the mesh becomes indexed, a strip already in it is welded first
+mesh.setVertexData(vertexData, indices, vertexCount) // a big generated mesh, like terrain, given in the GPU layout:
+                                     // a Float32Array of RENDER3D_VERTEX_FLOATS floats per vertex, written by
+                                     // meshWriteVertex(floats, ints, j, x, y, z, nx, ny, nz, u, v, rgba) with ints a
+                                     // Uint32Array view of its buffer, and a Uint32Array or Uint16Array of triangles
+                                     // counter clockwise from the front; uploaded as it is, kept for a lost context,
+                                     // drawn and picked like any mesh, but has no points to transform or combine
 mesh.toIndexed()                     // turn a strip mesh into the indexed form in place, each distinct vertex once
 mesh.indices                         // the triangles of an indexed mesh, undefined for a strip; either form draws the same
 mesh.combine(otherMesh, matrix, color)        // append a transformed, tinted copy, to build one shape out of several;

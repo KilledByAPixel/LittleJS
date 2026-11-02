@@ -167,6 +167,8 @@ export
     Camera3D,
     EngineObject3D,
     Mesh,
+    meshWriteVertex,
+    RENDER3D_VERTEX_FLOATS,
     InstancedMesh3D,
     buildLathe,
     buildCylinder,

@@ -106,3 +106,15 @@ test('the nearest face wins, and a ray of no length is where it starts', ()=>
     }
     finally { clear(); }
 });
+
+test("a sliver at a sphere's pole, its two corners all but one place, is not hit by rounding", ()=>
+{
+    try
+    {
+        // along the diagonal the round surface is at 5 - 1/sqrt(3), 4.42, and a facet a little inside it; before,
+        // the sliver at the pole said 4, a place outside the sphere
+        const d = pick(object(vec3(), buildSphere(2)), vec3(5, 5, 5), vec3(-1, -1, -1));
+        assert.ok(d > 4.42 && d < 4.5, d);
+    }
+    finally { clear(); }
+});

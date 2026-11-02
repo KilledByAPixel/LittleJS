@@ -23,7 +23,11 @@
  *  @memberof Render3D */
 let render3D;
 
-// vertex format: position xyz, normal xyz, uv, rgba bytes
+/** Floats in each vertex of the GPU layout: position xyz, normal xyz, uv, and the color as rgba bytes in the last
+ *  one, what meshWriteVertex writes and mesh.setVertexData takes
+ *  @type {number}
+ *  @default
+ *  @memberof Render3D */
 const RENDER3D_VERTEX_FLOATS = 9;
 const RENDER3D_VERTEX_BYTES = RENDER3D_VERTEX_FLOATS * 4;
 

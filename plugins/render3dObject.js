@@ -82,7 +82,7 @@ class EngineObject3D extends EngineObject
          *  @type {Mesh|undefined} */
         this.mesh = mesh;
         // a shared mesh measured since it last changed is not walked again for each object made from it
-        const bounds = mesh && mesh.points.length ? !mesh.dirty && mesh.bounds || mesh.getBounds() : undefined;
+        const bounds = mesh && mesh.vertexCount ? !mesh.dirty && mesh.bounds || mesh.getBounds() : undefined;
         /** @property {Vector3} - Size for solid collision and the collect and callback helpers, and of the sprite when
          *  there is a tileInfo and no mesh; starts at the size of the mesh's box, or 1 with no mesh, and setMesh leaves
          *  it as it is; the box is centered on pos3D, so center() a mesh whose origin is not its middle, like a model
@@ -949,10 +949,12 @@ function render3DRaycastObject(ray, o)
 // how far along a ray, in the mesh's own space, its nearest triangle is hit, or undefined: the triangles that face
 // the ray as the pass draws them, clockwise from the front, and the back faces too of a doubleSided mesh; a strip's
 // triangle i is (i-2, i-1, i), the odd ones read the other way, and a join between its pieces has no area and is
-// never hit; nothing is kept between calls, so a mesh that changed is hit as it is now
+// never hit; nothing is kept between calls, so a mesh that changed is hit as it is now; a mesh given its vertex data
+// is read from it, its places the first three floats of each vertex
 function render3DRaycastMesh(ray, mesh)
 {
-    const points = mesh.points, indices = mesh.indices, both = mesh.doubleSided;
+    const points = mesh.points, data = mesh.vertexData, indices = data ? mesh.vertexIndices : mesh.indices;
+    const both = mesh.doubleSided, stride = RENDER3D_VERTEX_FLOATS;
     const ox = ray.origin.x, oy = ray.origin.y, oz = ray.origin.z;
     const dx = ray.direction.x, dy = ray.direction.y, dz = ray.direction.z;
     const count = indices ? indices.length / 3 | 0 : points.length - 2;
@@ -960,26 +962,43 @@ function render3DRaycastMesh(ray, mesh)
     for (let i = 0; i < count; ++i)
     {
         // the corners clockwise from the front: an indexed list is written the other way round
-        let a, b, c;
+        let ia, ib, ic, ax, ay, az, bx, by, bz, cx, cy, cz;
         if (indices)
-            a = points[indices[i*3]], b = points[indices[i*3+2]], c = points[indices[i*3+1]];
+            ia = indices[i*3], ib = indices[i*3+2], ic = indices[i*3+1];
         else
-            a = points[i & 1 ? i + 1 : i], b = points[i & 1 ? i : i + 1], c = points[i + 2];
+            ia = i & 1 ? i + 1 : i, ib = i & 1 ? i : i + 1, ic = i + 2;
+        if (data)
+        {
+            ia *= stride, ib *= stride, ic *= stride;
+            ax = data[ia], ay = data[ia+1], az = data[ia+2];
+            bx = data[ib], by = data[ib+1], bz = data[ib+2];
+            cx = data[ic], cy = data[ic+1], cz = data[ic+2];
+        }
+        else
+        {
+            const a = points[ia], b = points[ib], c = points[ic];
+            ax = a.x, ay = a.y, az = a.z, bx = b.x, by = b.y, bz = b.z, cx = c.x, cy = c.y, cz = c.z;
+        }
 
         // Moller and Trumbore: the determinant is the ray along the face's normal, below zero from the front
-        const e1x = b.x - a.x, e1y = b.y - a.y, e1z = b.z - a.z;
-        const e2x = c.x - a.x, e2y = c.y - a.y, e2z = c.z - a.z;
+        const e1x = bx - ax, e1y = by - ay, e1z = bz - az;
+        const e2x = cx - ax, e2y = cy - ay, e2z = cz - az;
         const hx = dy * e2z - dz * e2y, hy = dz * e2x - dx * e2z, hz = dx * e2y - dy * e2x;
         const det = e1x * hx + e1y * hy + e1z * hz;
         if (both ? !det : !(det < 0)) continue;
-        const sx = ox - a.x, sy = oy - a.y, sz = oz - a.z;
+        const sx = ox - ax, sy = oy - ay, sz = oz - az;
         const u = (sx * hx + sy * hy + sz * hz) / det;
         if (!(u >= 0 && u <= 1)) continue;
         const qx = sy * e1z - sz * e1y, qy = sz * e1x - sx * e1z, qz = sx * e1y - sy * e1x;
         const v = (dx * qx + dy * qy + dz * qz) / det;
         if (!(v >= 0 && u + v <= 1)) continue;
         const t = (e2x * qx + e2y * qy + e2z * qz) / det;
-        if (t >= 0 && !(t >= nearest))
+        if (!(t >= 0 && !(t >= nearest))) continue;
+
+        // a sliver, two corners all but one place as at a strip's pole, has a determinant of rounding alone, which
+        // can say anything; its area against its edges says so, measured only for a hit
+        const nx = e1y * e2z - e1z * e2y, ny = e1z * e2x - e1x * e2z, nz = e1x * e2y - e1y * e2x;
+        if (nx*nx + ny*ny + nz*nz > 1e-12 * (e1x*e1x + e1y*e1y + e1z*e1z) * (e2x*e2x + e2y*e2y + e2z*e2z))
             nearest = t;
     }
     return nearest;

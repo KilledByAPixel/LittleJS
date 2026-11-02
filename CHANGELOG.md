@@ -6,7 +6,11 @@ What changed in each release, newest first. Releases before 1.20.0 are on the
 ## Unreleased
 
 ### New Changes
+- `mesh.setVertexData(vertexData, indices, vertexCount)` makes a mesh from vertices already in the GPU layout, for a big mesh a game generates, like terrain, which goes to the GPU as it is with no points made and packed again: a `Float32Array` of `RENDER3D_VERTEX_FLOATS` floats per vertex, place, normal, uv and the color as RGBA bytes, written by `meshWriteVertex`, and a `Uint32Array` or `Uint16Array` of triangles counter clockwise from the front, as `addTriangles` takes them. The arrays are kept and never changed, so a lost context uploads them again; the mesh draws, casts shadows, is instanced and is picked like any other, and the methods that read or change points, like `transform` and `combine`, assert on it
 - A 3D `Shader` can move vertices: `new Shader(fragmentCode, vertexCode)`, where the vertex code defines `void mainVertex(inout vec3 pos, inout vec3 normal)`, given each vertex's place and normal in world space, an instance's own in a batch, for wind in grass, waves or a wobble; it runs in the shadow map and the camera's depth too, so a moved vertex casts and hides where it is drawn. It reads `iTime`, `iResolution`, `cameraPos`, `iChannel0`, `localUV` and `modelMatrix`, and may change `vertexColor`, the color the fragment stage gets. `new Shader('', vertexCode)` keeps the plugin's own look; a Shader with no vertex code draws exactly as before. The object's bounds do not move with its vertices, so one moved far needs room to be culled by
+
+### Fixes
+- A 3D pick no longer hits a sliver at a strip mesh's pole, two corners all but one place, which rounding could make a hit anywhere along the ray, outside the mesh: `render3D.pick` along a sphere's diagonal said 4 for a sphere of size 2 seen from (5, 5, 5)
 
 ## 1.29.0 - 2026-11-01
 

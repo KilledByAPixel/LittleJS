@@ -30,14 +30,32 @@ function render3DForEachStripVertex(points, normals, uvs, colors, callback)
     }
 }
 
-// write one vertex into a packed buffer at float index j
-function render3DWriteVertex(floats, ints, j, x, y, z, n, u, v, rgba)
+/** Write one vertex in the GPU layout, RENDER3D_VERTEX_FLOATS floats, for vertex data given to mesh.setVertexData:
+ *  its place, its normal, its uv and its color as RGBA bytes, in numbers so a loop over many makes no objects
+ *  @param {Float32Array} floats - The vertex data
+ *  @param {Uint32Array} ints - A view of the same buffer, for the color
+ *  @param {number} j - The vertex's first float, its number times RENDER3D_VERTEX_FLOATS
+ *  @param {number} x
+ *  @param {number} y
+ *  @param {number} z
+ *  @param {number} nx - The normal, unit length
+ *  @param {number} ny
+ *  @param {number} nz
+ *  @param {number} u - Across the tile, 0 to 1
+ *  @param {number} v - Down the tile, 0 to 1
+ *  @param {number} rgba - The color as color.rgbaInt() gives it
+ *  @memberof Render3D */
+function meshWriteVertex(floats, ints, j, x, y, z, nx, ny, nz, u, v, rgba)
 {
-    floats[j]   = x;   floats[j+1] = y;   floats[j+2] = z;
-    floats[j+3] = n.x; floats[j+4] = n.y; floats[j+5] = n.z;
-    floats[j+6] = u;   floats[j+7] = v;
+    floats[j]   = x;  floats[j+1] = y;  floats[j+2] = z;
+    floats[j+3] = nx; floats[j+4] = ny; floats[j+5] = nz;
+    floats[j+6] = u;  floats[j+7] = v;
     ints[j+8] = rgba;
 }
+
+// write one vertex into a packed buffer at float index j, its normal a vector
+function render3DWriteVertex(floats, ints, j, x, y, z, n, u, v, rgba)
+{ meshWriteVertex(floats, ints, j, x, y, z, n.x, n.y, n.z, u, v, rgba); }
 
 // turn every triangle of an index list the other way round, in place: the authoring form reads counter clockwise
 // from the front and the pass draws clockwise, as a strip's triangles come out after its leading repeat
@@ -129,6 +147,29 @@ const render3DMeshBuffers = typeof FinalizationRegistry == 'undefined' ? undefin
         glContext.deleteBuffer(buffer);
         glContext.deleteBuffer(indexBuffer);
     });
+
+// what a mesh given its vertex data with setVertexData says when asked to read or edit its points
+const RENDER3D_VERTEX_DATA_MESH = 'a mesh given its vertex data has no points for ';
+
+// make a mesh's GPU buffers from its packed vertices and its index list, already in the order the pass draws, and
+// keep what a draw, a lost context and the collection of the mesh need
+function render3DMeshSetBuffers(mesh, data, indices, wide)
+{
+    const gl = glContext;
+    mesh.buffer = gl.createBuffer();
+    mesh.indexBuffer = gl.createBuffer();
+    mesh.bufferCount = indices.length;
+    mesh.indexType = wide ? gl.UNSIGNED_INT : gl.UNSIGNED_SHORT;
+    mesh.dirty = mesh.vertexDataPacked = false;
+    gl.bindBuffer(gl.ARRAY_BUFFER, mesh.buffer);
+    gl.bufferData(gl.ARRAY_BUFFER, data, mesh.dynamicDraw && !mesh.vertexData ? gl.DYNAMIC_DRAW : gl.STATIC_DRAW);
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, mesh.indexBuffer);
+    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, indices, gl.STATIC_DRAW);
+    mesh.contextGeneration = render3D.contextGeneration;
+    const buffers = {buffer: mesh.buffer, indexBuffer: mesh.indexBuffer, generation: mesh.contextGeneration};
+    render3DMeshBuffers?.register(mesh, buffers, mesh);
+    gl.bindBuffer(gl.ARRAY_BUFFER, glArrayBuffer); // the engine's 2D batch writes through this binding
+}
 
 // the points at one place, to a hundred thousandth, which smooth normals are summed by: each point's group, numbered
 // from 0, found by a number made from its place and checked against the place, so no text is made for a point
@@ -271,11 +312,64 @@ class Mesh
          *  @type {{min: Vector3, max: Vector3}|undefined} */
         this.bounds = undefined;
         this.contextGeneration = 0; // the context the buffer belongs to, see render3D.contextGeneration
+        /** @property {Float32Array|undefined} - The vertices in the GPU layout, given to setVertexData, read only;
+         *  a mesh given them has no points
+         *  @type {Float32Array|undefined} */
+        this.vertexData = undefined;
+        /** @property {Uint32Array|Uint16Array|undefined} - The triangles given to setVertexData, read only
+         *  @type {Uint32Array|Uint16Array|undefined} */
+        this.vertexIndices = undefined;
+        this.vertexDataCount = 0; // the vertices of vertexData in use
     }
 
     /** Number of vertices in the mesh
      *  @return {number} */
-    get vertexCount() { return this.points.length; }
+    get vertexCount() { return this.vertexData ? this.vertexDataCount : this.points.length; }
+
+    /** Make the mesh from vertices already in the GPU layout, for a big mesh a game generates, like terrain: they go
+     *  to the GPU as they are, with no points made and packed again
+     *  - Each vertex is RENDER3D_VERTEX_FLOATS floats, written by meshWriteVertex: its place, its normal, its uv and
+     *    its color as RGBA bytes through a Uint32Array view of the same buffer
+     *  - The triangles are listed counter clockwise seen from the front, as addTriangles takes them
+     *  - The arrays are kept, not copied, and never changed, so a lost context uploads them again; call this again
+     *    after changing them
+     *  - The mesh's points, normals, uvs, colors and indices are emptied, and what edits or reads those, like
+     *    transform, combine and computeNormals, does not take a mesh made this way; it draws, casts shadows, is
+     *    instanced and is picked like any other
+     *  @param {Float32Array} vertexData - At least vertexCount * RENDER3D_VERTEX_FLOATS floats
+     *  @param {Uint32Array|Uint16Array} indices - Three vertex numbers per triangle
+     *  @param {number} [vertexCount] - The vertices in use, all the data holds by default
+     *  @return {Mesh} */
+    setVertexData(vertexData, indices, vertexCount=vertexData.length / RENDER3D_VERTEX_FLOATS | 0)
+    {
+        ASSERT(vertexData instanceof Float32Array, 'setVertexData takes its vertices as a Float32Array');
+        ASSERT(indices instanceof Uint32Array || indices instanceof Uint16Array,
+            'setVertexData takes its triangles as a Uint32Array or Uint16Array');
+        ASSERT(indices.length % 3 === 0, 'setVertexData takes three indices per triangle', indices.length);
+        ASSERT(vertexCount >= 0 && vertexCount % 1 === 0 && vertexCount * RENDER3D_VERTEX_FLOATS <= vertexData.length,
+            'setVertexData: vertexCount must be whole and fit in the data', vertexCount);
+        ASSERT(indices.every(i=> i < vertexCount), 'setVertexData: an index points past the vertices');
+        ASSERT(!this.dynamicDraw, 'a dynamicDraw mesh is made of points, setVertexData uploads once');
+        this.points = [], this.normals = [], this.uvs = [], this.colors = [];
+        this.indices = this.vertexKeys = this.vertexLayout = undefined;
+        this.vertexData = vertexData;
+        this.vertexIndices = indices;
+        this.vertexDataCount = vertexCount;
+
+        // the radius and box measured once here, from the places in the data
+        let r = 0, x0 = Infinity, y0 = Infinity, z0 = Infinity, x1 = -Infinity, y1 = -Infinity, z1 = -Infinity;
+        for (let j = 0; j < vertexCount * RENDER3D_VERTEX_FLOATS; j += RENDER3D_VERTEX_FLOATS)
+        {
+            const x = vertexData[j], y = vertexData[j+1], z = vertexData[j+2];
+            r = max(r, x*x + y*y + z*z);
+            x0 = min(x0, x), y0 = min(y0, y), z0 = min(z0, z);
+            x1 = max(x1, x), y1 = max(y1, y), z1 = max(z1, z);
+        }
+        this.radius = r ** .5;
+        this.bounds = vertexCount ? {min: vec3(x0, y0, z0), max: vec3(x1, y1, z1)} : {min: vec3(), max: vec3()};
+        this.dirty = true;
+        return this;
+    }
 
     /** Add a triangle strip, joined to the previous one by invisible flat triangles so one mesh holds many strips
      *  - Strip order: the first three points make a triangle, then each point makes another with the two before it
@@ -288,6 +382,7 @@ class Mesh
      *  @return {Mesh} */
     addStrip(points, normals, uvs, colors)
     {
+        ASSERT(!this.vertexData, RENDER3D_VERTEX_DATA_MESH + 'addStrip');
         if (this.indices)
         {
             // an indexed mesh takes the strip as the triangles it makes
@@ -317,6 +412,7 @@ class Mesh
      *  @return {Mesh} */
     addTriangles(points, indices, normals, uvs, colors)
     {
+        ASSERT(!this.vertexData, RENDER3D_VERTEX_DATA_MESH + 'addTriangles');
         ASSERT(isArray(points) && isArray(indices) && indices.length % 3 === 0,
             'addTriangles takes points and three indices per triangle');
         ASSERT(indices.every(i=> i >= 0 && i < points.length && i % 1 === 0), 'an index points past the vertices given');
@@ -374,6 +470,8 @@ class Mesh
      *  @return {Mesh} */
     combine(mesh, matrix=RENDER3D_IDENTITY, color=WHITE)
     {
+        ASSERT(!this.vertexData, RENDER3D_VERTEX_DATA_MESH + 'combine');
+        ASSERT(!mesh.vertexData, RENDER3D_VERTEX_DATA_MESH + 'combine, mirror, spin or CSG');
         matrix = render3DMatrix(matrix); // most parts only need moving into place
         const normalMatrix = render3DNormalMatrix(matrix), mirrors = render3DMirrors(matrix);
         let part = mesh, order;
@@ -471,6 +569,7 @@ class Mesh
      *  @return {Mesh} */
     scaleUVs(scale)
     {
+        ASSERT(!this.vertexData, RENDER3D_VERTEX_DATA_MESH + 'scaleUVs');
         const s = render3DSize2(scale);
         // new vectors, builders share uv objects between faces
         this.uvs = this.uvs.map(uv=> vec2(uv.x * s.x, uv.y * s.y));
@@ -483,6 +582,7 @@ class Mesh
      *  @return {Mesh} */
     transform(matrix)
     {
+        ASSERT(!this.vertexData, RENDER3D_VERTEX_DATA_MESH + 'transform, center or fit');
         matrix = render3DMatrix(matrix);
         const normalMatrix = render3DNormalMatrix(matrix);
         for (let i = 0; i < this.points.length; ++i)
@@ -500,6 +600,7 @@ class Mesh
      *  @return {Mesh} */
     flipNormals()
     {
+        ASSERT(!this.vertexData, RENDER3D_VERTEX_DATA_MESH + 'flipNormals');
         render3DFlipWinding(this);
         this.normals = this.normals.map(n=> n.scale(-1));
         this.dirty = true;
@@ -511,6 +612,7 @@ class Mesh
      *  @return {Mesh} */
     setColor(color)
     {
+        ASSERT(!this.vertexData, RENDER3D_VERTEX_DATA_MESH + 'setColor');
         // one per point, not one per color already there, so a mesh built by hand with no
         // colors gets them instead of quietly staying white
         this.colors = this.points.map(()=> color);
@@ -522,6 +624,8 @@ class Mesh
      *  @return {{min: Vector3, max: Vector3}} */
     getBounds()
     {
+        if (this.vertexData) // measured when it was given
+            return {min: this.bounds.min.copy(), max: this.bounds.max.copy()};
         if (!this.points.length)
             return {min: vec3(), max: vec3()};
         const lo = vec3(Infinity), hi = vec3(-Infinity);
@@ -556,6 +660,7 @@ class Mesh
      *  @return {number} */
     computeRadius()
     {
+        if (this.vertexData) return this.radius; // measured when it was given
         let r = 0;
         for (const p of this.points)
             r = max(r, p.lengthSquared());
@@ -569,6 +674,7 @@ class Mesh
      *  @return {Mesh} */
     computeNormals(smooth=false)
     {
+        ASSERT(!this.vertexData, RENDER3D_VERTEX_DATA_MESH + 'computeNormals');
         if (this.indices)
         {
             // the triangles are listed: smooth normals add up around each position, weighted by the corner angle
@@ -667,23 +773,23 @@ class Mesh
             }
         }
         this.dispose();
-        const {vertices, indices} = this.getTriangles(), count = vertices.length, wide = count > 65535;
-        const data = render3DMeshVertexData(this, vertices);
-        this.vertexLayout = this.dynamicDraw ? {vertices, pointCount: this.points.length, data} : undefined;
+        const data = this.vertexData;
+        if (data)
+        {
+            // given in the GPU layout: sent as it is, the triangles turned round for the pass as they are copied into
+            // the index list's width, the game's arrays never changed
+            const source = this.vertexIndices, count = this.vertexDataCount, wide = count > 65535;
+            const indices = wide ? new Uint32Array(source.length) : new Uint16Array(source.length);
+            for (let t = 0; t + 2 < source.length; t += 3)
+                indices[t] = source[t], indices[t+1] = source[t+2], indices[t+2] = source[t+1];
+            render3DMeshSetBuffers(this, data.subarray(0, count * RENDER3D_VERTEX_FLOATS), indices, wide);
+            return this;
+        }
+        const {vertices, indices} = this.getTriangles(), wide = vertices.length > 65535;
+        const packed = render3DMeshVertexData(this, vertices);
+        this.vertexLayout = this.dynamicDraw ? {vertices, pointCount: this.points.length, data: packed} : undefined;
         this.vertexKeys = undefined; // used once: an edit after this may tell entries apart
-        this.buffer = gl.createBuffer();
-        this.indexBuffer = gl.createBuffer();
-        this.bufferCount = indices.length;
-        this.indexType = wide ? gl.UNSIGNED_INT : gl.UNSIGNED_SHORT;
-        this.dirty = this.vertexDataPacked = false;
-        gl.bindBuffer(gl.ARRAY_BUFFER, this.buffer);
-        gl.bufferData(gl.ARRAY_BUFFER, data, this.dynamicDraw ? gl.DYNAMIC_DRAW : gl.STATIC_DRAW);
-        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer);
-        gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, wide ? new Uint32Array(indices) : new Uint16Array(indices), gl.STATIC_DRAW);
-        this.contextGeneration = render3D.contextGeneration;
-        const buffers = {buffer: this.buffer, indexBuffer: this.indexBuffer, generation: this.contextGeneration};
-        render3DMeshBuffers?.register(this, buffers, this);
-        gl.bindBuffer(gl.ARRAY_BUFFER, glArrayBuffer); // the engine's 2D batch writes through this binding
+        render3DMeshSetBuffers(this, packed, wide ? new Uint32Array(indices) : new Uint16Array(indices), wide);
         return this;
     }
 
@@ -694,6 +800,7 @@ class Mesh
      *    vertex; indices are the triangles, three per triangle, into vertices */
     getTriangles()
     {
+        ASSERT(!this.vertexData, RENDER3D_VERTEX_DATA_MESH + 'getTriangles or toIndexed');
         const count = this.points.length, vertices = [];
         if (this.indices)
         {
