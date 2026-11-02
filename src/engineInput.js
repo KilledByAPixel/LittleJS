@@ -792,17 +792,17 @@ function inputInit()
         const rect = mainCanvas.getBoundingClientRect();
         return x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom;
     }
+}
 
-    // convert a mouse or touch event position to screen space
-    function mouseEventToScreen(mousePos)
-    {
-        const rect = mainCanvas.getBoundingClientRect();
-        const px = percent(mousePos.x, rect.left, rect.right);
-        const py = percent(mousePos.y, rect.top, rect.bottom);
-        const pos = vec2(px*mainCanvasSize.x, py*mainCanvasSize.y);
-        // bent once, as it comes in, but not while a level editor is open, which draws over the bent picture flat
-        return mouseScreenTransform && !levelEditor.isOpen ? mouseScreenTransform(pos) : pos;
-    }
+// convert a point of the window, a mouse or touch event's, to screen space
+function mouseEventToScreen(mousePos)
+{
+    const rect = mainCanvas.getBoundingClientRect();
+    const px = percent(mousePos.x, rect.left, rect.right);
+    const py = percent(mousePos.y, rect.top, rect.bottom);
+    const pos = vec2(px*mainCanvasSize.x, py*mainCanvasSize.y);
+    // bent once, as it comes in, but not while a level editor is open, which draws over the bent picture flat
+    return mouseScreenTransform && !levelEditor.isOpen ? mouseScreenTransform(pos) : pos;
 }
 
 function inputUpdate()
@@ -1371,6 +1371,42 @@ function touchGamepadRender()
     for (let i = 0; i < els.face.length; i++)
         if (els.face[i])
             els.face[i].setAttribute('fill', touchGamepadButtons[i] ? '#fff' : '#000');
+}
+
+/** Where a touch gamepad button is on screen, its size and how visible it is
+ *  @typedef {Object} TouchGamepadButtonPos
+ *  @property {Vector2} pos - Its center in screen space, as mousePosScreen
+ *  @property {number} size - Its diameter in screen pixels
+ *  @property {number} alpha - How visible the gamepad is now, 0 when it has faded out, up to touchGamepadAlpha
+ *  @memberof Input */
+
+/** Returns where a button of the touch gamepad is on screen, to draw an icon of the game's own over it
+ *  - Undefined when the touch gamepad is not showing that button: off, not a touch device, or no such button
+ *  - Buttons 0 to 3 are the right side's, 4 to 7 the left side's when it has buttons instead of a stick
+ *  - Follows the layout, touchGamepadSize, the screen's safe area and setMouseScreenTransform
+ *  @param {number} button
+ *  @return {TouchGamepadButtonPos|undefined}
+ *  @example
+ *  // in gameRenderPost, an icon centered in the action button that fades with it
+ *  const b = touchGamepadButtonPos(0);
+ *  if (b && b.alpha)
+ *  {
+ *      const color = hsl(0, 0, 1, b.alpha / touchGamepadAlpha); // fades with the buttons
+ *      drawTile(b.pos, vec2(b.size * .6), actionIcon, color, 0, false, undefined, glEnable, true);
+ *  }
+ *  @memberof Input */
+function touchGamepadButtonPos(button)
+{
+    ASSERT(isNumber(button), 'button must be a number');
+    const circle = touchGamepadEnable && touchGamepadOverlay && touchGamepadSvgEls?.face[button];
+    if (!circle || touchGamepadOverlay.style.display === 'none') return;
+
+    // the circle drawn for it, in the stage's CSS pixels, the stage inset by the safe area
+    const r = touchGamepadStageRect(), rr = +circle.getAttribute('r');
+    const x = r.left + +circle.getAttribute('cx'), y = r.top + +circle.getAttribute('cy');
+    const pos = mouseEventToScreen(vec2(x, y)), edge = mouseEventToScreen(vec2(x + rr, y));
+    const alpha = +touchGamepadOverlay.style.opacity || 0;
+    return {pos, size: 2*pos.distance(edge), alpha};
 }
 
 // convert a pointer event to stage-local CSS pixels

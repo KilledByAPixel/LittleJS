@@ -399,6 +399,7 @@ export
     gamepadWasReleased,
     gamepadStick,
     gamepadStickCount,
+    touchGamepadButtonPos,
     gamepadDpad,
     gamepadConnected,
     gamepadVibrate,

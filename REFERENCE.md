@@ -607,6 +607,8 @@ gamepadConnected(gamepad=gamepadPrimary)           // Is the gamepad connected?
 gamepadVibrate(gamepad=gamepadPrimary, duration=200, strongMagnitude=1, weakMagnitude=1, startDelay=0) // Rumble,
                                                    // durations in ms, browsers stop at 5 seconds with the delay
 gamepadVibrateStop(gamepad=gamepadPrimary)         // Stop gamepad vibration
+touchGamepadButtonPos(button)                      // {pos, size, alpha} of a touch gamepad button on screen, to
+                                                   // draw an icon over it; undefined when it is not showing
 
 // Touch Gamepad
 touchGamepadEnable = false            // Is on screen touch gamepad enabled? A real gamepad in use takes over
