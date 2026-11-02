@@ -90,7 +90,7 @@ let remaining = 36000;
   `ParticleEmitter`; `Vector2.angle()` is 0 up
 - **3D angles:** radians, `rotation3D` is pitch, yaw and roll, turning as three.js does, counter clockwise seen
   down an axis; `Camera3D.fov` is radians; a 3D level file and the 3D editor's `setTransform` take degrees, as
-  does `ThreeJSPlugin.cameraFOV`
+  does `new ThreeJSPlugin(THREE, cameraFOV)`
 - **Per frame:** speeds and spins, `velocity`, `angleVelocity`, a particle's `speed` and `angleSpeed`, damping and
   gravity, at the fixed 60 updates a second
 - **Seconds:** `Timer`, `Tween`, `time`, a particle emitter's `emitTime` and `particleTime` and its `emitRate` (per
@@ -608,7 +608,8 @@ gamepadVibrate(gamepad=gamepadPrimary, duration=200, strongMagnitude=1, weakMagn
                                                    // durations in ms, browsers stop at 5 seconds with the delay
 gamepadVibrateStop(gamepad=gamepadPrimary)         // Stop gamepad vibration
 touchGamepadButtonPos(button)                      // {pos, size, alpha} of a touch gamepad button on screen, to
-                                                   // draw an icon over it; undefined when it is not showing
+                                                   // draw an icon over it; undefined when the touch gamepad
+                                                   // is off, alpha 0 while it has faded out
 
 // Touch Gamepad
 touchGamepadEnable = false            // Is on screen touch gamepad enabled? A real gamepad in use takes over
@@ -747,7 +748,8 @@ engineObjectsDestroy(immediate=true) // destroy every object except the persiste
 - Interfaces with EngineObject for collision
 - Collision layer is separate from visible layers
 - It is recommended to have a visible layer that matches the collision
-- Tile layers made without WebGL can be drawn to using their context with Canvas2D
+- Tile layers made without WebGL can be drawn to using their context with Canvas2D, after the layer has drawn
+  (redraw), and a cell set later clears its square unless setData is given false
 - Drawn with WebGL by default, or straight to the main canvas when made with useWebGL=false
 
 ```javascript
@@ -779,7 +781,7 @@ CanvasLayer.onContextRestored() // Called when a lost WebGL context comes back, 
 
 // LittleJS Layer System
 TileLayer(pos, size, tileInfo, renderOrder=0, useWebGL=true) // Create a tile layer object
-TileLayer.setData(layerPos, data, redraw)      // Set data at position, drawn on the next render; redraw true draws now, false leaves it as drawn until a redraw()
+TileLayer.setData(layerPos, data, redraw)      // Set data at position, drawn on the next render, now inside its own redraw; redraw true draws now, false leaves it as drawn until a redraw()
 TileLayer.clearData(layerPos, redraw)          // Clear data at position, drawn as setData draws
 TileLayer.getData(layerPos)                    // Get data at position
 TileLayer.debugShow = true                     // Shown by the debug overlay's 2: Debug Tiles, off to leave a layer out
@@ -789,6 +791,7 @@ TileLayer.drawTileData(layerPos, clear=true)   // Draw the tile, inside redrawSt
 // the cells waiting to be drawn first, so what is drawn goes on top of them
 // to draw on a layer made with useWebGL=false (or with WebGL off), pass its context to drawCanvas2D:
 // drawCanvas2D(pos, size, angle, mirror, drawFunction, screenSpace, layer.context)
+// a TileLayer draws over it: its first render draws it whole, a cell set with no redraw argument is drawn again
 // on a WebGL layer use drawRect/drawTile, or drawLayerTile/drawLayerRect inside redrawStart/End, its canvas is not shown
 
 // Tile Layer Data Object
@@ -1206,7 +1209,8 @@ lightSystem.normalMaps = false        // on to shade objects by their normalMap;
                                       // flat without one, so what is in front hides it; about doubles the scene's
                                       // draws, off costs nothing; every surface is shaded, so lights fall off faster;
                                       // an image the game lays out, not one packed by loadSprite or loadAtlas; an
-                                      // object's own shader is not used in the pass, additive draws hide nothing; a
+                                      // object without a normalMap draws with its own Shader, so its holes show what
+                                      // is behind; additive draws hide nothing; a
                                       // textureSize not the canvas's shape skews a turned sprite's normals a little
 lightSystem.normalPass                // read only: true while objects draw into the normal buffer
 lightSystem.normalTexture             // read only: the normal buffer, the lightmap's size, while normalMaps is on
@@ -1441,7 +1445,8 @@ new FirstPersonCamera3D(pos3D, yaw, pitch) // mouse look and WASD or arrows to m
                                // so it takes over without a jump; fields for moveSpeed, lookSpeed, pitchRange,
                                // lockPointer, and fly to move the way it looks instead of walking level; give it a
                                // size3D and setCollision() to walk into solids, destroy it to hand the camera back
-camera.stick = 1               // the gamepad stick that looks, stickSpeed = 3 radians a second; moveStick = 0 moves
+camera.stick = 1               // the gamepad stick that looks, stickSpeed = 3 radians a second; moveStick = 0 moves;
+                               // -1 for either leaves that stick to the game
 camera.jumpSpeed = 0           // above 0, Space or gamepad button 0 jumps while it stands on something: a height map,
                                // a voxel map or a solid, see groundObject
 camera.eyeHeight = 0           // how far above its position the eye is, toward the top of its size3D body

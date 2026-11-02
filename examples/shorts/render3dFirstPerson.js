@@ -158,7 +158,8 @@ wide and the maze is centered on the origin, with the rows along z.
 
 ### The player
 `new FirstPersonCamera3D(pos3D)` is an object that reads the mouse and
-keys, moves itself, and puts the camera where it is. It starts in cell
+keys, or a gamepad's sticks, moves itself, and puts the camera where
+it is. It starts in cell
 `(1, 9)` at eye height. `size3D = vec3(1)` with `collideAsSphere3D` and
 `setCollision()` give it a round body one unit across that the walls
 push back out.

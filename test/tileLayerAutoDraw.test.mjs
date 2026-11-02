@@ -182,20 +182,40 @@ test("a game's own redraw that calls redrawStart draws once on the first render,
     assert.deepEqual(counts.cells, ['own']);
 });
 
-test('a cell onRedraw sets waits for the next render', () =>
+test('a cell onRedraw sets draws then, under what it paints after, and nothing waits', () =>
 {
-    const { layer } = makeLayer();
+    const { layer, counts } = makeLayer();
+    paintByHand(layer, counts); // the real start and end, so the redraw is this layer's own
+    counts.cells.length = 0;
     layer.onRedraw = ()=> layer.setData(vec2(1, 1), new TileLayerData(2));
     layer.redraw();
-    assert.equal(layer.dirtyCells.size, 1);
+    assert.equal(layer.dirtyCells.size, 0);
+    assert.equal(counts.cells.filter((c)=> c == '1,1').length, 2, 'drawn by the redraw and again by setData');
+    counts.cells.length = 0;
+    layer.render();
+    assert.deepEqual(counts.cells, []);
+});
+
+test('a layer the game clears and paints itself is not drawn over by cells set before', () =>
+{
+    const { layer, counts } = makeLayer();
+    paintByHand(layer, counts);
+    layer.setData(vec2(1, 1), new TileLayerData(2));
+    layer.redrawStart(true);
+    layer.redrawEnd();
+    counts.cells.length = 0;
+    layer.render();
+    assert.deepEqual(counts.cells, []);
 });
 
 test('a canvas copied up with updateWebGL counts as drawn', () =>
 {
     const { layer, counts } = makeLayer();
+    layer.setData(vec2(1, 1), new TileLayerData(2));
     layer.updateWebGL();
     layer.render();
     assert.equal(counts.full, 0, 'the picture on the canvas is kept');
+    assert.deepEqual(counts.cells, [], 'with the cells set before it');
 });
 
 test('tileLayersLoad leaves no cell pending, the layer draws whole or is hidden', () =>

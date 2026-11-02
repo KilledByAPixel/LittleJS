@@ -48,3 +48,17 @@ test('a page hidden and blurred stays paused until it is both shown and focused'
     run('audioPageChange()');
     assert.deepEqual(context.audioCalls, ['suspend', 'resume']);
 });
+
+test('the setters take effect at once, with no focus change', () =>
+{
+    const { run, context } = loadEngine({ audioCalls: [] }, `
+        audioContext.suspend = ()=> { audioContext.state = 'suspended'; audioCalls.push('suspend'); };
+        audioContext.resume = ()=> { audioContext.state = 'running'; audioCalls.push('resume');
+            return Promise.resolve(); };`);
+    context.document.hasFocus = ()=> false;
+
+    run('setSoundPauseWhenBlurred(true)');
+    assert.deepEqual(context.audioCalls, ['suspend'], 'turned on while blurred, it pauses');
+    run('setSoundPauseWhenBlurred(false)');
+    assert.deepEqual(context.audioCalls, ['suspend', 'resume'], 'turned off, it plays again');
+});

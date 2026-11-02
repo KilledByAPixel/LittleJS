@@ -670,12 +670,12 @@ function glSetTextureData(texture, image, pixelated=tilesPixelated)
  *  @param {WebGLTexture} texture
  *  @param {Uint8Array|Uint8ClampedArray|ImageData|HTMLImageElement|HTMLCanvasElement|OffscreenCanvas|ImageBitmap} pixels -
  *    RGBA bytes, width * height * 4 of them, or an image put in at its own size
- *  @param {number} x
- *  @param {number} y
- *  @param {number} width - Width of a byte array's rectangle
- *  @param {number} height - Height of a byte array's rectangle
+ *  @param {number} [x]
+ *  @param {number} [y]
+ *  @param {number} [width] - Width of a byte array's rectangle, an image's own is used
+ *  @param {number} [height] - Height of a byte array's rectangle, an image's own is used
  *  @memberof WebGL */
-function glSetTextureSubData(texture, pixels, x, y, width, height)
+function glSetTextureSubData(texture, pixels, x=0, y=0, width, height)
 {
     if (!glContext) return;
 

@@ -771,14 +771,11 @@ class CanvasLayer extends EngineObject
 
         if (headlessMode)
         {
-            // nothing to draw into in headless mode
-            this.redrawStart    = ()=> {};
-            this.redrawEnd      = ()=> {};
-            this.drawLayerTile  = ()=> {};
-            this.drawLayerRect  = ()=> {};
-            this.drawTile       = ()=> {};
-            this.drawRect       = ()=> {};
-            this.clearLayerRect = ()=> {};
+            // nothing to draw into in headless mode, but a game's own subclass keeps its methods
+            for (const name of ['redrawStart', 'redrawEnd', 'drawLayerTile', 'drawLayerRect', 'drawTile', 'drawRect',
+                'clearLayerRect'])
+                if (this[name] === CanvasLayer.prototype[name] || this[name] === TileLayer.prototype[name])
+                    this[name] = ()=> {};
         }
     }
 
@@ -872,6 +869,7 @@ class CanvasLayer extends EngineObject
         setShader(); // the tiles are drawn plain, a layer's own Shader applies when the layer is drawn
         // a redraw from inside another target's pass, like the light system's shadow map, draws the tiles in color
         // and hands that target back after
+        /** @type {[WebGLTexture|undefined, number, number, boolean, WebGLTexture|undefined, boolean]} */
         this.savedRenderTarget = [glRenderTarget, glColorMask, glColorAdditive, glSkipScreenSpace, glTextureOverride,
             glSkipAdditive];
         glColorMask = -1;
@@ -1184,7 +1182,7 @@ class TileLayer extends CanvasLayer
      *  @param {Vector2}       layerPos - Local position in array
      *  @param {TileLayerData} data - Data to set
      *  @param {boolean}       [redraw] - True draws the cell now, false leaves it as drawn, left out draws it
-     *                                     on the next render */
+     *                                     on the next render, or now inside the layer's own redraw */
     setData(layerPos, data, redraw)
     {
         ASSERT(isVector2(layerPos), 'layerPos must be a Vector2');
@@ -1195,9 +1193,11 @@ class TileLayer extends CanvasLayer
         const i = (layerPos.y|0)*this.size.x + (layerPos.x|0);
         this.data[i] = data;
 
+        // left out inside this layer's own redraw it draws now, under what the game paints after it
+        const isRedraw = drawContext === this.context;
+        if (redraw === undefined && isRedraw) redraw = true;
         redraw === undefined ? this.context && this.dirtyCells.add(i) : this.dirtyCells.delete(i);
         if (!redraw) return;
-        const isRedraw = drawContext === this.context;
         isRedraw ? this.drawTileData(layerPos) : this.redrawTileData(layerPos);
     }
 
@@ -1300,6 +1300,7 @@ class TileLayer extends CanvasLayer
     updateWebGL()
     {
         this.drawn = true;
+        this.dirtyCells.clear();
         super.updateWebGL();
     }
 
@@ -1316,6 +1317,8 @@ class TileLayer extends CanvasLayer
             this.drawPending();
             this.redrawIfSwitched();
         }
+        else
+            this.dirtyCells.clear(); // a cleared layer is the game's own picture, nothing waiting goes over it
         this.drawn = true;
         super.redrawStart(clear);
     }

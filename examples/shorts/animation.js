@@ -60,8 +60,9 @@ one-shot again and to make the walker morph before it walks on.
 
 ## How it works
 An animation here is a run of tiles next to each other in the sheet.
-`tileInfo.frame(n)` returns the tile `n` places along the row, and
-everything below is a way to pick `n` from the time.
+`tileInfo.frame(n)` returns the tile `n` places along the row, on into
+the next row past the sheet's edge, and everything below is a way to
+pick `n` from the time.
 
 ### SpriteAnimation
 `new SpriteAnimation(tileInfo, frameCount, frameTime)` takes the first

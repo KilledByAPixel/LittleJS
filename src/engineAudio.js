@@ -83,8 +83,8 @@ function audioSetSession()
 let audioSuspendedByPage = false;
 function audioPageChange()
 {
-    if (!audioContext) return; // a browser with no audio has none to pause
-    const pause = soundPauseWhenHidden && document.hidden || soundPauseWhenBlurred && !document.hasFocus();
+    if (!audioContext || headlessMode) return; // a browser with no audio has none to pause
+    const pause = soundPauseWhenHidden && document.hidden || soundPauseWhenBlurred && document.hasFocus?.() === false;
     if (pause)
     {
         if (audioSuspendedByPage || audioContext.state != 'running') return;

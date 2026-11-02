@@ -96,7 +96,8 @@ cell, and `levelHeight` says how high the ground is in that column:
 A cell above that height is skipped and stays empty. A cell at or under
 it gets tile 1 of the tile sheet with `setData`, and is marked solid
 with `setCollisionData`. `redraw()` then draws the tiles into the
-layer's image, and they do not show until it is called.
+layer's image; without it the layer draws itself the first time it
+shows.
 
 The player starts at `vec2(5,6)`, in the air above the flat part, and
 falls onto it.

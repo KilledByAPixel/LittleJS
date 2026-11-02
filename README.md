@@ -39,7 +39,7 @@ The code is very clean and well documented with many examples to get you started
 
 - Blazing fast WebGL2 + Canvas2D hybrid rendering system
 - Apply [Shadertoy](https://www.shadertoy.com) style shaders for post-processing effects, or on any object or draw
-- 2D lights with soft shadows, tinted glass and emissive objects, a sun with long shadows, and spotlight cones and gels
+- 2D lights with soft shadows, tinted glass and emissive objects, a sun with long shadows, spotlight cones and gels, and normal maps
 - Robust particle effect system with a library of ready made effects and an [effect design tool](https://killedbyapixel.github.io/LittleJS/examples/particles/)
 - Parallax background layers that repeat across a level of any size
 - Load sprites and animations into texture sheets at runtime, or import [TexturePacker](https://www.codeandweb.com/texturepacker) and [Aseprite](https://www.aseprite.org) atlases

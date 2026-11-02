@@ -35,9 +35,10 @@ gives the view a small bump and a click a big blast; press again while
 it shakes and the shakes add up.
 
 ## How it works
-`cameraShake(amount)` adds to how much shake is going, which is at
+`cameraShake(amount, direction)` adds to how much shake is going, which is at
 most 1, and it fades by itself, by `cameraShakeDecay` a second, so a
-full shake is gone in a second.
+full shake is gone in a second. `direction`, a vec2, weights each
+axis, and each axis fades on its own.
 
 The view moves by smooth noise, scaled by the shake squared. Squared
 means a little shake is gentle and a big one is wild, and the end of a
@@ -56,7 +57,8 @@ something is not thrown off by it. It works the same with a
 - A long rumble: add `setCameraShakeDecay(.3);`.
 - Move without turning: add `setCameraShakeAngle(0);`.
 - A heavy landing, mostly up and down: change `cameraShake(.8)` to
-  `cameraShake(.8, vec2(.2, 1))`.
+  `cameraShake(.8, vec2(.2, 1))`, with `setCameraShakeAngle(0)` too
+  for no turn.
 - Shake on every frame a key is held: change `keyWasPressed` to
   `keyIsDown` and `.3` to `.05`.
 

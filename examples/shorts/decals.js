@@ -28,7 +28,7 @@ function gameInit()
 
     // a picture in the world to paint on, 32 by 32 pixels a unit
     layer = new CanvasLayer(vec2(), vec2(32, 18), 0, -1, vec2(1024, 576));
-    layer.drawRect(vec2(), layer.size, hsl(.6, .2, .25));
+    layer.drawRect(vec2(), layer.size, hsl(.6, .2, .25), layer.angle);
 
     for (let i = 3; i--;)
         new Painter;
@@ -87,7 +87,8 @@ called when the context comes back, the place to draw it again.
 
 ## Try it
 - Turn the picture: in `gameInit`, change the layer's `0` angle to
-  `.3`. The paint still goes where the painters are.
+  `.3`. The paint still goes where the painters are, though they
+  still bounce in the upright box and leave its corners.
 - A sharper picture: change `vec2(1024, 576)` to `vec2(2048, 1152)`.
 - Bigger splats: change `randInCircle(1.5)` to `randInCircle(4)`.
 - More painters: change `i = 3` to `i = 20`.

@@ -1377,7 +1377,8 @@ function touchGamepadRender()
  *  @typedef {Object} TouchGamepadButtonPos
  *  @property {Vector2} pos - Its center in screen space, as mousePosScreen
  *  @property {number} size - Its diameter in screen pixels
- *  @property {number} alpha - How visible the gamepad is now, 0 when it has faded out, up to touchGamepadAlpha
+ *  @property {number} alpha - How visible the gamepad is now, 0 when it has faded out, up to touchGamepadAlpha, 1 in the
+ *    debug gamepad view
  *  @memberof Input */
 
 /** Returns where a button of the touch gamepad is on screen, to draw an icon of the game's own over it

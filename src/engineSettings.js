@@ -968,15 +968,15 @@ function setSoundDefaultRange(range) { soundDefaultRange = range; }
  *  @memberof Settings */
 function setSoundDefaultTaper(taper) { soundDefaultTaper = taper; }
 
-/** Set if all sound pauses while the page is hidden
+/** Set if all sound pauses while the page is hidden, taking effect at once
  *  @param {boolean} pause
  *  @memberof Settings */
-function setSoundPauseWhenHidden(pause) { soundPauseWhenHidden = pause; }
+function setSoundPauseWhenHidden(pause) { soundPauseWhenHidden = pause; audioPageChange(); }
 
-/** Set if all sound pauses while the window does not have focus
+/** Set if all sound pauses while the window does not have focus, taking effect at once
  *  @param {boolean} pause
  *  @memberof Settings */
-function setSoundPauseWhenBlurred(pause) { soundPauseWhenBlurred = pause; }
+function setSoundPauseWhenBlurred(pause) { soundPauseWhenBlurred = pause; audioPageChange(); }
 
 /** Set if watermark with FPS should be shown
  *  @param {boolean} show
