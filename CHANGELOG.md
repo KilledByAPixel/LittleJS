@@ -5,6 +5,10 @@ What changed in each release, newest first. Releases before 1.20.0 are on the
 
 ## Unreleased
 
+Nothing yet.
+
+## 1.29.0 - 2026-11-01
+
 ### New Changes
 - `textureInfo.updateData(pixels, x, y, width, height)` puts new pixels into part of a texture, RGBA bytes or an image, and uploads only that rectangle, for a texture the game changes as it runs, like an atlas decoded every frame where only a few tiles changed; what was batched with the old pixels is drawn first, mipmaps are made again when it is next drawn from, and without WebGL the pixels go into the canvas image; with WebGL only the texture changes, so a lost context brings back the image as it was; `glSetTextureSubData` is the WebGL call under it
 - A 3D `Shader` snippet can read `viewProjection`, the camera's matrix from the world to the screen, so one that sets its own depth needs no near and far planes of its own: `vec4 c = viewProjection * vec4(p, 1.); gl_FragDepth = c.z / c.w * .5 + .5;` puts the fragment at world point `p`, a sprite in front of a wall it stands before
