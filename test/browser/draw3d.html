@@ -93,6 +93,7 @@ smokeRun(async ()=>
         halfContext.fillRect(0, 0, 8, 16);
         const sprite = new EngineObject3D(vec3(-4.9, 3, 0), undefined, new TileInfo(vec2(), vec2(16), new TextureInfo(half)));
         sprite.scale3D = vec3(1.4);
+        sprite.emissive = 1; // its own colors, billboardLighting checks how sprites are lit
     }, ()=> {}, ()=> {}, ()=>
     {
         drawRect(vec2(-24, 24), vec2(8), rgb(1, 1, 0)); // 2D, over the 3D scene
@@ -120,7 +121,7 @@ smokeRun(async ()=>
         (p)=> smokeNear(p, [0, 128, 255, 255]));
     pixel('a voxel map draws its block with its tile', at(5.4, -.5), (p)=> smokeNear(p, [0, 255, 255, 255], 40));
     pixel('a height map draws', at(-5, -.3), (p)=> smokeNear(p, [255, 255, 0, 255], 40));
-    pixel('an opaque sprite draws its tile, unlit', at(-5.25, 3), (p)=> smokeNear(p, [255, 136, 0, 255], 40));
+    pixel('an opaque sprite draws its tile', at(-5.25, 3), (p)=> smokeNear(p, [255, 136, 0, 255], 40));
     pixel('and nothing where its tile is see through', at(-4.55, 3), (p)=> smokeNear(p, [0, 0, 0, 255], 20));
     pixel('3D particles draw', at(3, 2.7), (p)=> p[0] > 40);
     pixel('a 2D draw goes over the 3D scene', [.125, .875], (p)=> smokeNear(p, [255, 255, 0, 255]));

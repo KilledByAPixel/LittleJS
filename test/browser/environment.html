@@ -153,6 +153,7 @@ smokeRun(async ()=>
     spriteContext.fillRect(0, 4, 8, 4);
     const sprite = new EngineObject3D(vec3(-2, 0, -4), undefined, new TextureInfo(spriteCanvas));
     sprite.size3D = vec3(2);
+    sprite.emissive = 1; // its own colors, which way up it is is what is checked
     walls.push(sprite);
     const mirror = new EngineObject3D(vec3(), buildSphere(1, 24, 12, true), undefined, BLACK);
     mirror.reflectivity = 1;

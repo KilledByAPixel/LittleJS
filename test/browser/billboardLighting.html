@@ -1,0 +1,79 @@
+<!DOCTYPE html><meta charset=utf-8>
+<title>LittleJS smoke: lit billboards</title>
+<script src=../../dist/littlejs.js></script>
+<script src=smoke.js></script>
+<pre id=result>PENDING</pre>
+<script>
+'use strict';
+
+// sprites are lit with no direction: a light in front of one and a light behind another light them the same, the sun
+// reaches them and its shadow darkens them; round lighting makes the side toward a light brighter, instanced or in
+// the stream; emissive 1 keeps a sprite's own color and an additive one stays unlit
+// the camera is at z 10 looking at the origin, the view 11.5 units across at the origin, so a place (x, y) there is
+// at (.5 + x / 11.5, .5 + y / 11.5) of the canvas
+smokeRun(async ()=>
+{
+    setShowSplashScreen(false);
+    setDebugWatermark(false);
+    setEngineManualStep(true);
+    setCanvasFixedSize(vec2(128));
+    setCanvasClearColor(rgb(0, 0, 0));
+    const at = (x, y)=> [.5 + x / 11.5, .5 + y / 11.5];
+    await engineInit(()=>
+    {
+        setCameraScale(1);
+        new Render3DPlugin;
+        render3D.shadows = true;
+        render3D.sunDirection = vec3(0, 1, .2);
+        render3D.sunColor = rgb(.4, .4, .4);
+        render3D.ambientColor = rgb(.1, .1, .1);
+
+        const canvas = new OffscreenCanvas(16, 16), context = canvas.getContext('2d');
+        context.fillStyle = '#fff';
+        context.fillRect(0, 0, 16, 16);
+        const white = new TileInfo(vec2(), vec2(16), new TextureInfo(canvas));
+        const sprite = (x, y, color=rgb(1, 1, 1))=>
+        {
+            const o = new EngineObject3D(vec3(x, y, 0), undefined, white, color);
+            o.scale3D = vec3(1.5);
+            return o;
+        };
+        const light = (x, y, z)=> new Light3D(vec3(x, y, z), 3, rgb(1, 1, 1));
+
+        // a light in front of one sprite and behind another, at the same distance, and one with no light of its own
+        sprite(-4.5, 3), light(-4.5, 3, 1);
+        sprite(-1.5, 3), light(-1.5, 3, -1);
+        sprite(1.5, 3);
+
+        // round, a light to its right: instanced, and blended through the stream
+        sprite(4.5, 3).roundLighting = true;
+        light(5.8, 3, .3);
+        const blended = sprite(-3, -1);
+        blended.roundLighting = blended.transparent = true;
+        light(-1.7, -1, .3);
+
+        // emissive keeps its own color, an additive one is light of its own
+        sprite(.5, -1, rgb(1, .5, 0)).emissive = 1;
+        sprite(3.5, -1, rgb(.8, 0, .8)).additive = true;
+
+        // one under a box the sun shines down on, and one in the open
+        new EngineObject3D(vec3(-2, -2.5, 0), buildBox(1.2));
+        sprite(-2, -4);
+        sprite(2, -4);
+    }, ()=> {}, ()=> {}, ()=> {}, ()=> {});
+    engineStep();
+    const red = (x, y)=> smokePixel(...at(x, y))[0];
+    const front = red(-4.5, 3), behind = red(-1.5, 3), none = red(1.5, 3);
+    check('a light lights a sprite near it', front > none + 60, [front, none]);
+    check('as much from behind as from in front, with no direction', Math.abs(front - behind) < 12, [front, behind]);
+    const left = red(4.1, 3), right = red(4.9, 3);
+    check('round lighting is brighter on the side toward the light', right > left + 25, [left, right]);
+    const sLeft = red(-3.4, -1), sRight = red(-2.6, -1);
+    check('and so in the stream, for a sprite that blends', sRight > sLeft + 25, [sLeft, sRight]);
+    checkPixel('emissive 1 keeps its own color', ...at(.5, -1), [255, 128, 0, 255]);
+    checkPixel('an additive sprite stays unlit', ...at(3.5, -1), [204, 0, 204, 255]);
+    const shaded = red(-2, -4), open = red(2, -4);
+    check('the sun lights a sprite and its shadow darkens one', open > shaded + 50, [shaded, open]);
+    checkGLError();
+});
+</script>

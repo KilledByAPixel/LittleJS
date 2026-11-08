@@ -54,6 +54,21 @@ const RENDER3D_DEFAULT_UV = Object.freeze(vec2());
 const RENDER3D_SHADOW_COLOR = Object.freeze(hsl(0, 0, 0, .5));
 const RENDER3D_IDENTITY = new Matrix4; // never modified
 let render3DShadowCut; // the cut last sent to the shadow shader, see render3DSetDrawUniforms
+// how the draw being sent lights its normal, materialParams.w in the shader: 0 as a surface, 1 billboards lit with
+// no direction, 2 billboards lit round from where each pixel is on its quad; set by a batch of billboards as it draws
+let render3DBillboardMode = 0;
+
+// a batch of billboards: an additive one is light of its own and stays unlit, the rest are lit in a mode
+function render3DBillboardState(state, mode)
+{
+    if (state.additive)
+        state.lighting = false; // its own copy of the state
+    else
+    {
+        render3DBillboardMode = mode;
+        state.specular = state.reflectivity = 0; // no surface to shine or reflect
+    }
+}
 ///////////////////////////////////////////////////////////////////////////////
 // Private helpers
 
@@ -109,13 +124,14 @@ function render3DCanDraw()
  *  @property {TextureInfo|undefined} emissiveMap
  *  @property {Color} emissiveMapColor
  *  @property {CubeMap|undefined} environmentMap
+ *  @property {boolean} roundLighting
  *  @property {number} emissiveR
  *  @property {number} emissiveG
  *  @property {number} emissiveB
  *  @memberof Render3D */
 const RENDER3D_STATE_FIELDS = ['blend', 'additive', 'depthTest', 'depthWrite', 'cullBackFaces', 'mirrored', 'lighting',
     'emissive', 'receiveShadow', 'specular', 'pixelated', 'shader', 'normalMap', 'normalScale', 'shininess',
-    'reflectivity', 'emissiveMap', 'emissiveMapColor', 'environmentMap'];
+    'reflectivity', 'emissiveMap', 'emissiveMapColor', 'environmentMap', 'roundLighting'];
 
 // a copy of the draw state in one fixed shape, the fields of RENDER3D_STATE_FIELDS written out, and the version
 // it was taken at
@@ -127,7 +143,7 @@ function render3DCaptureBatchState()
         receiveShadow: d.receiveShadow, specular: d.specular, pixelated: d.pixelated, shader: d.shader,
         normalMap: d.normalMap, normalScale: d.normalScale, shininess: d.shininess, reflectivity: d.reflectivity,
         emissiveMap: d.emissiveMap, emissiveMapColor: (d.emissiveMapColor || WHITE).copy(), // the caller may change it
-        environmentMap: d.environmentMap, version: r.stateVersion};
+        environmentMap: d.environmentMap, roundLighting: d.roundLighting, version: r.stateVersion};
 }
 
 // put a captured draw state back, written out the same way; the transparent stage does this for every queued draw
@@ -139,7 +155,7 @@ function render3DApplyBatchState(s)
     r.receiveShadow = s.receiveShadow, r.specular = s.specular, r.pixelated = s.pixelated, r.shader = s.shader,
     r.normalMap = s.normalMap, r.normalScale = s.normalScale, r.shininess = s.shininess,
     r.reflectivity = s.reflectivity, r.emissiveMap = s.emissiveMap, r.emissiveMapColor = s.emissiveMapColor,
-    r.environmentMap = s.environmentMap;
+    r.environmentMap = s.environmentMap, r.roundLighting = s.roundLighting;
 }
 
 // true when the current draw state differs from a captured one, so a pending batch must flush first; it runs for
@@ -155,7 +171,7 @@ function render3DStateChanged(s)
         || d.specular !== s.specular || d.pixelated !== s.pixelated || d.shader !== s.shader
         || d.normalMap !== s.normalMap || d.normalScale !== s.normalScale || d.shininess !== s.shininess
         || d.reflectivity !== s.reflectivity || d.emissiveMap !== s.emissiveMap
-        || d.environmentMap !== s.environmentMap || d.emissiveR !== c.r || d.emissiveG !== c.g || d.emissiveB !== c.b)
+        || d.environmentMap !== s.environmentMap || d.roundLighting !== s.roundLighting || d.emissiveR !== c.r || d.emissiveG !== c.g || d.emissiveB !== c.b)
         return true;
     s.version = r.stateVersion; // set and set back to what it was: the batch goes on, checking the version again
     return false;
@@ -281,6 +297,7 @@ function render3DSetObjectState(o)
     r.emissiveMapColor = p?.emissiveMapColor || WHITE;
     ASSERT(!p?.environment || p.environment instanceof CubeMap, 'environment must be a CubeMap');
     r.environmentMap = p?.environment || undefined;
+    r.roundLighting = !!p?.roundLighting;
     r.receiveShadow = !p || p.receiveShadow;
     r.cullBackFaces = r.mirrored = false; // each mesh sets these as it draws
     r.pixelated = !!p?.pixelated;
@@ -319,18 +336,18 @@ function render3DInstance(mesh, matrix, tileInfo, color)
 // differs first, and return where its 24 floats go in mesh.instanceData: the matrix, the tint and the uv rect
 // drawMesh passes whether its matrix mirrors, and its batch then culls by the mesh and winds by that at the flush,
 // so it never sets the draw state for them, which would move the state's version at every draw; drawBillboard
-// passes that its batch is unlit, for the same reason
-function render3DInstanceSlot(mesh, textureInfo, mirrored, unlit=false)
+// and the particles pass that the batch is of billboards, lit without a direction, for the same reason
+function render3DInstanceSlot(mesh, textureInfo, mirrored, billboard=false)
 {
     const r = render3D;
     if (mesh.instanceCount && (mesh.instanceTextureInfo !== textureInfo || mesh.instanceMirrored !== mirrored
-        || mesh.instanceUnlit !== unlit || render3DStateChanged(mesh.instanceState)))
+        || mesh.instanceBillboard !== billboard || render3DStateChanged(mesh.instanceState)))
         render3DFlushInstances(mesh);
     if (!mesh.instanceCount)
     {
         mesh.instanceTextureInfo = textureInfo;
         mesh.instanceMirrored = mirrored;
-        mesh.instanceUnlit = unlit;
+        mesh.instanceBillboard = billboard;
         mesh.instanceState = render3DCaptureBatchState();
         r.instanceMeshes.push(mesh);
     }
@@ -364,9 +381,10 @@ function render3DFlushInstances(only)
         const state = mesh.instanceState;
         if (mesh.instanceMirrored !== undefined) // a drawMesh batch: culled by its mesh, wound by its matrices
             state.cullBackFaces = !mesh.doubleSided, state.mirrored = mesh.instanceMirrored;
-        if (mesh.instanceUnlit) // a batch of sprites
-            state.lighting = false;
+        // a batch of sprites or particles, round from where each pixel is on its quad
+        mesh.instanceBillboard && render3DBillboardState(state, state.roundLighting ? 2 : 1);
         render3DDrawInstanced(mesh, buffer, count, mesh.instanceTextureInfo, state);
+        render3DBillboardMode = 0;
     }
     if (!only)
         r.instanceMeshes.length = 0;
@@ -526,8 +544,8 @@ class Render3DPlugin
         this.drawState = {blend: false, additive: false, depthTest: true, depthWrite: true, cullBackFaces: false,
             mirrored: false, lighting: true, emissive: 0, receiveShadow: true, specular: 0, pixelated: false,
             shader: undefined, normalMap: undefined, normalScale: 1, shininess: 16, reflectivity: 0,
-            emissiveMap: undefined, emissiveMapColor: WHITE, environmentMap: undefined, emissiveR: 1, emissiveG: 1,
-            emissiveB: 1};
+            emissiveMap: undefined, emissiveMapColor: WHITE, environmentMap: undefined, roundLighting: false,
+            emissiveR: 1, emissiveG: 1, emissiveB: 1};
         /** @property {number} - Goes up when a draw state field changes, so a batch sees at a glance that none did */
         this.stateVersion = 0;
         ASSERT(Object.keys(render3DCaptureBatchState()).join() === [...RENDER3D_STATE_FIELDS, 'version'].join(),
@@ -765,7 +783,7 @@ class Render3DPlugin
         this.streamTileInfo = undefined;
         /** @type {Object|undefined} */
         this.streamState = undefined; // captured state the pending batch was drawn under, render3DCaptureBatchState's
-        this.streamUnlit = false;     // the pending batch is drawn unlit whatever that state says, billboards are
+        this.streamBillboard = false; // the pending batch is of billboards, lit without a direction, billboards are
         /** @type {Mesh|undefined} */
         this.capture = undefined;     // the mesh a bake is filling
         /** @type {Array<{distance: number, state: Object, draw: function(): void}>|undefined} */
@@ -855,6 +873,13 @@ class Render3DPlugin
     get environmentMap() { return this.drawState.environmentMap; }
     set environmentMap(v)
     { const d = this.drawState; d.environmentMap === v || (d.environmentMap = v, ++this.stateVersion); }
+
+    /** Light the next billboards as if they bulge toward the camera like a ball, lit on the side toward each light,
+     *  in place of the same all over; set from each object's roundLighting, a normal map overrides it
+     *  @return {boolean} */
+    get roundLighting() { return this.drawState.roundLighting; }
+    set roundLighting(v)
+    { const d = this.drawState; d.roundLighting === v || (d.roundLighting = v, ++this.stateVersion); }
 
     /** Multiplies the emissive map, set from each object's emissiveMapColor; compared by its rgb, so a Color
      *  changed in place is seen when it is set again, and undefined is white
@@ -1162,9 +1187,10 @@ class Render3DPlugin
     {
         if (!this.streamCount || !render3DCanDraw()) return;
         const gl = glContext;
-        if (this.streamUnlit)
-            this.streamState.lighting = false; // its own copy of the state
+        // billboards, round from the bent normals their corners were written with
+        this.streamBillboard && render3DBillboardState(this.streamState, this.streamState.roundLighting ? 0 : 1);
         render3DSetDrawUniforms(RENDER3D_IDENTITY, this.streamTileInfo, WHITE, RENDER3D_FULL_UV_RECT, this.streamState);
+        render3DBillboardMode = 0;
         render3DBindVertexBuffer(this.streamBuffer);
         gl.bufferSubData(gl.ARRAY_BUFFER, 0, this.streamFloats, 0, this.streamCount * RENDER3D_VERTEX_FLOATS);
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, this.streamCount);
@@ -1389,7 +1415,12 @@ class Render3DPlugin
         this.drawMesh(this.sphereMesh, buildMatrix(pos, undefined, vec3(size)), undefined, color);
     }
 
-    /** Draw a flat square that always faces the camera, unlit so it keeps its own colors
+    /** Draw a flat square that always faces the camera
+     *  - Lit with no direction, since it always faces the camera: each light by how near it is, the sun where its
+     *    light reaches, the ambient and the shadows, the same from any side, so a cloud is brighter by a light in
+     *    it; with roundLighting it is lit as a ball, bright on the side toward each light, and with a normal map
+     *    as a card facing the camera; no specular or reflection
+     *  - An additive one is light of its own and stays unlit, and emissive 1 keeps its own colors
      *  - Draw it from onRenderTransparent or a transparent object so it can fade
      *  @param {Vector3} pos - Center
      *  @param {Vector2} [size] - World units
@@ -1409,9 +1440,9 @@ class Render3DPlugin
             return this.queueTransparent(p, ()=> this.drawBillboard(p, s, tileInfo, c, angle, upright));
         }
 
-        // unlit on screen, in the shadow map the object's flag decides; the batch is told, the draw state is not
+        // lit as a billboard on screen, in the shadow map as anything; the batch is told, the draw state is not
         // set, which would move its version at every sprite
-        const unlit = !this.shadowPass;
+        const billboard = !this.shadowPass;
         if (!this.blend && this.depthTest && this.instancing)
         {
             // an opaque sprite is one more instance of the shared quad, as a mesh's uses are: every sprite of a
@@ -1424,7 +1455,7 @@ class Render3DPlugin
             render3DMeshUpload(quad);
             // the quad's half axes, doubled for its unit square
             const a = render3DBillboardAxes(size, angle, upright);
-            const k = render3DInstanceSlot(quad, render3DTextureOf(tileInfo), false, unlit), data = quad.instanceData;
+            const k = render3DInstanceSlot(quad, render3DTextureOf(tileInfo), false, billboard), data = quad.instanceData;
             data[k]    = a[0] * 2; data[k+1]  = a[1] * 2; data[k+2]  = a[2] * 2; data[k+3]  = 0;
             data[k+4]  = a[3] * 2; data[k+5]  = a[4] * 2; data[k+6]  = a[5] * 2; data[k+7]  = 0;
             data[k+8]  = cb.x;     data[k+9]  = cb.y;     data[k+10] = cb.z;     data[k+11] = 0;
@@ -1436,7 +1467,7 @@ class Render3DPlugin
 
         // one that blends is drawn in its sorted place: the quad's six stream vertices written straight in with no
         // vectors made, for sprites that blend, and for particles when instancing is off
-        const uvRect = render3DBeginStrip(6, tileInfo, unlit);
+        const uvRect = render3DBeginStrip(6, tileInfo, billboard);
         if (!uvRect) return;
         const a = render3DBillboardAxes(size, angle, upright);
         const rx = a[0], ry = a[1], rz = a[2], ux = a[3], uy = a[4], uz = a[5];
@@ -1445,13 +1476,25 @@ class Render3DPlugin
         const floats = this.streamFloats, ints = this.streamInts, stride = RENDER3D_VERTEX_FLOATS;
         let j = this.streamCount * stride;
         this.streamCount += 6;
+        // the normal at each corner: facing the camera, or for round lighting bent out along the quad's own right
+        // and up, which the GPU blends across it into the bulge the shader makes from an instance's own uvs
+        const round = billboard && this.roundLighting, kr = round ? 1 / (hypot(rx, ry, rz) || 1) : 0;
+        const ku = round ? 1 / (hypot(ux, uy, uz) || 1) : 0;
+        // the bend toward the right and toward the top, the left and the bottom the other way
+        const bx = rx * kr, by = ry * kr, bz = rz * kr, cx = ux * ku, cy = uy * ku, cz = uz * ku;
+        const tx = n.x + cx, ty = n.y + cy, tz = n.z + cz, dx = n.x - cx, dy = n.y - cy, dz = n.z - cz;
         // the corners in strip order with the repeats: top left twice, bottom left, top right, bottom right twice
-        render3DWriteVertex(floats, ints, j, x - rx + ux, y - ry + uy, z - rz + uz, n, u0, v0, rgba);
-        render3DWriteVertex(floats, ints, j += stride, x - rx + ux, y - ry + uy, z - rz + uz, n, u0, v0, rgba);
-        render3DWriteVertex(floats, ints, j += stride, x - rx - ux, y - ry - uy, z - rz - uz, n, u0, v1, rgba);
-        render3DWriteVertex(floats, ints, j += stride, x + rx + ux, y + ry + uy, z + rz + uz, n, u1, v0, rgba);
-        render3DWriteVertex(floats, ints, j += stride, x + rx - ux, y + ry - uy, z + rz - uz, n, u1, v1, rgba);
-        render3DWriteVertex(floats, ints, j += stride, x + rx - ux, y + ry - uy, z + rz - uz, n, u1, v1, rgba);
+        meshWriteVertex(floats, ints, j, x - rx + ux, y - ry + uy, z - rz + uz, tx - bx, ty - by, tz - bz, u0, v0, rgba);
+        meshWriteVertex(floats, ints, j += stride, x - rx + ux, y - ry + uy, z - rz + uz, tx - bx, ty - by, tz - bz,
+            u0, v0, rgba);
+        meshWriteVertex(floats, ints, j += stride, x - rx - ux, y - ry - uy, z - rz - uz, dx - bx, dy - by, dz - bz,
+            u0, v1, rgba);
+        meshWriteVertex(floats, ints, j += stride, x + rx + ux, y + ry + uy, z + rz + uz, tx + bx, ty + by, tz + bz,
+            u1, v0, rgba);
+        meshWriteVertex(floats, ints, j += stride, x + rx - ux, y + ry - uy, z + rz - uz, dx + bx, dy + by, dz + bz,
+            u1, v1, rgba);
+        meshWriteVertex(floats, ints, j += stride, x + rx - ux, y + ry - uy, z + rz - uz, dx + bx, dy + by, dz + bz,
+            u1, v1, rgba);
     }
 
     /** Draw a quad from four corners in loop order, counter clockwise seen from the front, a is the top left of the texture
@@ -1806,7 +1849,8 @@ const RENDER3D_SNIPPET_NAMES =
 //   fogFade (x = fogFadeStart, y = fogFadeEnd, 0 skips the fade, z = 1 measures fog along the view),
 //   cameraPos, cameraDir (the view's forward), tex, shadowMap, shadowParams (x = shadows on, y = bias, z = blur step in texture space,
 //   w = how the draw finishes: 1 opaque and alpha tested, 0 blended, -1 additive),
-//   materialParams (x = normal map scale, 0 skips it, y = shininess, z = reflectivity), emissiveTint (rgb, a = the
+//   materialParams (x = normal map scale, 0 skips it, y = shininess, z = reflectivity, w = how a billboard is lit,
+//   see render3DBillboardMode), emissiveTint (rgb, a = the
 //   emissive map is on), skyTop, skyHorizon, skyBottom (what a reflection shows), normalTex, emissiveTex
 function render3DFragmentSource(fragmentCode)
 {
@@ -1856,6 +1900,14 @@ function render3DFragmentSource(fragmentCode)
         'vec3 m=texture(normalTex,T).xyz*2.-1.;' +
         'm.xy*=materialParams.x;' +
         'return normalize((u*m.x-v*m.y)*inversesqrt(k)+n*m.z);}' +
+        // a billboard lit round: bent out toward where the pixel is on its quad, from the quad's own uvs and the same
+        // frame, as the bent corner normals of one in the stream blend across it
+        'vec3 roundNormal(vec3 n){' +
+        'vec3 p1=dFdx(P),p2=dFdy(P);vec2 t1=dFdx(L),t2=dFdy(L);' +
+        'vec3 a=cross(p2,n),b=cross(n,p1),u=a*t1.x+b*t2.x,v=a*t1.y+b*t2.y;' +
+        'if(dot(u,u)<=0.||dot(v,v)<=0.)return n;' +
+        'vec2 q=L*2.-1.;' +
+        'return normalize(n+normalize(u)*q.x+normalize(v)*q.y);}' +
         // a snippet's mainImage is declared here and written after main, so a define in it can not reach main
         (fragmentCode ? 'void mainImage(out vec4,vec2);' : '') +
         (hasNormal ? 'void mainNormal(inout vec3);' : '') +
@@ -1867,14 +1919,17 @@ function render3DFragmentSource(fragmentCode)
         'if(e<1.){' +
         'vec3 n=dot(N,N)>0.?normalize(N):vec3(0,1,0);' +
         'if(!gl_FrontFacing)n=-n;' + // only a double sided mesh shows a back face, light it on the side that is seen
-        'if(materialParams.x!=0.)n=normalMapNormal(n);' +
+        // materialParams.w: 0 a surface, 1 a billboard lit with no direction, 2 one lit round; a normal map makes a
+        // billboard a card facing the camera, lit as a surface
+        'float bm=materialParams.x!=0.?0.:materialParams.w;' +
+        'if(materialParams.x!=0.)n=normalMapNormal(n);else if(bm==2.)n=roundNormal(n);' +
         (hasNormal ? 'mainNormal(n);n=normalize(n);' : '') +
-        'float nl=dot(n,-lightDir.xyz);' +
+        'float nl=bm==1.?1.:dot(n,-lightDir.xyz);' +
         // the shadow is the sun's, or one spotlight's: shadowParams.x is 1 for the sun, 2 and up for that Light3D
         'float sh=shadow(),s=shadowParams.x<1.5?sh:1.;' +
         'int si=int(shadowParams.x+.5)-2;' +
         // the ambient: one color, or blended from the ground color below to the sky color above by the way the face points
-        'vec3 l=(ambientGround.a>0.?mix(ambientGround.rgb,ambientFog.rgb,n.y*.5+.5):ambientFog.rgb)+lightColor.rgb*max(nl,0.)*s;' +
+        'vec3 l=(ambientGround.a>0.?mix(ambientGround.rgb,ambientFog.rgb,bm==1.?.5:n.y*.5+.5):ambientFog.rgb)+lightColor.rgb*max(nl,0.)*s;' +
         // the Light3D objects: a point light falls off with distance, a directional one does not and carries the
         // direction toward it in xyz, marked by a negative radius; each adds its own highlight when there is a strength
         'vec3 eye=lightColor.a>0.?normalize(cameraPos-P):vec3(0),sp=vec3(0);' +
@@ -1886,7 +1941,7 @@ function render3DFragmentSource(fragmentCode)
         'float d=length(v);' +
         'float a=directional?1.:max(0.,1.-d/L.w);' +
         'v/=max(d,1e-6);' +
-        'float ln=dot(n,v);' +
+        'float ln=bm==1.?1.:dot(n,v);' +
         'vec3 lc=extraLightColors[i].rgb*extraLightColors[i].a*a*a;' +
         // a spotlight's cone: full where its fade starts, nothing at its edge, smooth between; 1 with no cone
         'vec4 K=extraLightCones[i];' +
@@ -2554,7 +2609,8 @@ function render3DSetMaterialUniforms(state)
 {
     const r = render3D, loaded = (map)=> render3DTextureOf(map)?.glTexture ? map : undefined;
     const normalMap = state.normalScale ? loaded(state.normalMap) : undefined, emissiveMap = loaded(state.emissiveMap);
-    render3DUniform4f('materialParams', normalMap ? state.normalScale : 0, max(state.shininess, 1e-3), state.reflectivity, 0);
+    render3DUniform4f('materialParams', normalMap ? state.normalScale : 0, max(state.shininess, 1e-3), state.reflectivity,
+        render3DBillboardMode);
     const ec = state.emissiveMapColor || WHITE;
     emissiveMap ? render3DUniform4f('emissiveTint', ec.r, ec.g, ec.b, 1) : render3DUniform4f('emissiveTint', 0, 0, 0, 0);
     render3DBindMap(2, normalMap, state);
@@ -2902,6 +2958,7 @@ function render3DRenderPass(after2D)
         // hand the state back to the engine's 2D batching, even when a draw threw
         r.isRendering = false;
         r.currentProgram = undefined; // the engine's 2D program takes over below
+        render3DBillboardMode = 0; // a batch that threw while drawing leaves no billboard lighting behind
         r.streamCount = 0;
         r.capture = r.transparentQueue = undefined;
         gl.disable(gl.DEPTH_TEST);
@@ -3083,9 +3140,9 @@ function render3DRenderDepth()
 // which way they face, so keeping the count even keeps every strip facing out.
 
 // make room in the stream for a strip of count vertices under the current state and texture, flushing a batch that
-// differs first; returns the uv rect to map the vertices with, or undefined when nothing can be drawn; unlit draws
-// the batch unlit whatever the state says, so a billboard does not set the state and set it back at every draw
-function render3DBeginStrip(count, tileInfo, unlit=false)
+// differs first; returns the uv rect to map the vertices with, or undefined when nothing can be drawn; billboard
+// lights the batch as billboards are lit, so a billboard does not set the state and set it back at every draw
+function render3DBeginStrip(count, tileInfo, billboard=false)
 {
     const r = render3D;
     if (!render3DCanDraw()) return;
@@ -3093,13 +3150,13 @@ function render3DBeginStrip(count, tileInfo, unlit=false)
     ASSERT(count <= RENDER3D_MAX_STREAM_VERTS, 'strip is too large for the stream, bake it into a mesh');
     if (count > RENDER3D_MAX_STREAM_VERTS) return;
     const textureInfo = render3DTextureOf(tileInfo);
-    if (r.streamCount && (textureInfo !== r.streamTileInfo || r.streamUnlit !== unlit
+    if (r.streamCount && (textureInfo !== r.streamTileInfo || r.streamBillboard !== billboard
         || render3DStateChanged(r.streamState) || r.streamCount + count > RENDER3D_MAX_STREAM_VERTS))
         r.flush();
     render3DFlushBeforeOverlay();
     if (!r.streamCount)
         r.streamState = render3DCaptureBatchState();
-    r.streamUnlit = unlit;
+    r.streamBillboard = billboard;
     r.streamTileInfo = textureInfo;
     return render3DGetTileUVs(tileInfo);
 }

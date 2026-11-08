@@ -144,6 +144,9 @@ class EngineObject3D extends EngineObject
         this.groundAngle = PI / 4;
         /** @property {boolean} - Darkened by the shadow map when render3D.shadows is on */
         this.receiveShadow = true;
+        /** @property {boolean} - A sprite or particle lit as a ball bulging toward the camera, bright on the side
+         *  toward each light, in place of the same all over; a normal map takes its place */
+        this.roundLighting = false;
         /** @property {boolean|undefined} - Draw this object over the 2D scene, undefined uses render3D.renderAfter2D
          *  @type {boolean|undefined} */
         this.renderAfter2D = undefined;

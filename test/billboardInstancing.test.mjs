@@ -45,7 +45,7 @@ test('opaque billboards are instances of the shared quad, one batch for a sheet,
             render3D.drawBillboard(vec3(i, 5, 0), vec2(2, 4), tile(i), hsl(0, 1, .5));
         assert.deepEqual([quad.instanceCount, render3D.streamCount], [3, 0]);
         assert.equal(render3D.stateVersion, version, 'no draw state was set and set back');
-        assert.equal(quad.instanceUnlit, true, 'a sprite is unlit on screen');
+        assert.equal(quad.instanceBillboard, true, 'a sprite is lit as a billboard on screen');
         const data = quad.instanceData;
         for (let i = 0; i < 3; ++i)
         {
@@ -79,7 +79,7 @@ test('a billboard that blends, or with instancing off, goes through the stream, 
         const version = render3D.stateVersion;
         render3D.drawBillboard(vec3(), vec2(1), tile(0));
         render3D.drawBillboard(vec3(1), vec2(1), tile(1));
-        assert.deepEqual([quad.instanceCount, render3D.streamCount, render3D.streamUnlit], [0, 12, true]);
+        assert.deepEqual([quad.instanceCount, render3D.streamCount, render3D.streamBillboard], [0, 12, true]);
         assert.equal(render3D.stateVersion, version);
         render3D.blend = false;
         render3D.streamCount = 0;
@@ -95,14 +95,14 @@ test('in the shadow map a lit sprite casts as it is, and an unlit one casts noth
     {
         render3D.shadowPass = true;
         render3D.drawBillboard(vec3(), vec2(1), tile(0));
-        assert.deepEqual([quad.instanceCount, quad.instanceUnlit], [1, false]);
+        assert.deepEqual([quad.instanceCount, quad.instanceBillboard], [1, false]);
         render3D.lighting = false;
         render3D.drawBillboard(vec3(1), vec2(1), tile(0));
         assert.equal(quad.instanceCount, 1, 'nothing more');
     });
 });
 
-test('a lit strip after an unlit billboard is a batch of its own', ()=>
+test('a strip after a billboard is a batch of its own', ()=>
 {
     pass(()=>
     {
@@ -114,9 +114,53 @@ test('a lit strip after an unlit billboard is a batch of its own', ()=>
             render3D.blend = true;
             render3D.drawBillboard(vec3(), vec2(1));
             render3D.drawStrip([vec3(), vec3(1), vec3(2)]);
-            assert.equal(flushes, 1, 'the billboard is unlit, the strip is not');
-            assert.equal(render3D.streamUnlit, false);
+            assert.equal(flushes, 1, 'the billboard is lit as a billboard, the strip as a surface');
+            assert.equal(render3D.streamBillboard, false);
         }
         finally { render3D.flush = flush; }
+    });
+});
+
+test('roundLighting is draw state: a change splits the batch', ()=>
+{
+    pass((quad)=>
+    {
+        let flushes = 0;
+        const flush = render3D.flush;
+        render3D.flush = ()=> { ++flushes; render3D.streamCount = 0; };
+        try
+        {
+            render3D.blend = true;
+            render3D.drawBillboard(vec3(), vec2(1), tile(0));
+            render3D.roundLighting = true;
+            render3D.drawBillboard(vec3(1), vec2(1), tile(0));
+            assert.equal(flushes, 1, 'round and not round are two batches');
+        }
+        finally { render3D.flush = flush; render3D.roundLighting = false; }
+    });
+});
+
+test('a round billboard in the stream bends its corner normals out along its right and up', ()=>
+{
+    pass(()=>
+    {
+        render3D.blend = true;
+        render3D.roundLighting = true;
+        try
+        {
+            render3D.drawBillboard(vec3(), vec2(2, 4), tile(0));
+            const f = render3D.streamFloats, cb = render3D.cameraBack, stride = 9;
+            // top left, bottom left, top right, bottom right: the camera's back, plus or minus the right and the up
+            const corner = (i)=> [f[i*stride+3], f[i*stride+4], f[i*stride+5]];
+            const bends = [1, 2, 3, 4].map((i)=> corner(i).map((v, k)=> v - [cb.x, cb.y, cb.z][k]));
+            for (const b of bends)
+                near(Math.hypot(...b), Math.SQRT2); // a unit right and a unit up, whatever the size
+            near(bends[0].reduce((a, v, k)=> a + v * bends[3][k], 0), -2); // opposite corners bend opposite ways
+            render3D.streamCount = 0;
+            render3D.roundLighting = false;
+            render3D.drawBillboard(vec3(), vec2(2, 4), tile(0));
+            near(Math.hypot(...corner(0).map((v, k)=> v - [cb.x, cb.y, cb.z][k])), 0); // flat, facing the camera
+        }
+        finally { render3D.roundLighting = false; }
     });
 });

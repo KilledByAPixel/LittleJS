@@ -1567,7 +1567,7 @@ mirror.capturePos                     // where it was last captured from, captur
 
 // Draw state, read at each draw; the pass sets it from each object's flags before render3D() and resets it before each
 // callback, so set it inside those, or use the object flags below
-render3D.lighting = true              // false draws plain vertex color times texture, as billboards and lines do
+render3D.lighting = true              // false draws plain vertex color times texture, as lines do
 render3D.emissive = 0                 // how much a surface lights itself, set from each object's emissive
 render3D.additive = false             // additive blending in the transparent stage
 render3D.specular = 0                 // Phong highlight strength, the shiny spot where the sun and each
@@ -1578,6 +1578,7 @@ render3D.normalMap render3D.normalScale render3D.reflectivity render3D.emissiveM
 render3D.environmentMap               // the cube map reflected in place of render3D.environment, from obj.environment
                                       // the material, set from each object's fields of the same names
 render3D.receiveShadow = true         // false keeps the next draws out of the shadow map's darkening
+render3D.roundLighting = false        // billboards lit as a ball facing the camera, set from obj.roundLighting
 render3D.shader = undefined           // a Shader for the next draws, set from each object's shader; with emissive 1
                                       // the snippet's color is final, so it can light itself from these 3D names:
                                       // worldPos, worldNormal, cameraPos, sunDirection (toward the sun), sunColor,
@@ -1720,6 +1721,8 @@ obj.castShadow = false                  // true by default, false keeps it out o
                                         // textures cast their outline, an object faded below half its alpha casts
                                         // nothing, a see through one casts only when textured, additive never casts
 obj.receiveShadow = false               // true by default, false draws it without the shadow map's darkening
+obj.roundLighting = true                // a sprite or particle emitter lit as a ball bulging toward the camera,
+                                        // bright on the side toward each light; a normal map takes its place
 obj.renderOrder                         // sorts the opaque stage; instanced meshes draw as batches, so set
                                         // mesh.instanced = false on a mesh whose order matters
 obj.renderAfter2D = true // this object on top of the 2D scene, or false for under it; undefined follows
@@ -1766,7 +1769,12 @@ render3D.billboardMesh                                    // a size 1 square fac
                                                           // ParticleEmitter3D draws its particles as instances of
 render3D.drawMesh(mesh, matrix, tileInfo, color) // any mesh, batched with its other uses; tileInfo can be a TextureInfo
                                                  // for the whole texture, uvs past 1 repeat when it wraps
-render3D.drawBillboard(pos, size, tileInfo, color, angle, upright) // camera facing quad, unlit, size is a Vector2;
+render3D.drawBillboard(pos, size, tileInfo, color, angle, upright) // camera facing quad, size is a Vector2; lit
+                                                                   // with no direction, by how near each light
+                                                                   // is, the sun, ambient and shadows, so a cloud
+                                                                   // is bright by a light inside it; emissive 1
+                                                                   // or additive keeps it unlit; a normal map lights
+                                                                   // it as a card facing the camera;
                                                                    // upright stands on world up; opaque ones,
                                                                    // and sprite objects that are not transparent,
                                                                    // are batched: a sheet's sprites are one

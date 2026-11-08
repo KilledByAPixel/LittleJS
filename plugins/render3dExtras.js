@@ -1626,14 +1626,12 @@ class ParticleEmitter3D extends EngineObject3D
         // the instanced path: one matrix per particle, its right and up axes the quad's size long, facing the camera,
         // written straight into the batch; the batch draws at the end so the order of the transparent stage holds
         const quad = r.billboardMesh, instanced = texture && r.instancing && !r.capture && render3DCanDraw();
-        let data, textureInfo, uv, lit;
+        let data, textureInfo, uv;
         if (instanced)
         {
             render3DMeshUpload(quad);
             textureInfo = render3DTextureOf(texture);
             uv = render3DGetTileUVs(texture);
-            lit = r.lighting;
-            r.lighting = r.shadowPass && lit; // unlit on screen, in the shadow map the object's flag decides
             r.cullBackFaces = r.mirrored = false;
         }
         const cb = r.cameraBack;
@@ -1666,7 +1664,8 @@ class ParticleEmitter3D extends EngineObject3D
                 else if (instanced)
                 {
                     // the quad's half axes, turned as drawBillboard turns them, doubled for billboardMesh's unit square
-                    const a = render3DBillboardAxes(size, angle, false), k = render3DInstanceSlot(quad, textureInfo);
+                    const a = render3DBillboardAxes(size, angle, false);
+                    const k = render3DInstanceSlot(quad, textureInfo, undefined, !r.shadowPass); // lit as billboards
                     data = quad.instanceData;
                     data[k]    = a[0] * 2; data[k+1] = a[1] * 2; data[k+2]  = a[2] * 2; data[k+3]  = 0;
                     data[k+4]  = a[3] * 2; data[k+5] = a[4] * 2; data[k+6]  = a[5] * 2; data[k+7]  = 0;
@@ -1689,7 +1688,6 @@ class ParticleEmitter3D extends EngineObject3D
         {
             if (instanced)
             {
-                r.lighting = lit;
                 r.flush(); // whatever the stream holds from before this emitter draws first
                 render3DFlushInstances(quad);
             }

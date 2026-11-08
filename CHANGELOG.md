@@ -5,7 +5,11 @@ What changed in each release, newest first. Releases before 1.20.0 are on the
 
 ## Unreleased
 
-Nothing yet.
+### New Changes
+- 3D billboards are lit: sprites, particles and `drawBillboard` take the lights, the sun, the ambient and the shadows, lit with no direction since they always face the camera, each light by how near it is, so a cloud of smoke is bright by a light inside it and dark in the shade; `obj.roundLighting` lights a sprite or a particle emitter as a ball bulging toward the camera, bright on the side toward each light, and a normal map lights one as a card facing the camera. Additive ones, like fire, sparks and a light's glow, are light of their own and stay unlit, and `emissive = 1` keeps any one its own colors
+
+### Breaking Changes
+- 3D sprites, particles and `drawBillboard` were always unlit and are now lit, so in a dark scene they are darker than before; set `emissive = 1` on a sprite object or particle emitter, or `render3D.emissive = 1` before a `drawBillboard` of your own, for the old look; additive ones are unchanged
 
 ## 1.29.1 - 2026-11-02
 
