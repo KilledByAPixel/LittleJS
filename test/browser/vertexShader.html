@@ -41,6 +41,16 @@ smokeRun(async ()=>
         colored.shader = new Shader('',
             'void mainVertex(inout vec3 pos, inout vec3 normal) { vertexColor = vec4(0, 1, 0, 1); }');
 
+        // two instances of one set, each colored by its own data, the second lifted by it in the vertex code
+        const set = new InstancedMesh3D(buildBox(), 2);
+        set.emissive = 1;
+        set.setTransformAt(0, vec3(1.2, 3, 0), undefined, vec3(.8));
+        set.setTransformAt(1, vec3(4.5, 1, 0), undefined, vec3(.8));
+        set.setDataAt(0, 1, 0, 0, 0);
+        set.setDataAt(1, 0, 1, 0, 2);
+        set.shader = new Shader('void mainImage(out vec4 c, vec2 uv) { c = vec4(instanceData.rgb, 1.); }',
+            'void mainVertex(inout vec3 pos, inout vec3 normal) { pos.y += instanceData.w; }');
+
         // the ground, seen from just above, and over its middle a box moved far below it, which casts nothing
         new EngineObject3D(vec3(0, -3.5, 0), buildGrid(vec2(40), 1));
         const gone = new EngineObject3D(vec3(), buildBox());
@@ -55,6 +65,8 @@ smokeRun(async ()=>
     pixel('a vertex moved by mainVertex draws where it was moved', at(-3, 3), (p)=> smokeNear(p, [255, 0, 0, 255]));
     pixel('and not where the object is', at(-3, 0), (p)=> smokeNear(p, [0, 0, 0, 255], 20));
     pixel('vertexColor colors it, with the plugin look kept', at(3, 0), (p)=> smokeNear(p, [0, 255, 0, 255]));
+    pixel("an instance's data reaches the fragment code", at(1.2, 3), (p)=> smokeNear(p, [255, 0, 0, 255]));
+    pixel('and the vertex code, each instance its own', at(4.5, 3), (p)=> smokeNear(p, [0, 255, 0, 255]));
     // the ground under the middle, where draw3d's box casts its shadow, is lit as the ground nearer the camera is
     const lit = smokePixel(.5, .12)[0], under = smokePixel(.5, .215)[0];
     check('the shadow map moves the vertex too, nothing casts where it was', lit > 150 && under > lit - 20,

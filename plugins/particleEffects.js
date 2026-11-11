@@ -91,11 +91,12 @@ const particleEffectSettings = [];
  *  the whole effect, the built-ins fitting a one unit object at 1; hue, which turns its colors around the color wheel,
  *  1 all the way; saturation, which multiplies it, 0 gray; angle, its direction, 0 up; tileInfo, the game's own art in
  *  place of the shape, tinted by its colors, a TextureInfo drawn whole; and in 3D flatten, a flat spawn area across
- *  the way it emits; emitSize may be a vec2, a rectangle; shape is one of the built-in names, so a misspelled one is
- *  caught, where an effect's settings, read from JSON, take any string
+ *  the way it emits, and roundLighting, each particle lit as a ball, bright on the side toward each light; emitSize
+ *  may be a vec2, a rectangle; shape is one of the built-in names, so a misspelled one is caught, where an effect's
+ *  settings, read from JSON, take any string
  *  @typedef {Omit<ParticleEffectSettings, 'emitSize'|'shape'> & {scale?: number, hue?: number, saturation?: number,
- *  angle?: number, tileInfo?: TileInfo|TextureInfo, flatten?: boolean, emitSize?: number|Vector2,
- *  shape?: ''|'dot'|'soft'|'glow'|'smoke'|'spark'|'square'|'triangle'|'ring'|'star'|'plus'}} ParticleEffectOptions
+ *  angle?: number, tileInfo?: TileInfo|TextureInfo, flatten?: boolean, roundLighting?: boolean,
+ *  emitSize?: number|Vector2, shape?: ''|'dot'|'soft'|'glow'|'smoke'|'spark'|'square'|'triangle'|'ring'|'star'|'plus'}} ParticleEffectOptions
  *  @memberof ParticleEffects */
 let particleEffectSettingGroup; // the group settings are being added to
 
@@ -553,7 +554,7 @@ function particleEffectSet(emitter, effect)
 }
 
 // the options a play takes besides the settings
-const PARTICLE_EFFECT_OPTIONS = ['hue', 'saturation', 'scale', 'angle', 'tileInfo', 'flatten'];
+const PARTICLE_EFFECT_OPTIONS = ['hue', 'saturation', 'scale', 'angle', 'tileInfo', 'flatten', 'roundLighting'];
 
 // whether an option is a value its setting takes, as particleEffectSanitize keeps one
 function particleEffectOptionValid(setting, value)
@@ -737,7 +738,8 @@ function particleEffectSet3D(emitter, effect)
  *  @param {string|ParticleEffect} nameOrEffect - A built-in or added effect's name, or an effect
  *  @param {Vector3} [pos3D]
  *  @param {ParticleEffectOptions} [options] - scale, hue, saturation, angle, tileInfo and any setting as particleEffect; angle turns it
- *    about z, so 0 is up; flatten makes the spawn area flat across the way it emits
+ *    about z, so 0 is up; flatten makes the spawn area flat across the way it emits; roundLighting lights each
+ *    particle as a ball, for smoke and clouds a light shines into
  *  @return {ParticleEmitter3D|undefined} - undefined when there is no such effect
  *  @memberof ParticleEffects */
 function particleEffect3D(nameOrEffect, pos3D=vec3(), options={})
@@ -751,6 +753,7 @@ function particleEffect3D(nameOrEffect, pos3D=vec3(), options={})
         e.rotation3D = vec3(0, 0, -options.angle);
     e.scale3D = vec3(options.scale ?? 1);
     e.emitFlat = !!options.flatten; // a sphere a disc, a box a sheet, across the way it emits
+    e.roundLighting = !!options.roundLighting;
     if (options.tileInfo) // a whole texture too, the 3D emitter draws one as a tile
         e.tileInfo = /** @type {TileInfo} */ (options.tileInfo);
     return e;

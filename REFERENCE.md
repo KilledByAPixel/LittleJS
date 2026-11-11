@@ -885,10 +885,10 @@ particleEffect(name, pos, {scale, hue, saturation, angle}) // play an effect, re
                                         // continuous one goes until destroyed, a one-shot ends itself; any setting
                                         // in the options replaces the effect's own: {emitTime: .5} for a burst,
                                         // {emitTime: 0, emitRate: 30} to keep a one-shot going
-particleEffect3D(name, pos3D, {scale, hue, saturation, angle, flatten}) // the same effect as a
+particleEffect3D(name, pos3D, {scale, hue, saturation, angle, flatten, roundLighting}) // the same effect as a
                                         // ParticleEmitter3D, angle turning it about z; a circle area becomes a sphere
                                         // and a rectangle a box as deep as it is wide, flatten makes them a disc or a
-                                        // sheet across the way it emits
+                                        // sheet across the way it emits; roundLighting lights each particle as a ball
                                         // both take {tileInfo} to draw the game's own art in place of the shape
 particleEffectsBuiltIn                  // the built-in names: fire, torch, smoke, steam, explosion, sparks, hit,
                                         // dust, debris, sparkle, magic, heal, poison, portal, rain, snow, leaves,
@@ -1627,6 +1627,8 @@ set.setTransforms(start, count, x, y, z, rx, ry, rz, sx, sy, sz) // place a run 
                                   // rotations and scales are optional, all three or none
 set.setMatrixAt(i, matrix)        // place one by a matrix; getMatrixAt(i) reads one back
 set.setColorAt(i, color)          // color one, they start in the object's color; only changed colors upload
+set.setDataAt(i, x, y, z, w)      // four numbers of the game's own, read by a Shader as vec4 instanceData, in
+                                  // both stages and the shadow map; set.dataValues and set.markDataDirty(start, end)
 set.matrixData / set.colorData    // 16 and 8 floats an instance, edit them and call markDirty(i) / markColorDirty(i),
                                   // or markDirtyRange(start, end) for a run of matrices
 set.radius = 50                   // fix the culling sphere, which otherwise grows to hold every instance set

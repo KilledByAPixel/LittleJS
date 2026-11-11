@@ -12,7 +12,11 @@ function gameInit()
 
     // built-in effects, the same ones 2D games use, one line each
     particleEffect3D('fire', vec3(-5,1,0), {scale: 3});
-    particleEffect3D('smoke', vec3(-5,3,0), {scale: 2});
+    particleEffect3D('smoke', vec3(-5,3,0), {scale: 2, roundLighting: true});
+
+    // the fire lights its smoke from below, each puff round
+    new Light3D(vec3(-5,1.5,0), 6, hsl(.08,1,.6), 2);
+
     particleEffect3D('sparks', vec3(5,2,0), {scale: 3});
 
     // a fountain: splash kept going, its settings replaced by the options;
@@ -52,6 +56,14 @@ Every built-in effect is made to fit an object one unit across. `scale`
 in the options grows the whole effect: the area the particles start in,
 their sizes, their speed and their fall.
 
+### Lit smoke
+Particles are lit like everything else, but with no side facing a light,
+since each one always faces the camera: a light lights the ones near it.
+The fire is additive, light of its own, so it stays as bright as it is.
+The smoke is not, and a `Light3D` in the fire lights it from below.
+`roundLighting: true` in its options lights each puff as a ball, bright
+on the side toward the light, which gives the smoke its depth.
+
 ### The fountain
 `'splash'` is a one-shot, a short burst that ends itself. Any emitter
 setting named in the options replaces the effect's own, and these turn
@@ -76,6 +88,7 @@ each side.
   colors half way around the color wheel.
 - Change `emitConeAngle: .15` to `1` for a wide spray.
 - Change `sin(time)*.5` to `time` and the jet turns all the way around.
+- Take out `roundLighting: true` and the smoke is lit the same all over.
 
 ## See also
 Particles, Particle Effects and Particle Options show the same effects

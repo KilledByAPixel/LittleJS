@@ -400,7 +400,7 @@ function render3DFlushInstances(only)
 // draw reads these slots as constant attributes, and in Firefox a draw that reads a constant through a slot whose
 // divisor is set leaves the next batch on that slot reading the wrong values
 // colorBuffer holds the tint and uv rect apart from the matrices, as an InstancedMesh3D keeps them
-function render3DDrawInstanced(mesh, buffer, count, textureInfo, state, colorBuffer)
+function render3DDrawInstanced(mesh, buffer, count, textureInfo, state, colorBuffer, dataBuffer)
 {
     const gl = glContext, matrixBytes = RENDER3D_MATRIX_FLOATS * 4;
     for (const [location, size, offset] of RENDER3D_INSTANCE_ATTRIBS)
@@ -412,6 +412,14 @@ function render3DDrawInstanced(mesh, buffer, count, textureInfo, state, colorBuf
         gl.enableVertexAttribArray(location);
         gl.vertexAttribDivisor(location, 1);
     }
+    if (dataBuffer)
+    {
+        // each instance's data on slot 8, its divisor only while its array is on, as for the others
+        gl.bindBuffer(gl.ARRAY_BUFFER, dataBuffer);
+        gl.vertexAttribPointer(8, 4, gl.FLOAT, false, 16, 0);
+        gl.enableVertexAttribArray(8);
+        gl.vertexAttribDivisor(8, 1);
+    }
     render3DSetDrawUniforms(RENDER3D_IDENTITY, textureInfo, WHITE, RENDER3D_FULL_UV_RECT, state);
     render3DBindMesh(mesh);
     gl.drawElementsInstanced(gl.TRIANGLES, mesh.bufferCount, mesh.indexType, 0, count);
@@ -419,6 +427,11 @@ function render3DDrawInstanced(mesh, buffer, count, textureInfo, state, colorBuf
     {
         gl.disableVertexAttribArray(location);
         gl.vertexAttribDivisor(location, 0);
+    }
+    if (dataBuffer)
+    {
+        gl.disableVertexAttribArray(8);
+        gl.vertexAttribDivisor(8, 0);
     }
     ++drawCount;
     primitiveCount += mesh.bufferCount / 3 * count;
@@ -1993,12 +2006,30 @@ function render3DShaderProgram(shader)
 {
     ASSERT(shader instanceof Shader, 'render3D.shader must be a Shader, not the snippet itself');
     shader.program3D || glShaderTrack(shader); // one let go of and drawn again is kept for a lost context again
-    // its own uniforms, declared in the stages that use them
+    // its own uniforms, declared in the stages that use them, and an instance's data when it reads it
+    const data = render3DUsesInstanceData(shader.fragmentCode + ' ' + shader.vertexCode);
     const program = shader.program3D ||= glCreateProgram(
-        render3DVertexSource(shader.vertexCode, glUniformDeclarations(shader, shader.vertexCode)),
-        render3DFragmentSource(shader.fragmentCode, glUniformDeclarations(shader, shader.fragmentCode)));
+        render3DInstanceDataVertex(render3DVertexSource(shader.vertexCode,
+            glUniformDeclarations(shader, shader.vertexCode)), data, true),
+        render3DInstanceDataFragment(render3DFragmentSource(shader.fragmentCode,
+            glUniformDeclarations(shader, shader.fragmentCode)), render3DUsesInstanceData(shader.fragmentCode)));
     return glFailedPrograms.has(program) ? render3D.program : program; // one that did not build draws as with none
 }
+
+// whether a snippet reads an instance's data, the four numbers an InstancedMesh3D's setDataAt gives each instance;
+// only a program of a Shader that does takes the input, so the plugin's own and every other stay as they were
+const render3DUsesInstanceData = (code)=> /\binstanceData\b/.test(code);
+
+// the vertex stage of a program that reads the data: the input on slot 8, passed on to the fragment stage when
+// it reads it too; slot 8 holds zeros for any draw that is not of a set with data
+function render3DInstanceDataVertex(source, data, passOn)
+{
+    if (!data) return source;
+    return source.replace('void main(){', 'layout(location=8) in vec4 D;' + (passOn ? 'out vec4 I;' : '') +
+        '\n#define instanceData D\nvoid main(){' + (passOn ? 'I=D;' : ''));
+}
+function render3DInstanceDataFragment(source, data)
+{ return data ? source.replace('out vec4 o;', 'out vec4 o;in vec4 I;\n#define instanceData I\n') : source; }
 
 // the depth only program for the shadow map and the camera's depth, same vertex layout; see through pixels cast
 // nothing, so sprites and cut out textures cast their outline, and a blended object faded below half its alpha
@@ -2034,8 +2065,9 @@ function render3DShadowProgram(shader)
     const r = render3D;
     if (!shader?.vertexCode) return r.shadowShader;
     shader.shadowProgram3D || glShaderTrack(shader);
-    const program = shader.shadowProgram3D ||= glCreateProgram(render3DShadowVertexSource(shader.vertexCode, glUniformDeclarations(shader, shader.vertexCode)),
-        RENDER3D_SHADOW_FRAGMENT_SOURCE);
+    const program = shader.shadowProgram3D ||= glCreateProgram(render3DInstanceDataVertex(
+        render3DShadowVertexSource(shader.vertexCode, glUniformDeclarations(shader, shader.vertexCode)),
+        render3DUsesInstanceData(shader.vertexCode), false), RENDER3D_SHADOW_FRAGMENT_SOURCE);
     return glFailedPrograms.has(program) ? r.shadowShader : program; // one that did not build casts as with none
 }
 
@@ -2108,6 +2140,7 @@ function render3DInitGL()
     r.uniformValues = {};
     render3DShadowCut = undefined; // the shadow shader is new too
     r.attribValues = []; // a fresh context has its own attribute defaults, so nothing sent before it counts
+    gl.vertexAttrib4f(8, 0, 0, 0, 0); // an instance's data, zeros for every draw that is not of a set with data
 
     // the shader, see RENDER3D_VERTEX_SOURCE and render3DFragmentSource
     r.program = glCreateProgram(RENDER3D_VERTEX_SOURCE, render3DFragmentSource());

@@ -1267,6 +1267,15 @@ class InstancedMesh3D extends EngineObject3D
         this.colorDirtyStart = 0;
         /** @property {number} - One past the last instance whose color uploads */
         this.colorDirtyEnd = count;
+        /** @property {Float32Array|undefined} - Each instance's data, 4 floats, made by the first setDataAt: what a
+         *  Shader's snippets read as vec4 instanceData; edit it directly and call markDataDirty for the instances
+         *  changed
+         *  @type {Float32Array|undefined} */
+        this.dataValues = undefined;
+        this.dataDirtyStart = Infinity; // the instances whose data uploads before the next draw
+        this.dataDirtyEnd = 0;
+        /** @type {WebGLBuffer|undefined} */
+        this.dataBuffer = undefined;  // the GPU copy of dataValues
         // the farthest any instance's position has been from the origin, and the largest scale any has had, both
         // squared, and the instances set since radius last took them in: setting one does no bounds work at all
         this.reachSquared = 0;
@@ -1385,6 +1394,33 @@ class InstancedMesh3D extends EngineObject3D
         this.markColorDirty(i);
     }
 
+    /** Give an instance four numbers of the game's own, which a Shader's snippets read as vec4 instanceData, in the
+     *  vertex code and the fragment code, the shadow map too, like a tile's height or a sprite's foot line; an
+     *  instance not given any reads zeros, and so does every draw that is not of a set with data
+     *  @param {number} i
+     *  @param {number} [x]
+     *  @param {number} [y]
+     *  @param {number} [z]
+     *  @param {number} [w] */
+    setDataAt(i, x=0, y=0, z=0, w=0)
+    {
+        ASSERT(i >= 0 && i < this.maxCount, 'instance index out of range');
+        const data = this.dataValues ||= new Float32Array(this.maxCount * 4), k = i * 4;
+        data[k] = x, data[k+1] = y, data[k+2] = z, data[k+3] = w;
+        this.markDataDirty(i);
+    }
+
+    /** Note that a run of instances' data changed, for code that writes dataValues directly; setDataAt calls this
+     *  @param {number} start - First instance
+     *  @param {number} [end] - One past the last */
+    markDataDirty(start, end=start + 1)
+    {
+        ASSERT(start >= 0 && end <= this.maxCount && start <= end, 'instance range out of range');
+        this.dataValues ||= new Float32Array(this.maxCount * 4);
+        if (start < this.dataDirtyStart) this.dataDirtyStart = start;
+        if (end > this.dataDirtyEnd) this.dataDirtyEnd = end;
+    }
+
     /** Note that an instance's matrix changed, so it uploads before the next draw and the bounds take it in when
      *  they are read; setTransformAt and setMatrixAt call this, and so must an edit made straight to matrixData
      *  @param {number} i */
@@ -1478,6 +1514,7 @@ class InstancedMesh3D extends EngineObject3D
             gl.bufferData(gl.ARRAY_BUFFER, this.matrixData, gl.DYNAMIC_DRAW);
             gl.bindBuffer(gl.ARRAY_BUFFER, this.colorBuffer = gl.createBuffer());
             gl.bufferData(gl.ARRAY_BUFFER, this.colorData, gl.DYNAMIC_DRAW);
+            this.dataBuffer = undefined; // made again below when there is data
         }
         else
         {
@@ -1491,13 +1528,30 @@ class InstancedMesh3D extends EngineObject3D
             upload(this.colorBuffer, this.colorData, RENDER3D_COLOR_FLOATS, this.colorDirtyStart, this.colorDirtyEnd);
         }
         this.dirtyStart = this.colorDirtyStart = Infinity, this.dirtyEnd = this.colorDirtyEnd = 0;
+        // each instance's data, once it has any: all of it the first time and under a fresh context, then what changed
+        if (this.dataValues)
+        {
+            if (!this.dataBuffer)
+            {
+                gl.bindBuffer(gl.ARRAY_BUFFER, this.dataBuffer = gl.createBuffer());
+                gl.bufferData(gl.ARRAY_BUFFER, this.dataValues, gl.DYNAMIC_DRAW);
+            }
+            else if (this.dataDirtyEnd > this.dataDirtyStart)
+            {
+                gl.bindBuffer(gl.ARRAY_BUFFER, this.dataBuffer);
+                gl.bufferSubData(gl.ARRAY_BUFFER, this.dataDirtyStart * 16, this.dataValues, this.dataDirtyStart * 4,
+                    (this.dataDirtyEnd - this.dataDirtyStart) * 4);
+            }
+            this.dataDirtyStart = Infinity, this.dataDirtyEnd = 0;
+        }
 
         // one draw under the object's state, the mesh setting the culling as drawMesh does
         r.flush();
         render3DFlushBeforeOverlay(); // as in drawMesh, what was drawn before goes under it
         const cullBackFaces = r.cullBackFaces, tileInfo = this.tileInfo;
         r.cullBackFaces = !mesh.doubleSided;
-        render3DDrawInstanced(mesh, this.buffer, this.count, render3DTextureOf(tileInfo), r, this.colorBuffer);
+        render3DDrawInstanced(mesh, this.buffer, this.count, render3DTextureOf(tileInfo), r, this.colorBuffer,
+            this.dataBuffer);
         r.cullBackFaces = cullBackFaces;
     }
 
@@ -1506,8 +1560,11 @@ class InstancedMesh3D extends EngineObject3D
     destroy(immediate)
     {
         if (this.buffer && this.bufferGeneration === render3D?.contextGeneration)
+        {
             glContext?.deleteBuffer(this.buffer), glContext?.deleteBuffer(this.colorBuffer);
-        this.buffer = this.colorBuffer = undefined;
+            this.dataBuffer && glContext?.deleteBuffer(this.dataBuffer);
+        }
+        this.buffer = this.colorBuffer = this.dataBuffer = undefined;
         super.destroy(immediate);
     }
 }
