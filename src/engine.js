@@ -200,6 +200,10 @@ let engineCollideGridMin = 64;
 // everything
 let engineCollideGrid;
 
+// true while engineObjectsUpdate runs every object's physics, so a 3D grid made for that pass is not used by an
+// updatePhysics a game calls by hand at another time, with objects moved since
+let engineObjectsPhysicsRunning = false;
+
 // where each object that collides with solids was before this frame's moves, kept only when a one way solid is among
 // them, so a one way test goes by where both were whichever of the two updates first
 let engineObjectsOneWayStart;
@@ -999,6 +1003,7 @@ function engineObjectsUpdate()
     // a one way solid with no mass moves first, nothing pushes it, so what lands on it or passes up through it sees it
     // where it is now and where it was, whatever the render order
     const oneWayFirst = (o)=> o.oneWay && !o.mass;
+    engineObjectsPhysicsRunning = true;
     try
     {
         if (engineObjectsOneWayStart)
@@ -1017,6 +1022,7 @@ function engineObjectsUpdate()
     }
     finally
     {
+        engineObjectsPhysicsRunning = false;
         engineCollideGrid && (engineCollideGrid = undefined);
         engineObjectsOneWayStart && (engineObjectsOneWayStart = undefined);
     }
