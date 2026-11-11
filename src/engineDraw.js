@@ -380,11 +380,14 @@ class TextureInfo
         glSetTextureWrap(this.glTexture, wrap);
     }
 
-    /** Make this texture hard edged or smooth on its own, whatever tilesPixelated says for the rest; it is made again
-     *  with the new filtering
+    /** Make this texture hard edged or smooth on its own, whatever tilesPixelated says for the rest; a change makes it
+     *  again from its image with the new filtering, since a smooth one is stored premultiplied with mipmaps, so
+     *  pixels put in with updateData are lost unless the image has them too, as after a lost context
      *  @param {boolean} [pixelated] - undefined follows tilesPixelated again */
     setPixelated(pixelated)
     {
+        // the same setting keeps the texture as it is; undefined remakes it, to follow tilesPixelated as it is now
+        if (pixelated !== undefined && pixelated === this.pixelated) return;
         this.pixelated = pixelated;
         if (!this.glTexture) return;
         this.destroyWebGLTexture();
@@ -1419,11 +1422,14 @@ function drawCanvas2D(pos, size, angle=0, mirror=false, drawFunction, screenSpac
         angle -= cameraAngle;
     }
     context.save();
-    context.translate(pos.x+.5, pos.y+.5);
-    context.rotate(angle);
-    context.scale(mirror ? -size.x : size.x, -size.y);
-    drawFunction(context);
-    context.restore();
+    try
+    {
+        context.translate(pos.x+.5, pos.y+.5);
+        context.rotate(angle);
+        context.scale(mirror ? -size.x : size.x, -size.y);
+        drawFunction(context);
+    }
+    finally { context.restore(); } // a callback that throws leaves no transform or clip behind
 }
 
 ///////////////////////////////////////////////////////////////////////////////

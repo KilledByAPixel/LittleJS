@@ -385,10 +385,17 @@ class ParticleEmitter extends EngineObject
         this.additive && setAdditiveBlendMode();
         particleTile = null; // none yet, undefined is the untextured tile
         particleTileBatch = true;
-        for (const particle of this.particles)
-            particle.render();
-        particleTileBatch = false;
-        this.additive && setAdditiveBlendMode(false);
+        try
+        {
+            for (const particle of this.particles)
+                particle.render();
+        }
+        finally
+        {
+            // put back even when a particle's render throws, so the draws after it are not batched or additive
+            particleTileBatch = false;
+            this.additive && setAdditiveBlendMode(false);
+        }
     }
 
     /** is emitter actively spawning

@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { buildGrid, buildSphere, buildBox, buildTorus, buildCylinder, parseOBJ, Vector3, vec2, vec3, clamp }
+import { buildGrid, buildSphere, buildBox, buildTorus, buildCylinder, parseOBJ, Mesh, Vector3, vec2, vec3, clamp }
     from '../dist/littlejs.esm.js';
 
 // Mesh.computeNormals works in numbers, grouping the points at one place by their rounded position: its normals must
@@ -62,7 +62,7 @@ function oldFlatStrip(points)
 function wavedFlag()
 {
     const mesh = buildGrid(vec2(4, 2.5), vec2(16, 10));
-    mesh.points = mesh.points.map((p)=> vec3(p.x, p.y, Math.sin(p.x * 3 + 1.7) * .3 * (p.x + 2)));
+    mesh.points = mesh.points.map((p)=> vec3(p.x, Math.sin(p.x * 3 + 1.7) * .3 * (p.x + 2), p.z));
     return mesh;
 }
 const house = `v -1 0 -1\nv 1 0 -1\nv 1 0 1\nv -1 0 1\nv -1 1.2 -1\nv 1 1.2 -1\nv 1 1.2 1\nv -1 1.2 1\n` +
@@ -81,11 +81,43 @@ test('smooth normals are what they were, to the last bit, on strips and on index
     }
 });
 
-test('flat normals are what they were on a strip, and every one is a Vector3 of its own or the default', () =>
+test('flat normals are what they were on a strip that does not fold, and every one is a Vector3 of its own', () =>
 {
-    const mesh = wavedFlag(), expected = bits(oldFlatStrip(mesh.points));
+    const mesh = buildGrid(vec2(4, 2.5), vec2(16, 10)), expected = bits(oldFlatStrip(mesh.points));
     assert.deepEqual(bits(mesh.computeNormals(false).normals), expected);
+    assert.ok(!mesh.indices, 'a flat strip stays a strip');
     assert.ok(mesh.normals.every((n)=> n instanceof Vector3));
+});
+
+// every triangle with area has its own face normal at all three corners, read through the list the GPU gets
+function assertFlat(mesh, name)
+{
+    const { vertices, indices } = mesh.getTriangles(), points = mesh.points, normals = mesh.normals;
+    let faces = 0;
+    for (let t = 0; t < indices.length; t += 3)
+    {
+        const [a, b, c] = [0, 1, 2].map((j)=> vertices[indices[t+j]]);
+        const cross = points[b].subtract(points[a]).cross(points[c].subtract(points[a]));
+        if (cross.lengthSquared() < 1e-12) continue;
+        ++faces;
+        // the GPU's list reads clockwise, so the face's front is the other way
+        const face = cross.normalize(-1);
+        for (const v of [a, b, c])
+            assert.ok(normals[v].distance(face) < 1e-9, `${name}: triangle ${t / 3} corner ${v} is not its face`);
+    }
+    assert.ok(faces, name + ' has faces');
+}
+
+test('flat normals of a strip that folds are each face\'s own at all three corners, as the list form gives', () =>
+{
+    const points = [vec3(0, 0, 0), vec3(1, 0, 0), vec3(0, 1, 0), vec3(1, 1, 1)];
+    const folded = new Mesh().addStrip(points), listed = new Mesh().addStrip(points).toIndexed();
+    assertFlat(folded.computeNormals(false), 'folded');
+    assertFlat(listed.computeNormals(false), 'listed');
+    assert.deepEqual(bits(folded.normals), bits(listed.normals));
+    for (const [name, mesh] of Object.entries({ flag: wavedFlag(), sphere: buildSphere(1, 12, 8),
+        torus: buildTorus(2, .5, 16, 8), cylinder: buildCylinder(1, 2, 10), box: buildBox(vec3(1, 2, 3)) }))
+        assertFlat(mesh.computeNormals(false), name);
 });
 
 test('smooth normals of a mesh where faces meet back to back at a place are still what they were', () =>

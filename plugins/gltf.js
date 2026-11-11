@@ -14,9 +14,9 @@
  *   color texture's uvs; roughness, metalness and occlusion maps are not loaded
  * - The base color texture reads the uv set its texCoord names, moved by KHR_texture_transform as gltfpack and
  *   Blender write it
- * - An OPAQUE material, the default, ignores its texture's alpha as the format says: a texture only such materials
- *   use loads with its alpha set to 1, so the 3D pass cuts no holes in it; MASK always cuts at half, alphaCutoff
- *   is not read
+ * - An OPAQUE material, the default, ignores its texture's alpha as the format says: its texture loads with alpha
+ *   set to 1, so the 3D pass cuts no holes in it, as a copy when a MASK or BLEND material uses the texture too;
+ *   MASK always cuts at half, alphaCutoff is not read
  * - Material and vertex colors are linear in glTF and are converted to sRGB at load, the space textures are in
  * - glTF and LittleJS agree on the axes, y up and -z forward, on counter clockwise triangles and on uvs running down
  * - Requires the Render3D plugin
@@ -560,8 +560,8 @@ async function parseGLTF(data, baseUrl='', files)
     const usedTextures = new Set((json.materials || []).flatMap(m=> [m.pbrMetallicRoughness?.baseColorTexture?.index,
         m.normalTexture?.index, m.emissiveTexture?.index]));
     const normalTextures = new Set((json.materials || []).map(m=> m.normalTexture?.index));
-    const opaqueTextures = gltfOpaqueTextures(json);
-    const textures = await Promise.all((json.textures || []).map(async (texture, index)=>
+    const {opaque: opaqueTextures, copies: opaqueCopies} = gltfOpaqueTextures(json);
+    const loadTexture = async (texture, index, opaqueOnly)=>
     {
         if (!glContext || typeof createImageBitmap == 'undefined' || !usedTextures.has(index)) return;
         try
@@ -577,9 +577,9 @@ async function parseGLTF(data, baseUrl='', files)
                 const view = json.bufferViews[image.bufferView];
                 blob = new Blob([new Uint8Array(buffers[view.buffer], view.byteOffset || 0, view.byteLength)], {type: image.mimeType});
             }
-            // an OPAQUE material ignores its texture's alpha, which the 3D pass would cut holes by, so a texture only
-            // those use has it set to 1; decoded as stored for that, and a jpeg has no alpha to set
-            const opaque = opaqueTextures.has(index) && blob.type !== 'image/jpeg';
+            // an OPAQUE material ignores its texture's alpha, which the 3D pass would cut holes by, so a texture for
+            // those has it set to 1; decoded as stored for that, and a jpeg has no alpha to set
+            const opaque = opaqueOnly && blob.type !== 'image/jpeg';
             // a normal map is directions, not colors, so it is decoded as stored; one a material also uses as a
             // color, an odd file, is decoded that way too
             const bitmap = normalTextures.has(index) ?
@@ -589,7 +589,13 @@ async function parseGLTF(data, baseUrl='', files)
             return new TextureInfo(bitmap, true, [sampler.wrapS ?? 10497, sampler.wrapT ?? 10497], sampler.magFilter === 9728);
         }
         catch (e) { console.warn('glTF image not loaded, left out: ' + (e?.message || e)); }
-    }));
+    };
+    const textures = await Promise.all((json.textures || []).map((texture, index)=>
+        loadTexture(texture, index, opaqueTextures.has(index))));
+    // a texture OPAQUE and MASK or BLEND materials share keeps its alpha, and the OPAQUE ones get a copy without
+    const copies = new Map(await Promise.all([...opaqueCopies].map(async (index)=>
+        /** @type {[number, TextureInfo|undefined]} */ ([index, await loadTexture(json.textures[index], index, true)]))));
+    const allTextures = [...textures, ...copies.values()];
 
     // the parts: the scene's nodes walked with their transforms, every primitive of a node's mesh placed by it;
     // each node's parent and resting place are kept, so an animation can move a part from where it rests
@@ -628,7 +634,7 @@ async function parseGLTF(data, baseUrl='', files)
             {
                 const skinned = skin?.joints?.length && primitive.attributes.JOINTS_0 !== undefined &&
                     primitive.attributes.WEIGHTS_0 !== undefined;
-                const part = gltfPart(json, buffers, textures, primitive, skinned ? new Matrix4 : matrix,
+                const part = gltfPart(json, buffers, textures, copies, primitive, skinned ? new Matrix4 : matrix,
                     node.name || mesh.name || 'part ' + parts.length);
                 if (!part) continue;
                 part.node = index;
@@ -669,14 +675,14 @@ async function parseGLTF(data, baseUrl='', files)
     catch (error)
     {
         // a file that fails partway leaves no model to dispose, so the textures it made go now
-        for (const texture of textures)
+        for (const texture of allTextures)
             texture?.destroyWebGLTexture();
         throw error;
     }
 
     // a texture none of the parts draws with, another scene's, goes now too, since dispose finds them by the parts
     const used = new Set(parts.flatMap(p=> [p.textureInfo, p.normalMap, p.emissiveMap]));
-    for (const texture of textures)
+    for (const texture of allTextures)
         texture && !used.has(texture) && texture.destroyWebGLTexture();
     // a skinned part rests as its joints place it, with nothing moved
     const nodeTree = {nodes: json.nodes, parents, restInverse, restPose}, restWorlds = gltfNodeWorlds(nodeTree, new Map);
@@ -874,20 +880,23 @@ function gltfNodeTRS(node)
         scale: [...(node.scale || [1, 1, 1])]};
 }
 
-// the base color textures that only OPAQUE materials use, the default mode, which the format says ignores alpha;
-// one a MASK or BLEND material also uses keeps its alpha for that
+// the base color textures of OPAQUE materials, the default mode, which the format says ignores alpha: opaque, the
+// ones only those use, loaded with alpha 1; copies, the ones a MASK or BLEND material uses too, which keep their
+// alpha for that and get a copy with alpha 1 for the OPAQUE ones; only materials a primitive draws with count
 function gltfOpaqueTextures(json)
 {
+    const drawn = new Set((json.meshes || []).flatMap(m=> (m.primitives || []).map(p=> p.material)));
     const opaque = new Set, cut = new Set;
-    for (const material of json.materials || [])
+    (json.materials || []).forEach((material, i)=>
     {
         const index = material.pbrMetallicRoughness?.baseColorTexture?.index;
-        if (index !== undefined)
+        if (index !== undefined && drawn.has(i))
             (!material.alphaMode || material.alphaMode === 'OPAQUE' ? opaque : cut).add(index);
-    }
+    });
+    const copies = new Set([...opaque].filter((index)=> cut.has(index)));
     for (const index of cut)
         opaque.delete(index);
-    return opaque;
+    return {opaque, copies};
 }
 
 // an image decoded without premultiplied alpha, given alpha 1 all over and its colors as they are; read back through
@@ -1107,7 +1116,7 @@ function gltfAccessor(json, buffers, index)
 }
 
 // one primitive as a part: its attributes into a mesh, the indices as triangles, then placed and given its material
-function gltfPart(json, buffers, textures, primitive, matrix, name)
+function gltfPart(json, buffers, textures, copies, primitive, matrix, name)
 {
     const mode = primitive.mode ?? 4; // triangles
     if (mode < 4)
@@ -1157,9 +1166,11 @@ function gltfPart(json, buffers, textures, primitive, matrix, name)
     // only a blending material reads its alpha, an opaque or masked one is solid whatever the factor says
     const transmission = material.extensions?.KHR_materials_transmission?.transmissionFactor || 0;
     const blend = material.alphaMode === 'BLEND', alpha = (blend ? factor[3] : 1) * (1 - .8 * transmission);
+    const opaqueMaterial = !material.alphaMode || material.alphaMode === 'OPAQUE';
     const texture = textureRef && json.textures?.[textureRef.index];
     const part = new GLTFPart(name, mesh, rgb(gltfSRGB(factor[0]), gltfSRGB(factor[1]), gltfSRGB(factor[2]), alpha),
-        textureRef ? textures[textureRef.index] : undefined, blend || transmission > 0);
+        textureRef ? opaqueMaterial && copies.get(textureRef.index) || textures[textureRef.index] : undefined,
+        blend || transmission > 0);
     part.pixelated = json.samplers?.[texture?.sampler]?.magFilter === 9728; // NEAREST
     part.vertexSource = vertexSource;
     part.unlit = !!material.extensions?.KHR_materials_unlit;

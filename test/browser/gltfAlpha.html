@@ -1,0 +1,49 @@
+<!DOCTYPE html><meta charset=utf-8>
+<script src=../../dist/littlejs.js></script><script src=smoke.js></script>
+<pre id=result>PENDING</pre>
+<script>
+// a glTF OPAQUE material ignores its texture's alpha, a MASK one cuts by it: a red texture of alpha .25, an unlit
+// triangle over the middle of the view, drawn by each kind of material and by both sharing the texture
+'use strict';
+smokeRun(async ()=>
+{
+    setShowSplashScreen(false); setDebugWatermark(false);
+    setEngineManualStep(true); setCanvasFixedSize(vec2(64));
+    setCanvasClearColor(BLACK);
+    await engineInit(()=> { setCameraScale(1); new Render3DPlugin; });
+
+    // the texture, red at a quarter alpha, under the half the 3D pass cuts at
+    const canvas = document.createElement('canvas');
+    canvas.width = canvas.height = 1;
+    const context = canvas.getContext('2d');
+    context.fillStyle = 'rgba(255, 0, 0, .25)';
+    context.fillRect(0, 0, 1, 1);
+    const positions = new Float32Array([-2, -2, 0, 2, -2, 0, 0, 2, 0]);
+    const uri = 'data:application/octet-stream;base64,' + btoa(String.fromCharCode(...new Uint8Array(positions.buffer)));
+    const material = (alphaMode)=> ({alphaMode, pbrMetallicRoughness: {baseColorTexture: {index: 0}},
+        extensions: {KHR_materials_unlit: {}}});
+    // a file of these materials, its one mesh drawing the triangle with each material named by primitives
+    const file = (materials, primitives)=> ({asset: {version: '2.0'},
+        buffers: [{uri, byteLength: positions.byteLength}], bufferViews: [{buffer: 0, byteLength: positions.byteLength}],
+        accessors: [{bufferView: 0, componentType: 5126, count: 3, type: 'VEC3'}],
+        images: [{uri: canvas.toDataURL()}], textures: [{source: 0}], materials: materials.map(material),
+        meshes: [{primitives: primitives.map((m)=> ({attributes: {POSITION: 0}, material: m}))}],
+        nodes: [{mesh: 0}], scenes: [{nodes: [0]}]});
+    const draw = async (name, json, color)=>
+    {
+        const model = await parseGLTF(json), object = model.createObject();
+        engineStep();
+        checkPixel(name, .5, .5, color);
+        object.destroy(true);
+        model.dispose();
+    };
+
+    await draw('an OPAQUE material draws its texture solid', file(['OPAQUE'], [0]), [255, 0, 0, 255]);
+    await draw('a MASK material cuts where the texture is under half alpha', file(['MASK'], [0]), [0, 0, 0, 255]);
+    await draw('a MASK material no primitive uses does not cut the OPAQUE one', file(['OPAQUE', 'MASK'], [0]),
+        [255, 0, 0, 255]);
+    await draw('an OPAQUE material sharing its texture with a MASK one in use still draws solid',
+        file(['OPAQUE', 'MASK'], [1, 0]), [255, 0, 0, 255]);
+    checkGLError();
+});
+</script>

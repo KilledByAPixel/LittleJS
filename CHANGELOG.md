@@ -20,6 +20,10 @@ What changed in each release, newest first. Releases before 1.20.0 are on the
 - 3D sprites, particles and `drawBillboard` were always unlit and are now lit, so they look different: darker in shade, tinted by the lights and the sun, and shadowed; set `emissive = 1` on a sprite object or particle emitter, or `render3D.emissive = 1` before a `drawBillboard` of your own, for the old look; additive ones are unchanged
 
 ### Fixes
+- A glTF OPAQUE material draws its texture solid when a MASK or BLEND material shares the texture, through a copy with its alpha set to 1, and a material no part draws with no longer counts, where either made the opaque part cut out
+- `computeNormals(false)` on a strip that folds gives each face its own normal at all three corners, by making the strip indexed, where a face took its neighbor's normals at the corners they share
+- `drawCanvas2D` puts the context back when its callback throws, and a particle that throws in `render` leaves the batch and the blend as they were, so a game that catches the error draws on unclipped and not additive
+- `setPixelated` with the setting a texture already has keeps the texture, where it remade it from its image and lost what `updateData` put in; a change still does, as documented
 - A `ThirdPersonCamera3D` taking over from another camera starts where the view is and eases to its target from there, where it jumped to where it last was; `snap()` on a camera that is not driving the view leaves it alone, the zoom of a `FollowCamera` and the camera of a `ThirdPersonCamera3D` with no target too; and a draw that throws in the 3D pass no longer leaves the camera shaken, or the 3D editor's camera in place, for the game's next update
 - A Box2D joint made to an object already destroyed is made destroyed in every joint type, where most threw reading the gone object's body, and a gear joint of a joint destroyed with its object no longer stops Box2D in a release build
 - A 3D child with mass is held by its parent, where gravity pulled it out of it

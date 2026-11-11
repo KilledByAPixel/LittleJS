@@ -671,7 +671,8 @@ class Mesh
 
     /** Derive normals from the triangles, of the strip or of the index list
      *  @param {boolean} [smooth] - Round the lighting across faces instead of giving each face a hard edge; flat
-     *    normals on an indexed mesh give every corner its own vertex
+     *    normals on an indexed mesh give every corner its own vertex, and a strip that folds, where neighbors share
+     *    vertices that can hold only one normal, is made indexed first
      *  @return {Mesh} */
     computeNormals(smooth=false)
     {
@@ -735,6 +736,16 @@ class Mesh
             // triangles in a strip alternate which way they wind, so every other one is flipped back
             // a zero normal means a flat triangle joining two strips, so skip it
             faceNormals.push(normal.lengthSquared() ? normal.normalize(i & 1 ? 1 : -1) : undefined);
+        }
+
+        // a triangle in a strip shares vertices with the two before it, which hold one normal each, so a strip folded
+        // where faces meet becomes the list form, a vertex per corner, as the list's flat normals are
+        for (let i = 1; i < faceNormals.length; ++i)
+        for (let k = 1; k <= 2 && k <= i; ++k)
+        {
+            const a = faceNormals[i-k], b = faceNormals[i];
+            if (a && b && a.distanceSquared(b) > 1e-12)
+                return this.toIndexed().computeNormals(false);
         }
 
         // then hand those to the vertices: every triangle writes its own three corners, so the only vertices left

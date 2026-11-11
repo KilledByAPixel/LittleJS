@@ -389,6 +389,7 @@ hero.tileInfo           // the frame to draw now; also hero.frame, hero.isDone, 
 TextureInfo(image, useWebGL=true, wrap=false, pixelated) // Created automatically for each image; pixelated makes
                         // this texture hard edged or smooth on its own, undefined follows tilesPixelated
 TextureInfo.setPixelated(pixelated) // Hard edged or smooth for this texture alone, a soft glow in a pixel art game
+                        // a change remakes it from its image, so updateData's pixels must go in again
 TextureInfo.updateData(pixels, x=0, y=0, width, height) // Put RGBA bytes or an image into part of the texture,
                         // uploading only that rectangle; x and y from the top left, as a tile's pos is
 TextureInfo.image       // Image source
