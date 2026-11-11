@@ -50,20 +50,28 @@ function level3DAddType(name, make, defaults={}, tileInfo)
 }
 
 /** Add a type that is a mesh and nothing more, a static prop with no class to write, for a built mesh or a model
- *  - Each object has a color and a solid property, solid collides as the box around the mesh
+ *  - Each object has a color, a solid property, which collides as the box around the mesh, and a meshCollision
+ *    property, which makes the level's ground and walls of the mesh's own triangles in its place, with a
+ *    MeshCollider as its child, so what moves over it follows its shape: a ramp, a rock, a bridge
  *  @param {string} name - The type the objects have in the level
  *  @param {Mesh} mesh - Shared by every object of the type
  *  @param {TileInfo} [tileInfo] - Its texture
  *  @param {Color} [color] - Its color, an object's own color property goes over it
+ *  @param {boolean} [meshCollision] - Whether objects of the type collide by the mesh's triangles unless they say not
  *  @memberof Level3D
  *  @example
- *  level3DAddMesh('Tree', treeMesh, tile(4)); */
-function level3DAddMesh(name, mesh, tileInfo, color=WHITE)
+ *  level3DAddMesh('Tree', treeMesh, tile(4));
+ *  level3DAddMesh('Ramp', rampMesh, tile(2), WHITE, true); */
+function level3DAddMesh(name, mesh, tileInfo, color=WHITE, meshCollision=false)
 {
     ASSERT(mesh instanceof Mesh, 'mesh must be a Mesh');
     ASSERT(isColor(color), 'color must be a color');
-    level3DAddType(name, function(pos, properties) { return level3DMakeShape(pos, properties, mesh, tileInfo); },
-        {color, solid: false}, tileInfo);
+    level3DAddType(name, function(pos, properties)
+    {
+        const o = level3DMakeShape(pos, properties, mesh, tileInfo);
+        properties.meshCollision && o.addChild(new MeshCollider(mesh));
+        return o;
+    }, {color, solid: false, meshCollision: !!meshCollision}, tileInfo);
 }
 
 /** Make the objects of a level, each from the type added for its name

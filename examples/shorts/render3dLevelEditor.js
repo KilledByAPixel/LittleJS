@@ -24,6 +24,7 @@ const level = {littlejs3D: 1,
     {id: 6, type: 'Light', pos: [0, 4, 0],
         properties: {color: color(.1, 1, .7), radius: 12}},
     {id: 7, type: 'PlayerStart', pos: [0, 2, 6]},
+    {id: 8, type: 'Ramp', pos: [.5, .75, -3], scale: [3, 1.5, 2]},
 ]};
 
 class Coin extends EngineObject3D
@@ -68,6 +69,11 @@ function gameInit()
     // Cylinder and Light are built in
     level3DAddType('Coin', Coin);
     level3DAddType('PlayerStart', (pos)=> playerStart = pos);
+    // a ramp, a box with its top half cut away on a slant; true makes
+    // it collide by its triangles, so the player walks up its slope
+    const ramp = buildBox().subtract(buildBox(2),
+        buildMatrix(vec3(-.71, .71, 0), vec3(0, 0, PI / 4)));
+    level3DAddMesh('Ramp', ramp, undefined, hsl(.55, .3, .6), true);
     loadLevel();
 
     // the editor opens with the game's view, so look at the level
@@ -91,8 +97,8 @@ function gameRenderPost()
 }
 
 /* info
-A small 3D level that starts in the 3D level editor. Place boxes, lights
-and coins, paint blocks, then press Play or Escape to walk around, and
+A small 3D level that starts in the 3D level editor. Place boxes, ramps,
+lights and coins, paint blocks, then press Play or Escape to walk around, and
 Escape again to go back to editing. The level is autosaved as you go.
 
 In the editor: click selects, W, E and R move, rotate and scale with
@@ -132,6 +138,12 @@ one unit across, so its `scale` is its size, and it is solid.
   it when the player is within 1 unit.
 - `'PlayerStart'` is an arrow function, which is called and not made
   with `new`. It makes nothing and keeps the position.
+- `'Ramp'` is a mesh with no class, added with `level3DAddMesh`. The
+  mesh is a box with a bigger box, turned 45 degrees, `subtract`ed from
+  it. The last argument, `true`, gives each ramp a `MeshCollider` of
+  its own, so it collides by its slope and not as a box. The panel
+  shows that as its `meshCollision` property. The one in the level
+  leads up onto the purple box.
 
 ### loadLevel
 `engineObjectsDestroy()` removes everything, `level3DLoad(level)` makes
@@ -158,8 +170,10 @@ since the editor opens with the game's view.
 - Press B and drag on the floor to paint blocks, then Escape to walk
   on them.
 - Add an object in the code: after the `PlayerStart` line add
-  `{id: 8, type: 'Sphere', pos: [2, 1, 2], scale: [2, 2, 2]},`.
+  `{id: 9, type: 'Sphere', pos: [2, 1, 2], scale: [2, 2, 2]},`.
 - Jump higher: `player.jumpSpeed = .35;`.
+- Select the ramp, untick `meshCollision` and tick `solid` in the
+  panel, then play: it collides as its box, too tall to walk onto.
 - Change `shadows: true` to `shadows: false` in the scene block.
 - Collect coins from farther away: `< 1` to `< 3` in `Coin`.
 

@@ -158,6 +158,26 @@ test('level3DAddMesh makes a static prop of a mesh, not solid unless the object 
     rock.destroy(); wall.destroy();
 });
 
+test('a mesh prop with meshCollision collides by its triangles, turned and scaled with it', ()=>
+{
+    const mesh = LJS.buildBox(2);
+    level3DAddMesh('Rock', mesh);
+    level3DAddMesh('Ramp', mesh, undefined, WHITE, true);
+    const [rock, ramp, flat, shaped] = level3DLoad({ objects: [{ id: 1, type: 'Rock', pos: [0, 0, 0] },
+        { id: 2, type: 'Ramp', pos: [10, 0, 0], scale: [1, 2, 1] },
+        { id: 3, type: 'Ramp', pos: [20, 0, 0], properties: { meshCollision: false } },
+        { id: 4, type: 'Rock', pos: [30, 0, 0], properties: { meshCollision: true } }] });
+    assert.equal(rock.children.length, 0);
+    assert.equal(flat.children.length, 0);
+    const collider = ramp.children[0];
+    assert.ok(collider instanceof LJS.MeshCollider);
+    assert.equal(collider.mesh, mesh);
+    near(collider.levelRaycast3D(new LJS.Ray3D(vec3(10, 9, 0), vec3(0, -1, 0))), 7); // its top is at 2
+    near(shaped.children[0].levelRaycast3D(new LJS.Ray3D(vec3(30, 9, 0), vec3(0, -1, 0))), 8);
+    for (const o of [rock, ramp, flat, shaped]) o.destroy();
+    assert.ok(collider.destroyed);
+});
+
 test('adding a name again replaces it, a built-in one too', ()=>
 {
     class MyBox extends EngineObject3D { constructor(pos) { super(pos); } }

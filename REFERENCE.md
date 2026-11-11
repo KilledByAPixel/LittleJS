@@ -2149,7 +2149,8 @@ geometry.dispose()                        // optional here, a collected mesh fre
 ```javascript
 level3DAddType(name, make, defaults={}, tileInfo) // A type by name: a class made with new make(pos3D, properties),
                                                   // or an arrow function called with them, like a player start
-level3DAddMesh(name, mesh, tileInfo, color=WHITE) // A static prop type of a mesh, with color and solid properties
+level3DAddMesh(name, mesh, tileInfo, color=WHITE, meshCollision=false) // A static prop type of a mesh, with color,
+                                                  // solid (its box) and meshCollision (its triangles) properties
 level3DLoad(level)                                // Make every object of a level, returns what was made
 level3DVoxelSetup(tileInfo, (map)=> {})           // The sheet a level's block map uses, and a function to set each
                                                   // map up, its block types' faces; texture 0 without it

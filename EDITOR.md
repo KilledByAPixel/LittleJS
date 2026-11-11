@@ -82,7 +82,10 @@ objectLayersAddType('Coin', Coin, {value: 1});
 
 - In 3D a class needs its own constructor that takes the position: one that passes every argument on to
   `EngineObject3D` would pass the properties as its mesh.
-- `level3DAddMesh('Tree', mesh, tileInfo)` is a 3D type with no class: a static prop with `color` and `solid`.
+- `level3DAddMesh('Tree', mesh, tileInfo)` is a 3D type with no class: a static prop with `color`, `solid`, which
+  collides as its box, and `meshCollision`, which collides by its triangles, so a ramp or a rock placed in the
+  editor is walked on as it is shaped; `level3DAddMesh('Ramp', mesh, tileInfo, WHITE, true)` makes that the type's
+  default.
 - Changing a 3D object's property in the editor makes the object again, since its constructor takes them.
 - 3D prefabs, small levels placed many times, are types too: see "Prefabs" in [REFERENCE.md](REFERENCE.md). The
   panel's Load prefab button adds one from a file to the level being edited.
