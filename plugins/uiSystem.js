@@ -1500,8 +1500,14 @@ class UITextInput extends UIObject
         let text = this.text;
         if (this.isKeyInputObject()) // add a cursor to end of text
             text += timeReal%1 < .5 ?  '█' : '░';
-        uiSystem.drawText(text, this.getTextPos(textSize), textSize, 
-            this.textColor, this.textLineWidth, this.textLineColor, this.align, this.font, this.fontStyle, true, this.textShadow);
+        // typed text shows as typed, a :name: of an icon too
+        textIconsOff = true;
+        try
+        {
+            uiSystem.drawText(text, this.getTextPos(textSize), textSize,
+                this.textColor, this.textLineWidth, this.textLineColor, this.align, this.font, this.fontStyle, true, this.textShadow);
+        }
+        finally { textIconsOff = false; }
     }
 }
 

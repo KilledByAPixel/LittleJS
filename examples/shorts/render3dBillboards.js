@@ -48,8 +48,10 @@ middle does not.
 ## How it works
 An `EngineObject3D` with a tile and no mesh is a sprite. The constructor
 is `(pos3D, mesh, tileInfo, color)`, so `Sprite` passes `undefined` for
-the mesh. The object then draws its tile as a billboard, unlit, so it
-keeps its own colors whatever the light is.
+the mesh. The object then draws its tile as a billboard, lit as a
+sprite is: by the sun, the ambient and each light near it, from any
+side, since it always faces the camera. `emissive = 1` keeps its own
+colors whatever the light.
 
 ### Sprite
 - `size3D = vec3(2)` makes the sprite 2 world units wide and tall. For a

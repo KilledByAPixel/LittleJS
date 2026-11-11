@@ -438,7 +438,7 @@ class EngineObject3D extends EngineObject
 const RENDER3D_PART_SETTINGS = {emissive: 0, additive: false, specular: 0, shininess: 16, reflectivity: 0,
     normalMap: undefined, normalScale: 1, emissiveMap: undefined, emissiveMapColor: WHITE, receiveShadow: true,
     castShadow: true, pixelated: false, shader: undefined, environment: undefined, renderAfter2D: undefined,
-    renderOrder: 0};
+    renderOrder: 0, roundLighting: false};
 
 // make a part draw with its owner's settings: it draws with the owner's where the owner set it away from the default,
 // and its own otherwise, so a model's unlit or rough part keeps what its file gave it; a link the renderer follows
@@ -680,7 +680,7 @@ function render3DPushFrom(shapeA, shapeB, a, b, push)
 
 // the solids that do not move, mass 0, in the order of the engine's list, gathered once a pass for the settles, which
 // would otherwise walk every collider for each push between two movers
-const render3DFixed = {pass: -1, list: []};
+const render3DFixed = {pass: -1, list: [], set: new Set};
 function render3DFixedSolids()
 {
     if (render3DFixed.pass !== engineObjectsUpdateCount)
@@ -688,6 +688,7 @@ function render3DFixedSolids()
         render3DFixed.pass = engineObjectsUpdateCount;
         render3DFixed.list = engineObjectsCollide.filter((b)=> !b.mass && b instanceof EngineObject3D &&
             !b.parent && !b.sync2D);
+        render3DFixed.set = new Set(render3DFixed.list); // the grid's settle meets the same solids
     }
     return render3DFixed.list;
 }
@@ -702,9 +703,10 @@ function render3DSettleFixed(o, pusher, from)
     let shape = render3DSolidShape(o);
     const reachO = render3DSolidReach(o);
     // with many solids the ones near where it is, through the grid; the movers there are skipped below
-    const grid = render3DSolidGrid();
-    for (const b of grid ? render3DGridWalk(grid, reachO, ()=> shape.pos, Infinity) : render3DFixedSolids())
+    const grid = render3DSolidGrid(), fixed = render3DFixedSolids();
+    for (const b of grid ? render3DGridWalk(grid, reachO, ()=> shape.pos, Infinity) : fixed)
     {
+        if (grid && !render3DFixed.set.has(b)) continue; // the fixed solids of the pass, as the list has them
         // a pair where neither is solid passes through, as in the pair loop; a solid against one that is not still meets
         if (b === o || b === pusher || b.mass || b.destroyed || !o.isSolid && !b.isSolid)
             continue;
@@ -715,7 +717,9 @@ function render3DSettleFixed(o, pusher, from)
         let push = render3DSolidPush(shape, shapeB);
         if (!push || push.lengthSquared() < 1e-12) continue;
         push = render3DPushFrom(shape, shapeB, o, b, push);
-        if (!render3DCollideAsk(o, b, push)) continue;
+        const resolve = render3DCollideAsk(o, b, push);
+        grid && (render3DGridPlace(grid, o), render3DGridPlace(grid, b)); // a callback may have moved either
+        if (!resolve) continue;
         // standing as in a pair: a push off a face within its groundAngle of up holds it there, turned straight up
         const lengthSquared = push.lengthSquared(), up = push.y / lengthSquared ** .5;
         if (up > 0 && o.mass && up >= cos(o.groundAngle) && render3DOnFace(push, shapeB))
@@ -807,7 +811,9 @@ function render3DCollideSolid(a)
         push = render3DPushFrom(shapeA, shapeB, a, b, push);
 
         // both objects hear about it, and either one can take the touch over
-        if (!render3DCollideAsk(a, b, push, false)) continue;
+        const resolve = render3DCollideAsk(a, b, push, false);
+        grid && (render3DGridPlace(grid, a), render3DGridPlace(grid, b)); // a callback may have moved either
+        if (!resolve) continue;
 
         // standing: resting on a box's face within the upper one's groundAngle of level holds it there, the push
         // turned straight up, as far as it takes to leave the surface, so it does not creep down a ramp; only what
@@ -869,10 +875,24 @@ function render3DCollideSolid(a)
 // with three times engineCollideGridMin 3D solids or more, 192 by default, a solid finds the ones near it through a
 // grid of cells, as in 2D, rather than checking every one before it in the list, which is quicker below that
 // (measured: the grid 1.9 ms an update at 64 and 8.3 at 300, every pair 1.2 and 12.7, and at 1000 34 against 120
-// to 160); it meets the same ones in the same order, so a game plays the same either way. The grid of a pass is made the first time a solid asks in it, and only while the engine runs
-// the physics of every object: {size, cells, at, index, big, seen, stamp, byIndex}, each cell's solids, the cells
+// to 160); it meets the same ones in the same order, so a game plays the same either way. The grid of a pass is
+// made the first time a solid asks in it, and only while the engine runs the physics of every object: {size, cells, at, index, big, seen, stamp, byIndex}, each cell's solids, the cells
 // each one covers, its place in the list, the ones too big for cells, and what a query found
 const render3DGrid = {pass: -1, grid: undefined};
+
+// place a solid again once its updatePhysics is done, which an override may have moved after the engine's
+function render3DGridPhysicsDone(o)
+{
+    const kept = render3DGrid;
+    kept.grid && kept.pass === engineObjectsUpdateCount && render3DGridPlace(kept.grid, o);
+}
+
+// let go of the pass's grid and fixed solids once every object has moved, so a level taken down is not kept
+function render3DGridRelease()
+{
+    render3DGrid.grid = undefined, render3DGrid.pass = -1;
+    render3DFixed.list = [], render3DFixed.set = new Set, render3DFixed.pass = -1;
+}
 function render3DSolidGrid()
 {
     if (!engineObjectsPhysicsRunning) return;
@@ -1068,7 +1088,7 @@ function render3DRaycastObject(ray, o)
 {
     if (o.destroyed || !(o instanceof EngineObject3D)) return;
     // a height map or voxel map is hit on its surface, not its box
-    if (o instanceof HeightMap || o instanceof VoxelMap) return o.levelRaycast3D(ray);
+    if (o instanceof HeightMap || o instanceof VoxelMap || o instanceof MeshCollider) return o.levelRaycast3D(ray);
     if (!(o.mesh || o.tileInfo)) return;
     if (o instanceof InstancedMesh3D) return; // its instances are not objects, and its one sphere is not a thing to hit
     const matrix = render3DObjectMatrix(o), mesh = o.mesh;

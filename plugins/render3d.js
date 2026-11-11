@@ -796,14 +796,16 @@ class Render3DPlugin
         this.streamTileInfo = undefined;
         /** @type {Object|undefined} */
         this.streamState = undefined; // captured state the pending batch was drawn under, render3DCaptureBatchState's
-        this.streamBillboard = false; // the pending batch is of billboards, lit without a direction, billboards are
+        this.streamBillboard = false; // the pending batch is of billboards, lit without a direction
         /** @type {Mesh|undefined} */
         this.capture = undefined;     // the mesh a bake is filling
         /** @type {Array<{distance: number, state: Object, draw: function(): void}>|undefined} */
         this.transparentQueue = undefined; // draws queued during the transparent stage, replayed far to near
 
         render3DInitGL();
-        engineAddPlugin(undefined, render3DRender, render3DContextLost, render3DContextRestored, render3DPreRender);
+        engineAddPlugin(undefined, render3DRender, render3DContextLost, render3DContextRestored, render3DPreRender,
+            render3DGridRelease);
+        engineObjectsPhysicsDone = render3DGridPhysicsDone;
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -1491,7 +1493,8 @@ class Render3DPlugin
         this.streamCount += 6;
         // the normal at each corner: facing the camera, or for round lighting bent out along the quad's own right
         // and up, which the GPU blends across it into the bulge the shader makes from an instance's own uvs
-        const round = billboard && this.roundLighting, kr = round ? 1 / (hypot(rx, ry, rz) || 1) : 0;
+        // a normal map lights it as a card facing the camera, with no bend
+        const round = billboard && this.roundLighting && !this.normalMap, kr = round ? 1 / (hypot(rx, ry, rz) || 1) : 0;
         const ku = round ? 1 / (hypot(ux, uy, uz) || 1) : 0;
         // the bend toward the right and toward the top, the left and the bottom the other way
         const bx = rx * kr, by = ry * kr, bz = rz * kr, cx = ux * ku, cy = uy * ku, cz = uz * ku;
@@ -1934,7 +1937,8 @@ function render3DFragmentSource(fragmentCode, declarations='')
         'if(!gl_FrontFacing)n=-n;' + // only a double sided mesh shows a back face, light it on the side that is seen
         // materialParams.w: 0 a surface, 1 a billboard lit with no direction, 2 one lit round; a normal map makes a
         // billboard a card facing the camera, lit as a surface
-        'float bm=materialParams.x!=0.?0.:materialParams.w;' +
+        // a Shader's mainNormal lights it as a surface too, so it has a normal to bend
+        (hasNormal ? 'float bm=0.;' : 'float bm=materialParams.x!=0.?0.:materialParams.w;') +
         'if(materialParams.x!=0.)n=normalMapNormal(n);else if(bm==2.)n=roundNormal(n);' +
         (hasNormal ? 'mainNormal(n);n=normalize(n);' : '') +
         'float nl=bm==1.?1.:dot(n,-lightDir.xyz);' +
@@ -2007,10 +2011,10 @@ function render3DShaderProgram(shader)
     ASSERT(shader instanceof Shader, 'render3D.shader must be a Shader, not the snippet itself');
     shader.program3D || glShaderTrack(shader); // one let go of and drawn again is kept for a lost context again
     // its own uniforms, declared in the stages that use them, and an instance's data when it reads it
-    const data = render3DUsesInstanceData(shader.fragmentCode + ' ' + shader.vertexCode);
     const program = shader.program3D ||= glCreateProgram(
         render3DInstanceDataVertex(render3DVertexSource(shader.vertexCode,
-            glUniformDeclarations(shader, shader.vertexCode)), data, true),
+            glUniformDeclarations(shader, shader.vertexCode)),
+            render3DUsesInstanceData(shader.fragmentCode + ' ' + shader.vertexCode), true),
         render3DInstanceDataFragment(render3DFragmentSource(shader.fragmentCode,
             glUniformDeclarations(shader, shader.fragmentCode)), render3DUsesInstanceData(shader.fragmentCode)));
     return glFailedPrograms.has(program) ? render3D.program : program; // one that did not build draws as with none
@@ -2025,11 +2029,14 @@ const render3DUsesInstanceData = (code)=> /\binstanceData\b/.test(code);
 function render3DInstanceDataVertex(source, data, passOn)
 {
     if (!data) return source;
-    return source.replace('void main(){', 'layout(location=8) in vec4 D;' + (passOn ? 'out vec4 I;' : '') +
-        '\n#define instanceData D\nvoid main(){' + (passOn ? 'I=D;' : ''));
+    return source.replace('void main(){', 'layout(location=8) in vec4 instanceData;' +
+        (passOn ? 'out vec4 instanceDataV;void main(){instanceDataV=instanceData;' : 'void main(){'));
 }
 function render3DInstanceDataFragment(source, data)
-{ return data ? source.replace('out vec4 o;', 'out vec4 o;in vec4 I;\n#define instanceData I\n') : source; }
+{
+    return data ? source.replace('out vec4 o;', 'out vec4 o;in vec4 instanceDataV;\n#define instanceData instanceDataV\n') :
+        source;
+}
 
 // the depth only program for the shadow map and the camera's depth, same vertex layout; see through pixels cast
 // nothing, so sprites and cut out textures cast their outline, and a blended object faded below half its alpha

@@ -336,14 +336,17 @@ new Shader(fragmentCode)          // fragmentCode defines void mainImage(out vec
                                   // void mainNormal(inout vec3 n), the world normal after the normal map, to bend
                                   // it per pixel (waves, ripples) for the lighting, specular and reflection
 new Shader(fragmentCode, vertexCode, uniforms) // uniforms: values the snippets read by name, {glow: 1, tint: RED},
-                                  // declared for them, a number a float, a boolean a bool, a vec2, vec3, Color, list
-                                  // of 2 to 4, 9 or 16 numbers or a Matrix4 a vec2 to vec4, mat3 or mat4
-shader.setUniform(name, value)    // change one, no recompile; in 2D the draws before keep the old value, in 3D it
-                                  // holds for the frame
+                                  // declared for them, a number a float, a boolean a bool, a Vector2, Vector3 or
+                                  // Color a vec2 to vec4, a list of 2 to 4, 9 or 16 numbers or a Matrix4 a vector,
+                                  // mat3 or mat4, column by column; a name the engine's shader uses already, like
+                                  // tint or lightColor, fails to compile with the GLSL error naming it
+shader.setUniform(name, value)    // change one, no recompile; in 2D the draws before keep the old value, in 3D set it
+                                  // outside the 3D pass and it holds for the frame
 new Shader(fragmentCode, vertexCode) // 3D: vertexCode defines void mainVertex(inout vec3 pos, inout vec3 normal),
                                   // world space, to move vertices (wind, waves), in the shadow map and depth too;
-                                  // names: iTime, iResolution, cameraPos, iChannel0, localUV, modelMatrix and
-                                  // vertexColor, which it may change; new Shader('', vertexCode) keeps the 3D look
+                                  // names: iTime, iResolution, cameraPos, iChannel0, localUV, modelMatrix,
+                                  // instanceData (an InstancedMesh3D's setDataAt) and vertexColor, which it may
+                                  // change; new Shader('', vertexCode) keeps the 3D look
 obj.shader = shader               // any EngineObject or EngineObject3D; draws that share a Shader share a batch
 shader.noTint = false             // 2D: write mainImage's color as it is with the draw's alpha, no tint, for data
                                   // like normals; set before it first draws
@@ -1930,8 +1933,8 @@ terrain.rows terrain.columns                  // samples along Z and X
 
 // Mesh collider - a mesh's triangles as level collision: floors, walls, ramps and rocks
 new MeshCollider(mesh, pos3D=vec3())          // objects with collideLevel land on it, slide along it and walk up
-        // it as on a HeightMap, as capsules as wide as their narrower side across and as tall as their height, or
-        // their sphere; draws nothing, so make an EngineObject3D with the same mesh, or any, to see it; any mesh,
+        // it as on a HeightMap, as capsules as tall as their height and as wide as their narrowest side, or their
+        // sphere; draws nothing, so make an EngineObject3D with the same mesh, or any, to see it; any mesh,
         // turned and scaled with the collider, both sides of a triangle; particles and picking hit it too
 collider.rebuild()                            // take the triangles from the mesh again after changing it
 

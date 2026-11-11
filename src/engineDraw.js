@@ -592,7 +592,7 @@ class SpriteAnimator
 ///////////////////////////////////////////////////////////////////////////////
 /** A value a Shader's snippet reads as a uniform: a number, a boolean, a Vector2, a Vector3, a Color, a Matrix4, or a
  *  list of 2, 3, 4, 9 or 16 numbers
- *  @typedef {number|boolean|Vector2|Color|ArrayLike<number>|{x: number, y: number, z: number}|{m: ArrayLike<number>}} ShaderUniform
+ *  @typedef {number|boolean|Vector2|Color|ArrayLike<number>|{x: number, y: number, z: number}|{m: Float32Array}} ShaderUniform
  *  @memberof Draw */
 
 /**
@@ -625,14 +625,17 @@ class SpriteAnimator
  *   each vertex's place and normal in world space, an instance's own in a batch, to move it for wind, waves or a
  *   wobble; it runs in the shadow map and the camera's depth too, so a moved vertex casts and hides where it is
  *   drawn. Its names: iTime, iResolution, cameraPos, iChannel0 (texture or texelFetch in the vertex stage), localUV,
- *   modelMatrix and vertexColor, the vertex color times the tint, which it may change. The object's bounds are not
+ *   modelMatrix, instanceData (the four numbers an InstancedMesh3D's setDataAt gives, the fragment code may read it
+ *   too) and vertexColor, the vertex color times the tint, which it may change. The object's bounds are not
  *   moved with it, so one that moves vertices far needs room to be culled by, like a bigger radius
  * - A Shader of vertex code alone, new Shader('', vertexCode), keeps the 3D plugin's own look; in 2D a Shader's
  *   vertex code is not used
  * - Values of the game's own, uniforms, are given by name when it is made and read by name in the snippets, which
  *   need not declare them: new Shader(code, '', {glow: 1, tint: RED}), then shader.setUniform('glow', 2) as often as
- *   needed, with no recompile; each is declared in the snippets that use it, so one may share a name with something
- *   of the engine's in the other stage, and is sent to a program only when it changed
+ *   needed, with no recompile; each is declared in the snippets that use it, so one may share a name with an input
+ *   of the engine's in the other stage, and is sent to a program only when it changed; a name the engine's shader
+ *   uses already, like tint or lightColor, fails to compile with the GLSL error naming it; a matrix list is column
+ *   by column; in 3D set a value outside the 3D pass, it holds for the frame
  * @example
  * const fade = new Shader(`
  * void mainImage(out vec4 c, vec2 uv)
@@ -1569,7 +1572,7 @@ function drawTextScreen(text, pos, size, color=WHITE, lineWidth=0, lineColor=BLA
     lines.forEach(line=>
     {
         // only a line with a registered icon in it takes the icon path, every other draws as it always has
-        const runs = textIcons.size && line.includes(':') ? textIconRuns(line) : undefined;
+        const runs = textIcons.size && !textIconsOff && line.includes(':') ? textIconRuns(line) : undefined;
         if (runs)
             drawTextIconLine(context, runs, yOffset, size, color, lineWidth, textAlign, maxWidth);
         else
@@ -1590,6 +1593,8 @@ const textIcons = new Map;
 
 // set while uiSystem draws a text's shadow, so its icons are drawn as shapes in the shadow's color
 let textIconsSilhouette = false;
+// set while uiSystem draws text a player typed, which shows as it was typed
+let textIconsOff = false;
 
 /** Register a tile to show in text: written between colons in any text drawTextScreen draws, drawText and the UI
  *  system's text included, it is drawn in its place, as tall as the text, 'Gold: :coin: 25'
@@ -1636,7 +1641,8 @@ function textIconRuns(line)
 const textIconTint = new Color, textIconAdd = new Color(0, 0, 0, 0);
 function drawTextIconLine(context, runs, y, size, color, lineWidth, textAlign, maxWidth)
 {
-    const widths = runs.map(run=> typeof run == 'string' ? context.measureText(run).width : size * run.size.x / run.size.y);
+    const widths = runs.map(run=> typeof run == 'string' ? context.measureText(run).width :
+        run.size.y ? size * run.size.x / run.size.y : 0); // an image that failed to load takes no room
     const total = widths.reduce((a, b)=> a + b, 0);
     context.save();
     context.textAlign = 'left';

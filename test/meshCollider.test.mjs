@@ -138,3 +138,37 @@ test('it draws nothing, and leaves the level when destroyed', () =>
         deck.destroy(true);`);
     assert.ok(json('inLevel') && !json('render3DLevel.includes(deck)'));
 });
+
+test('a fast landing on a finely divided floor comes straight down, with no push sideways off the edges beside it', () =>
+{
+    const { run, json } = engine();
+    run(`var deck = new MeshCollider(buildGrid(vec2(20), vec2(40)));
+        var o = body(vec3(.25, 3, .175)); o.velocity3D = vec3(0, -.9, 0); o.clampSpeed = false; step(30);`);
+    const [x, z, vx, vz] = json('[o.pos3D.x, o.pos3D.z, o.velocity3D.x, o.velocity3D.z]');
+    near(x, .25, .01), near(z, .175, .01);
+    assert.ok(Math.abs(vx) < 1e-6 && Math.abs(vz) < 1e-6, JSON.stringify([vx, vz]));
+});
+
+test('walking up stairs lower than its round foot it stays grounded, so it can always jump', () =>
+{
+    const { run, json } = engine();
+    run(`var deck = new MeshCollider(buildGrid(vec2(40), 1));
+        for (let i = 0; i < 8; ++i)
+            new MeshCollider(buildBox(vec3(1, .3 * (i + 1), 4)), vec3(3 + i, .15 * (i + 1), 0));
+        var o = body(vec3(0, 1, 0), vec3(.8, 1.6, .8)); step(30);
+        var off = 0;
+        for (let i = 0; i < 70; ++i) { o.velocity3D.x = .15; step(); o.groundObject || ++off; }`);
+    assert.ok(json('o.pos3D.y') > 2, 'it climbed: ' + json('o.pos3D.y'));
+    assert.ok(json('off') < 4, 'off the ground ' + json('off') + ' frames');
+});
+
+test('a particle starting on a face and moving off it is not stopped, and a pick from inside a box hits its walls', () =>
+{
+    const { run, json } = engine();
+    run(`var deck = new MeshCollider(buildGrid(vec2(20), 1));
+        var leaving = deck.levelSegment3D(vec3(.3, 0, .2), vec3(.3, .5, .2));
+        var room = new MeshCollider(buildBox(vec3(10)), vec3(50, 0, 0));
+        var inside = render3D.pick(new Ray3D(vec3(50, 0, 0), vec3(1, 0, 0)), [room]);`);
+    assert.equal(json('leaving === undefined'), true);
+    near(json('inside.distance'), 5);
+});

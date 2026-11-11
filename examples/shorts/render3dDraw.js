@@ -87,7 +87,8 @@ around, and `time*.3` turns the whole ring slowly.
   that places and turns it.
 
 ### drawTransparent
-These are all unlit: they show their own colors whatever the light.
+These show their own colors whatever the light, all but the billboard,
+which is lit as a sprite is, by each light near it from any side.
 
 - `drawSoftDisc(pos, size, color)` is a disc that fades out at its rim
   and faces the camera, for a glow.

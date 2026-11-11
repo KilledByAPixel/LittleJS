@@ -190,7 +190,7 @@ const exampleList =
     new ExampleInfo('Shapes', 'shapes.js', 'Draw geometric shapes and primitives', false, 'circle, ellipse, rectangle, polygon, lines'),
     new ExampleInfo('Colors', 'colors.js', 'Color manipulation and HSL', false, 'hue, saturation, blending, rectangle'),
     new ExampleInfo('Vectors', 'vectors.js', 'Vector2 math operations', false, 'math, add, rotate, lerp, normalize, reflect'),
-    new ExampleInfo('Text', 'text.js', 'Text with outlines, alignment, fonts, rows and screen placement', false, 'drawText, drawTextScreen, font, outline, align, beginner'),
+    new ExampleInfo('Text', 'text.js', 'Text with outlines, alignment, fonts, rows and screen placement', false, 'drawText, drawTextScreen, font, outline, align, beginner, icon, setTextIcon'),
     new ExampleInfo('Random', 'random.js', 'Random numbers, and a seeded generator that repeats', false, 'rand, randInt, randColor, RandomGenerator, seed, dice, beginner'),
     new ExampleInfo('Rendering'),
     new ExampleInfo('Texture', 'texture.js', 'Texture display and manipulation', false, 'sprites, loading, tiles'),

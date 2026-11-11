@@ -109,3 +109,39 @@ test('an updatePhysics called by hand outside the engine pass checks every pair,
         mover.updatePhysics();
         met`), true);
 });
+
+test('the grid follows a callback that moves the other far away and lets the pair pass', () =>
+{
+    compare(300, `
+        bodies.forEach((o, i)=>
+        {
+            if (i % 7 == 0)
+                o.collideWithObject = (other)=> (other.mass && other.pos3D.set(-other.pos3D.x, other.pos3D.y + 5,
+                    other.pos3D.z), false);
+        });`);
+});
+
+test('the grid follows an updatePhysics override that moves its object after the engine physics', () =>
+{
+    compare(300, `
+        bodies.forEach((o, i)=>
+        {
+            if (i % 5 == 0 && o.mass)
+                o.updatePhysics = function()
+                {
+                    EngineObject3D.prototype.updatePhysics.call(this);
+                    if (this.pos3D.y < -6) this.pos3D = vec3(-this.pos3D.x, 15, -this.pos3D.z);
+                };
+        });`);
+});
+
+test('the grid follows a callback that grows the other and lets the pair pass', () =>
+{
+    compare(300, `
+        bodies.forEach((o, i)=>
+        {
+            if (i % 7 == 0)
+                o.collideWithObject = (other)=> (other.mass && other.size3D.x < 3 &&
+                    (other.size3D = other.size3D.scale(1.5)), false);
+        });`);
+});

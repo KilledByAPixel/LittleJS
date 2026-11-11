@@ -35,11 +35,11 @@ test('only a program that reads instanceData takes the input, the plugin\'s own 
             RENDER3D_VERTEX_SOURCE, vertex, fragment, shadow])
     `));
     assert.ok(plain, 'a snippet that does not read it changes nothing');
-    assert.match(vertex, /layout[(]location=8[)] in vec4 D;out vec4 I;/);
-    assert.match(vertex, /void main[(][)][{]I=D;/);
-    assert.match(fragment, /in vec4 I;\n#define instanceData I/);
-    assert.match(shadow, /layout[(]location=8[)] in vec4 D;\n#define instanceData D/);
-    assert.doesNotMatch(shadow, /out vec4 I/, 'the depth program has no fragment stage that reads it');
+    assert.match(vertex, /layout[(]location=8[)] in vec4 instanceData;out vec4 instanceDataV;/);
+    assert.match(vertex, /void main[(][)][{]instanceDataV=instanceData;/);
+    assert.match(fragment, /in vec4 instanceDataV;\n#define instanceData instanceDataV/);
+    assert.match(shadow, /layout[(]location=8[)] in vec4 instanceData;void main/);
+    assert.doesNotMatch(shadow, /instanceDataV/, 'the depth program has no fragment stage that reads it');
 });
 
 test('markDataDirty takes a run, for data written straight into dataValues', () =>

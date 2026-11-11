@@ -82,8 +82,8 @@ in a modeling program often has a simpler mesh for collision.
 
 ### Capsules
 An object with `collideLevel`, which `setCollision` turns on, collides
-with a `MeshCollider` as a capsule: as wide as its narrower side across
-and as tall as its height, with a round foot. That round foot is what
+with a `MeshCollider` as a capsule: as tall as its height and as wide
+as its narrowest side, with a round foot. That round foot is what
 climbs the stairs, each step lower than it is; a taller step would stop
 the player as the walls do.
 
@@ -103,6 +103,6 @@ only the floor holds them and they slide down the ramp.
   Debug Physics, and the collider's edges are drawn.
 
 ## See also
-3D Third Person has the same player and camera on a field of blocks,
+3D Third Person has the same camera on a ball on a field of blocks,
 3D Height Map terrain from an image, and 3D Voxels a world of blocks.
 */

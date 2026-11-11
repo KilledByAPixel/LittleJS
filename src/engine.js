@@ -203,6 +203,9 @@ let engineCollideGrid;
 // true while engineObjectsUpdate runs every object's physics, so a 3D grid made for that pass is not used by an
 // updatePhysics a game calls by hand at another time, with objects moved since
 let engineObjectsPhysicsRunning = false;
+// called with each object once its updatePhysics is done, by a plugin that keeps solids of its own in a grid, as
+// the 3D plugin does, so a solid an override moved after the engine's physics is found where it is
+let engineObjectsPhysicsDone;
 
 // where each object that collides with solids was before this frame's moves, kept only when a one way solid is among
 // them, so a one way test goes by where both were whichever of the two updates first
@@ -1012,12 +1015,14 @@ function engineObjectsUpdate()
                 {
                     o.updatePhysics();
                     engineCollideGrid?.built && engineCollideGridPlace(engineCollideGrid.built, o);
+                    engineObjectsPhysicsDone?.(o);
                 }
         for (const o of engineObjects)
             if (!o.parent && !o.destroyed && !(engineObjectsOneWayStart && oneWayFirst(o)))
             {
                 o.updatePhysics();
                 engineCollideGrid?.built && engineCollideGridPlace(engineCollideGrid.built, o);
+                engineObjectsPhysicsDone?.(o);
             }
     }
     finally
