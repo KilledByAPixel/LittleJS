@@ -152,3 +152,21 @@ test('snap on a third person camera that is not driving leaves the view alone', 
         var before = JSON.stringify(render3D.camera.pos); camera.snap();`);
     assert.equal(run(`JSON.stringify(render3D.camera.pos)`), run(`before`));
 });
+
+test('snap with no target on a camera that is not driving leaves the camera alone', () =>
+{
+    const run = engine();
+    run(`var newer = new ThirdPersonCamera3D(new EngineObject3D(vec3(30, 0, 0))); newer.smoothing = 0;
+        var before = JSON.stringify(render3D.camera.pos); camera.target = undefined; camera.snap();`);
+    assert.equal(run(`JSON.stringify(render3D.camera.pos)`), run(`before`));
+});
+
+test('taking over from another camera, it starts where the view is and eases from there, with no jump', () =>
+{
+    const run = engine();
+    run(`camera.smoothing = .5; step(30);
+        var other = new ThirdPersonCamera3D(new EngineObject3D(vec3(20, 0, 10)), 4, .6); other.smoothing = 0; step(5);
+        var view = render3D.camera.pos.copy(); other.destroy(); step();`);
+    // the first update after it takes over moves the camera only a step of its easing, not back to its old place
+    assert.ok(json(run, 'render3D.camera.pos.distance(view)') < 2, json(run, 'render3D.camera.pos.distance(view)'));
+});

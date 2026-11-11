@@ -2876,9 +2876,13 @@ function render3DPreRender()
 // the render hook, after gameRenderPost: the layer on top of the 2D scene
 function render3DRender()
 {
-    render3DRenderPass(true);
-    editor3DCameraEnd();
-    render3DShakeEnd();
+    // the game's own camera back, the editor's and the shaken one taken out, even when a draw in the pass throws
+    try { render3DRenderPass(true); }
+    finally
+    {
+        editor3DCameraEnd();
+        render3DShakeEnd();
+    }
 }
 
 // one 3D pass for the objects of a layer: take over the gl state, draw the shadow map once a frame and the stages, hand

@@ -14,6 +14,9 @@ What changed in each release, newest first. Releases before 1.20.0 are on the
 ### Breaking Changes
 - 3D sprites, particles and `drawBillboard` were always unlit and are now lit, so in a dark scene they are darker than before; set `emissive = 1` on a sprite object or particle emitter, or `render3D.emissive = 1` before a `drawBillboard` of your own, for the old look; additive ones are unchanged
 
+### Fixes
+- A `ThirdPersonCamera3D` taking over from another camera starts where the view is and eases to its target from there, where it jumped to where it last was; `snap()` on a camera that is not driving the view leaves it alone, the zoom of a `FollowCamera` and the camera of a `ThirdPersonCamera3D` with no target too; and a draw that throws in the 3D pass no longer leaves the camera shaken, or the 3D editor's camera in place, for the game's next update
+
 ## 1.29.1 - 2026-11-02
 
 ### New Changes

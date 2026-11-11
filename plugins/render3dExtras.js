@@ -902,11 +902,13 @@ class ThirdPersonCamera3D extends EngineObject3D
     /** Make this the camera that drives the view */
     activate() { cameraActivate(this); }
 
-    /** Taking over from another camera, it turns to look the way that one did */
+    /** Taking over from another camera, it starts where that one left the view, looking the way it looked, and eases
+     *  to its target from there */
     takeView()
     {
         this.yaw = render3D.camera.rotation.y;
         this.pitch = clamp(-render3D.camera.rotation.x, this.pitchRange.x, this.pitchRange.y);
+        this.pivot = render3D.camera.pos.subtract(this.getPoleDirection().scale(this.poleLength));
     }
 
     /** Turn it by hand, as the mouse and stick do, which holds the swing for swingDelay seconds
@@ -926,10 +928,9 @@ class ThirdPersonCamera3D extends EngineObject3D
         const pos = this.getTargetPos();
         if (!pos)
         {
-            this.takeView();
             this.poleLength = this.distance;
-            this.pivot = render3D.camera.pos.subtract(this.getPoleDirection().scale(this.distance));
-            return this.placeCamera();
+            this.takeView();
+            return cameraDriver() === this && this.placeCamera(); // one not driving leaves the camera alone
         }
         this.pivot = pos.add(this.pivotOffset);
         this.targetFrom = pos.copy();

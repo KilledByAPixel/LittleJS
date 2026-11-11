@@ -232,3 +232,11 @@ test('renderDebugInfo draws the dead zone, the offset and look to the focus, and
     const sides = calls.filter(c => c[0] === 'line').slice(2);
     assert.deepEqual(sides.map(c => c[1] === c[3] ? 'x' + c[1] : 'y' + c[2]), ['x-20', 'y30']);
 });
+
+test('snap on a camera that is not driving leaves the zoom alone too', () =>
+{
+    const { run } = engine();
+    run(`var a = new FollowCamera(target, 0), b = new FollowCamera(new EngineObject(vec2(20, 0)), 0);
+        a.scale = 10; a.snap();`);
+    assert.equal(run('cameraScale'), 50);
+});

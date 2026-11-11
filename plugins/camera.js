@@ -145,15 +145,16 @@ class FollowCamera extends EngineObject
      *  this camera is the one driving it */
     snap()
     {
-        if (this.scale !== undefined)
-            setCameraScale(this.scale);
+        // a camera not driving keeps its place for later, and leaves the view and its zoom alone
+        const driving = cameraDriver() === this;
+        driving && this.scale !== undefined && setCameraScale(this.scale);
         this.lookFrom = undefined; // a teleport is not a move to look along
         this.updateLook(true);
         const focus = this.getFocus();
         if (focus)
             this.pos = focus;
         this.pos = this.inBounds(this.pos);
-        cameraDriver() === this && setCameraPos(this.pos); // a camera not driving keeps its place for later
+        driving && setCameraPos(this.pos);
     }
 
     /** Move toward the target and set the view, called by the camera plugin after the objects update */
