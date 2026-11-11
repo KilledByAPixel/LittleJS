@@ -319,6 +319,8 @@ drawCanvas2D(pos, size, angle=0, mirror=false, drawFunction, screenSpace=drawScr
 // Text functions
 drawText(text, pos, size=1, color=WHITE, lineWidth=0, lineColor=BLACK, textAlign='center', font, fontStyle, maxWidth, angle=0)
 drawTextScreen(text, pos, size, color=WHITE, lineWidth=0, lineColor=BLACK, textAlign='center', font, fontStyle, maxWidth, angle=0)
+setTextIcon(name, tileInfo)  // a tile shown in any text where its name is written between colons, 'Gold: :coin: 25',
+                             // as tall as the text; only registered names are replaced, no tileInfo takes it off
 
 // Utility drawing functions
 setAdditiveBlendMode(additive)

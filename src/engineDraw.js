@@ -1523,6 +1523,7 @@ function textBaseLetter(code)
 
 /** Draw text in screen space
  *  Automatically splits new lines into rows
+ *  - An icon registered with setTextIcon is drawn where its name is written between colons, ':coin:'
  *  @param {string|number}  text
  *  @param {Vector2} pos
  *  @param {number}  size
@@ -1567,9 +1568,99 @@ function drawTextScreen(text, pos, size, color=WHITE, lineWidth=0, lineColor=BLA
     let yOffset = -(lines.length-1) * size/2; // center vertically
     lines.forEach(line=>
     {
-        lineWidth && context.strokeText(line, 0, yOffset, maxWidth);
-        context.fillText(line, 0, yOffset, maxWidth);
+        // only a line with a registered icon in it takes the icon path, every other draws as it always has
+        const runs = textIcons.size && line.includes(':') ? textIconRuns(line) : undefined;
+        if (runs)
+            drawTextIconLine(context, runs, yOffset, size, color, lineWidth, textAlign, maxWidth);
+        else
+        {
+            lineWidth && context.strokeText(line, 0, yOffset, maxWidth);
+            context.fillText(line, 0, yOffset, maxWidth);
+        }
         yOffset += size;
+    });
+    context.restore();
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// Icons in text
+
+// the icons text can show by name, see setTextIcon
+const textIcons = new Map;
+
+// set while uiSystem draws a text's shadow, so its icons are drawn as shapes in the shadow's color
+let textIconsSilhouette = false;
+
+/** Register a tile to show in text: written between colons in any text drawTextScreen draws, drawText and the UI
+ *  system's text included, it is drawn in its place, as tall as the text, 'Gold: :coin: 25'
+ *  - Only a registered name is replaced, so other text with colons, like a time of 5:30, stays as it is
+ *  - Text drawn with ImageFont does not show icons
+ *  @param {string} name - Letters, digits, _ and -
+ *  @param {TileInfo} [tileInfo] - Left out to take the name off
+ *  @example
+ *  setTextIcon('coin', tile(5));
+ *  drawTextScreen('Gold: :coin: 25', vec2(100, 50), 40);
+ *  @memberof Draw */
+function setTextIcon(name, tileInfo)
+{
+    ASSERT(isStringLike(name) && /^[A-Za-z0-9_-]+$/.test(name), 'setTextIcon: a name is letters, digits, _ and -', name);
+    ASSERT(!tileInfo || tileInfo instanceof TileInfo, 'setTextIcon: tileInfo must be a TileInfo', tileInfo);
+    tileInfo ? textIcons.set(name, tileInfo) : textIcons.delete(name);
+}
+
+// a line split into its text and its icons, in order, or undefined when no registered icon is in it
+function textIconRuns(line)
+{
+    const runs = [], pattern = /:([A-Za-z0-9_-]+):/g;
+    let last = 0, found = false, match;
+    while ((match = pattern.exec(line)))
+    {
+        const icon = textIcons.get(match[1]);
+        if (!icon)
+        {
+            pattern.lastIndex = match.index + 1; // the closing colon may open a name that is registered
+            continue;
+        }
+        match.index > last && runs.push(line.slice(last, match.index));
+        runs.push(icon);
+        last = pattern.lastIndex;
+        found = true;
+    }
+    if (!found) return;
+    last < line.length && runs.push(line.slice(last));
+    return runs;
+}
+
+// draw a line of text and icons, each icon as tall as the text and as wide as its tile's shape, the whole line placed
+// by the alignment and squeezed across to maxWidth as the text alone would be; icons fade with the text's alpha
+const textIconTint = new Color, textIconAdd = new Color(0, 0, 0, 0);
+function drawTextIconLine(context, runs, y, size, color, lineWidth, textAlign, maxWidth)
+{
+    const widths = runs.map(run=> typeof run == 'string' ? context.measureText(run).width : size * run.size.x / run.size.y);
+    const total = widths.reduce((a, b)=> a + b, 0);
+    context.save();
+    context.textAlign = 'left';
+    if (maxWidth && total > maxWidth)
+        context.scale(maxWidth / total, 1); // about the line's anchor, so the alignment holds
+    // white, or for a shadow black with the shadow's color added on, either faded with the text
+    textIconTint.set(textIconsSilhouette ? 0 : 1, textIconsSilhouette ? 0 : 1, textIconsSilhouette ? 0 : 1, color.a);
+    textIconAdd.set(textIconsSilhouette ? color.r : 0, textIconsSilhouette ? color.g : 0, textIconsSilhouette ? color.b : 0, 0);
+    let x = textAlign === 'left' ? 0 : textAlign === 'right' ? -total : -total / 2;
+    runs.forEach((run, i)=>
+    {
+        if (typeof run == 'string')
+        {
+            lineWidth && context.strokeText(run, x, y);
+            context.fillText(run, x, y);
+        }
+        else if (run.textureInfo?.image && run.textureInfo.size.x)
+        {
+            const pixelated = run.textureInfo.pixelated ?? tilesPixelated;
+            context.imageSmoothingEnabled = !pixelated;
+            drawImageColor(context, run.textureInfo.image, run.pos.x, run.pos.y, run.size.x, run.size.y,
+                x, y - size / 2, widths[i], size, textIconTint, textIconAdd, run.bleed);
+        }
+        x += widths[i];
     });
     context.restore();
 }

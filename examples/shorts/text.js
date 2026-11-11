@@ -29,17 +29,29 @@ function gameRender()
         fontDefault, '', undefined, sin(time)*.5);
 }
 
+function gameInit()
+{
+    // tiles text can show by name, written between colons
+    setTextIcon('clock', tile(7));
+    setTextIcon('ghost', tile(9));
+}
+
 function gameRenderPost()
 {
     // screen text is placed and sized in pixels, from the top left corner
     drawTextScreen('drawTextScreen: 20 pixels, at the top left', vec2(10, 15),
         20, hsl(0,0,.7), 0, BLACK, 'left');
+
+    // icons in text: a clock and a ghost from the tile sheet
+    drawTextScreen(':clock: ' + formatTime(time) + '   :ghost: x 3',
+        vec2(mainCanvasSize.x - 10, 15), 20, hsl(0,0,.7), 0, BLACK, 'right');
 }
 
 /* info
 What `drawText` can do: size, color, an outline, alignment, fonts and
-styles, several rows, a squeezed line, a turned line, and text placed in
-pixels on the screen. There is nothing to press.
+styles, several rows, a squeezed line, a turned line, text placed in
+pixels on the screen, and icons from the tile sheet in a line of text.
+There is nothing to press.
 
 ## How it works
 Text is drawn on the 2D canvas, over what WebGL drew, so it stays sharp
@@ -71,6 +83,12 @@ called in `gameRenderPost`, so it is drawn after everything else, which
 is where a score or a menu goes. `drawText` converts its world values
 and calls it.
 
+### Icons
+`setTextIcon(name, tileInfo)` in `gameInit` names a tile, and any text
+that writes the name between colons, `':clock:'`, draws the tile there,
+as tall as the text. Only a registered name is replaced, so the time
+`formatTime` writes, with its colon, stays text.
+
 ## Try it
 - Change the title's size from `2` to `4`.
 - Thicken the outline: `.15` to `.4`.
@@ -78,6 +96,7 @@ and calls it.
 - Change the `4` at the end of the squeezed line to `12`, and it is no
   longer squeezed.
 - Change `sin(time)*.5` to `time` and the text spins.
+- Add `:clock:` to the title, `'LittleJS :clock: text'`.
 
 ## See also
 Image Font draws text from an image, pixel art style, and Low

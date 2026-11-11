@@ -538,7 +538,12 @@ class UISystemPlugin
     {
         const context = uiSystem.uiContext;
         if (textShadow && shadowColor.a > 0)
-            drawTextScreen(text, pos.add(textShadow), size.y, shadowColor, lineWidth, lineColor, align, font, fontStyle, applyMaxWidth ? size.x : undefined, 0, context);
+        {
+            // icons in the text are shapes of the shadow's color in its shadow
+            textIconsSilhouette = true;
+            try { drawTextScreen(text, pos.add(textShadow), size.y, shadowColor, lineWidth, lineColor, align, font, fontStyle, applyMaxWidth ? size.x : undefined, 0, context); }
+            finally { textIconsSilhouette = false; }
+        }
         uiSetShadow(context, shadowColor, shadowBlur, shadowOffset);
         drawTextScreen(text, pos, size.y, color, lineWidth, lineColor, align, font, fontStyle, applyMaxWidth ? size.x : undefined, 0, context);
         context.shadowColor = '#0000';

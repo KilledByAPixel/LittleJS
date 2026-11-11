@@ -325,6 +325,7 @@ export
     drawCanvas2D,
     drawText,
     drawTextScreen,
+    setTextIcon,
     setAdditiveBlendMode,
     setShader,
     setBackgroundCanvas,
