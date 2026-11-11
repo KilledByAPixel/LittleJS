@@ -19,6 +19,7 @@ smokeRun(async ()=>
     setCanvasFixedSize(vec2(64));
     setCanvasClearColor(rgb(0, 0, 0));
     const at = (x, y)=> [.5 + x / 11.5, .5 + y / 11.5];
+    let movedShader;
     await engineInit(()=>
     {
         setCameraScale(1);
@@ -26,11 +27,12 @@ smokeRun(async ()=>
         render3D.shadows = true;
         render3D.sunDirection = vec3(0, 1, .2); // nearly overhead, the shadows fall a little away from the camera
 
-        // a red box moved up 3 units by its vertex code
-        const moved = new EngineObject3D(vec3(-3, 0, 0), buildBox(), undefined, rgb(1, 0, 0));
+        // a box moved up 3 units by its vertex code, red from its fragment code, both by uniforms
+        const moved = new EngineObject3D(vec3(-3, 0, 0), buildBox());
         moved.scale3D = vec3(1.5);
         moved.emissive = 1;
-        moved.shader = new Shader('', 'void mainVertex(inout vec3 pos, inout vec3 normal) { pos.y += 3.; }');
+        movedShader = moved.shader = new Shader('void mainImage(out vec4 c, vec2 uv) { c = tint; }',
+            'void mainVertex(inout vec3 pos, inout vec3 normal) { pos.y += lift; }', {tint: rgb(1, 0, 0), lift: 3});
 
         // a white box its vertex code makes green, with no fragment code
         const colored = new EngineObject3D(vec3(3, 0, 0), buildBox(), undefined, rgb(1, 1, 1));
@@ -43,7 +45,9 @@ smokeRun(async ()=>
         new EngineObject3D(vec3(0, -3.5, 0), buildGrid(vec2(40), 1));
         const gone = new EngineObject3D(vec3(), buildBox());
         gone.scale3D = vec3(2);
-        gone.shader = new Shader('', 'void mainVertex(inout vec3 pos, inout vec3 normal) { pos.y -= 100.; }');
+        // by a uniform, which the depth program gets too
+        gone.shader = new Shader('', 'void mainVertex(inout vec3 pos, inout vec3 normal) { pos.y -= drop; }',
+            {drop: 100});
     }, ()=> {}, ()=> {}, ()=> {}, ()=> {});
     check('the 3D shaders compiled', !!render3D.program);
     engineStep();
@@ -55,6 +59,13 @@ smokeRun(async ()=>
     const lit = smokePixel(.5, .12)[0], under = smokePixel(.5, .215)[0];
     check('the shadow map moves the vertex too, nothing casts where it was', lit > 150 && under > lit - 20,
         [under, lit]);
+
+    // uniforms changed between frames: the box back down and blue
+    movedShader.setUniform('lift', 0);
+    movedShader.setUniform('tint', rgb(0, 0, 1));
+    engineStep();
+    pixel('uniforms changed between frames reach both stages the next frame', at(-3, 0),
+        (p)=> smokeNear(p, [0, 0, 255, 255]));
     checkGLError();
 });
 </script>

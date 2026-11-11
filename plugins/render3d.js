@@ -1792,7 +1792,7 @@ const RENDER3D_VERTEX_SNIPPET_NAMES =
 
 // given a Shader's vertex code, its mainVertex moves the world position and normal after the model matrix, with the
 // color worked out first so it can change it, and the rest uses what it gives; without, the source is as it was
-function render3DVertexSource(vertexCode)
+function render3DVertexSource(vertexCode, declarations='')
 {
     return '#version 300 es\n' +
         'precision highp float;' +
@@ -1811,7 +1811,7 @@ function render3DVertexSource(vertexCode)
             'gl_Position=viewProj*w;' +
             'P=q;' +
             'S=lightViewProj*w;' +
-            '}\n' + RENDER3D_VERTEX_SNIPPET_NAMES + vertexCode + '\n'
+            '}\n' + RENDER3D_VERTEX_SNIPPET_NAMES + declarations + vertexCode + '\n'
         :
             'void main(){' +
             'vec4 w=mat4(m0,m1,m2,m3)*vec4(p,1.);' +
@@ -1852,7 +1852,7 @@ const RENDER3D_SNIPPET_NAMES =
 //   materialParams (x = normal map scale, 0 skips it, y = shininess, z = reflectivity, w = how a billboard is lit,
 //   see render3DBillboardMode), emissiveTint (rgb, a = the
 //   emissive map is on), skyTop, skyHorizon, skyBottom (what a reflection shows), normalTex, emissiveTex
-function render3DFragmentSource(fragmentCode)
+function render3DFragmentSource(fragmentCode, declarations='')
 {
     const hasNormal = /\bmainNormal\s*\(/.test(fragmentCode || '');
     return '#version 300 es\n' +
@@ -1985,7 +1985,7 @@ function render3DFragmentSource(fragmentCode)
         'if(shadowParams.w>0.&&t.a<.5)discard;' +
         'o=vec4(c.rgb,shadowParams.w>0.?1.:c.a);' +
         '}' +
-        (fragmentCode ? '\n' + RENDER3D_SNIPPET_NAMES + fragmentCode + '\n' : '');
+        (fragmentCode ? '\n' + RENDER3D_SNIPPET_NAMES + declarations + fragmentCode + '\n' : '');
 }
 
 // a Shader's 3D program, compiled the first time a draw needs it
@@ -1993,8 +1993,10 @@ function render3DShaderProgram(shader)
 {
     ASSERT(shader instanceof Shader, 'render3D.shader must be a Shader, not the snippet itself');
     shader.program3D || glShaderTrack(shader); // one let go of and drawn again is kept for a lost context again
-    const program = shader.program3D ||= glCreateProgram(render3DVertexSource(shader.vertexCode),
-        render3DFragmentSource(shader.fragmentCode));
+    // its own uniforms, declared in the stages that use them
+    const program = shader.program3D ||= glCreateProgram(
+        render3DVertexSource(shader.vertexCode, glUniformDeclarations(shader, shader.vertexCode)),
+        render3DFragmentSource(shader.fragmentCode, glUniformDeclarations(shader, shader.fragmentCode)));
     return glFailedPrograms.has(program) ? render3D.program : program; // one that did not build draws as with none
 }
 
@@ -2002,7 +2004,7 @@ function render3DShaderProgram(shader)
 // nothing, so sprites and cut out textures cast their outline, and a blended object faded below half its alpha
 // casts nothing, as it draws; an opaque one draws solid whatever its tint alpha, and casts so; given a Shader's
 // vertex code, its mainVertex moves the vertex as it does on the screen, with the world normal and a color of its own
-function render3DShadowVertexSource(vertexCode)
+function render3DShadowVertexSource(vertexCode, declarations='')
 {
     return '#version 300 es\n' +
         'precision highp float;' +
@@ -2014,7 +2016,7 @@ function render3DShadowVertexSource(vertexCode)
             'void main(){T=uvRect.xy+t*uvRect.zw;C=c*tint;' +
             'vec4 w=mat4(m0,m1,m2,m3)*vec4(p,1.);' + RENDER3D_VERTEX_NORMAL +
             'vec3 q=w.xyz;mainVertex(q,N);A=C.a;gl_Position=viewProj*vec4(q,1.);}\n' +
-            RENDER3D_VERTEX_SNIPPET_NAMES + vertexCode + '\n'
+            RENDER3D_VERTEX_SNIPPET_NAMES + declarations + vertexCode + '\n'
         :
             'void main(){T=uvRect.xy+t*uvRect.zw;A=c.a*tint.a;gl_Position=viewProj*mat4(m0,m1,m2,m3)*vec4(p,1.);}');
 }
@@ -2032,10 +2034,13 @@ function render3DShadowProgram(shader)
     const r = render3D;
     if (!shader?.vertexCode) return r.shadowShader;
     shader.shadowProgram3D || glShaderTrack(shader);
-    const program = shader.shadowProgram3D ||= glCreateProgram(render3DShadowVertexSource(shader.vertexCode),
+    const program = shader.shadowProgram3D ||= glCreateProgram(render3DShadowVertexSource(shader.vertexCode, glUniformDeclarations(shader, shader.vertexCode)),
         RENDER3D_SHADOW_FRAGMENT_SOURCE);
     return glFailedPrograms.has(program) ? r.shadowShader : program; // one that did not build casts as with none
 }
+
+// a uniform's place in the depth program in use
+const render3DShadowUniform = (name)=> render3DUniform(name, render3D.shadowProgram);
 
 // make a depth program current for the shadow map or the camera's depth and send it the pass's matrix, plus for a
 // Shader's the names its vertex code reads, the camera's own place so a vertex moves as it does on the screen
@@ -2761,6 +2766,7 @@ function render3DSetDrawUniforms(matrix, tileInfo, tint, uvRect, state=render3D)
         // texture's as an opaque draw
         const program = render3DShadowProgram(state.shader);
         program === r.shadowProgram || render3DUseShadowProgram(program);
+        program === r.shadowShader || glShaderSendUniforms(state.shader, program, render3DShadowUniform);
         const cut = state.blend ? 1 : 0;
         if (render3DShadowCut !== cut)
             glContext.uniform1f(render3DUniform('cut', program), render3DShadowCut = cut);
@@ -2770,6 +2776,7 @@ function render3DSetDrawUniforms(matrix, tileInfo, tint, uvRect, state=render3D)
     // the program: a Shader's own, compiled by its first draw, or the plugin's; switching sends the pass uniforms
     const program = state.shader ? render3DShaderProgram(state.shader) : r.program;
     program === r.currentProgram || render3DUseProgram(program);
+    program === r.program || glShaderSendUniforms(state.shader, program, render3DUniform); // its own, when they changed
 
     // blending, matches the engine's 2D blend functions
     if (state.blend)

@@ -590,6 +590,11 @@ class SpriteAnimator
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+/** A value a Shader's snippet reads as a uniform: a number, a boolean, a Vector2, a Vector3, a Color, a Matrix4, or a
+ *  list of 2, 3, 4, 9 or 16 numbers
+ *  @typedef {number|boolean|Vector2|Color|ArrayLike<number>|{x: number, y: number, z: number}|{m: ArrayLike<number>}} ShaderUniform
+ *  @memberof Draw */
+
 /**
  * Shader - A custom fragment shader for objects and draws, 2D or 3D
  * - Write a mainImage function in the post processing style, the renderer wraps it with its own program
@@ -624,6 +629,10 @@ class SpriteAnimator
  *   moved with it, so one that moves vertices far needs room to be culled by, like a bigger radius
  * - A Shader of vertex code alone, new Shader('', vertexCode), keeps the 3D plugin's own look; in 2D a Shader's
  *   vertex code is not used
+ * - Values of the game's own, uniforms, are given by name when it is made and read by name in the snippets, which
+ *   need not declare them: new Shader(code, '', {glow: 1, tint: RED}), then shader.setUniform('glow', 2) as often as
+ *   needed, with no recompile; each is declared in the snippets that use it, so one may share a name with something
+ *   of the engine's in the other stage, and is sent to a program only when it changed
  * @example
  * const fade = new Shader(`
  * void mainImage(out vec4 c, vec2 uv)
@@ -641,8 +650,11 @@ class Shader
     /** Create a shader from a fragment snippet that defines void mainImage(out vec4 c, vec2 uv), and in 3D a vertex
      *  snippet that defines void mainVertex(inout vec3 pos, inout vec3 normal)
      *  @param {string} [fragmentCode] - Left out or empty with vertex code, the 3D plugin's own look
-     *  @param {string} [vertexCode] - 3D only */
-    constructor(fragmentCode='', vertexCode='')
+     *  @param {string} [vertexCode] - 3D only
+     *  @param {Object<string, ShaderUniform>} [uniforms] - Values the snippets read by name, declared for them: a
+     *    number is a float, a boolean a bool, a Vector2 a vec2, a Vector3 a vec3, a Color a vec4, and a list of 2, 3,
+     *    4, 9 or 16 numbers, or a Matrix4, a vec2, vec3, vec4, mat3 or mat4; change one with setUniform */
+    constructor(fragmentCode='', vertexCode='', uniforms={})
     {
         ASSERT(isStringLike(fragmentCode) && isStringLike(vertexCode), 'a Shader takes its snippets as strings');
         ASSERT(String(fragmentCode).includes('mainImage') || !fragmentCode && String(vertexCode).includes('mainVertex'),
@@ -666,7 +678,39 @@ class Shader
          *  draw's color and additive color, for data rather than a picture, as the light system's normal pass does;
          *  set it before the shader first draws, its program is built then */
         this.noTint = false;
+        // each uniform's GLSL type, fixed by its first value, and its value as the numbers sent, which setUniform
+        // changes and the version counts, so a program is sent them only when they changed since it last was
+        /** @type {Object<string, string>} */
+        this.uniformTypes = {};
+        /** @type {Object<string, number|Float32Array>} */
+        this.uniformValues = {};
+        this.uniformsVersion = 0;
+        for (const name in uniforms)
+        {
+            ASSERT(/^[A-Za-z_][A-Za-z0-9_]*$/.test(name) && !name.startsWith('gl_'),
+                'a Shader uniform is named as a GLSL variable is', name);
+            const type = this.uniformTypes[name] = glUniformType(uniforms[name]);
+            ASSERT(!!type, 'a Shader uniform is a number, boolean, vector, Color, matrix or list of 2, 3, 4, 9 or 16 numbers',
+                name, uniforms[name]);
+            this.uniformValues[name] = glUniformData(uniforms[name], type);
+        }
         glShaderObjects.push(this); // a lost context drops the programs of every one
+    }
+
+    /** Change a uniform's value: in 2D what was drawn with the shader before it keeps the old value, in 3D the
+     *  value holds for the frame, so set it outside the 3D pass
+     *  @param {string} name - One of those the shader was made with
+     *  @param {ShaderUniform} value - Of the same kind it was made with */
+    setUniform(name, value)
+    {
+        const type = this.uniformTypes[name];
+        ASSERT(!!type, 'setUniform: the Shader was not made with this uniform', name);
+        ASSERT(glUniformType(value) === type, 'setUniform: a uniform keeps the kind it was made with', name, value);
+        if (!type) return;
+        // what was batched with the old value is drawn first
+        glContext && !headlessMode && glBatchShader === this && glFlush();
+        this.uniformValues[name] = glUniformData(value, type);
+        ++this.uniformsVersion;
     }
 
     /** Let go of this shader: its compiled programs are freed and it leaves the engine's list of shaders, which

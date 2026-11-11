@@ -333,6 +333,11 @@ new Shader(fragmentCode)          // fragmentCode defines void mainImage(out vec
                                   // apply in 2D, and the lighting, shadows and fog in 3D; in 3D it may also define
                                   // void mainNormal(inout vec3 n), the world normal after the normal map, to bend
                                   // it per pixel (waves, ripples) for the lighting, specular and reflection
+new Shader(fragmentCode, vertexCode, uniforms) // uniforms: values the snippets read by name, {glow: 1, tint: RED},
+                                  // declared for them, a number a float, a boolean a bool, a vec2, vec3, Color, list
+                                  // of 2 to 4, 9 or 16 numbers or a Matrix4 a vec2 to vec4, mat3 or mat4
+shader.setUniform(name, value)    // change one, no recompile; in 2D the draws before keep the old value, in 3D it
+                                  // holds for the frame
 new Shader(fragmentCode, vertexCode) // 3D: vertexCode defines void mainVertex(inout vec3 pos, inout vec3 normal),
                                   // world space, to move vertices (wind, waves), in the shadow map and depth too;
                                   // names: iTime, iResolution, cameraPos, iChannel0, localUV, modelMatrix and

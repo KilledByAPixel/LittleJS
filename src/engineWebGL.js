@@ -526,6 +526,7 @@ function glShaderProgram(shader)
         'uniform vec3 iResolution;' +    // canvas size in pixels
         'uniform float iTime;' +         // engine time
         'uniform bool premultipliedTexture;' + // is the texture premultiplied, a render target or a smooth image
+        glUniformDeclarations(shader, shader.fragmentCode) + // the shader's own
         'in vec2 v,l;in vec4 d,e;out vec4 c;' +
         // main first, the snippet's mainImage declared for it, so a define in the snippet can not reach main's names
         'void mainImage(out vec4,vec2);' +
@@ -536,6 +537,65 @@ function glShaderProgram(shader)
         '#define localUV l\n' +
         shader.fragmentCode + '\n');
     return glFailedPrograms.has(program) ? glShader : program;
+}
+
+// the GLSL type of a Shader uniform's value, or undefined for one that can not be a uniform; a vector or matrix is
+// known by its shape, so this core file needs no plugin's class
+function glUniformType(value)
+{
+    if (typeof value == 'number') return 'float';
+    if (typeof value == 'boolean') return 'bool';
+    if (value instanceof Color) return 'vec4';
+    if (value instanceof Vector2) return 'vec2';
+    if (value && isNumber(value.x) && isNumber(value.y) && isNumber(value.z)) return 'vec3';
+    const list = value?.m?.length === 16 ? value.m : value;
+    const n = list && typeof list != 'string' && isNumber(list.length) ? list.length : 0;
+    return {2: 'vec2', 3: 'vec3', 4: 'vec4', 9: 'mat3', 16: 'mat4'}[n];
+}
+
+// a uniform's value as the numbers sent, a copy, so a vector changed after it was given does not change the shader
+function glUniformData(value, type)
+{
+    if (type === 'float') return +value;
+    if (type === 'bool') return value ? 1 : 0;
+    if (value instanceof Color) return new Float32Array([value.r, value.g, value.b, value.a]);
+    if (value instanceof Vector2) return new Float32Array([value.x, value.y]);
+    if (type === 'vec3' && isNumber(value.x)) return new Float32Array([value.x, value.y, value.z]);
+    return Float32Array.from(value.m || value);
+}
+
+// the declarations of a Shader's uniforms for one of its snippets, those it names: a stage that does not use one
+// does not declare it, so a uniform can share a name with something of the engine's in the other stage, like the
+// vertex stage's tint
+function glUniformDeclarations(shader, code)
+{
+    let declarations = '';
+    for (const name in shader.uniformTypes)
+        if (new RegExp('\\b' + name + '\\b').test(code))
+            declarations += 'uniform ' + shader.uniformTypes[name] + ' ' + name + ';';
+    return declarations;
+}
+
+// send a Shader's uniforms to one of its programs, which is in use, when they changed since that program was last
+// sent them; uniformLocation gives a name's place in the program, the renderer's own cached lookup
+const glUniformVersions = new WeakMap;
+function glShaderSendUniforms(shader, program, uniformLocation)
+{
+    if (glUniformVersions.get(program) === shader.uniformsVersion) return;
+    glUniformVersions.set(program, shader.uniformsVersion);
+    const gl = glContext;
+    for (const name in shader.uniformValues)
+    {
+        const location = uniformLocation(name), v = shader.uniformValues[name], type = shader.uniformTypes[name];
+        if (!location) continue; // left out by the compiler, the snippet does not use it
+        if (type === 'float') gl.uniform1f(location, /** @type {number} */ (v));
+        else if (type === 'bool') gl.uniform1i(location, /** @type {number} */ (v));
+        else if (type === 'vec2') gl.uniform2fv(location, /** @type {Float32Array} */ (v));
+        else if (type === 'vec3') gl.uniform3fv(location, /** @type {Float32Array} */ (v));
+        else if (type === 'vec4') gl.uniform4fv(location, /** @type {Float32Array} */ (v));
+        else if (type === 'mat3') gl.uniformMatrix3fv(location, false, /** @type {Float32Array} */ (v));
+        else gl.uniformMatrix4fv(location, false, /** @type {Float32Array} */ (v));
+    }
 }
 
 // a Shader compiled again after dispose is kept for a lost context again
@@ -772,6 +832,7 @@ function glFlush()
                 const height = glRenderTarget ? mainCanvasSize.y : glCanvas.height;
                 glContext.uniform3f(uniform('iResolution'), width, height, 1);
                 glContext.uniform1i(uniform('premultipliedTexture'), +premultiplied);
+                program === glShader || glShaderSendUniforms(glBatchShader, program, uniform);
                 if (program === glShader)
                     glShaderPremultiplied = premultiplied; // a Shader that did not build draws with the engine's
             }

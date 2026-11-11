@@ -6,6 +6,7 @@ What changed in each release, newest first. Releases before 1.20.0 are on the
 ## Unreleased
 
 ### New Changes
+- A `Shader` takes values of the game's own, uniforms, for its snippets to read by name, in 2D and 3D: `new Shader(code, '', {glow: 1, tint: RED})`, then `shader.setUniform('glow', 2)` each frame, with no recompile; a number is a float, a boolean a bool, a `Vector2`, `Vector3` or `Color` a vec2 to vec4, and a list of 2, 3, 4, 9 or 16 numbers or a `Matrix4` a vector or a matrix. Each is declared for the snippets that use it, and sent only when it changed; in 2D what was drawn before a change keeps the old value, in 3D a value holds for the frame, and the shadow map's depth program gets them too
 - 3D billboards are lit: sprites, particles and `drawBillboard` take the lights, the sun, the ambient and the shadows, lit with no direction since they always face the camera, each light by how near it is, so a cloud of smoke is bright by a light inside it and dark in the shade; `obj.roundLighting` lights a sprite or a particle emitter as a ball bulging toward the camera, bright on the side toward each light, and a normal map lights one as a card facing the camera. Additive ones, like fire, sparks and a light's glow, are light of their own and stay unlit, and `emissive = 1` keeps any one its own colors
 
 ### Breaking Changes

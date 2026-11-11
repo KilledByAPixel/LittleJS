@@ -1,0 +1,50 @@
+<!DOCTYPE html><meta charset=utf-8>
+<title>LittleJS smoke: Shader uniforms in 2D</title>
+<script src=../../dist/littlejs.js></script>
+<script src=smoke.js></script>
+<pre id=result>PENDING</pre>
+<script>
+'use strict';
+
+// a Shader's own uniforms reach its 2D program: a Color, a number and a list of numbers; a value changed in the
+// middle of a frame leaves what was drawn before with the old one, and one changed between frames is used after
+// the view is 64 units across, a unit a pixel, so a place (x, y) is at (.5 + x / 64, .5 + y / 64) of the canvas
+smokeRun(async ()=>
+{
+    setShowSplashScreen(false);
+    setDebugWatermark(false);
+    setEngineManualStep(true);
+    setCanvasFixedSize(vec2(64));
+    setCanvasClearColor(rgb(0, 0, 0));
+    const at = (x, y)=> [.5 + x / 64, .5 + y / 64];
+    let white, shader, bright = .5;
+    await engineInit(()=>
+    {
+        setCameraScale(1);
+        const canvas = new OffscreenCanvas(8, 8), context = canvas.getContext('2d');
+        context.fillStyle = '#fff';
+        context.fillRect(0, 0, 8, 8);
+        white = new TileInfo(vec2(), vec2(8), new TextureInfo(canvas));
+        shader = new Shader('void mainImage(out vec4 c, vec2 uv) { c = vec4(tint.rgb * bright + add, 1.); }', '',
+            {tint: rgb(1, 0, 0), bright: 1, add: [0, 0, 0]});
+    }, ()=> {}, ()=> {}, ()=>
+    {
+        // the left one red, then the same Shader made green for the right one, in one frame
+        shader.setUniform('tint', rgb(1, 0, 0));
+        shader.setUniform('bright', bright);
+        setShader(shader);
+        drawTile(vec2(-16, 0), vec2(16), white);
+        shader.setUniform('tint', rgb(0, 1, 0));
+        drawTile(vec2(16, 0), vec2(16), white);
+        setShader();
+    }, ()=> {});
+    engineStep();
+    checkPixel('a Color and a number reach the snippet', ...at(-16, 0), [128, 0, 0, 255]);
+    checkPixel('a value changed in the frame is used by the draws after it, not before', ...at(16, 0), [0, 128, 0, 255]);
+    bright = 1;
+    shader.setUniform('add', [0, 0, 1]);
+    engineStep();
+    checkPixel('a value changed between frames is used the next frame', ...at(-16, 0), [255, 0, 255, 255]);
+    checkGLError();
+});
+</script>
