@@ -34,10 +34,11 @@ The code is very clean and well documented with many examples to get you started
 ### ✨ Graphics
 
 - Blazing fast WebGL2 + Canvas2D hybrid rendering system
-- Apply [Shadertoy](https://www.shadertoy.com) style shaders for post-processing effects, or on any object or draw
+- Apply [Shadertoy](https://www.shadertoy.com) style shaders for post-processing effects, or on any object or draw, with values the game sets each frame
 - 2D lights with soft shadows, tinted glass and emissive objects, a sun with long shadows, spotlight cones and gels, and normal maps
 - Robust particle effect system with a library of ready made effects and an [effect design tool](https://killedbyapixel.github.io/LittleJS/examples/particles/)
 - Parallax background layers that repeat across a level of any size
+- Your own icons inline in text, like a coin beside the score, written by name
 - Load sprites and animations into texture sheets at runtime, or import [TexturePacker](https://www.codeandweb.com/texturepacker) and [Aseprite](https://www.aseprite.org) atlases
 
 ### 🧊 LittleJS 3D
@@ -45,13 +46,13 @@ The code is very clean and well documented with many examples to get you started
 - Built-in 3D renderer that shares the canvas with your 2D game
 - 3D objects with the same physics, children and timers as 2D
 - Shape builders, extruded sprites and text, and OBJ and glTF model loading
-- Height map terrain and voxel maps with collision and raycasts
+- Height map terrain, voxel maps and mesh colliders, with collision and raycasts
 - 3D levels and prefabs, built in the 3D level editor and loaded with one call
 - Shadow maps, colored lights, spotlights, lens flares, specular, emissive glow and fog
 - Reflections of a sky box or the scene itself, from mirror sharp to rough
-- Particles, trails, billboards and instanced drawing
+- Particles, trails, lit billboards and instanced drawing of thousands of meshes
 - Orbit, chase and first person cameras with mouse picking
-- Custom shaders on any object
+- Custom shaders on any object, with vertex code, uniforms and data for each instance
 - Optional [Three.js](https://threejs.org) plugin as an alternative renderer
 
 ### 🔊 Audio

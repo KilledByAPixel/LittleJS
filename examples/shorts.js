@@ -306,6 +306,7 @@ const exampleList =
     new ExampleInfo('3D Glow', 'render3dGlow.js', 'Bloom from the post processing plugin', false, 'bloom, post processing, light'),
     new ExampleInfo('3D Instancing', 'render3dInstancing.js', 'Thousands of cubes in one draw call', false, 'instancing, batch, performance, InstancedMesh3D'),
     new ExampleInfo('3D Shaders', 'render3dShaders.js', 'Custom surface and lighting shaders', false, 'shader, Shader, lighting, toon'),
+    new ExampleInfo('3D Grass', 'render3dGrass.js', 'A field of grass swaying in the wind, bent by a vertex shader', false, 'grass, wind, vertex shader, mainVertex, uniform, setUniform, instanceData, setDataAt, InstancedMesh3D'),
     new ExampleInfo('3D Level Editor', 'render3dLevelEditor.js', 'Place boxes, lights and coins, then walk around', false, 'debug, editor, level, level3DLoad, level3DAddType, handles, snap, free camera'),
     new ExampleInfo('3D Prefab Maker', 'render3dPrefab.js', 'Build a prefab in the level editor and save it for a game to place', false, 'debug, editor, prefab, level3DAddPrefab, level3DLoadPrefab, reuse'),
     new ExampleInfo('3D Dodge Game', 'render3dDodgeGame.js', 'Dodge boxes tumbling in from every side', false, 'chase camera, shadows, sound'),
