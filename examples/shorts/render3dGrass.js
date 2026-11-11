@@ -26,7 +26,10 @@ function gameInit()
     new Render3DPlugin;
     render3D.setSky(hsl(.58, .5, .5), hsl(.58, .4, .85));
     render3D.setFog(15, 30);
+    // sharp shadows for thin blades: more pixels over less of the world
     render3D.shadows = true;
+    render3D.shadowMapSize = 2048;
+    render3D.shadowRange = 20;
     new CameraControl3D(vec3(), 10, .3, .001);
 
     // the ground
@@ -109,6 +112,14 @@ and may move it.
 The shadow map runs the same vertex code, so the shadows sway with the
 blades.
 
+### The shadows
+A blade is about a tenth of a unit wide, so its shadow needs small
+shadow map pixels. The map is `shadowMapSize` pixels across a square of
+`shadowRange` units that follows the camera: 2048 over 20 units is 100
+pixels a unit, four times the default 1024 over 40. Past that square
+there are no shadows, but there the grass hides the ground and the fog
+takes over.
+
 ### The wind
 `gameUpdate` turns the wind's direction with `time` and hands it to
 the shader with `setUniform('wind', wind)` every frame. A uniform
@@ -121,6 +132,8 @@ changes without making the shader again, so this costs almost nothing.
   in the shader.
 - Gusts closer together: `along * .4` to `along * 1.`.
 - Taller grass: `rand(.4, 1.2)` to `rand(1, 2)`.
+- See the shadows at the default size: remove the two lines that set
+  `shadowMapSize` and `shadowRange`.
 
 ## See also
 3D Instancing draws thousands of cubes in one call, and 3D Shaders
