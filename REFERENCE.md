@@ -2562,15 +2562,15 @@ loadSprite(src, frameSize, padding=1, sourcePadding=0) // Load an image and pack
 loadAtlas(imageSrc, jsonSrc, padding=1) // Load a TexturePacker or Aseprite atlas, returns name->TileInfo object
 parseAtlas(data)                      // Parse atlas json into named frame groups, used by loadAtlas
 spritesReady()                        // Promise resolved when all sprites are packed
-textureSheets                         // Array of TextureSheet created by loadSprite
+textureSheets                         // Array of TextureSheet created by loadSprite, loadAtlas and loadTiles
 new TextureSheet(size=2048)           // A texture that images are packed into
 sheet.tryAdd(imageSize, frameSize, padding, sourcePadding) // Reserve a spot, returns a TileInfo
 sheet.drawImage(image, tileInfo, update=true, sourcePadding=0) // Draw an image into a reserved spot
 sheet.updateTexture()                 // Upload batched images to WebGL
 
 // Settings
-textureSheetSize = 2048   // Size in pixels of texture sheets created by loadSprite
-textureSheetPadding = 1   // Default padding around each frame packed by loadSprite
+textureSheetSize = 2048   // Size in pixels of texture sheets created by loadSprite, loadAtlas and loadTiles
+textureSheetPadding = 1   // Default padding around each frame packed by loadSprite, loadAtlas and loadTiles
 
 // Load a sprite and an animation, then wait for both
 async function gameInit()

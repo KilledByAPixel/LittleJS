@@ -177,13 +177,14 @@ class PathFinder
         return 0;
     }
 
-    /** Get the node at tile coords, or null if out of bounds
+    /** Get the node at tile coords, or null if out of bounds or not whole numbers
      *  @param {number} x
      *  @param {number} y
      *  @return {PathFinderNode|null} */
     getNode(x, y)
     {
-        if (x < 0 || y < 0 || x >= this.size.x || y >= this.size.y) return null;
+        if (!Number.isInteger(x) || !Number.isInteger(y) || x < 0 || y < 0 || x >= this.size.x || y >= this.size.y)
+            return null;
         return this.nodes[x + y * this.size.x];
     }
 

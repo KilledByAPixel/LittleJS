@@ -13,19 +13,19 @@
 
 'use strict';
 
-/** Width and height in pixels of texture sheets created by loadSprite
+/** Width and height in pixels of texture sheets created by loadSprite, loadAtlas and loadTiles
  *  @type {number}
  *  @default
  *  @memberof Settings */
 let textureSheetSize = 2048;
 
-/** Default padding pixels around each frame packed by loadSprite
+/** Default padding pixels around each frame packed by loadSprite, loadAtlas and loadTiles
  *  @type {number}
  *  @default
  *  @memberof Settings */
 let textureSheetPadding = 1;
 
-/** Array of texture sheets created by loadSprite
+/** Array of texture sheets created by loadSprite, loadAtlas and loadTiles
  *  @type {Array<TextureSheet>}
  *  @memberof TextureSheets */
 let textureSheets = [];
@@ -552,7 +552,7 @@ function parseAtlasNamesCheck(groups)
     return groups;
 }
 
-/** Wait for everything started by loadSprite and loadAtlas to finish packing
+/** Wait for everything started by loadSprite, loadAtlas and loadTiles to finish packing
  *  @return {Promise<void>}
  *  @example
  *  async function gameInit()
@@ -600,7 +600,7 @@ function textureSheetAdd(imageSize, frameSize, padding, sourcePadding)
 ///////////////////////////////////////////////////////////////////////////////
 // Texture sheet setting setters
 
-/** Set width and height in pixels of texture sheets created by loadSprite
+/** Set width and height in pixels of texture sheets created by loadSprite, loadAtlas and loadTiles
  *  @param {number} size
  *  @memberof Settings */
 function setTextureSheetSize(size) { textureSheetSize = size; }

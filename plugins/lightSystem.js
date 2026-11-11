@@ -69,7 +69,8 @@ class LightSystemPlugin
         this.shadersFailed = false; // a shader did not build on this device, so the system draws nothing
         /** @property {Color} - Baseline color applied to unlit areas of the scene. Defaults to BLACK (pitch dark). Set to a small RGB for a faint ambient. The lightmap is cleared to this color each frame, then lights add on top, then the result multiplies the scene. */
         this.ambientColor = (ambientColor || BLACK).copy();
-        /** @property {Vector2} - Size of the lightmap texture, follows mainCanvasSize (css pixels, so it is not scaled by canvasPixelRatio) unless a size was passed */
+        /** @property {Vector2|undefined} - Size of the lightmap texture, follows mainCanvasSize (css pixels, so it is not scaled by canvasPixelRatio) unless a size was passed; undefined until the system starts when none was
+         *  @type {Vector2|undefined} */
         this.textureSize = textureSize ? textureSize.copy() : undefined;
         /** @property {boolean} - True when no size was passed, so the lightmap follows mainCanvasSize */
         this.textureSizeAuto = !textureSize;
@@ -1052,8 +1053,9 @@ class LightSystemPlugin
         }
     }
 
-    /** Bring the sizes of the textures it makes down to what the device can make: shadowMapSize, shadowTextureSize
-     *  and a textureSize given by hand; called before they are made, so a size too big falls back instead of failing */
+    /** Bring the sizes of the textures it makes down to what the device can make: shadowMapSize, shadowTextureSize,
+     *  directionalTextureSize and textureSize; called before they are made, so a size too big falls back instead of
+     *  failing */
     clampTextureSizes()
     {
         this.shadowMapSize = glClampTextureSize(this.shadowMapSize);

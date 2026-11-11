@@ -1,7 +1,8 @@
 /*
  * LittleJS 3D Extras Plugin
  * - Things built on the 3D renderer that it does not need in order to draw: the rest of the shape builders,
- *   HeightMap terrain, the camera controls, ParticleEmitter3D and Trail3D, and the OBJ loader
+ *   normalMapFromHeight, HeightMap terrain and MeshCollider, the camera controls, ParticleEmitter3D and Trail3D,
+ *   LensFlare3D, the OBJ loader and CSG
  * - Requires the Render3D plugin and goes after it, everything here is part of its Render3D namespace
  */
 
@@ -202,7 +203,7 @@ function buildCapsule(size=1, height=1, sides=16, rings=4, smooth=render3D?.smoo
  */
 function buildTorus(size=1, tubeSize=.3, sides=16, tubeSides=8, smooth=render3D?.smoothShading)
 {
-    ASSERT(tubeSize <= size, 'the tube must fit inside the torus');
+    ASSERT(tubeSize <= size / 2, 'the tube must fit inside the torus, at most half its size, or the ring turns inside out');
     const profile = [], radius = (size - tubeSize) / 2, tubeRadius = tubeSize / 2;
     for (let i = 0; i <= tubeSides; ++i)
     {
@@ -474,7 +475,8 @@ class HeightMap extends EngineObject3D
         this.height = height;
         /** @property {boolean} - Smooth shading, rebuild() after changing it */
         this.smooth = !!smooth;
-        this.size3D = vec3(mapSize.x, height, mapSize.y);
+        // its box, centered on pos3D, reaches a full height above and below, so it holds the surface rising from it
+        this.size3D = vec3(mapSize.x, 2 * abs(height), mapSize.y);
         this.rebuild();
         render3DLevel.push(this);
     }
@@ -1314,7 +1316,7 @@ class ThirdPersonCamera3D extends EngineObject3D
     /** Make a third person camera, the view goes to it at once
      *  @param {EngineObject3D|Vector3} [target] - What to follow, an object or a position
      *  @param {number} [distance] - How long the pole is
-     *  @param {number} [pitch] - Angle of the pole above level, PI/2 looks straight down */
+     *  @param {number} [pitch] - Angle of the pole above level, held to pitchRange, -.4 to 1.2 by default */
     constructor(target, distance=6, pitch=.3)
     {
         ASSERT(!target || target instanceof EngineObject3D || isVector3(target),
@@ -1561,7 +1563,7 @@ class FirstPersonCamera3D extends EngineObject3D
         /** @property {number} - Radians a second a stick pushed all the way turns the view */
         this.stickSpeed = 3;
         /** @property {number} - Speed of a jump in world units a frame, 0 for none; Space or gamepad button 0 jumps
-         *  while it stands on something, a height map, a voxel map or a solid, see groundObject */
+         *  while it stands on something, a height map, a voxel map, a mesh collider or a solid, see groundObject */
         this.jumpSpeed = 0;
         /** @property {number} - How far above its position the eye is, in its own space, so with a size3D the eye can
          *  sit toward the top of the body instead of its middle; keep it under half the body's height, or the eye is
@@ -1689,7 +1691,7 @@ function render3DParticleView(emitter)
 /**
  * @callback Particle3DCollideCallback - Decides whether a particle stops where it hits the level, a filter as in 2D
  * @param {Particle3D} particle
- * @param {EngineObject3D} level - The HeightMap or VoxelMap it hit
+ * @param {EngineObject3D} level - The HeightMap, VoxelMap or MeshCollider it hit
  * @param {Vector3} pos - Where it hit
  * @return {boolean|void} - true to stop it there; a callback that returns nothing lets it pass through
  * @memberof Render3D
@@ -1710,8 +1712,8 @@ function render3DParticleView(emitter)
  * - An emitter with an emitTime destroys itself once its last particle is gone, like the 2D emitter
  * - Callbacks as the 2D emitter's: particleCreateCallback, particleUpdateCallback, particleCollideCallback and
  *   particleDestroyCallback, each given a Particle3D, one object the emitter reuses for every particle and call
- * - collideLevel, off by default, has particles hit the height maps and voxel maps, bouncing by restitution and
- *   sliding by friction
+ * - collideLevel, off by default, has particles hit the level, height maps, voxel maps and mesh colliders, bouncing
+ *   by restitution and sliding by friction
  * @extends EngineObject3D
  * @memberof Render3D
  * @example
@@ -1808,8 +1810,8 @@ class ParticleEmitter3D extends EngineObject3D
         this.trailData = undefined;
         /** @property {number} - Trail points kept per particle, from trailTime */
         this.trailMax = 0;
-        /** @property {boolean} - Particles hit the level, the height maps and voxel maps, bouncing by restitution and
-         *  sliding along by friction; off by default, it tests each particle's move against the level every frame */
+        /** @property {boolean} - Particles hit the level, height maps, voxel maps and mesh colliders, bouncing by
+         *  restitution and sliding along by friction; off by default, it tests each particle's move against the level every frame */
         this.collideLevel = false;
         /** @property {number} - How much a particle grips where it lands, 0 to 1: its speed along the surface is
          *  cut by this much on each hit, on top of the friction, 1 stops it there */
@@ -2353,7 +2355,7 @@ function render3DFlareTile(shape)
  * @property {number|Vector2} size - How big across, as a part of the screen's height, a vector for a part wider
  *  than it is tall
  * @property {Color} color - Its color, the alpha how bright
- * @property {string} [shape] - glow, disc, ring, hex, streak or star, a glow when left out
+ * @property {'glow'|'disc'|'ring'|'hex'|'streak'|'star'} [shape] - A glow when left out
  * @property {TileInfo} [tileInfo] - A tile of the game's own to draw in place of a shape, best white on clear
  * @property {number} [angle] - How far it is turned, in radians
  * @memberof Render3D
@@ -2405,7 +2407,7 @@ class LensFlare3D extends EngineObject3D
         /** @property {Array<string>|undefined} - The shapes the ghosts are picked from, glow, disc, ring, hex,
          *  streak or star: ['hex'] makes every ghost a hexagon, and a shape listed twice is picked twice as often;
          *  discs, rings and glows when not set
-         *  @type {Array<string>|undefined} */
+         *  @type {Array<'glow'|'disc'|'ring'|'hex'|'streak'|'star'>|undefined} */
         this.shapes = undefined;
         /** @property {number} - Scales the glow at the sun, 0 for none */
         this.glowSize = 1;

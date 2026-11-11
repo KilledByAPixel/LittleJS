@@ -19,6 +19,20 @@ What changed in each release, newest first. Releases before 1.20.0 are on the
 
 ### Fixes
 - A `ThirdPersonCamera3D` taking over from another camera starts where the view is and eases to its target from there, where it jumped to where it last was; `snap()` on a camera that is not driving the view leaves it alone, the zoom of a `FollowCamera` and the camera of a `ThirdPersonCamera3D` with no target too; and a draw that throws in the 3D pass no longer leaves the camera shaken, or the 3D editor's camera in place, for the game's next update
+- A Box2D joint made to an object already destroyed is made destroyed in every joint type, where most threw reading the gone object's body, and a gear joint of a joint destroyed with its object no longer stops Box2D in a release build
+- A 3D child with mass is held by its parent, where gravity pulled it out of it
+- The camera's depth texture holds what is drawn unlit, a line or a mesh with `lighting` off, which was left out with the shadows
+- Turning the touch gamepad on in the middle of a touch lets go of the mouse button the finger held, and the first tap after it is off again presses
+- The 3D level editor: a level it made with no level loaded comes back from its autosave with its scene and its prefabs; Duplicate keeps the sizes of what was cut for the next paste; a brush that could not place stays in hand; a game's own key is kept from the browser, Ctrl+S or F5; a game hook that throws as it opens or closes no longer leaves the input captured; a failed Save says why in the console
+- The 2D level editor: keys wait for a drag of objects to let go, where an undo was moved again and lost the redo, and a game's tool reads Cmd as Ctrl on a Mac
+- A Shader's `iResolution` is the lightmap's size in the light system's passes, not the canvas's; updating a texture being drawn into draws what was queued first; turning WebGL off draws what was queued
+- `tile()` of a texture no wider than the tile with its padding gives its first tile, not NaN
+- With `debugShowErrors` an ASSERT throws its own error, which says what its values are, and `console.assert` an Error, not a string
+- Debug Tiles calls only the solid layer collision
+- A tweak added again for a new object, as after a restart, drives the new one from its number box
+- Wavedash gives an achievement up after its retries, where many unlocked at once used them all up at the start
+- `setScene` from a scene's leave is left out in a release build, where it called itself until the stack ran out; `PathFinder.getNode` is null at coordinates that are not whole; a CubeMap disposed after a lost context no longer deletes a texture of the old one
+- Asserts for a negative `setObjectMaxSpeed`, a `friction` outside 0 to 1, a camera scale or pixel ratio of 0, and a loading screen that is not a function; and types and docs: the flare shapes, a Wavedash board's display, a Newgrounds period, SpriteAnimation's modes, the 3D docs that left out MeshCollider, and others
 
 ## 1.29.1 - 2026-11-02
 

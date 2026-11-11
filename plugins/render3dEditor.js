@@ -228,7 +228,8 @@ function editor3DSegmentDistance(screenPos, a, b)
     return screenPos.distance(sa.add(ab.scale(t)));
 }
 
-// the first point a ray hits: on an object, a height map or a voxel map, leaving some out, or on the ground plane
+// the first point a ray hits: on an object, a height map, voxel map or mesh collider, leaving some out, or on the
+// ground plane
 // at height 0 when it hits none
 function editor3DSurface(ray, ignore=new Set)
 {
@@ -276,9 +277,10 @@ let editor3DLevel;
 // what the game made for each object of the level, by the object's id
 const editor3DInstances = new Map;
 
-// what the editor keeps for each level: {fileName, key, original, hash, pending, fileHandle, undo, redo}, the file
-// it came from, the file's objects and their hash for the autosave, an autosave waiting for a file that changed,
-// and its undo and redo lists
+// what the editor keeps for each level: {fileName, key, original, originalParts, sceneBase, hash, savedHash,
+// pending, fileHandle, saving, undo, redo}, the file it came from, the file's objects and parts and their hash for
+// the autosave, the scene the game set, the hash of the file a Save wrote, an autosave waiting for a file that
+// changed, the file picked, a save being written, and its undo and redo lists
 const editor3DRecords = new WeakMap;
 
 // if the editor is open, and if it was opened and not exited, while Escape switches between playing and editing
@@ -295,7 +297,7 @@ let editor3DBrush;
 let editor3DClipboard;
 /** @type {Map<Object, {size: Vector3, offset: Vector3}>} */
 let editor3DClipboardBoxes = new Map;
-// the level's, each entry its object list and its parts, the scene and the blocks, before and after an edit
+// the level's, each entry its object list and its parts, see editor3DLevelPartNames, before and after an edit
 let editor3DUndoList = [], editor3DRedoList = [];
 // the edit being made, a drag is one: the objects and the parts as they were before it, and painted when blocks
 // were set in the game's map and are not in the level yet
@@ -311,8 +313,8 @@ const editor3DObjects = ()=> isArray(editor3DLevel?.objects) ? editor3DLevel.obj
 const editor3DObject = (id)=> editor3DObjects().find((o)=> o.id === id);
 const editor3DSelected = ()=> editor3DObjects().filter((o)=> editor3DSelection.has(o.id));
 
-// the parts of a level beside its objects that the editor edits: its scene block and its map of blocks; each is
-// undone, autosaved, reset and saved as the objects are
+// the parts of a level beside its objects that the editor edits: its scene block, its map of blocks, its terrain
+// and its own prefabs; each is undone, autosaved, reset and saved as the objects are
 const editor3DLevelPartNames = ['scene', 'voxels', 'terrain', 'prefabs'];
 
 // the last copy made of each part, as its text and the copy: a part that has not changed since is not copied
@@ -650,8 +652,8 @@ function editor3DChange(change)
     change(after);
     if (editor3DSame(before, after)) return false;
     editor3DFixIds(after); // an object added with no id, or with one in use, gets one of its own
+    editor3DStroke ||= {before, parts: editor3DLevelParts()}; // first, so a constructor that throws is undone
     editor3DSetObjects(after);
-    editor3DStroke ||= {before, parts: editor3DLevelParts()};
     return true;
 }
 
@@ -1607,9 +1609,10 @@ function editor3DPaste(offset=vec3())
 // copy the selected objects where they are and select the copies, the clipboard stays as it was
 function editor3DDuplicate()
 {
-    const clipboard = editor3DClipboard;
+    const clipboard = editor3DClipboard, boxes = editor3DClipboardBoxes;
     const done = editor3DCopySelection() === false ? false : editor3DPaste();
     editor3DClipboard = clipboard;
+    editor3DClipboardBoxes = boxes; // what was cut has nothing left to measure
     return done;
 }
 
@@ -1649,13 +1652,14 @@ function editor3DSetOpen(open)
     {
         editor3DSetFreeCamera(false);
         pointerLockIsActive() && pointerLockExit(); // the game's captured mouse is let go, the editor needs it
-        editor3DLevel || editor3DLevelLoaded({}); // a new level, with nothing loaded
+        editor3DLevel || level3DLoad({}); // a new level, with nothing loaded, and its autosave made
         editor3DCamera || editor3DCameraStart();
         editor3DGamePaused = paused;
         setPaused(true);
         setDebugOverlay(false); // out of the way of the level
         editor3DIsOpen = true;
         editor3DRestore();
+        inputCapture(editor3DViewOn()); // before the game's hook, which may throw
         editorCall('onOpen');
         editorKeyClashes();
     }
@@ -1669,9 +1673,9 @@ function editor3DSetOpen(open)
         editor3DToolHeld = false;
         editor3DIsOpen = false;
         setPaused(editor3DGamePaused);
+        inputCapture(editor3DViewOn()); // the game's input back before its hook, which may throw
         editorCall('onClose');
     }
-    inputCapture(editor3DViewOn());
 }
 
 // open the editor, a new session starts at the game's camera and a return keeps the editor's
@@ -1996,9 +2000,11 @@ async function editor3DSave(pickAgain=false)
 // write one save of a level, the one before it done
 async function editor3DSaveText(level, record, text, pickAgain)
 {
-    const file = JSON.parse(text), written = editor3DCopy(file.objects), writtenParts = editor3DLevelParts(file);
+    const file = JSON.parse(text), writtenObjects = editor3DCopy(file.objects);
+    const writtenParts = editor3DLevelParts(file);
     const picker = /** @type {any} */ (globalThis).showSaveFilePicker;
     const fileKey = (globalThis.location?.pathname ?? '') + ' 3D ' + record.key;
+    let written = false;
     if (picker)
     {
         try
@@ -2019,21 +2025,28 @@ async function editor3DSaveText(level, record, text, pickAgain)
             const writable = await record.fileHandle.createWritable();
             await writable.write(text);
             await writable.close();
-            if (record.fileHandle.name === record.fileName)
-            {
-                record.original = written;
-                record.originalParts = writtenParts;
-                record.savedHash = editor3DContentHash(written, writtenParts);
-                editor3DAutosave(level);
-            }
-            return 'written';
+            written = true;
         }
         catch (error)
         {
             if (error?.name === 'AbortError') return; // the picker was closed, nothing saved
             record.fileHandle = undefined; // a file it could not write, a download instead, and not kept
             editorFileStore.set(fileKey, undefined);
+            console.warn(`LittleJS editor: ${record.fileName} could not be written, downloaded instead`, error);
         }
+    }
+    if (written)
+    {
+        // outside the write's catch, so an error here is its own and not a failed write that downloads a copy;
+        // the browser gives the picked file's name but not its folder, so the name is what says it is the level's
+        if (record.fileHandle.name === record.fileName)
+        {
+            record.original = writtenObjects;
+            record.originalParts = writtenParts;
+            record.savedHash = editor3DContentHash(writtenObjects, writtenParts);
+            editor3DAutosave(level);
+        }
+        return 'written';
     }
     saveText(text, record.fileName, 'application/json');
     return 'downloaded';
@@ -2221,7 +2234,8 @@ function editor3DPress(mouse, ray, shift)
     }
     if (editor3DBrush)
     {
-        editor3DPlaceAt(editor3DBrush, ray);
+        // the brush stays when nothing was placed, on nothing or on a level whose autosave waits
+        if (!editor3DPlaceAt(editor3DBrush, ray)) return;
         shift || (editor3DBrush = undefined);
         editor3DTool = 'move';
         return;
@@ -2252,14 +2266,15 @@ function editor3DPress(mouse, ray, shift)
         start: editor3DDragStart(), level: editor3DPlanePoint(ray, pos, normal) ?? pos};
 }
 
-// place an object of a type where a ray lands, standing on what is there, snapped, selected, as one undo
+// place an object of a type where a ray lands, standing on what is there, snapped, selected, as one undo; true
+// when one was placed
 function editor3DPlaceAt(type, ray)
 {
     const point = editor3DSurface(ray);
-    if (!point) return;
+    if (!point) return false;
     editor3DStrokeEnd();
     const id = editor3DPlace(type, point);
-    if (id === undefined) return;
+    if (id === undefined) return false;
     const object = editor3DObject(id), size = editor3DSize(object), offset = editor3DBoxOffset(object);
     const ignore = new Set(editor3DParts(editor3DInstances.get(id)));
     const snapped = editor3DSnapPos(editor3DRest(point, size), size, editor3DGrid ? editor3DMoveStep : 0);
@@ -2268,6 +2283,7 @@ function editor3DPlaceAt(type, ray)
     const to = vec3(snapped.x, y, snapped.z).subtract(offset);
     editor3DChange((list)=> editor3DSetTransform(list.find((o)=> o.id === id), to));
     editor3DStrokeEnd();
+    return true;
 }
 
 // the mouse moved with a drag held: the selection goes from where the drag started to where the mouse says
@@ -2600,7 +2616,12 @@ if (debug && globalThis.document?.addEventListener)
 {
     document.addEventListener('keydown', (e)=>
     {
-        if (editor3DIsOpen && (e.ctrlKey || e.metaKey) && /^Key[ZYCXVDG]$/.test(e.code) && !editorIsTextField(e.target))
+        if (!editor3DIsOpen || editorIsTextField(e.target)) return;
+        const ctrl = e.ctrlKey || e.metaKey;
+        // a key of the game's own, Ctrl+S or F5, is the game's: its action runs in the update, after this
+        const own = Object.keys(levelEditor.keys).some((spelled)=> spelled.startsWith('ctrl+') === ctrl &&
+            editor3DKeyCode(spelled.slice(spelled.startsWith('ctrl+') ? 5 : 0)) === e.code);
+        if (own || ctrl && /^Key[ZYCXVDG]$/.test(e.code))
             e.preventDefault();
     });
     // a page going away writes what is waiting, the last event it is sure to get

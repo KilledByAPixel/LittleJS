@@ -511,9 +511,13 @@ function setCameraPos(pos)
 function setCameraAngle(angle) { cameraAngle = angle; }
 
 /** Set scale of camera in world space
- *  @param {number} scale
+ *  @param {number} scale - Pixels per world unit, above 0
  *  @memberof Settings */
-function setCameraScale(scale) { cameraScale = scale; }
+function setCameraScale(scale)
+{
+    ASSERT(scale > 0, 'camera scale must be above 0');
+    cameraScale = scale;
+}
 
 /** Set how far a full camera shake moves the view, in world units
  *  @param {number} distance
@@ -615,7 +619,11 @@ function setTilesPixelated(pixelated) { tilesPixelated = pixelated; }
  *  // render at native resolution, capped so phones don't pay for 3x
  *  setCanvasPixelRatio(min(devicePixelRatio, 2));
  *  @memberof Settings */
-function setCanvasPixelRatio(pixelRatio) { canvasPixelRatio = pixelRatio; }
+function setCanvasPixelRatio(pixelRatio)
+{
+    ASSERT(pixelRatio === undefined || pixelRatio > 0, 'pixel ratio must be above 0, or undefined to track the device');
+    canvasPixelRatio = pixelRatio;
+}
 
 /** Get the pixel ratio currently applied to the canvas backing store
  *  - Resolves canvasPixelRatio, falling back to devicePixelRatio when it is undefined
@@ -639,7 +647,11 @@ function setShowSplashScreen(show) { showSplashScreen = show; }
 /** Set the loading screen, drawn after the splash while the game loads, once that takes more than half a second
  *  @param {LoadingScreenCallback} [callback] - Draws on mainContext given the part done, 0 to 1; undefined for none
  *  @memberof Settings */
-function setLoadingScreen(callback) { loadingScreen = callback; }
+function setLoadingScreen(callback)
+{
+    ASSERT(!callback || typeof callback == 'function', 'setLoadingScreen takes a function or undefined');
+    loadingScreen = callback;
+}
 
 /** Set to disable rendering, audio, and input for servers, must be set before engineInit
  *  @param {boolean} headless
@@ -704,6 +716,7 @@ function setGLEnable(enable)
         glEnableBeforeLoss = enable;
         return;
     }
+    !enable && glEnable && glFlush(); // what was queued is drawn, not kept for when it is on again
     glEnable = enable;
     if (glCanvas) // hide glCanvas if WebGL is disabled
         glCanvas.style.display = enable ? '' : 'none';
@@ -776,12 +789,20 @@ function setObjectDefaultRestitution(restitution) { objectDefaultRestitution = r
 /** Set the fraction of sliding speed objects keep each frame on the ground, 1 is no friction, 0 stops at once
  *  @param {number} friction
  *  @memberof Settings */
-function setObjectDefaultFriction(friction) { objectDefaultFriction = friction; }
+function setObjectDefaultFriction(friction)
+{
+    ASSERT(friction >= 0 && friction <= 1, 'friction must be 0 to 1, the fraction of sliding speed kept each frame');
+    objectDefaultFriction = friction;
+}
 
 /** Set max speed to avoid fast objects missing collisions
- *  @param {number} speed
+ *  @param {number} speed - 0 or more
  *  @memberof Settings */
-function setObjectMaxSpeed(speed) { objectMaxSpeed = speed; }
+function setObjectMaxSpeed(speed)
+{
+    ASSERT(speed >= 0, 'max speed must be 0 or more');
+    objectMaxSpeed = speed;
+}
 
 /** Set how much gravity to apply to objects
  *  @param {Vector2} newGravity

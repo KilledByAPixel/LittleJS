@@ -322,7 +322,7 @@ class NewgroundsPlugin
      *  @param {boolean} [social] - If true, only the scores of the user and their friends, the logged in player when user is left out
      *  @param {number} [skip]    - Number of scores to skip over
      *  @param {number} [limit]   - Number of scores to include in the list
-     *  @param {string} [period]  - 'D' today, which the server assumes when left out, 'W' this week, 'M' this month, 'Y' this year or 'A' all time
+     *  @param {'D'|'W'|'M'|'Y'|'A'} [period]  - 'D' today, which the server assumes when left out, 'W' this week, 'M' this month, 'Y' this year or 'A' all time
      *  @return {Promise<Object>} - The response JSON object, undefined when the call failed; the scores are in
      *    result.data.scores, each with user.name, value and formatted_value; without a user or social it is the whole board
      */

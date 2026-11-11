@@ -327,7 +327,7 @@ function tweakRow(t)
 
     tweakElement('div', row, '', label);
     if (t.type === 'number')
-        return tweakNumber(row, '', t.get, t.set, t.options, save);
+        return tweakNumber(row, '', ()=> t.get(), (n)=> t.set(n), t.options, save); // added again, the new object's
 
     // a part of a vector or color is a number of its own, set as a new copy with that part changed
     const part = (key, options)=> tweakNumber(row, key, ()=> t.get()?.[key],

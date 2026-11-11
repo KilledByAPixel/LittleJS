@@ -693,9 +693,9 @@ function glSetTextureData(texture, image, pixelated=tilesPixelated)
 {
     if (!glContext) return;
 
-    // build the texture, after drawing what was queued with the old image
+    // build the texture, after drawing what was queued with the old image, or into the texture as the target
     ASSERT(image?.width > 0, 'Invalid image data.');
-    texture === glActiveTexture && glFlush();
+    (texture === glActiveTexture || texture === glRenderTarget) && glFlush();
     glContext.bindTexture(glContext.TEXTURE_2D, texture);
     if (typeof ImageBitmap != 'undefined' && image instanceof ImageBitmap)
     {
@@ -827,9 +827,10 @@ function glFlush()
                 const uniform = (name)=> glUniformLocation(program, name);
                 glContext.uniformMatrix4fv(uniform('m'), false, glTransform);
                 glContext.uniform1f(uniform('iTime'), time);
-                // a render target is the size glPreRender gave its viewport
-                const width = glRenderTarget ? mainCanvasSize.x : glCanvas.width;
-                const height = glRenderTarget ? mainCanvasSize.y : glCanvas.height;
+                // a render target is the size glPreRender gave its viewport, the light system's lightmap its own
+                const base = !glRenderTarget && glRenderTargetBase?.[1];
+                const width = glRenderTarget ? mainCanvasSize.x : base ? base.x : glCanvas.width;
+                const height = glRenderTarget ? mainCanvasSize.y : base ? base.y : glCanvas.height;
                 glContext.uniform3f(uniform('iResolution'), width, height, 1);
                 glContext.uniform1i(uniform('premultipliedTexture'), +premultiplied);
                 program === glShader || glShaderSendUniforms(glBatchShader, program, uniform);
@@ -1101,8 +1102,8 @@ function glSetRenderTarget(texture, clear=false)
 }
 
 /** Clear out a rectangle area of the WebGL canvas or render target
- *  - In framebuffer pixels from the bottom left: backing store pixels on the canvas, texture pixels in a
- *    render target
+ *  - In framebuffer pixels: backing store pixels from the bottom left on the canvas, texture pixels from the top
+ *    left in a render target, where draws are flipped so row 0 is the top of the picture
  *  @param {number} x
  *  @param {number} y
  *  @param {number} width

@@ -24,7 +24,8 @@
  * - setCollision takes the same flags as in 2D, but the solid collision happens in 3D against size3D
  * - The solid box turns with rotation3D, so a turned wall or a ramp collides as it looks; resting on one no steeper
  *   than groundAngle stands there
- * - Its tile and raycast halves are 2D only so they default off here, and a child sits solid collision out
+ * - Its tile and raycast halves are 2D only, collideLevel collides with the 3D level instead: the height maps, voxel
+ *   maps and mesh colliders; a child sits solid collision out
  * - A sync2D object collides in 2D instead, which needs the 2D size set as well as size3D
  * - setMesh swaps the mesh and frees the old one, for text and terrain that get built again
  * - addChild attaches the 3D transform, and a child's pos3D, rotation3D and scale3D are then relative to its parent,
@@ -197,7 +198,7 @@ class EngineObject3D extends EngineObject
         const solve = enablePhysicsSolver && !this.sync2D;
         const cap = this.clampSpeed && solve && (this.collideSolidObjects || this.collideLevel && this.mass) ?
             objectMaxSpeed : undefined; // 0 holds it still, as in 2D
-        // a moving object keeps out of the level, the height maps and voxel maps, from where it was before it moved,
+        // a moving object keeps out of the level, the height maps, voxel maps and mesh colliders, from where it was,
         // and a solid it hits sends it back to the side it came from
         const oldPos = (this.collideLevel || this.collideSolidObjects) && this.mass && !this.sync2D ?
             this.pos3D.copy() : undefined;
@@ -245,12 +246,14 @@ class EngineObject3D extends EngineObject
 
     /** Set how this object collides, the same flags as in 2D
      *  - Solid collision happens in 3D here, against size3D boxes or spheres; a child sits it out
-     *  - The boxes turn with rotation3D, against height maps and voxel maps an object is still its upright box
+     *  - The boxes turn with rotation3D; against height maps and voxel maps an object is still its upright box, and
+     *    against a MeshCollider a capsule
      *  - A sync2D object collides in 2D instead, against the 2D size, so set that as well as size3D
      *  @param {boolean} [collideSolidObjects] - Take part in solid collision
      *  @param {boolean} [isSolid] - Block other objects, a pair where neither one blocks passes through;
      *    blocking needs collideSolidObjects, so isSolid on its own is not allowed
-     *  @param {boolean} [collideLevel] - Collide with the level, the height maps and voxel maps, or the 2D tile layers
+     *  @param {boolean} [collideLevel] - Collide with the level, the height maps, voxel maps and mesh colliders, or
+     *    the 2D tile layers
      *    for a sync2D object
      *  @param {boolean} [collideRaycast] - Raycasts, 2D only; 3D has render3D.pick and engineObjectsRaycast3D */
     setCollision(collideSolidObjects=true, isSolid=true, collideLevel=true, collideRaycast=false)
@@ -535,7 +538,8 @@ function render3DMove(o, cap)
     // damped first and gravity added after, the order EngineObject.updatePhysics uses,
     // so the same mass, damping and gravity fall the same way in both
     v.x *= d, v.y *= d, v.z *= d;
-    if (o.mass && !o.sync2D) // a 2D driven object gets the 2D gravity instead
+    // a 2D driven object gets the 2D gravity instead, and a child none, its parent holds it
+    if (o.mass && !o.sync2D && !o.parent)
     {
         const g = render3D.gravity, s = o.gravityScale;
         v.x += g.x * s, v.y += g.y * s, v.z += g.z * s;
@@ -1087,7 +1091,7 @@ const render3DRaycastCenter = vec3();
 function render3DRaycastObject(ray, o)
 {
     if (o.destroyed || !(o instanceof EngineObject3D)) return;
-    // a height map or voxel map is hit on its surface, not its box
+    // a height map, voxel map or mesh collider is hit on its surface, not its box
     if (o instanceof HeightMap || o instanceof VoxelMap || o instanceof MeshCollider) return o.levelRaycast3D(ray);
     if (!(o.mesh || o.tileInfo)) return;
     if (o instanceof InstancedMesh3D) return; // its instances are not objects, and its one sphere is not a thing to hit
@@ -1200,7 +1204,8 @@ function render3DRaycastDisc(ray, center, radius)
  * - The ray has no end, so everything along it counts however far away it is
  * - Use render3D.pick for the nearest one on its own, with the distance to it
  * @param {Ray3D} ray - From render3D.screenToRay, or any ray
- * @param {Array<EngineObject>} [objects] - Defaults to every object; only those with a mesh or a sprite count
+ * @param {Array<EngineObject>} [objects] - Defaults to every object; only those with a mesh or a sprite count, and
+ *   the height maps, voxel maps and mesh colliders, on their surfaces
  * @return {Array<EngineObject3D>}
  * @memberof Render3D
  */
@@ -1511,7 +1516,7 @@ class InstancedMesh3D extends EngineObject3D
         if (r.transparentQueue) // sorted as one thing with the other transparent draws
             return r.queueTransparent(this.getWorldPos3D(), ()=> this.render3D());
         if (!mesh || !this.count || !render3DCanDraw()) return;
-        if (r.shadowPass && !r.lighting) return; // unlit things cast no shadow
+        if (r.shadowPass && !r.depthPass && !r.lighting) return; // unlit casts no shadow, but is in the depth
         render3DMeshUpload(mesh);
         if (!mesh.bufferCount) return;
         if (r.frustumCulling && !render3DSphereVisible(0, 0, 0, this.radius)) return;

@@ -149,7 +149,8 @@ function tile(index=0, size=tileDefaultSize, texture=0, padding=tileDefaultPaddi
     let x, y;
     if (typeof index === 'number')
     {
-        const cols = textureInfo.size.x / sizePaddedX |0;
+        // at least one, so the first tile of a texture no wider than it is its corner, not NaN
+        const cols = max(1, textureInfo.size.x / sizePaddedX |0);
         x = index % cols;
         y = index / cols |0;
     }
@@ -430,7 +431,8 @@ class SpriteAnimation
         this.frameTime = frameTime;
         /** @property {number} - Rate multiplier, 2 plays twice as fast; set it before starting */
         this.speed = 1;
-        /** @property {string} - How it runs: 'loop', 'once' or 'pingPong', set by loop, play and pingPong */
+        /** @property {'loop'|'once'|'pingPong'} - How it runs, set by loop, play and pingPong
+         *  @type {'loop'|'once'|'pingPong'} */
         this.mode = 'loop';
         /** @property {number} - Engine time it started at */
         this.startTime = time;
@@ -465,7 +467,7 @@ class SpriteAnimation
     stop() { this.heldFrame = this.frame; return this; }
 
     /** Start over from the first frame in a mode, with no end callback
-     *  @param {string} [mode] - 'loop', 'once' or 'pingPong', the current mode when left out
+     *  @param {'loop'|'once'|'pingPong'} [mode] - The current mode when left out
      *  @return {SpriteAnimation} */
     restart(mode=this.mode)
     {
@@ -679,7 +681,8 @@ class Shader
         this.shadowProgram3D = undefined;
         /** @property {boolean} - In 2D, write what mainImage gives as it is, with the draw's alpha, leaving out the
          *  draw's color and additive color, for data rather than a picture, as the light system's normal pass does;
-         *  set it before the shader first draws, its program is built then */
+         *  its output is taken as straight color, not premultiplied, whatever the texture; set it before the shader
+         *  first draws, its program is built then */
         this.noTint = false;
         // each uniform's GLSL type, fixed by its first value, and its value as the numbers sent, which setUniform
         // changes and the version counts, so a program is sent them only when they changed since it last was
@@ -948,6 +951,7 @@ function drawTextureWrapped(pos, size, wrapCount, texture=0, color=WHITE,
             if (glSkipScreenSpace) return;
             [pos, size, angle] = screenToWorldTransform(pos, size, angle);
         }
+        ASSERT(!!textureInfo.glTexture, 'texture has no WebGL texture, draw it with useWebGL false');
         glSetTexture(textureInfo.glTexture);
         glDraw(pos.x, pos.y, size.x, size.y, angle,
             0, 0, wrapCount.x, wrapCount.y,
@@ -1015,7 +1019,7 @@ function drawTextureWrapped(pos, size, wrapCount, texture=0, color=WHITE,
 }
 
 /** Draw connected lines between a series of points
- *  @param {Array<Vector2>} points
+ *  @param {Array<Vector2>} points - In its own space, y up, in screen space too, where drawLine's ends go down
  *  @param {number}  [width]
  *  @param {Color}   [color=WHITE]
  *  @param {boolean} [wrap] - Should the last point connect to the first?
@@ -1132,7 +1136,7 @@ const drawRegularPolyPoints = [], drawRegularPolyPool = [];
 /** Draw colored polygon using passed in points
  *  - WebGL fills a polygon whose edges do not cross, concave or not; a self crossing one, like a star through its
  *    outer points, fills wrong there, so draw it as its simple outline or in parts
- *  @param {Array<Vector2>} points - Array of Vector2 points
+ *  @param {Array<Vector2>} points - In its own space, y up, in screen space too, where drawLine's ends go down
  *  @param {Color}   [color=WHITE]
  *  @param {number}  [lineWidth]
  *  @param {Color}   [lineColor=BLACK]

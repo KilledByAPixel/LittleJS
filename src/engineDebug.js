@@ -82,6 +82,9 @@ let debugPrimitives = [], debugClearCount = 0, debugPhysics = false, debugRaycas
 ///////////////////////////////////////////////////////////////////////////////
 // Debug helper functions
 
+// if an ASSERT is calling console.assert, which debugShowErrors makes throw for the game's own asserts
+let debugAsserting = false;
+
 /** Asserts if the expression is false, does nothing in release builds
  *  Halts execution if the assert fails and throws an error
  *  @param {*} assert - any value, the assert fails when it is falsy
@@ -90,7 +93,9 @@ let debugPrimitives = [], debugClearCount = 0, debugPhysics = false, debugRaycas
 function ASSERT(assert, ...output)
 {
     if (assert) return;
-    console.assert(assert, ...output)
+    debugAsserting = true; // the console says it, and the error below is what is thrown, debugShowErrors or not
+    try { console.assert(assert, ...output); }
+    finally { debugAsserting = false; }
     // the error says what went wrong, so an error box or overlay that shows only the error shows the message too: a
     // value with a toString of its own as that, a vec2 or a color, a plain object as JSON, an object of a class with
     // none by its class's name, each cut at 200 characters, so a whole level is not the message
@@ -303,12 +308,8 @@ function debugShowErrors()
     console.assert = (assertion, ...output)=>
     {
         originalAssert(assertion, ...output);
-        if (!assertion)
-        {
-            const message = output.join(' ');
-            const stack = new Error().stack;
-            throw 'Assertion failed!\n' + message + '\n' + stack;
-        }
+        if (!assertion && !debugAsserting) // an ASSERT throws its own error, which says what its values are
+            throw new Error('Assertion failed!\n' + output.join(' '));
     };
     onunhandledrejection = (event)=>
         showError(event.reason?.stack || event.reason);
@@ -396,7 +397,7 @@ function debugTilesLabel(layers)
 {
     if (!debugTiles) return '';
     const layer = layers[debugTiles - 2];
-    return layer ? ` (layer ${debugTiles - 1} of ${layers.length}, renderOrder ${layer.renderOrder}${layer instanceof TileCollisionLayer ? ', collision' : ''})` : ' (all)';
+    return layer ? ` (layer ${debugTiles - 1} of ${layers.length}, renderOrder ${layer.renderOrder}${layer instanceof TileCollisionLayer && layer.isSolid ? ', collision' : ''})` : ' (all)';
 }
 
 // Debug Tiles: each layer's bounds, then the collision value of every cell on screen, tinted by value, with the
@@ -408,7 +409,8 @@ function debugTileLayers(layers)
     const showValues = cameraScale >= 24;
     for (const layer of debugTileLayersSelected(layers))
     {
-        const isCollision = layer instanceof TileCollisionLayer, size = layer.size, pos = layer.pos;
+        // a layer the solid tests skip, a map's art, is not collision whatever values it has
+        const isCollision = layer instanceof TileCollisionLayer && layer.isSolid, size = layer.size, pos = layer.pos;
         const color = isCollision ? '#f80' : '#0cf';
         debugRect(pos.add(size.scale(.5)), size, color, 0, 0, false, false);
         const label = 'layer ' + (layers.indexOf(layer) + 1) + ', ' + size.x + 'x' + size.y + ', renderOrder ' + layer.renderOrder + (isCollision ? ', collision' : '');

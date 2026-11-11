@@ -379,7 +379,7 @@ function render3DFlushInstances(only)
         gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
         gl.bufferData(gl.ARRAY_BUFFER, mesh.instanceData, gl.DYNAMIC_DRAW, 0, count * RENDER3D_INSTANCE_FLOATS);
         const state = mesh.instanceState;
-        if (mesh.instanceMirrored !== undefined) // a drawMesh batch: culled by its mesh, wound by its matrices
+        if (mesh.instanceMirrored !== undefined) // a drawMesh or drawBillboard batch: culled by its mesh, wound by its matrices
             state.cullBackFaces = !mesh.doubleSided, state.mirrored = mesh.instanceMirrored;
         // a batch of sprites or particles, round from where each pixel is on its quad
         mesh.instanceBillboard && render3DBillboardState(state, state.roundLighting ? 2 : 1);
@@ -1021,10 +1021,11 @@ class Render3DPlugin
 
     /** Find the nearest object under a screen position or along a ray, for clicking on things
      *  - A mesh is hit on its triangles, the ones that face the ray as they are drawn, both sides of a doubleSided
-     *    mesh; a sprite is hit as the quad it draws, and a height map or a voxel map on its surface
+     *    mesh; a sprite is hit as the quad it draws, and a height map, voxel map or mesh collider on its surface
      *  - engineObjectsRaycast3D is the other half of this, every object along a ray instead of the nearest
      *  @param {Vector2|Ray3D} from - A screen position like mousePosScreen, or a ray to look along
-     *  @param {Array<EngineObject>} [objects] - Defaults to every object; only those with a mesh or a sprite count
+     *  @param {Array<EngineObject>} [objects] - Defaults to every object; only those with a mesh or a sprite count,
+     *    and the height maps, voxel maps and mesh colliders, on their surfaces
      *  @return {{object: EngineObject3D, distance: number}|undefined} */
     pick(from, objects=engineObjects)
     {
@@ -1114,7 +1115,7 @@ class Render3DPlugin
             return this.queueTransparent(m.getTranslation(), ()=> this.drawMesh(mesh, m, tileInfo, c));
         }
         if (!render3DCanDraw()) return;
-        if (this.shadowPass && !this.lighting) return; // unlit things cast no shadow
+        if (this.shadowPass && !this.depthPass && !this.lighting) return; // unlit casts no shadow, but is in the depth
         render3DMeshUpload(mesh);
         if (!mesh.bufferCount) return;
         const m = matrix.m;
@@ -1463,7 +1464,7 @@ class Render3DPlugin
             // an opaque sprite is one more instance of the shared quad, as a mesh's uses are: every sprite of a
             // sheet is one instanced draw at the end of the stage, with nothing written per corner; the shader
             // drops its see through texels, so it needs no sorting
-            if (!render3DCanDraw() || this.shadowPass && !this.lighting) return; // unlit things cast no shadow
+            if (!render3DCanDraw() || this.shadowPass && !this.depthPass && !this.lighting) return; // unlit: in depth, no shadow
             if (this.frustumCulling && !render3DSphereVisible(pos.x, pos.y, pos.z, hypot(size.x, size.y) / 2))
                 return;
             const quad = this.billboardMesh, cb = this.cameraBack, uv = render3DGetTileUVs(tileInfo);
@@ -2259,7 +2260,9 @@ class CubeMap
     /** Free its texture, which is made again if it is used after */
     dispose()
     {
-        this.glTexture && glContext?.deleteTexture(this.glTexture);
+        // a texture of a context lost since is gone with it
+        this.glTexture && this.contextGeneration === render3D?.contextGeneration &&
+            glContext?.deleteTexture(this.glTexture);
         this.glTexture = undefined;
         render3D?.cubeCaptures.delete(this);
     }
@@ -2751,9 +2754,8 @@ function render3DBindMesh(mesh)
 // the texture a draw samples: a tile's texture, a TextureInfo as it is, or undefined for white
 function render3DTextureOf(tileInfo) { return tileInfo instanceof TileInfo ? tileInfo.textureInfo : tileInfo; }
 
-// where a tile sits in its texture, pulled in slightly at the edges so neighbors do not bleed in
-// the level's solid geometry in 3D, the height maps and voxel maps that objects with collideLevel collide with, as
-// tileCollisionLayers is in 2D; each joins when made and leaves when destroyed
+// the level's solid geometry in 3D, the height maps, voxel maps and mesh colliders that objects with collideLevel
+// collide with, as tileCollisionLayers is in 2D; each joins when made and leaves when destroyed
 const render3DLevel = [];
 
 // take one of the level's parts out of it, when it is destroyed
@@ -2763,13 +2765,15 @@ function render3DLevelLeave(o)
     i >= 0 && render3DLevel.splice(i, 1);
 }
 
-// the level's parts are looked up in world space, so they stay upright and unscaled at the root
+// a height map's and a voxel map's cells are looked up in world space, so they stay upright and unscaled at the
+// root; a mesh collider bakes its own turn and scale and calls none of this
 function render3DLevelAssertPlaced(o)
 {
     ASSERT(!o.parent && !o.rotation3D.lengthSquared() && o.scale3D.x === 1 && o.scale3D.y === 1 && o.scale3D.z === 1,
         'a height map or voxel map stays upright and unscaled at the root, its lookups are in world space');
 }
 
+// where a tile sits in its texture, pulled in slightly at the edges so neighbors do not bleed in
 // this returns one shared object, so read it before calling again
 const render3DTileUVRect = {x:0, y:0, w:1, h:1};
 // the tiles of objects made from a whole TextureInfo, they cover all of it even after the texture is resized
@@ -3197,7 +3201,7 @@ function render3DBeginStrip(count, tileInfo, billboard=false)
 {
     const r = render3D;
     if (!render3DCanDraw()) return;
-    if (r.shadowPass && !r.lighting) return; // unlit things cast no shadow
+    if (r.shadowPass && !r.depthPass && !r.lighting) return; // unlit casts no shadow, but is in the depth
     ASSERT(count <= RENDER3D_MAX_STREAM_VERTS, 'strip is too large for the stream, bake it into a mesh');
     if (count > RENDER3D_MAX_STREAM_VERTS) return;
     const textureInfo = render3DTextureOf(tileInfo);

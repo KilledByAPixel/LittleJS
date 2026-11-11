@@ -172,7 +172,8 @@ function saveText(text, filename='text', type='text/plain')
  *  @param {number} width - In pixels
  *  @param {number} [height] - In pixels, defaults to the width for a square
  *  @param {boolean} [willReadFrequently] - Keep it in software, faster when getImageData is called on it often
- *  @return {OffscreenCanvasRenderingContext2D}
+ *  @return {OffscreenCanvasRenderingContext2D} An HTMLCanvasElement's context where there is no OffscreenCanvas, as
+ *    in Safari before 16.4, which has the same drawing calls
  *  @memberof Utilities */
 function createCanvasContext(width, height=width, willReadFrequently=false)
 {
@@ -229,7 +230,7 @@ function saveDataURL(url, filename='download', revokeTime)
 /** Share content using the native share dialog if available
  *  @param {string} title - title of the share
  *  @param {string} url - url to share
- *  @param {Function} [callback] - Called when share is complete
+ *  @param {function(): void} [callback] - Called when share is complete
  *  @memberof Utilities */
 function shareURL(title, url, callback)
 {

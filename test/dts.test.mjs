@@ -59,7 +59,7 @@ test('dist/littlejs.d.ts keeps Map types, built with a library that has them', (
 {
     // without a target tsc types with ES5's library, where a Map is any, which a dependency declaring Map hid
     const dts = readFileSync('dist/littlejs.d.ts', 'utf8');
-    assert.match(dts, /edgeListFixtures: Map<any, any>;/);
+    assert.match(dts, /edgeListFixtures: Map<number, Array<Vector2>>;/);
     assert.match(dts, /files\?: Map<string, Blob>\): Promise<GLTFModel>/);
 });
 
@@ -73,7 +73,7 @@ test('dist/littlejs.d.ts has no more any types than it had, so a new one is type
     // counted in the types, not the doc comments; what is left is user data (save data, JSON, a level object's
     // properties), input checks, and the objects of Box2D, three.js and the platforms' APIs, which have no types here;
     // lower the ceiling when a change takes some away
-    const ceiling = 85;
+    const ceiling = 83;
     let count = 0, inComment = false;
     for (const line of readFileSync('dist/littlejs.d.ts', 'utf8').split('\n').map(line => line.trim()))
     {

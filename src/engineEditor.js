@@ -283,7 +283,8 @@ class LevelEditor
      *  @param {string} key - A letter or digit, 'k', or a key's name in any case, 'Delete', 'F2', 'Enter', 'Space';
      *    'ctrl+k' with Ctrl or Cmd
      *  @param {function(boolean): unknown} action - Called with whether Shift is held; returning false says it did
-     *    nothing, and the key is left to the browser
+     *    nothing, and the key is left to the browser in the 2D editor; the 3D editor reads keys in its update, after
+     *    the browser has them, so it keeps every key added here from the browser
      *  @param {string} [helpLine] - A line for the editor's help */
     addKey(key, action, helpLine)
     {
@@ -1467,12 +1468,13 @@ function editorChangeObjects(layer, change)
     const before = editorObjectList(layer), after = editorObjectsCopy(before);
     change(after);
     if (editorSameData(before, after)) return false;
-    editorSetObjects(layer, after);
+    // in the stroke first, so a constructor that throws as the objects are made is undone
     const last = editorStroke?.[editorStroke.length - 1];
     if (last?.objectLayer === layer)
         last.after = after;
     else
         (editorStroke ||= []).push({objectLayer: layer, before, after});
+    editorSetObjects(layer, after);
     return true;
 }
 
@@ -2649,7 +2651,9 @@ function editorOnKeyDown(e)
     // a key of the game's own first, it takes the place of one of the editor's
     const ctrl = e.ctrlKey || e.metaKey, own = levelEditor.keys[(ctrl ? 'ctrl+' : '') + key];
     const action = own ? (shift)=> own.action.call(levelEditor, shift) : (ctrl ? editorCtrlKeys : editorKeys)[key];
-    if (action && action(e.shiftKey) !== false)
+    if (action && editorObjectDrag)
+        e.preventDefault(); // the keys wait for a drag of objects to let go, an undo would be moved again
+    else if (action && action(e.shiftKey) !== false)
         e.preventDefault();
 }
 
@@ -2978,7 +2982,7 @@ function editorToolAt()
     const pos = screenToWorld(editorMouseScreen);
     return {pos, cell: layer && !editorMouseOnPanel ? editorCellAt(layer.live, pos) || undefined : undefined,
         ray: undefined, shift: keyIsDown('ShiftLeft') || keyIsDown('ShiftRight'),
-        ctrl: keyIsDown('ControlLeft') || keyIsDown('ControlRight')};
+        ctrl: keyIsDown('ControlLeft') || keyIsDown('ControlRight') || keyIsDown('MetaLeft') || keyIsDown('MetaRight')};
 }
 
 // the game's tool, when one is on: the left button is its, a press, a drag and a release one undo, the right

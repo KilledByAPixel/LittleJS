@@ -429,7 +429,7 @@ class VoxelMap extends EngineObject3D
             if (t0 > enter) enter = t0, entryAxis = k;
             exit = min(exit, t1);
         }
-        if (enter > exit) return;
+        if (enter >= exit) return; // a miss, or a touch of its outside, as a ray leaving from its far face
 
         // walk the cells, stepping across whichever cell edge comes next
         const start = o.add(d.scale(enter)), cell = [], step = [], next = [], delta = [];

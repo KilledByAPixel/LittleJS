@@ -371,6 +371,7 @@ class EngineObject
         // physics sanity checks
         ASSERT(this.angleDamping >= 0 && this.angleDamping <= 1, 'angleDamping must be 0 to 1, the fraction kept each frame');
         ASSERT(this.damping >= 0 && this.damping <= 1, 'damping must be 0 to 1, the fraction of velocity kept each frame');
+        ASSERT(this.friction >= 0 && this.friction <= 1, 'friction must be 0 to 1, the fraction of sliding speed kept each frame');
 
         // apply physics; only collision needs where the object was, so only then is it copied
         const solve = enablePhysicsSolver && this.mass;

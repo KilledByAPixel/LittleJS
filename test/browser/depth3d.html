@@ -7,7 +7,8 @@
 'use strict';
 
 // with render3D.depthTexture on, a post process shader reads how far the scene is with sceneDepth: a box 10 away
-// reads near, a box 30 away reads farther, and where there is nothing it reads far
+// reads near, a box 30 away reads farther, and where there is nothing it reads far; an unlit box drawn in
+// onRenderOpaque is in it too, it is only left out of the shadows
 // the shader shows the distance as a brightness, 1 at 40 units or more
 smokeRun(async ()=>
 {
@@ -26,6 +27,13 @@ smokeRun(async ()=>
         near.scale3D = vec3(3);
         const far = new EngineObject3D(vec3(9, 0, -30), render3D.boxMesh);
         far.scale3D = vec3(9);
+        const unlitMatrix = Matrix4.translation(vec3(0, 0, -15)).multiply(Matrix4.scaling(vec3(2)));
+        render3D.onRenderOpaque = ()=>
+        {
+            render3D.lighting = false;
+            render3D.drawMesh(render3D.boxMesh, unlitMatrix);
+            render3D.lighting = true;
+        };
         new PostProcessPlugin(`
             void mainImage(out vec4 c, vec2 p)
             {
@@ -42,6 +50,8 @@ smokeRun(async ()=>
     check('a near box reads near, its front 8.5 away', Math.abs(near - 8.5 / 40 * 255) < 20, near);
     check('a far box reads farther, its front 25.5 away', Math.abs(far - 25.5 / 40 * 255) < 25, far);
     check('where nothing is it reads far', nothing > 240, nothing);
+    const unlit = smokePixel(.5, .5)[0];
+    check('an unlit box reads where it is, its front 14 away', Math.abs(unlit - 14 / 40 * 255) < 20, unlit);
     checkGLError();
 });
 </script>

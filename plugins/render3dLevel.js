@@ -588,7 +588,7 @@ class Prefab3D extends EngineObject3D
         this.originOffset = vec3();
         /** @type {Array<Level3DObject>} */
         this.partObjects = []; // the prefab's object of each part
-        this.partsPlaced = ''; // where the handle was when its parts were last placed, undefined parts not made
+        this.partsPlaced = ''; // where the handle was when its parts were last placed, '' before they are
         this.partsMade = false;
     }
 

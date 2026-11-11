@@ -32,6 +32,7 @@ let sceneCurrent, sceneLeaving = false, scenePluginAdded = false;
 function setScene(scene)
 {
     ASSERT(!sceneLeaving, 'setScene can not be called from a scene leave');
+    if (sceneLeaving) return; // a release build, the leave would call itself till the stack runs out
     if (!scenePluginAdded)
     {
         scenePluginAdded = true;
@@ -56,6 +57,6 @@ function setScene(scene)
 function getScene() { return sceneCurrent; }
 
 // the plugin hooks, update skips the frozen ticks that skip gameUpdate
-function sceneUpdate() { paused || !timeScale || sceneCurrent?.update?.(); }
+function sceneUpdate() { paused || engineFrozenTick || sceneCurrent?.update?.(); }
 function sceneRender() { sceneCurrent?.render?.(); }
 function sceneRenderPost() { sceneCurrent?.renderPost?.(); }

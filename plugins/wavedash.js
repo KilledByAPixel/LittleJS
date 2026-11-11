@@ -116,7 +116,7 @@ class WavedashMedal extends Medal
 class WavedashPlugin
 {
     /** Start the Wavedash SDK when the game is on Wavedash, and make its leaderboards
-     *  @param {Object<string, {lowerWins?: boolean, display?: string}>} [leaderboards] - The game's leaderboards by
+     *  @param {Object<string, {lowerWins?: boolean, display?: 'number'|'seconds'|'milliseconds'|'ticks'}>} [leaderboards] - The game's leaderboards by
      *    name: lowerWins for times and golf, where a lower score is better, higher wins when left out; display how
      *    Wavedash shows a score, 'number', 'seconds', 'milliseconds' or 'ticks' (60 a second), 'number' when left out
      */
@@ -130,12 +130,12 @@ class WavedashPlugin
          *  has made or found it, undefined when it could not
          *  @type {Object<string, Promise<string|undefined>>} */
         this.leaderboards = Object.create(null); // no inherited names, a board may be called constructor
-        /** @type {Object<string, {lowerWins?: boolean, display?: string}>} */
+        /** @type {Object<string, {lowerWins?: boolean, display?: 'number'|'seconds'|'milliseconds'|'ticks'}>} */
         this.leaderboardSettings = leaderboards; // how each one sorts and shows its scores, read as its own entries
         /** @type {Set<string>} */
         this.achievementsSent = new Set; // the achievements Wavedash took this visit, or refused for good
         /** @type {Object<string, number>} */
-        this.achievementTries = Object.create(null); // how many times each one not taken yet was sent
+        this.achievementTries = Object.create(null); // how many retries each one not taken yet was sent in
         /** @type {number|undefined} */
         this.achievementRetry = undefined; // the timer that sends refused ones again
         /** @type {Promise<boolean>|undefined} */
@@ -432,9 +432,11 @@ class WavedashPlugin
 
     /** Send every unlocked WavedashMedal's achievement Wavedash has not taken yet, again every two seconds while it
      *  refuses some, as it does until it has loaded the player's achievements; one refused for about a minute is
-     *  taken as an identifier Wavedash does not have, said once in the console, and not sent again this visit
+     *  taken as an identifier Wavedash does not have, said once in the console, and not sent again this visit; only
+     *  the retries count, so many unlocked at once do not use them up
+     *  @param {boolean} [retry] - Sent by the retry timer
      *  @ignore */
-    sendAchievements()
+    sendAchievements(retry=false)
     {
         if (!this.isActive() || debugMedals) return;
         let refused = false;
@@ -445,7 +447,7 @@ class WavedashPlugin
             const result = this.call('setAchievement', achievement, true);
             if (result === true || result?.['success'] === true)
                 this.achievementsSent.add(achievement);
-            else if ((this.achievementTries[achievement] = (this.achievementTries[achievement] || 0) + 1) < wavedashRetries)
+            else if ((this.achievementTries[achievement] = (this.achievementTries[achievement] || 0) + +retry) < wavedashRetries)
                 refused = true;
             else
             {
@@ -455,6 +457,6 @@ class WavedashPlugin
             }
         });
         clearTimeout(this.achievementRetry);
-        this.achievementRetry = refused ? setTimeout(()=> this.sendAchievements(), wavedashRetryMS) : undefined;
+        this.achievementRetry = refused ? setTimeout(()=> this.sendAchievements(true), wavedashRetryMS) : undefined;
     }
 }

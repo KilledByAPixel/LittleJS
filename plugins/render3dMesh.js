@@ -656,7 +656,8 @@ class Mesh
         return this.transform(Matrix4.scaling(vec3(scale)));
     }
 
-    /** Measure the bounding sphere around the origin into radius, called by upload
+    /** Measure the bounding sphere around the origin into radius; upload measures it as it packs, and calls this
+     *  only with no WebGL
      *  @return {number} */
     computeRadius()
     {

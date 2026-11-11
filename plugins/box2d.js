@@ -448,6 +448,7 @@ class Box2dObject extends EngineObject
          *  @type {Array<Array<Vector2>>} */
         this.edgeLoops = [];
         // the fixtures of the edge lists and loops, by pointer, each to the points it is drawn with
+        /** @type {Map<number, Array<Vector2>>} */
         this.edgeListFixtures = new Map;
         /** @property {number} - How fast its surface moves, clockwise around it, in world units per second, like a
          *  conveyor belt: what touches it is carried along by friction, to the right across its top when positive;
@@ -521,7 +522,7 @@ class Box2dObject extends EngineObject
      *  @param {Color}   [lineColor]
      *  @param {number}  [lineWidth]
      *  @param {boolean} [useWebGL=glEnable]
-     *  @param {CanvasRenderingContext2D} [context] */
+     *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context] */
     drawFixtures(color=WHITE, lineColor=BLACK, lineWidth=.1, useWebGL, context)
     {
         // draw each fixture, but the edges of an edge list or loop, which draw below as one line
@@ -542,8 +543,9 @@ class Box2dObject extends EngineObject
     ///////////////////////////////////////////////////////////////////////////////
     // physics contact callbacks
 
-    /** Called when a contact begins, while the world steps: a destroy or a setter waits until the step is done,
-     *  and creating objects, fixtures or joints must wait until after the step
+    /** Called when a contact begins, while the world steps: a destroy, and a setter that moves a body or changes
+     *  its type or mass, waits until the step is done, and creating objects, fixtures or joints must wait until after
+     *  the step
      *  - The fixtures say which shapes touched, the same objects addBox and the others returned, so a small sensor
      *    under a player's feet can tell standing on the ground from touching a wall
      *  - impactSpeed is how fast they were closing along the contact normal, spin included, in world units per
@@ -558,8 +560,9 @@ class Box2dObject extends EngineObject
      *  @param {Box2dContact} [contact] - Where they touched and how hard they hit */
     beginContact(otherObject, fixture, otherFixture, impactSpeed, contact) {}
 
-    /** Called when a contact ends, while the world steps or a body is destroyed: a destroy or a setter waits
-     *  until the step is done, and creating objects, fixtures or joints must wait until after the step
+    /** Called when a contact ends, while the world steps or a body is destroyed: a destroy, and a setter that
+     *  moves a body or changes its type or mass, waits until the step is done, and creating objects, fixtures or
+     *  joints must wait until after the step
      *  @param {Box2dObject} otherObject
      *  @param {b2Fixture} [fixture] - This object's fixture that touched
      *  @param {b2Fixture} [otherFixture] - The other object's fixture that touched */
@@ -1268,6 +1271,7 @@ class Box2dKinematicObject extends Box2dObject
  * Box2d Tile Layer
  * - adds Box2d support to tile layers
  * - creates static box2d fixtures for solid tiles, call buildCollision to rebuild them after the tiles change
+ * - every cell with collision is a box solid from all sides, a one way tile (setOneWay) included
  * @extends Box2dStaticObject
  * @memberof Box2D
  */
@@ -1377,6 +1381,11 @@ class Box2dRaycastResult
         this.fraction = fraction;
     }
 }
+
+// if either object of a joint to be made is destroyed, and a joint def with no bodies, which Box2dJoint makes a
+// destroyed joint, as it would be had the object gone after; a debug build asserts there
+const box2dJointGone = (objectA, objectB)=> !objectA.body || !objectB.body;
+const box2dJointGoneDef = ()=> new box2d.instance.b2DistanceJointDef();
 
 ///////////////////////////////////////////////////////////////////////////////
 /** 
@@ -1489,6 +1498,7 @@ class Box2dTargetJoint extends Box2dJoint
      *  @param {Vector2} worldPos */
     constructor(object, fixedObject, worldPos)
     {
+        if (box2dJointGone(object, fixedObject)) { super(box2dJointGoneDef()); return; } // made destroyed
         ASSERT(object.getBodyType() === box2d.bodyTypeDynamic, 'a target joint needs a dynamic object');
         object.setAwake();
         const jointDef = new box2d.instance.b2MouseJointDef();
@@ -1542,6 +1552,7 @@ class Box2dDistanceJoint extends Box2dJoint
      *  @param {boolean} [collide] */
     constructor(objectA, objectB, anchorA, anchorB, collide=false)
     {
+        if (box2dJointGone(objectA, objectB)) { super(box2dJointGoneDef()); return; } // made destroyed
         anchorA ||= box2d.vec2From(objectA.body.GetPosition());
         anchorB ||= box2d.vec2From(objectB.body.GetPosition());
         const localAnchorA = objectA.worldToLocal(anchorA);
@@ -1607,6 +1618,7 @@ class Box2dRopeJoint extends Box2dJoint
      *  @param {boolean} [collide] */
     constructor(objectA, objectB, anchorA, anchorB, extraLength=0, collide=false)
     {
+        if (box2dJointGone(objectA, objectB)) { super(box2dJointGoneDef()); return; } // made destroyed
         anchorA ||= box2d.vec2From(objectA.body.GetPosition());
         anchorB ||= box2d.vec2From(objectB.body.GetPosition());
         const localAnchorA = objectA.worldToLocal(anchorA);
@@ -1658,6 +1670,7 @@ class Box2dRevoluteJoint extends Box2dJoint
      *  @param {boolean} [collide] */
     constructor(objectA, objectB, anchor, collide=false)
     {
+        if (box2dJointGone(objectA, objectB)) { super(box2dJointGoneDef()); return; } // made destroyed
         anchor ||= box2d.vec2From(objectB.body.GetPosition());
         const localAnchorA = objectA.worldToLocal(anchor);
         const localAnchorB = objectB.worldToLocal(anchor);
@@ -1805,12 +1818,15 @@ class Box2dGearJoint extends Box2dJoint
             'a gear joint joins objectB of joint1 and objectB of joint2, pass those');
         const ratioSign = (joint1 instanceof Box2dRevoluteJoint) === (joint2 instanceof Box2dRevoluteJoint) ? 1 : -1;
         const jointDef = new box2d.instance.b2GearJointDef();
-        jointDef.set_bodyA(objectA.body);
-        jointDef.set_bodyB(objectB.body);
-        jointDef.set_joint1(joint1.box2dJoint);
-        jointDef.set_joint2(joint2.box2dJoint);
-        jointDef.set_ratio(ratio * ratioSign);
-        super(jointDef);
+        if (!box2dJointGone(objectA, objectB) && joint1.box2dJoint && joint2.box2dJoint)
+        {
+            jointDef.set_bodyA(objectA.body);
+            jointDef.set_bodyB(objectB.body);
+            jointDef.set_joint1(joint1.box2dJoint);
+            jointDef.set_joint2(joint2.box2dJoint);
+            jointDef.set_ratio(ratio * ratioSign);
+        }
+        super(jointDef); // with no bodies, when an object or a joint is gone, it is made destroyed
 
         /** @property {Box2dJoint} - The first joint geared, a revolute or prismatic joint */
         this.joint1 = joint1;
@@ -1858,6 +1874,7 @@ class Box2dPrismaticJoint extends Box2dJoint
      *  @param {boolean} [collide] */
     constructor(objectA, objectB, anchor, worldAxis=vec2(0,1), collide=false)
     {
+        if (box2dJointGone(objectA, objectB)) { super(box2dJointGoneDef()); return; } // made destroyed
         anchor ||= box2d.vec2From(objectB.body.GetPosition());
         const localAnchorA = objectA.worldToLocal(anchor);
         const localAnchorB = objectB.worldToLocal(anchor);
@@ -1973,6 +1990,7 @@ class Box2dWheelJoint extends Box2dJoint
      *  @param {boolean} [collide] */
     constructor(objectA, objectB, anchor, worldAxis=vec2(0,1), collide=false)
     {
+        if (box2dJointGone(objectA, objectB)) { super(box2dJointGoneDef()); return; } // made destroyed
         anchor ||= box2d.vec2From(objectB.body.GetPosition());
         const localAnchorA = objectA.worldToLocal(anchor);
         const localAnchorB = objectB.worldToLocal(anchor);
@@ -2070,6 +2088,8 @@ class Box2dWeldJoint extends Box2dJoint
      *  @param {boolean} [collide] */
     constructor(objectA, objectB, anchor, collide=false)
     {
+        if (box2dJointGone(objectA, objectB)) // made destroyed
+            { super(box2dJointGoneDef()); this.referenceAngle = 0; return; }
         anchor ||= box2d.vec2From(objectB.body.GetPosition());
         const localAnchorA = objectA.worldToLocal(anchor);
         const localAnchorB = objectB.worldToLocal(anchor);
@@ -2133,6 +2153,7 @@ class Box2dFrictionJoint extends Box2dJoint
      *  @param {boolean} [collide] */
     constructor(objectA, objectB, anchor, collide=false)
     {
+        if (box2dJointGone(objectA, objectB)) { super(box2dJointGoneDef()); return; } // made destroyed
         anchor ||= box2d.vec2From(objectB.body.GetPosition());
         const localAnchorA = objectA.worldToLocal(anchor);
         const localAnchorB = objectB.worldToLocal(anchor);
@@ -2192,6 +2213,7 @@ class Box2dPulleyJoint extends Box2dJoint
      *  @param {boolean} [collide] */
     constructor(objectA, objectB, groundAnchorA, groundAnchorB, anchorA, anchorB, ratio=1, collide=false)
     {
+        if (box2dJointGone(objectA, objectB)) { super(box2dJointGoneDef()); return; } // made destroyed
         anchorA ||= box2d.vec2From(objectA.body.GetPosition());
         anchorB ||= box2d.vec2From(objectB.body.GetPosition());
         const localAnchorA = objectA.worldToLocal(anchorA);
@@ -2255,6 +2277,7 @@ class Box2dMotorJoint extends Box2dJoint
      *  @param {Box2dObject} objectB */
     constructor(objectA, objectB)
     {
+        if (box2dJointGone(objectA, objectB)) { super(box2dJointGoneDef()); return; } // made destroyed
         const linearOffset = objectA.worldToLocal(box2d.vec2From(objectB.body.GetPosition()));
         const angularOffset = objectB.body.GetAngle() - objectA.body.GetAngle();
         const jointDef = new box2d.instance.b2MotorJointDef();
@@ -2642,7 +2665,7 @@ class Box2dPlugin
      *  @param {Color} [lineColor]
      *  @param {number} [lineWidth]
      *  @param {boolean} [useWebGL=glEnable]
-     *  @param {CanvasRenderingContext2D} [context] */
+     *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context] */
     drawFixture(fixture, pos, angle, color=WHITE, lineColor=BLACK, lineWidth=.1, useWebGL, context)
     {
         const shape = box2d.castShapeObject(fixture.GetShape());

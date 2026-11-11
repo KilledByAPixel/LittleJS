@@ -7,7 +7,6 @@
  * - Virtual on-screen gamepad for mobile devices
  * - Automatic gamepad vs keyboard/mouse detection
  * - Input event prevention for canvas focus
- * - Clipboard copy/paste support
  * @namespace Input
  */
 
@@ -687,13 +686,14 @@ function inputInit()
             if (soundEnable && !headlessMode && audioContext && !audioIsRunning())
                 audioResume();
 
-            if (!touchInputEnable)
+            if (!touchInputEnable || touchGamepadEnable && !touchGamepadPassthrough)
             {
-                // turned off mid touch, the finger that drove the mouse lets go of it
+                // off, or the touch gamepad owns touch: turned so mid touch, the finger that drove the mouse lets
+                // go of it, and the next touch to drive it presses
                 if (inputWasTouching && (inputData[0][0] & 1))
                     inputData[0][0] = inputData[0][0] & 2 | 4;
                 inputWasTouching = 0;
-                return;
+                if (!touchInputEnable) return;
             }
             inputLastTouchTime = performance.now();
 

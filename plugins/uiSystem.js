@@ -1795,8 +1795,8 @@ class UISlider extends UIObject
  * UIVideo - A UI object that plays video
  * @extends UIObject
  * @example
- * // Create a video player UI object
- * const video = new UIVideo(vec2(400, 300), vec2(320, 240), 'video.mp4', true);
+ * // Create a video player UI object, in the middle of the canvas
+ * const video = new UIVideo(vec2(), vec2(320, 240), 'video.mp4', true);
  * video.play();
  * @memberof UISystem
  */

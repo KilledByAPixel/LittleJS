@@ -96,7 +96,8 @@ function setPaused(isPaused=true) { paused = isPaused; }
 // the update running now is frozen, paused or at a time scale of 0, so what follows game time holds
 let engineFrozenTick = false;
 
-/** Frames drawn per second, smoothed over the last few seconds, in release builds too
+/** Display frames per second, the browser's animation frames whether or not one drew, smoothed over about a
+ *  third of a second, in release builds too
  *  @type {number}
  *  @memberof Engine */
 let averageFPS = 0;
@@ -461,10 +462,9 @@ function engineLoadingScreenDraw(elapsed)
  *  @param {GameCallback} [gameRenderPost] - Called after objects are rendered, use for drawing UI/overlays
  *  @param {Array<string>|string} [imageSources=[]] - List of image file paths to preload (e.g., ['player.png', 'tiles.png']), or one path
  *  @param {HTMLElement} [rootElement] - Root DOM element to attach canvas to, defaults to document.body; it is
- *                                       styled for a game (no scroll bars or selection, touch-action none),
- *                                       where its own inline style does not say otherwise
- *    It keeps its own inline styles and the canvas centers inside it, but the canvas is still sized from the window,
- *    so set canvasFixedSize or canvasMaxSize to fit a smaller element
+ *    styled for a game (no scroll bars or selection, touch-action none) where its own inline style does not say
+ *    otherwise, and the canvas centers inside it, but the canvas is still sized from the window, so set
+ *    canvasFixedSize or canvasMaxSize to fit a smaller element
  *  @example
  *  // Basic engine startup
  *  engineInit(
@@ -874,7 +874,7 @@ function engineUpdateCanvas()
     }
     else
     {
-        // setting the size also resets the context state, match that, what a game may have left on it too
+        // setting the size also resets the context state, match the parts a game is likely to have left on it
         mainContext.setTransform(1, 0, 0, 1, 0, 0);
         mainContext.globalCompositeOperation = 'source-over';
         mainContext.globalAlpha = 1;
