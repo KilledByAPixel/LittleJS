@@ -1928,6 +1928,13 @@ terrain.raycast(ray)                          // distance along a ray to where i
 terrain.getColor(pos3D) or (x, z)             // nearest sample color
 terrain.rows terrain.columns                  // samples along Z and X
 
+// Mesh collider - a mesh's triangles as level collision: floors, walls, ramps and rocks
+new MeshCollider(mesh, pos3D=vec3())          // objects with collideLevel land on it, slide along it and walk up
+        // it as on a HeightMap, as capsules as wide as their narrower side across and as tall as their height, or
+        // their sphere; draws nothing, so make an EngineObject3D with the same mesh, or any, to see it; any mesh,
+        // turned and scaled with the collider, both sides of a triangle; particles and picking hit it too
+collider.rebuild()                            // take the triangles from the mesh again after changing it
+
 // Voxel map - a 3D tile map, from the render3dVoxels plugin
 const map = new VoxelMap(pos3D=vec3(), mapSize=vec3(16), tileInfo=tile()) // a grid of blocks that draws itself and
         // that objects with collideLevel collide with; pos3D is its corner and a cell is 1 unit, it stays upright

@@ -185,6 +185,7 @@ export
     buildExtrude,
     buildText3D,
     HeightMap,
+    MeshCollider,
     VoxelMap,
     Light3D,
     DirectionalLight3D,

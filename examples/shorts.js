@@ -285,6 +285,7 @@ const exampleList =
     new ExampleInfo('3D Sync 2D', 'render3dSync2D.js', 'A 2D platformer with 2D physics, drawn in 3D', false, 'sync2D, 2D physics, platformer, tile collision, crates'),
     new ExampleInfo('3D Voxels', 'render3dVoxels.js', 'Walk, jump, dig and build in a voxel world', false, 'voxel, blocks, minecraft, first person, jump, VoxelMap'),
     new ExampleInfo('3D Collision', 'render3dCollision.js', 'Solid objects, bouncing and picking', false, 'solid, sphere, box, cylinder, picking'),
+    new ExampleInfo('3D Mesh Collider', 'render3dMeshCollider.js', 'Walk a level made of one mesh: ramps, stairs and walls', false, 'MeshCollider, collision, level, capsule, ramp, stairs, slope, groundAngle'),
     new ExampleInfo('3D First Person', 'render3dFirstPerson.js', 'Walk a maze with mouse look, WASD and a flashlight', false, 'first person, camera, maze, flashlight, spotlight, shadows, night, FirstPersonCamera3D, gamepad'),
     new ExampleInfo('3D Third Person', 'render3dThirdPerson.js', 'Run a ball around with a camera that swings behind it', false, 'third person, camera, follow, orbit, platformer, walls, ThirdPersonCamera3D'),
     new ExampleInfo('3D Lens Flare', 'render3dLensFlare.js', 'The sun flares across the screen and hides behind pillars', false, 'lens flare, sun, glow, ghosts, occlusion'),

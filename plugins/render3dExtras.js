@@ -695,6 +695,435 @@ class HeightMap extends EngineObject3D
     }
 }
 
+///////////////////////////////////////////////////////////////////////////////
+/**
+ * MeshCollider - A level shape made of a mesh's triangles, which objects with collideLevel land on, slide along and
+ * walk up, as on a HeightMap: a level's floors, walls, ramps and rocks, often a low poly mesh made for collision
+ * - It draws nothing: make an EngineObject3D with the same mesh to see it, or with a mesh of its own to show more
+ *   than collides; Debug Physics on the debug overlay draws its edges
+ * - An object collides with it as a capsule as wide as its narrower side across and as tall as its height, so it
+ *   rides up a step lower than its round bottom and over small bumps, and one with collideAsSphere3D as its sphere
+ * - Its triangles are taken from the mesh in world space where it is, through its pos3D, rotation3D and scale3D, and
+ *   taken again when it moves; call rebuild() after changing the mesh
+ * - Any mesh works, a strip, an indexed one, a loaded model or one given its vertex data; both sides of a triangle
+ *   collide
+ * - A fast object is moved in steps no longer than half its width, so it does not go through a thin wall
+ * - Particles with collideLevel hit it, render3D.pick and the camera's wall test hit its triangles
+ * @extends EngineObject3D
+ * @memberof Render3D
+ * @example
+ * const level = await loadOBJ('level-collision.obj');
+ * new MeshCollider(level.mesh);
+ */
+class MeshCollider extends EngineObject3D
+{
+    /** Make a mesh a level shape, it joins the level's collision
+     *  @param {Mesh} mesh
+     *  @param {Vector3} [pos3D] */
+    constructor(mesh, pos3D=vec3())
+    {
+        ASSERT(mesh instanceof Mesh, 'a MeshCollider needs a Mesh');
+        super(pos3D, mesh);
+        /** @type {Float64Array} */
+        this.triangles = new Float64Array(0); // each triangle's corners in world space, 9 numbers a triangle
+        /** @type {Float64Array} */
+        this.normals = new Float64Array(0);   // each one's unit normal, 3 numbers a triangle
+        this.triangleCount = 0;
+        /** @type {Float64Array|undefined} */
+        this.bakedMatrix = undefined;         // the world matrix the triangles were taken under
+        /** @type {{size: number, cells: Map<number, Array<number>>, big: Array<number>, min: Vector3, max: Vector3,
+         *  seen: Int32Array, stamp: number}|undefined} */
+        this.grid = undefined;                // the triangles by the cells they cover, see meshColliderNear
+        render3DLevel.push(this);
+    }
+
+    /** Take the triangles from the mesh again, after it changed */
+    rebuild() { this.bakedMatrix = undefined; }
+
+    /** It draws nothing, the game draws what it wants seen
+     *  @return {void} */
+    render3D() {}
+
+    /** Draws its edges while Debug Physics is on, called automatically each frame */
+    update()
+    {
+        super.update();
+        if (!debugPhysics) return;
+        meshColliderBake(this);
+        const t = this.triangles, color = hsl(.3, 1, .5, .6), count = min(this.triangleCount, 5000);
+        for (let i = 0; i < count; ++i)
+        {
+            const k = i * 9, a = vec3(t[k], t[k+1], t[k+2]), b = vec3(t[k+3], t[k+4], t[k+5]);
+            const c = vec3(t[k+6], t[k+7], t[k+8]);
+            debugLine3D(a, b, color), debugLine3D(b, c, color), debugLine3D(c, a, color);
+        }
+    }
+
+    /** Keep an object out of the triangles, called by the engine for each object with collideLevel
+     *  @param {EngineObject3D} o
+     *  @param {Vector3} oldPos - Where it was before it moved
+     *  @param {boolean} [wasOn] - It stood on this one last frame
+     *  @ignore */
+    levelCollide3D(o, oldPos, wasOn) { meshColliderCollide(this, o, oldPos, wasOn); }
+
+    /** Where a short move first meets a triangle, for a particle's move in one frame: the part of the move made
+     *  before it, 0 to 1, and the triangle's normal facing back along the move; undefined when it meets none
+     *  @param {Vector3} from
+     *  @param {Vector3} to
+     *  @return {{distance: number, normal: Vector3}|undefined}
+     *  @ignore */
+    levelSegment3D(from, to)
+    {
+        meshColliderBake(this);
+        const dx = to.x - from.x, dy = to.y - from.y, dz = to.z - from.z;
+        const near = meshColliderNear(this, min(from.x, to.x), min(from.y, to.y), min(from.z, to.z),
+            max(from.x, to.x), max(from.y, to.y), max(from.z, to.z));
+        let best = Infinity, normal;
+        for (const i of near)
+        {
+            const d = meshColliderRayTriangle(this.triangles, i * 9, from.x, from.y, from.z, dx, dy, dz);
+            if (d !== undefined && d <= 1 && d < best)
+                best = d, normal = i;
+        }
+        if (normal === undefined) return;
+        const n = this.normals, k = normal * 3, s = n[k] * dx + n[k+1] * dy + n[k+2] * dz > 0 ? -1 : 1;
+        return {distance: best, normal: vec3(n[k] * s, n[k+1] * s, n[k+2] * s)};
+    }
+
+    /** Destroy it, it leaves the level's collision
+     *  @param {boolean} [immediate] */
+    destroy(immediate)
+    {
+        render3DLevelLeave(this);
+        super.destroy(immediate);
+    }
+}
+
+// take a collider's triangles from its mesh in world space, when its world matrix changed since, and grid them: each
+// triangle in the cells its box covers, cells about the size of a typical triangle, between half a unit and 16
+function meshColliderBake(collider)
+{
+    const m = render3DObjectMatrix(collider).m, baked = collider.bakedMatrix;
+    if (baked && baked.every((v, j)=> v === m[j])) return;
+    collider.bakedMatrix = Float64Array.from(m);
+    const mesh = collider.mesh, data = mesh.vertexData;
+    let indices, place;
+    if (data)
+    {
+        indices = mesh.vertexIndices;
+        place = (i)=> [data[i * RENDER3D_VERTEX_FLOATS], data[i * RENDER3D_VERTEX_FLOATS + 1], data[i * RENDER3D_VERTEX_FLOATS + 2]];
+    }
+    else
+    {
+        const triangles = mesh.getTriangles(), points = mesh.points;
+        indices = triangles.indices;
+        place = (i)=> { const p = points[triangles.vertices[i]]; return [p.x, p.y, p.z]; };
+    }
+    const tris = [], normals = [];
+    for (let j = 0; j + 2 < indices.length; j += 3)
+    {
+        const corners = [indices[j], indices[j+1], indices[j+2]].map((i)=>
+        {
+            const [x, y, z] = place(i);
+            return [m[0]*x + m[4]*y + m[8]*z + m[12], m[1]*x + m[5]*y + m[9]*z + m[13], m[2]*x + m[6]*y + m[10]*z + m[14]];
+        });
+        const [a, b, c] = corners;
+        const ux = b[0] - a[0], uy = b[1] - a[1], uz = b[2] - a[2], vx = c[0] - a[0], vy = c[1] - a[1], vz = c[2] - a[2];
+        const nx = uy*vz - uz*vy, ny = uz*vx - ux*vz, nz = ux*vy - uy*vx, length = hypot(nx, ny, nz);
+        if (!(length > 1e-12)) continue; // no area, nothing to push out of
+        tris.push(...a, ...b, ...c);
+        normals.push(nx / length, ny / length, nz / length);
+    }
+    const t = collider.triangles = Float64Array.from(tris), count = collider.triangleCount = tris.length / 9;
+    collider.normals = Float64Array.from(normals);
+
+    // the grid, and the box around every triangle
+    let extent = 0;
+    const lo = vec3(Infinity), hi = vec3(-Infinity);
+    for (let i = 0; i < count; ++i)
+    {
+        const k = i * 9;
+        extent += max(max(t[k], t[k+3], t[k+6]) - min(t[k], t[k+3], t[k+6]), max(t[k+1], t[k+4], t[k+7]) -
+            min(t[k+1], t[k+4], t[k+7]), max(t[k+2], t[k+5], t[k+8]) - min(t[k+2], t[k+5], t[k+8]));
+        for (let c = 0; c < 9; c += 3)
+        {
+            lo.x = min(lo.x, t[k+c]), lo.y = min(lo.y, t[k+c+1]), lo.z = min(lo.z, t[k+c+2]);
+            hi.x = max(hi.x, t[k+c]), hi.y = max(hi.y, t[k+c+1]), hi.z = max(hi.z, t[k+c+2]);
+        }
+    }
+    const size = clamp(count ? extent / count : 1, .5, 16);
+    const grid = collider.grid = {size, cells: new Map, big: [], min: lo, max: hi, seen: new Int32Array(count), stamp: 0};
+    for (let i = 0; i < count; ++i)
+    {
+        const k = i * 9;
+        const x0 = floor(min(t[k], t[k+3], t[k+6]) / size), x1 = floor(max(t[k], t[k+3], t[k+6]) / size);
+        const y0 = floor(min(t[k+1], t[k+4], t[k+7]) / size), y1 = floor(max(t[k+1], t[k+4], t[k+7]) / size);
+        const z0 = floor(min(t[k+2], t[k+5], t[k+8]) / size), z1 = floor(max(t[k+2], t[k+5], t[k+8]) / size);
+        if ((x1 - x0 + 1) * (y1 - y0 + 1) * (z1 - z0 + 1) > 4096) // too big for cells, near everything
+        {
+            grid.big.push(i);
+            continue;
+        }
+        for (let x = x0; x <= x1; ++x)
+        for (let y = y0; y <= y1; ++y)
+        for (let z = z0; z <= z1; ++z)
+        {
+            const key = render3DGridKey(x, y, z), cell = grid.cells.get(key);
+            cell ? cell.push(i) : grid.cells.set(key, [i]);
+        }
+    }
+}
+
+// the triangles whose cells a box touches, each once, in the order they are in the mesh, so a collision comes out the
+// same however the cells hold them; none when the box is clear of every triangle's
+function meshColliderNear(collider, x0, y0, z0, x1, y1, z1)
+{
+    const grid = collider.grid, near = [];
+    if (!grid || x1 < grid.min.x || y1 < grid.min.y || z1 < grid.min.z || x0 > grid.max.x || y0 > grid.max.y ||
+        z0 > grid.max.z)
+        return near;
+    const s = grid.size, stamp = ++grid.stamp, seen = grid.seen;
+    const add = (i)=> seen[i] === stamp || (seen[i] = stamp, near.push(i));
+    grid.big.forEach(add);
+    const cx0 = floor(x0 / s), cy0 = floor(y0 / s), cz0 = floor(z0 / s);
+    const cx1 = floor(x1 / s), cy1 = floor(y1 / s), cz1 = floor(z1 / s);
+    if ((cx1 - cx0 + 1) * (cy1 - cy0 + 1) * (cz1 - cz0 + 1) > 4096)
+        for (let i = 0; i < collider.triangleCount; ++i) add(i); // a box too big for cells meets every triangle
+    else
+        for (let x = cx0; x <= cx1; ++x)
+        for (let y = cy0; y <= cy1; ++y)
+        for (let z = cz0; z <= cz1; ++z)
+            grid.cells.get(render3DGridKey(x, y, z))?.forEach(add);
+    return near.sort((a, b)=> a - b);
+}
+
+// the closest point of a triangle to a point, written into out: Ericson's Real-Time Collision Detection, 5.1.5
+function meshColliderClosestOnTriangle(t, k, px, py, pz, out)
+{
+    const ax = t[k], ay = t[k+1], az = t[k+2];
+    const abx = t[k+3] - ax, aby = t[k+4] - ay, abz = t[k+5] - az, acx = t[k+6] - ax, acy = t[k+7] - ay, acz = t[k+8] - az;
+    const apx = px - ax, apy = py - ay, apz = pz - az;
+    const d1 = abx*apx + aby*apy + abz*apz, d2 = acx*apx + acy*apy + acz*apz;
+    const set = (u, v)=> (out[0] = ax + abx*u + acx*v, out[1] = ay + aby*u + acy*v, out[2] = az + abz*u + acz*v);
+    if (d1 <= 0 && d2 <= 0) return set(0, 0);
+    const bpx = px - t[k+3], bpy = py - t[k+4], bpz = pz - t[k+5];
+    const d3 = abx*bpx + aby*bpy + abz*bpz, d4 = acx*bpx + acy*bpy + acz*bpz;
+    if (d3 >= 0 && d4 <= d3) return set(1, 0);
+    const vc = d1*d4 - d3*d2;
+    if (vc <= 0 && d1 >= 0 && d3 <= 0) return set(d1 / (d1 - d3), 0);
+    const cpx = px - t[k+6], cpy = py - t[k+7], cpz = pz - t[k+8];
+    const d5 = abx*cpx + aby*cpy + abz*cpz, d6 = acx*cpx + acy*cpy + acz*cpz;
+    if (d6 >= 0 && d5 <= d6) return set(0, 1);
+    const vb = d5*d2 - d1*d6;
+    if (vb <= 0 && d2 >= 0 && d6 <= 0) return set(0, d2 / (d2 - d6));
+    const va = d3*d6 - d5*d4;
+    if (va <= 0 && d4 - d3 >= 0 && d5 - d6 >= 0)
+    {
+        const w = (d4 - d3) / (d4 - d3 + d5 - d6);
+        return set(1 - w, w);
+    }
+    const denom = 1 / (va + vb + vc);
+    return set(vb * denom, vc * denom);
+}
+
+// the closest points of two segments, p to q and r to s, the first's written into out at 0 and the other's at 3:
+// Ericson's Real-Time Collision Detection, 5.1.9
+function meshColliderClosestSegments(px, py, pz, qx, qy, qz, rx, ry, rz, sx, sy, sz, out)
+{
+    const d1x = qx - px, d1y = qy - py, d1z = qz - pz, d2x = sx - rx, d2y = sy - ry, d2z = sz - rz;
+    const wx = px - rx, wy = py - ry, wz = pz - rz;
+    const a = d1x*d1x + d1y*d1y + d1z*d1z, e = d2x*d2x + d2y*d2y + d2z*d2z, f = d2x*wx + d2y*wy + d2z*wz;
+    let s, t;
+    if (a <= 1e-12 && e <= 1e-12)
+        s = t = 0;
+    else if (a <= 1e-12)
+        s = 0, t = clamp(f / e);
+    else
+    {
+        const c = d1x*wx + d1y*wy + d1z*wz;
+        if (e <= 1e-12)
+            t = 0, s = clamp(-c / a);
+        else
+        {
+            const b = d1x*d2x + d1y*d2y + d1z*d2z, denom = a*e - b*b;
+            s = denom ? clamp((b*f - c*e) / denom) : 0;
+            t = (b*s + f) / e;
+            if (t < 0)
+                t = 0, s = clamp(-c / a);
+            else if (t > 1)
+                t = 1, s = clamp((b - c) / a);
+        }
+    }
+    out[0] = px + d1x*s, out[1] = py + d1y*s, out[2] = pz + d1z*s;
+    out[3] = rx + d2x*t, out[4] = ry + d2y*t, out[5] = rz + d2z*t;
+}
+
+// how far along a ray a triangle is, either side, in the ray's own units, or undefined: Moller and Trumbore
+function meshColliderRayTriangle(t, k, ox, oy, oz, dx, dy, dz)
+{
+    const e1x = t[k+3] - t[k], e1y = t[k+4] - t[k+1], e1z = t[k+5] - t[k+2];
+    const e2x = t[k+6] - t[k], e2y = t[k+7] - t[k+1], e2z = t[k+8] - t[k+2];
+    const hx = dy*e2z - dz*e2y, hy = dz*e2x - dx*e2z, hz = dx*e2y - dy*e2x, det = e1x*hx + e1y*hy + e1z*hz;
+    if (abs(det) < 1e-12) return;
+    const sx = ox - t[k], sy = oy - t[k+1], sz = oz - t[k+2], u = (sx*hx + sy*hy + sz*hz) / det;
+    if (u < 0 || u > 1) return;
+    const qx = sy*e1z - sz*e1y, qy = sz*e1x - sx*e1z, qz = sx*e1y - sy*e1x, v = (dx*qx + dy*qy + dz*qz) / det;
+    if (v < 0 || u + v > 1) return;
+    const d = (e2x*qx + e2y*qy + e2z*qz) / det;
+    return d >= 0 ? d : undefined;
+}
+
+// how a capsule's segment, from a to b, is pushed out of a triangle to be radius clear of it, written into push, its
+// length the depth; false when it is clear. The closest points of the two come from the segment's ends against the
+// triangle and its edges against the segment, unless the segment goes through it, which is pushed along the normal
+// to the side its middle is on, out past its deeper end
+const meshColliderPoint = [0, 0, 0], meshColliderPair = [0, 0, 0, 0, 0, 0];
+function meshColliderPush(collider, i, ax, ay, az, bx, by, bz, radius, push)
+{
+    const t = collider.triangles, k = i * 9, n = collider.normals, nk = i * 3;
+    const nx = n[nk], ny = n[nk+1], nz = n[nk+2];
+    const da = nx*(ax - t[k]) + ny*(ay - t[k+1]) + nz*(az - t[k+2]);
+    const db = nx*(bx - t[k]) + ny*(by - t[k+1]) + nz*(bz - t[k+2]);
+    if (min(da, db) > radius || max(da, db) < -radius) return false; // clear of its plane by more than the radius
+    const out = meshColliderPoint;
+    if (da * db < 0)
+    {
+        // it crosses the plane: through the triangle when the crossing is on it
+        const f = da / (da - db), x = ax + (bx - ax) * f, y = ay + (by - ay) * f, z = az + (bz - az) * f;
+        meshColliderClosestOnTriangle(t, k, x, y, z, out);
+        if ((out[0] - x)**2 + (out[1] - y)**2 + (out[2] - z)**2 < 1e-18)
+        {
+            const middle = (da + db) / 2, s = middle >= 0 ? 1 : -1, depth = radius + max(-da * s, -db * s);
+            push[0] = nx * s * depth, push[1] = ny * s * depth, push[2] = nz * s * depth;
+            return true;
+        }
+    }
+    // the nearest of the ends to the triangle and the segment to its edges
+    let best = Infinity, sx = 0, sy = 0, sz = 0, tx = 0, ty = 0, tz = 0;
+    const consider = (px, py, pz, qx, qy, qz)=>
+    {
+        const d = (px - qx)**2 + (py - qy)**2 + (pz - qz)**2;
+        if (d < best) best = d, sx = px, sy = py, sz = pz, tx = qx, ty = qy, tz = qz;
+    };
+    meshColliderClosestOnTriangle(t, k, ax, ay, az, out);
+    consider(ax, ay, az, out[0], out[1], out[2]);
+    if (ax !== bx || ay !== by || az !== bz)
+    {
+        meshColliderClosestOnTriangle(t, k, bx, by, bz, out);
+        consider(bx, by, bz, out[0], out[1], out[2]);
+        const pair = meshColliderPair;
+        for (let e = 0; e < 9; e += 3)
+        {
+            const f = (e + 3) % 9;
+            meshColliderClosestSegments(ax, ay, az, bx, by, bz, t[k+e], t[k+e+1], t[k+e+2], t[k+f], t[k+f+1], t[k+f+2], pair);
+            consider(pair[0], pair[1], pair[2], pair[3], pair[4], pair[5]);
+        }
+    }
+    if (best >= radius * radius) return false;
+    const distance = best ** .5;
+    if (distance > 1e-9)
+    {
+        const scale = (radius - distance) / distance;
+        push[0] = (sx - tx) * scale, push[1] = (sy - ty) * scale, push[2] = (sz - tz) * scale;
+    }
+    else
+    {
+        // touching, the way out is the side of the plane its middle is on
+        const s = da + db >= 0 ? 1 : -1;
+        push[0] = nx * s * radius, push[1] = ny * s * radius, push[2] = nz * s * radius;
+    }
+    return true;
+}
+
+// push a capsule standing at a center out of a collider's triangles near it, a few passes over them in their order;
+// a push within groundAngle of straight up is ground, turned straight up so it does not creep down a slope, and it
+// returns whether there was ground and the unit normals of the rest, the walls, for the velocity
+const meshColliderPushed = [0, 0, 0];
+function meshColliderResolve(collider, center, half, radius, groundAngle, walls)
+{
+    let ground = false;
+    const push = meshColliderPushed, cosGround = cos(groundAngle);
+    for (let pass = 0; pass < 4; ++pass)
+    {
+        const near = meshColliderNear(collider, center.x - radius, center.y - half - radius, center.z - radius,
+            center.x + radius, center.y + half + radius, center.z + radius);
+        let moved = false;
+        for (const i of near)
+        {
+            if (!meshColliderPush(collider, i, center.x, center.y - half, center.z, center.x, center.y + half, center.z,
+                radius, push))
+                continue;
+            const lengthSquared = push[0]**2 + push[1]**2 + push[2]**2;
+            if (lengthSquared < 1e-18) continue;
+            const length = lengthSquared ** .5, up = push[1] / length;
+            if (up >= cosGround)
+            {
+                ground = true;
+                center.y += lengthSquared / push[1];
+            }
+            else
+            {
+                center.x += push[0], center.y += push[1], center.z += push[2];
+                walls.push(vec3(push[0] / length, push[1] / length, push[2] / length));
+            }
+            moved = true;
+        }
+        if (!moved) break;
+    }
+    return ground;
+}
+
+// keep an object out of a collider: its move from where it was in steps no longer than half its width, each pushed out
+// of the triangles near it; a fall stopped by ground stands it there and bounces by restitution, a wall takes the
+// speed into it; one that stood on it last frame and is not rising follows it down a slope as far as it moved across
+function meshColliderCollide(collider, o, oldPos, wasOn)
+{
+    meshColliderBake(collider);
+    if (!collider.triangleCount) return;
+    const k = o.scale3D, sx = o.size3D.x * abs(k.x), sy = o.size3D.y * abs(k.y), sz = o.size3D.z * abs(k.z);
+    const radius = o.collideAsSphere3D ? max(sx, sy, sz) / 2 : min(sx, sy, sz) / 2;
+    const half = o.collideAsSphere3D ? 0 : max(0, sy / 2 - radius);
+    if (!(radius > 0)) return;
+    const p = o.pos3D, from = oldPos || p;
+    const mx = p.x - from.x, my = p.y - from.y, mz = p.z - from.z, move = hypot(mx, my, mz);
+    // nothing near where it went or came from, which is most objects most of the time
+    const g = collider.grid, reach = radius + half;
+    if (max(p.x, from.x) + radius < g.min.x || min(p.x, from.x) - radius > g.max.x ||
+        max(p.y, from.y) + reach < g.min.y || min(p.y, from.y) - reach > g.max.y ||
+        max(p.z, from.z) + radius < g.min.z || min(p.z, from.z) - radius > g.max.z)
+        return;
+    const steps = min(64, max(1, ceil(move / (radius / 2))));
+    const center = from.copy(), walls = [];
+    let ground = false;
+    for (let step = 1; step <= steps; ++step)
+    {
+        center.x += mx / steps, center.y += my / steps, center.z += mz / steps;
+        ground = meshColliderResolve(collider, center, half, radius, o.groundAngle, walls) || ground;
+    }
+    if (!ground && wasOn && o.velocity3D.y <= 0)
+    {
+        // down a slope: try it as far below as it moved across, and keep that if it lands
+        const follow = hypot(mx, mz) + 1e-3, below = center.copy();
+        below.y -= follow;
+        if (meshColliderResolve(collider, below, half, radius, o.groundAngle, []) && below.y < center.y)
+            center.set(below.x, below.y, below.z), ground = true;
+    }
+    p.set(center.x, center.y, center.z);
+    const v = o.velocity3D, restitution = max(o.restitution, collider.restitution);
+    for (const n of walls)
+    {
+        const into = v.dot(n);
+        if (into < 0)
+            v.set(v.x - n.x * into * (1 + restitution), v.y - n.y * into * (1 + restitution), v.z - n.z * into * (1 + restitution));
+    }
+    if (ground)
+    {
+        if (v.y < 0)
+            v.y *= -restitution;
+        o.groundObject = collider;
+    }
+}
+
 // read an image's pixel bytes through the engine's work canvas, as {data, width, height}
 function render3DImageData(image)
 {
