@@ -250,13 +250,6 @@ class Sound
         /** @property {number} - Percentage of this sound currently loaded, sounds
          *  fetched from a url stay at 0 until decoding completes */
         this.loadedPercent = 0;
-        if (!soundEnable || headlessMode || !audioContext) // a browser with no audio makes none either
-        {
-            // no sound is made: it counts as loaded, so a game that waits for its sounds goes on
-            this.loadedPercent = 1;
-            onloadCallback?.(this);
-            return;
-        }
         const rangeIsDefault = range === undefined;
         if (rangeIsDefault)
             range = soundDefaultRange;
@@ -280,6 +273,14 @@ class Sound
         this.sampleRate = audioDefaultSampleRate;
         /** @property {number} - How many samples per channel this sound has */
         this.sampleLength = 0;
+
+        if (!soundEnable || headlessMode || !audioContext) // a browser with no audio makes none either
+        {
+            // no sound is made: it counts as loaded, so a game that waits for its sounds goes on
+            this.loadedPercent = 1;
+            onloadCallback?.(this);
+            return;
+        }
         /** @property {AudioBuffer|undefined} - Decoded audio shared by every play of this sound
          *  @type {AudioBuffer|undefined} */
         this.sampleBuffer = undefined;

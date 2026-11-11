@@ -287,7 +287,8 @@ function tileLayerTileInfo(t, tile)
  *   visibility carry to the layers inside it
  * - An object or image layer keeps its index, with its slot in the returned array left empty
  * - A hidden layer (visible false) is loaded, its collision included, but not drawn; its render
- *   is a no-op, delete that to show it
+ *   is a no-op, delete that to show it; it casts its solid cells as squares in the light system's shadows
+ *   (shadowSquares), it has no tiles drawn to cast them from, as an LDtk map's collision layer
  *  @param {TiledMap} [tileMapData] - Level data from exported data, a 50 by 50 empty level when left out
  *  @param {TileInfo} [tileInfo] - Default tile info (used for size and texture), tile() by default, none when no image is loaded
  *  @param {number}   [renderOrder] - Render order of the top layer
@@ -388,7 +389,10 @@ function tileLayersLoad(tileMapData, tileInfo=tileLayerDefaultTile(), renderOrde
         tileLayer.isSolid = layerIndex === collisionLayer; // the others are art, the solid tests skip them
         tileLayers[layerIndex] = tileLayer;
         if (!visible)
+        {
             tileLayer.render = ()=> {}; // a hidden layer keeps its tiles and collision but is not drawn
+            tileLayer.shadowSquares = true; // and its texture is never drawn, its shadows are its cells
+        }
 
         for (let x=0; x<levelSize.x; ++x)
         for (let y=0; y<levelSize.y; ++y)
@@ -1417,6 +1421,9 @@ class TileCollisionLayer extends TileLayer
         /** @property {boolean} - In the light system's shadow pass, cast only from the cells with collision, drawn
          *  as the layer shows them, so a floor in the same layer stays lit; false casts every tile */
         this.shadowSolidOnly = true;
+        /** @property {boolean} - In the shadow pass, cast each cell with collision as a full square, not the shape
+         *  its tile draws; tileLayersLoad sets it on a hidden layer, which draws no tiles to cast from */
+        this.shadowSquares = false;
         /** @property {Map<number, Vector2>} - The tiles set one way, by tile index, and the way each can be passed
          *  through, see setOneWay
          *  @type {Map<number, Vector2>} */
@@ -1445,11 +1452,11 @@ class TileCollisionLayer extends TileLayer
     }
 
     /** Draw this layer's shadow shape: the cells with collision in the part the shadow map covers, each row of
-     *  them in one draw from that part of the layer's texture, so see through pixels in a tile cast nothing;
-     *  every tile when shadowSolidOnly is off, or when the layer is turned or mirrored */
+     *  them in one draw from that part of the layer's texture, so see through pixels in a tile cast nothing, or as
+     *  squares with shadowSquares; every tile when shadowSolidOnly is off, or when the layer is turned or mirrored */
     renderShadow()
     {
-        if (!this.shadowSolidOnly || this.angle || this.mirror)
+        if (!this.shadowSquares && (!this.shadowSolidOnly || this.angle || this.mirror))
             return super.renderShadow();
 
         // the cells in view, which in the shadow pass is the shadow map
@@ -1466,10 +1473,16 @@ class TileCollisionLayer extends TileLayer
             let end = x + 1; // a run of solid cells along the row
             while (end < x1 && this.collisionData[y*size.x + end] > 0) ++end;
             const count = end - x;
-            const tileInfo = new TileInfo(vec2(x*cellPixels.x, textureHeight - (y+1)*cellPixels.y),
-                vec2(count*cellPixels.x, cellPixels.y), this.textureInfo, 0, 0);
             const pos = vec2(this.pos.x + (x + count/2)*cellWorld.x, this.pos.y + (y + .5)*cellWorld.y);
-            drawTile(pos, vec2(count*cellWorld.x, cellWorld.y), tileInfo, this.color, 0, false, undefined, useWebGL, false);
+            if (this.shadowSquares)
+                drawRect(pos, vec2(count*cellWorld.x, cellWorld.y), WHITE, 0, useWebGL, false);
+            else
+            {
+                const tileInfo = new TileInfo(vec2(x*cellPixels.x, textureHeight - (y+1)*cellPixels.y),
+                    vec2(count*cellPixels.x, cellPixels.y), this.textureInfo, 0, 0);
+                drawTile(pos, vec2(count*cellWorld.x, cellWorld.y), tileInfo, this.color, 0, false, undefined,
+                    useWebGL, false);
+            }
             x = end;
         }
     }

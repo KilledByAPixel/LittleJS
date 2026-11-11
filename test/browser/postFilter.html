@@ -1,0 +1,41 @@
+<!DOCTYPE html><meta charset=utf-8>
+<title>LittleJS smoke: post process sampling</title>
+<script src=../../dist/littlejs.js></script>
+<script src=smoke.js></script>
+<pre id=result>PENDING</pre>
+<script>
+'use strict';
+
+// the post process reads the frame smoothly by default, whatever tilesPixelated is, and hard edged with pixelated:
+// the left half is white, and a shader reading a quarter pixel to the right at the last white pixel gets three
+// quarters white smooth and all white pixelated
+smokeRun(async ()=>
+{
+    setShowSplashScreen(false);
+    setDebugWatermark(false);
+    setEngineManualStep(true);
+    setCanvasFixedSize(vec2(64));
+    setCanvasPixelRatio(1);
+    setCanvasClearColor(rgb(0, 0, 0));
+    await engineInit(()=>
+    {
+        setCameraScale(1);
+        new PostProcessPlugin(`
+            void mainImage(out vec4 c, vec2 p)
+            {
+                c = texture(iChannel0, (p + vec2(.25, 0.)) / iResolution.xy);
+                c.a = 1.;
+            }`);
+    }, ()=> {}, ()=> {}, ()=> { drawRect(vec2(-16, 0), vec2(32, 64), WHITE); }, ()=> {});
+
+    engineStep();
+    const smooth = smokePixel(31.5 / 64, .5)[0];
+    check('by default it reads between pixels, with tilesPixelated on', tilesPixelated &&
+        Math.abs(smooth - 191) < 8, smooth);
+    postProcess.pixelated = true;
+    engineStep();
+    const hard = smokePixel(31.5 / 64, .5)[0];
+    check('pixelated reads the nearest pixel', hard > 250, hard);
+    checkGLError();
+});
+</script>

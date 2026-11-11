@@ -349,10 +349,11 @@ class EngineObject3D extends EngineObject
 
     /** Attaches a child, its pos3D, rotation3D and scale3D taken as the offset from this one; returns child for chaining
      *  - The 2D offset arguments do nothing for an EngineObject3D child, set its pos3D
-     *  @param {EngineObject} child
+     *  @template {EngineObject} T
+     *  @param {T} child
      *  @param {Vector2} [localPos]
      *  @param {number} [localAngle]
-     *  @return {EngineObject} The child object attached */
+     *  @return {T} The child object attached */
     addChild(child, localPos, localAngle)
     {
         // addChild brings the child's transform up to date, which is not a step: it already moved this pass as
@@ -366,8 +367,9 @@ class EngineObject3D extends EngineObject
      *  parent to keep its world transform, where addChild takes them as the offset; returns child for chaining
      *  - A parent scaled unevenly and a child turned under it make a shear, which those three values cannot hold,
      *    so the child comes out as close as they can get; a uniform scale is exact
-     *  @param {EngineObject} child
-     *  @return {EngineObject} The child object attached */
+     *  @template {EngineObject} T
+     *  @param {T} child
+     *  @return {T} The child object attached */
     attach(child)
     {
         if (!(child instanceof EngineObject3D))

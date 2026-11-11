@@ -843,10 +843,11 @@ class EngineObject
     getMirrorSign() { return this.mirror ? -1 : 1; }
 
     /** Attaches a child to this with a local transform, returns child for chaining
-     *  @param {EngineObject} child
-     *  @param {Vector2}      [localPos=vec2()]
-     *  @param {number}       [localAngle]
-     *  @return {EngineObject} The child object added */
+     *  @template {EngineObject} T
+     *  @param {T}       child
+     *  @param {Vector2} [localPos=vec2()]
+     *  @param {number}  [localAngle]
+     *  @return {T} The child object added */
     addChild(child, localPos=vec2(), localAngle=0)
     {
         ASSERT(!this.destroyed, 'cannot add child to destroyed object');
@@ -867,12 +868,13 @@ class EngineObject
 
     /** Attaches a child to this without moving it: the local transform is worked out from where the child is now,
      *  where addChild takes one; a child of something else is moved over, returns child for chaining
-     *  @param {EngineObject} child
-     *  @return {EngineObject} The child object attached */
+     *  @template {EngineObject} T
+     *  @param {T} child
+     *  @return {T} The child object attached */
     attach(child)
     {
         ASSERT(child instanceof EngineObject, 'child must be an EngineObject');
-        ASSERT(child !== this, 'cannot attach self');
+        ASSERT(/** @type {EngineObject} */ (child) !== this, 'cannot attach self');
         child.parent?.removeChild(child);
         // the local values that updateTransforms turns back into the child's current pos and angle
         const mirror = this.getMirrorSign(), local = this.worldToLocal(child.pos);

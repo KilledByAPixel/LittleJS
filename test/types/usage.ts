@@ -142,3 +142,14 @@ lamp.flare.count = 5;
 lamp.flare?.destroy(); // takes it away
 // @ts-expect-error
 lamp.flare = true;
+
+// addChild and attach hand back the child as its own type, in 2D and 3D
+import { EngineObject3D } from 'littlejsengine';
+class Gun extends EngineObject { fire() {} }
+const holder = new EngineObject(vec2());
+holder.addChild(new Gun(vec2())).fire();
+holder.attach(new Gun(vec2())).fire();
+class Lamp3D extends EngineObject3D { glow() {} }
+const holder3D = new EngineObject3D(vec3());
+holder3D.addChild(new Lamp3D(vec3())).glow();
+holder3D.attach(new Lamp3D(vec3())).glow();

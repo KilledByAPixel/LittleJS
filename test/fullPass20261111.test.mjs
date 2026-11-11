@@ -195,3 +195,29 @@ test('the first tile of a texture no wider than the tile with its padding is its
     run('textureInfos[0] = new TextureInfo({width: 16, height: 16})');
     assert.equal(run('tile(0, 16, 0, 1).pos.toString()'), vec2(1, 1).toString());
 });
+
+test('a hidden solid layer, as an LDtk map\'s collision, casts its solid cells as squares in the shadow pass', ()=>
+{
+    const { run } = loadEngine();
+    run(`setHeadlessMode(true); mainCanvasSize = vec2(1e3); cameraPos = vec2(2, .5); cameraScale = 32;
+        var squares = [], tiles = 0;
+        drawRect = (pos, size)=> squares.push(pos.x + ' ' + size.x);
+        drawTile = ()=> ++tiles;
+        var map = {width: 4, height: 1, tilewidth: 16, tileheight: 16,
+            layers: [{type: 'tilelayer', name: 'Walls', visible: false, data: [1, 1, 0, 1]},
+                {type: 'tilelayer', name: 'Art', data: [2, 2, 2, 2]}]};
+        var [walls, art] = tileLayersLoad(map, tile(), 0, 'Walls', false);
+        walls.renderShadow(); art.renderShadow();`);
+    assert.equal(run('JSON.stringify(squares)'), '["1 2","3.5 1"]', 'each run of solid cells is one square');
+    assert.equal(run('tiles'), 0, 'and the art, with no collision, casts nothing');
+    assert.equal(run('walls.shadowSquares && !art.shadowSquares'), true);
+});
+
+test('a Sound made headless keeps its range, taper and randomness, as its types say', ()=>
+{
+    const { run } = loadEngine();
+    run('setHeadlessMode(true); var sound = new Sound([1], .2, 30, .5)');
+    assert.deepEqual([run('sound.range'), run('sound.taper'), run('sound.randomness'), run('sound.rangeIsDefault')],
+        [30, .5, .2, false]);
+    assert.equal(run('new Sound([1]).range === soundDefaultRange'), true);
+});

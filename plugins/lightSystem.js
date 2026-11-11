@@ -363,15 +363,19 @@ class LightSystemPlugin
         {
             const gl = glContext, ls = lightSystem;
             ls.shadowMap = createTexture(ls.shadowMapSize);
-            ls.shadowTextureA = createTexture(ls.shadowTextureSize);
-            ls.shadowTextureB = createTexture(ls.shadowTextureSize);
             ls.shadowMapSizeAllocated = ls.shadowMapSize;
-            ls.shadowTextureSizeAllocated = ls.shadowTextureSize;
+            if (ls.shadows)
+            {
+                // the point lights' own shadow textures, a sun alone needs only the map
+                ls.shadowTextureA = createTexture(ls.shadowTextureSize);
+                ls.shadowTextureB = createTexture(ls.shadowTextureSize);
+                ls.shadowTextureSizeAllocated = ls.shadowTextureSize;
+            }
             // put back the texture the engine tracks
             if (glActiveTexture)
                 gl.bindTexture(gl.TEXTURE_2D, glActiveTexture);
-            if (ls.shadowCopyShader)
-                return; // the programs are kept while the textures are made again
+            if (ls.shadowCopyShader || !ls.shadows)
+                return; // the programs are kept while the textures are made again, and made only for point lights
 
             // copy: the shadow map around the light into the light's texture, light at the center
             ls.shadowCopyShader = glCreateProgram(quadVertex,
@@ -450,7 +454,7 @@ class LightSystemPlugin
             // make the resources the first time, and again when a size changed
             ls.clampTextureSizes();
             if (!ls.shadowMap || ls.shadowMapSize !== ls.shadowMapSizeAllocated
-                || ls.shadowTextureSize !== ls.shadowTextureSizeAllocated)
+                || ls.shadows && (!ls.shadowTextureA || ls.shadowTextureSize !== ls.shadowTextureSizeAllocated))
             {
                 ls.shadowMap && freeShadowTextures();
                 initShadows();

@@ -1215,6 +1215,8 @@ obj.renderEmissive()                  // draws its glowing shape into the lightm
 obj.castShadow = true                 // draws into the shadow map; false for a floor TileLayer, a background, a pickup
 layer.shadowSolidOnly = true          // a TileCollisionLayer casts only from its cells with collision, as they are
                                       // drawn, so a floor in the same layer stays lit; false casts every tile
+layer.shadowSquares = false           // casts its cells with collision as squares, set on a hidden layer the
+                                      // loader made, which draws no tiles to cast from
 obj.renderShadow()                    // draws the shadow shape, render() by default, screen space draws skipped;
                                       // a figure draws a blob at its feet
                                       // to stay lit; additive draws add black so glows cast nothing; WebGL draws only
@@ -1297,6 +1299,7 @@ postProcessBloom(threshold=.6, strength=1, size=6, includeMainCanvas=false) // s
 postProcessBloomShader(threshold, strength, size) // its shader code, to pass to PostProcessPlugin or build on
 postProcess.setShaderCode(shaderCode) // shade with new code from the next frame, to switch effects while running
 postProcess.enabled = true     // false skips the pass, the frame showing as drawn, to turn an effect off and back on
+postProcess.pixelated = false  // true reads the frame hard edged, so blurs and the CRT curve step as pixel art does
 
 // Built in effects: each is a piece of shader code with its settings written in, working on c, the pixel's color,
 // and uv, where it is on the screen from 0 to 1; postProcessEffects joins pieces in order into one shader, and your

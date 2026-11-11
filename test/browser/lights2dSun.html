@@ -41,6 +41,8 @@ smokeRun(async ()=>
     engineStep(3);
     check('a directional light makes the background map', !!lightSystem.backgroundMap);
     check('and the shadow map, with shadows off', !!lightSystem.shadowMap && !lightSystem.shadows);
+    check('but not the point lights\' shadow textures or programs', !lightSystem.shadowTextureA &&
+        !lightSystem.shadowTextureB && !lightSystem.shadowCopyShader && !lightSystem.shadowStretchShader);
     check('open floor is lit in the color of the light', bright(-6, 4) > 200, bright(-6, 4));
     check('the block throws a long shadow to its right', bright(0, 0) < 120, bright(0, 0));
     check('which fades the further it goes', bright(6, 0) > bright(0, 0) + 20, [bright(6, 0), bright(0, 0)]);
@@ -158,7 +160,6 @@ smokeRun(async ()=>
     check('and the light still draws, its long shadow too', bright(-6, 4) > 200 && bright(0, 0) < 120,
         [bright(-6, 4), bright(0, 0)]);
 
-    const copyProgram = lightSystem.shadowCopyShader;
     sun.destroy();
     engineStep(3);
     check('destroyed, it adds nothing', bright(-6, 4) < 40, bright(-6, 4));
@@ -170,7 +171,11 @@ smokeRun(async ()=>
     engineStep(2);
     check('which draws with them, not compiled again', lightSystem.directionalPrograms.seed === kept && bright(-6, 4) > 200,
         bright(-6, 4));
-    check('the programs of the shadow map are kept too, with shadows off', lightSystem.shadowCopyShader === copyProgram);
+    lightSystem.shadows = true;
+    engineStep();
+    check('shadows turned on make the point lights\' textures and programs', !!lightSystem.shadowTextureA &&
+        !!lightSystem.shadowTextureB && !!lightSystem.shadowCopyShader && !!lightSystem.shadowStretchShader);
+    lightSystem.shadows = false;
     next.destroy();
     checkGLError();
 });

@@ -54,6 +54,12 @@ class PostProcessPlugin
          *  and the feedback texture holds the last frame drawn with it on */
         this.enabled = true;
 
+        /** @property {boolean} - Read the frame with hard edged sampling, so an effect that samples between pixels,
+         *  a blur, glow, the CRT curve or chromatic aberration, steps from pixel to pixel as pixel art does; off, the
+         *  default, it reads smoothly between them, whatever tilesPixelated is; a frame read at its own pixels, as a
+         *  pass-through or a vignette does, looks the same either way */
+        this.pixelated = false;
+
         /** @property {Object<string, number|Array<number>>} - The game's own values for the shader, a uniform each
          *  by its name, a number a float and a list of 2 to 4 numbers a vector, set every frame as they are; an
          *  effect setting can be one of these names, so it changes every frame without making the shader again, all
@@ -172,6 +178,14 @@ class PostProcessPlugin
             // setup texture
             glContext.activeTexture(glContext.TEXTURE0);
             glContext.bindTexture(glContext.TEXTURE_2D, postProcess.texture);
+            // smooth or hard edged as pixelated says now, the frame and the feedback alike
+            const filter = postProcess.pixelated ? glContext.NEAREST : glContext.LINEAR;
+            const setFilter = ()=>
+            {
+                glContext.texParameteri(glContext.TEXTURE_2D, glContext.TEXTURE_MAG_FILTER, filter);
+                glContext.texParameteri(glContext.TEXTURE_2D, glContext.TEXTURE_MIN_FILTER, filter);
+            };
+            setFilter();
             if (includeMainCanvas)
             {
                 // copy main canvas to work canvas at the backing store size,
@@ -206,6 +220,7 @@ class PostProcessPlugin
             {
                 glContext.activeTexture(glContext.TEXTURE1);
                 glContext.bindTexture(glContext.TEXTURE_2D, postProcess.feedbackTexture);
+                setFilter();
             }
 
             // the 3D depth, when render3D draws it, on the third texture unit, with what sceneDepth needs to read it
