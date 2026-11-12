@@ -141,7 +141,7 @@ function render3DFlipWinding(mesh)
 // frees the GPU buffer of a mesh that is garbage collected without dispose, some time after it goes; it holds the
 // buffer and its context, never the mesh, or the mesh could not be collected, and dispose unregisters the mesh
 const render3DMeshBuffers = typeof FinalizationRegistry == 'undefined' ? undefined :
-    new FinalizationRegistry(({buffer, indexBuffer, generation})=>
+    /* @__PURE__ */ new FinalizationRegistry(({buffer, indexBuffer, generation})=>
     {
         if (generation !== render3D?.contextGeneration || !glContext) return;
         glContext.deleteBuffer(buffer);

@@ -51,10 +51,11 @@ const RENDER3D_MAX_LIGHTS = 8; // Light3D objects per frame, the shader loops ov
 const RENDER3D_QUAD_UVS = /** @type {Array<Vector2>} */
     (Object.freeze([vec2(0, 0), vec2(0, 1), vec2(1, 0), vec2(1, 1)].map(uv=> Object.freeze(uv))));
 const RENDER3D_FULL_UV_RECT = Object.freeze({x:0, y:0, w:1, h:1});
-const RENDER3D_DEFAULT_NORMAL = Object.freeze(vec3(0, 1, 0));
-const RENDER3D_DEFAULT_UV = Object.freeze(vec2());
-const RENDER3D_SHADOW_COLOR = Object.freeze(hsl(0, 0, 0, .5));
-const RENDER3D_IDENTITY = new Matrix4; // never modified
+// these made on load are marked pure, so a bundler leaves them out of a game that uses no 3D, with what they are
+const RENDER3D_DEFAULT_NORMAL = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ vec3(0, 1, 0));
+const RENDER3D_DEFAULT_UV = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ vec2());
+const RENDER3D_SHADOW_COLOR = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ hsl(0, 0, 0, .5));
+const RENDER3D_IDENTITY = /* @__PURE__ */ new Matrix4; // never modified
 let render3DShadowCut; // the cut last sent to the shadow shader, see render3DSetDrawUniforms
 // how the draw being sent lights its normal, materialParams.w in the shader: 0 as a surface, 1 billboards lit with
 // no direction, 2 billboards lit round from where each pixel is on its quad; set by a batch of billboards as it draws

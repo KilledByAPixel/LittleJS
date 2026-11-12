@@ -488,7 +488,7 @@ function render3DTakeWorld(o, world)
 // an object's world matrix, the one it keeps: rebuilt only when its position, rotation or scale changed since the
 // last build, or its parent's matrix did, so an object that stands still costs nine compares a frame instead of
 // the trig and a new matrix; the matrix returned is the object's own, read it and never change it
-const render3DLocalMatrix = new Matrix4;
+const render3DLocalMatrix = /* @__PURE__ */ new Matrix4;
 function render3DObjectMatrix(o)
 {
     const parent = o.parent instanceof EngineObject3D ? o.parent : undefined;

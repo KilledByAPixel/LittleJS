@@ -89,7 +89,8 @@ test('the ParticleEffectSettings typedef lists every setting the particle effect
 {
     // the settings are a table made at run time, the typedef is written out for the types, so the two are compared
     const source = readFileSync('plugins/particleEffects.js', 'utf8');
-    const settings = [...source.matchAll(/particleEffectAddSetting\('(\w+)'/g)].map(m => m[1]);
+    const made = source.slice(source.indexOf('function particleEffectSettingsMake'), source.indexOf('return settings;'));
+    const settings = [...made.matchAll(/\badd\('(\w+)'/g)].map(m => m[1]);
     const typedef = source.slice(source.indexOf('@typedef {Object} ParticleEffectSettings'));
     const listed = [...typedef.slice(0, typedef.indexOf('*/')).matchAll(/@property \{[^}]+\} \[(\w+)\]/g)].map(m => m[1]);
     assert.ok(settings.length > 30, 'the settings are found');

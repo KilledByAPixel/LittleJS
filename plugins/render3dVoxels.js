@@ -24,12 +24,12 @@ const RENDER3D_VOXEL_FACES = [
 ];
 
 // the shade of a corner by how many solid blocks crowd it, from 0, closed in, to 3, open
-const RENDER3D_VOXEL_SHADES = [.55, .7, .85, 1].map(v=> Object.freeze(rgb(v, v, v)));
+const RENDER3D_VOXEL_SHADES = /* @__PURE__ */ [.55, .7, .85, 1].map(v=> Object.freeze(rgb(v, v, v)));
 
 // each face's corners about a cell's center, as render3DQuadAxes gives them: top left, bottom left, top right, bottom
 // right; then the sides of the face each corner is toward, for its shading, and the corners in strip order, or split
 // along the other diagonal
-const RENDER3D_VOXEL_CORNERS = RENDER3D_VOXEL_FACES.map(([normal, right, up])=>
+const RENDER3D_VOXEL_CORNERS = /* @__PURE__ */ RENDER3D_VOXEL_FACES.map(([normal, right, up])=>
     render3DQuadAxes(normal.scale(.5), right.scale(.5), up.scale(.5)));
 const RENDER3D_VOXEL_CORNER_SIDES = [[-1, 1], [-1, -1], [1, 1], [1, -1]];
 const RENDER3D_VOXEL_ORDER = [0, 1, 2, 3], RENDER3D_VOXEL_FLIPPED = [1, 3, 0, 2];

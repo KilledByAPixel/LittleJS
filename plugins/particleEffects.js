@@ -26,7 +26,7 @@ const particleEffectGroups = ['Emitter', 'Particles', 'Color', 'Motion', 'Collis
  *  value:(number|boolean|string|Array<number>), min:number, max:number, step:number,
  *  description:string, hardMin:number, hardMax:number, extra:boolean}>}
  *  @memberof ParticleEffects */
-const particleEffectSettings = [];
+const particleEffectSettings = /* @__PURE__ */ particleEffectSettingsMake();
 
 /** An effect: what particleEffect plays, the designer edits and a library file holds; plain data, so it saves as JSON
  *  @typedef {Object} ParticleEffect
@@ -98,114 +98,131 @@ const particleEffectSettings = [];
  *  angle?: number, tileInfo?: TileInfo|TextureInfo, flatten?: boolean, roundLighting?: boolean,
  *  emitSize?: number|Vector2, shape?: ''|'dot'|'soft'|'glow'|'smoke'|'spark'|'square'|'triangle'|'ring'|'star'|'plus'}} ParticleEffectOptions
  *  @memberof ParticleEffects */
-let particleEffectSettingGroup; // the group settings are being added to
 
-// the slider covers min to max, typed values may go out to hardMin and hardMax
-function particleEffectAddSetting(name, kind, value, min, max, step, description, hardMin=min, hardMax=max)
+// every setting, in the order the designer shows them; a function a bundler may leave out when nothing reads its table
+function particleEffectSettingsMake()
 {
-    // extras are not constructor arguments, the code export assigns them after
-    const extra = ['trailScale', 'velocityInheritance', 'localSpace', 'restitution', 'friction', 'gravity'].includes(name);
-    particleEffectSettings.push({group:particleEffectSettingGroup, name, kind, value, min, max, step, description,
-        hardMin, hardMax, extra});
+    const settings = [];
+    let group; // the group settings are being added to
+
+    // the slider covers min to max, typed values may go out to hardMin and hardMax
+    const add = (name, kind, value, min, max, step, description, hardMin=min, hardMax=max)=>
+    {
+        // extras are not constructor arguments, the code export assigns them after
+        const extra = ['trailScale', 'velocityInheritance', 'localSpace', 'restitution', 'friction', 'gravity']
+            .includes(name);
+        settings.push({group, name, kind, value, min, max, step, description, hardMin, hardMax, extra});
+    };
+
+    group = 'Emitter';
+    add('emitRate', 'number', 100, 0, 500, .1,
+        'Particles per second, 0 emits none', 0, 1e4);
+    add('emitTime', 'number', 0, 0, 5, .05,
+        'Seconds to emit for, 0 is forever', 0, 1e9);
+    add('emitSize', 'number', 0, 0, 10, .05,
+        'Diameter, or width when rectangular', 0, 1e9);
+    add('emitRect', 'checkbox', false, 0, 0, 0,
+        'Rectangle emitter, off is a circle');
+    add('emitHeight', 'number', 0, 0, 10, .05,
+        'Rectangle height', 0, 1e9);
+    add('emitConeAngle', 'number', PI, 0, PI, .01,
+        'Half angle particles move in, 3.14 is all ways');
+    add('angle', 'number', 0, -3.14, 3.14, .01,
+        'Emitter angle, 0 points up', -PI, PI); // the slider steps from its min
+
+    group = 'Particles';
+    add('particleTime', 'number', .5, 0, 5, .05,
+        'Seconds each particle lives', 0, 1e9);
+    add('sizeStart', 'number', .1, 0, 5, .01,
+        'Size at the start of life', 0, 1e9);
+    add('sizeEnd', 'number', 1, 0, 5, .01,
+        'Size at the end of life', 0, 1e9);
+    add('fadeRate', 'number', .1, 0, 1, .01,
+        'Share of life spent fading in and out');
+    add('randomness', 'number', .2, 0, 1, .01,
+        'How much each particle varies');
+    add('particleConeAngle', 'number', PI, 0, PI, .01,
+        'Half angle of start rotation, 3.14 is any');
+    add('trailScale', 'number', 0, 0, 20, .1,
+        'Stretch along the motion, 0 is off', 0, 1e9);
+    add('additive', 'checkbox', false, 0, 0, 0,
+        'Glow with additive blending');
+
+    group = 'Color';
+    add('colorStartA', 'color', [1,1,1,1], 0, 1, .01,
+        'Start color, each particle picks between A and B');
+    add('colorStartB', 'color', [1,1,1,1], 0, 1, .01,
+        'Second start color');
+    add('colorEndA', 'color', [1,1,1,0], 0, 1, .01,
+        'End color, each particle picks between A and B');
+    add('colorEndB', 'color', [1,1,1,0], 0, 1, .01,
+        'Second end color');
+    add('randomColorLinear', 'checkbox', true, 0, 0, 0,
+        'Pick along A to B, off picks each channel');
+
+    group = 'Motion';
+    add('speed', 'number', .1, 0, .5, .005,
+        'Start speed, world units per frame', -1e9, 1e9); // negative goes back against the cone, as the emitter takes it
+    add('angleSpeed', 'number', .05, 0, .5, .005,
+        'Spin speed, radians per frame', -1e9, 1e9);
+    add('damping', 'number', 1, .8, 1, .001,
+        'Speed kept each frame, 1 keeps it all', 0, 1);
+    add('angleDamping', 'number', 1, .8, 1, .001,
+        'Spin kept each frame', 0, 1);
+    add('gravityScale', 'number', 0, -2, 2, .05,
+        'How much gravity pulls', -1e9, 1e9);
+    add('gravity', 'number', 0, -.02, .02, .0005,
+        'Its own fall each frame, the same in any game', -1, 1);
+    add('velocityInheritance', 'number', 0, 0, 1, .01,
+        'Share of emitter motion passed on');
+    add('localSpace', 'checkbox', false, 0, 0, 0,
+        'Particles move with the emitter');
+
+    group = 'Collision';
+    add('collideLevel', 'checkbox', false, 0, 0, 0,
+        'Hit tiles, the preview adds a floor');
+    add('restitution', 'number', 0, 0, 1, .01,
+        'Bounce when hitting tiles');
+    add('friction', 'number', .8, 0, 1, .01,
+        'Speed kept sliding along tiles, the larger of this and the friction of the layer, as for an object');
+
+    group = 'Texture';
+    add('shape', 'shape', 'soft', 0, 0, 0,
+        'Built-in shape, none uses the tile');
+    add('tileIndex', 'number', -1, -1, 63, 1,
+        'Tile in texture 0 when no shape, -1 is untextured', -1, 1e4);
+    add('tileSize', 'number', 16, 1, 128, 1,
+        'Tile size in texture pixels', 1, 4096);
+    add('tilePadding', 'number', 1, 0, 8, 1,
+        'Pixels of padding around each tile', 0, 64);
+    return settings;
 }
-
-particleEffectSettingGroup = 'Emitter';
-particleEffectAddSetting('emitRate', 'number', 100, 0, 500, .1,
-    'Particles per second, 0 emits none', 0, 1e4);
-particleEffectAddSetting('emitTime', 'number', 0, 0, 5, .05,
-    'Seconds to emit for, 0 is forever', 0, 1e9);
-particleEffectAddSetting('emitSize', 'number', 0, 0, 10, .05,
-    'Diameter, or width when rectangular', 0, 1e9);
-particleEffectAddSetting('emitRect', 'checkbox', false, 0, 0, 0,
-    'Rectangle emitter, off is a circle');
-particleEffectAddSetting('emitHeight', 'number', 0, 0, 10, .05,
-    'Rectangle height', 0, 1e9);
-particleEffectAddSetting('emitConeAngle', 'number', PI, 0, PI, .01,
-    'Half angle particles move in, 3.14 is all ways');
-particleEffectAddSetting('angle', 'number', 0, -3.14, 3.14, .01,
-    'Emitter angle, 0 points up', -PI, PI); // the slider steps from its min
-
-particleEffectSettingGroup = 'Particles';
-particleEffectAddSetting('particleTime', 'number', .5, 0, 5, .05,
-    'Seconds each particle lives', 0, 1e9);
-particleEffectAddSetting('sizeStart', 'number', .1, 0, 5, .01,
-    'Size at the start of life', 0, 1e9);
-particleEffectAddSetting('sizeEnd', 'number', 1, 0, 5, .01,
-    'Size at the end of life', 0, 1e9);
-particleEffectAddSetting('fadeRate', 'number', .1, 0, 1, .01,
-    'Share of life spent fading in and out');
-particleEffectAddSetting('randomness', 'number', .2, 0, 1, .01,
-    'How much each particle varies');
-particleEffectAddSetting('particleConeAngle', 'number', PI, 0, PI, .01,
-    'Half angle of start rotation, 3.14 is any');
-particleEffectAddSetting('trailScale', 'number', 0, 0, 20, .1,
-    'Stretch along the motion, 0 is off', 0, 1e9);
-particleEffectAddSetting('additive', 'checkbox', false, 0, 0, 0,
-    'Glow with additive blending');
-
-particleEffectSettingGroup = 'Color';
-particleEffectAddSetting('colorStartA', 'color', [1,1,1,1], 0, 1, .01,
-    'Start color, each particle picks between A and B');
-particleEffectAddSetting('colorStartB', 'color', [1,1,1,1], 0, 1, .01,
-    'Second start color');
-particleEffectAddSetting('colorEndA', 'color', [1,1,1,0], 0, 1, .01,
-    'End color, each particle picks between A and B');
-particleEffectAddSetting('colorEndB', 'color', [1,1,1,0], 0, 1, .01,
-    'Second end color');
-particleEffectAddSetting('randomColorLinear', 'checkbox', true, 0, 0, 0,
-    'Pick along A to B, off picks each channel');
-
-particleEffectSettingGroup = 'Motion';
-particleEffectAddSetting('speed', 'number', .1, 0, .5, .005,
-    'Start speed, world units per frame', -1e9, 1e9); // negative goes back against the cone, as the emitter takes it
-particleEffectAddSetting('angleSpeed', 'number', .05, 0, .5, .005,
-    'Spin speed, radians per frame', -1e9, 1e9);
-particleEffectAddSetting('damping', 'number', 1, .8, 1, .001,
-    'Speed kept each frame, 1 keeps it all', 0, 1);
-particleEffectAddSetting('angleDamping', 'number', 1, .8, 1, .001,
-    'Spin kept each frame', 0, 1);
-particleEffectAddSetting('gravityScale', 'number', 0, -2, 2, .05,
-    'How much gravity pulls', -1e9, 1e9);
-particleEffectAddSetting('gravity', 'number', 0, -.02, .02, .0005,
-    'Its own fall each frame, the same in any game', -1, 1);
-particleEffectAddSetting('velocityInheritance', 'number', 0, 0, 1, .01,
-    'Share of emitter motion passed on');
-particleEffectAddSetting('localSpace', 'checkbox', false, 0, 0, 0,
-    'Particles move with the emitter');
-
-particleEffectSettingGroup = 'Collision';
-particleEffectAddSetting('collideLevel', 'checkbox', false, 0, 0, 0,
-    'Hit tiles, the preview adds a floor');
-particleEffectAddSetting('restitution', 'number', 0, 0, 1, .01,
-    'Bounce when hitting tiles');
-particleEffectAddSetting('friction', 'number', .8, 0, 1, .01,
-    'Speed kept sliding along tiles, the larger of this and the friction of the layer, as for an object');
-
-particleEffectSettingGroup = 'Texture';
-particleEffectAddSetting('shape', 'shape', 'soft', 0, 0, 0,
-    'Built-in shape, none uses the tile');
-particleEffectAddSetting('tileIndex', 'number', -1, -1, 63, 1,
-    'Tile in texture 0 when no shape, -1 is untextured', -1, 1e4);
-particleEffectAddSetting('tileSize', 'number', 16, 1, 128, 1,
-    'Tile size in texture pixels', 1, 4096);
-particleEffectAddSetting('tilePadding', 'number', 1, 0, 8, 1,
-    'Pixels of padding around each tile', 0, 64);
 
 /** The behaviors an effect can use, each a push applied to every particle every update, with a 2D and a 3D version
  *  @type {Array<{name:string, update:(Function|undefined), update3D:(Function|undefined), min:number, max:number,
  *  value:number, description:string}>}
  *  @memberof ParticleEffects */
-const particleEffectBehaviors =
-[
-    {name:'wobble',     min:0,  max:5, value:1, description:'Sway from side to side'},
-    {name:'swirl',      min:-2, max:2, value:1, description:'Turn the direction of travel'},
-    {name:'turbulence', min:0,  max:5, value:1, description:'Random pushes every frame'},
-    {name:'attract',    min:-2, max:2, value:1, description:'Pull toward the emitter, negative pushes away'},
-    {name:'orbit',      min:-2, max:2, value:1, description:'Push around the emitter, add attract to circle it'},
-    {name:'wind',       min:-2, max:2, value:1, description:'A sideways push that grows with age'},
-    {name:'stick',      min:0,  max:1, value:1, description:'Grip on landing, pair with collideLevel'},
-].map(b=> ({...b, update: undefined, update3D: undefined}));
+const particleEffectBehaviors = /* @__PURE__ */ particleEffectBehaviorsMake();
 const particleEffectBehavior = (name)=> particleEffectBehaviors.find(b=> b.name === name);
+
+// the behaviors with their 2D and 3D pushes; a function a bundler may leave out when nothing reads its list
+function particleEffectBehaviorsMake()
+{
+    const list =
+    [
+        {name:'wobble',     min:0,  max:5, value:1, description:'Sway from side to side'},
+        {name:'swirl',      min:-2, max:2, value:1, description:'Turn the direction of travel'},
+        {name:'turbulence', min:0,  max:5, value:1, description:'Random pushes every frame'},
+        {name:'attract',    min:-2, max:2, value:1, description:'Pull toward the emitter, negative pushes away'},
+        {name:'orbit',      min:-2, max:2, value:1, description:'Push around the emitter, add attract to circle it'},
+        {name:'wind',       min:-2, max:2, value:1, description:'A sideways push that grows with age'},
+        {name:'stick',      min:0,  max:1, value:1, description:'Grip on landing, pair with collideLevel'},
+    ].map(b=> ({...b, update: undefined, update3D: undefined}));
+    const find = (name)=> list.find(b=> b.name === name);
+    particleEffectBehaviorsSet2D(find);
+    particleEffectBehaviorsSet3D(find);
+    return list;
+}
 
 /** Names of the shapes the plugin draws, for an effect's shape setting
  *  @type {Array<string>}
@@ -308,7 +325,7 @@ function particleEffectRecolor(effect, hue=0, saturation=1)
 // libraries
 
 // the effects by lower case name, the built-ins and any a game adds or loads
-const particleEffectsByName = new Map;
+// declared at the end of the file, after what making the built-in effects reads
 
 /** Add effects to play by name, sanitized; one with the name of an effect already there replaces it, and one with no
  *  settings takes every default
@@ -442,9 +459,8 @@ function particleEffectShapeTile(name)
 
 ///////////////////////////////////////////////////////////////////////////////
 // behaviors, the 2D pushes: a distance moved grows with the particle's scale, so a bigger effect moves the same way
-
+function particleEffectBehaviorsSet2D(b)
 {
-    const b = particleEffectBehavior;
     b('wobble').update = (p, s)=>
     {
         // each particle on its own beat, from its randomized life, so nothing is added to it
@@ -670,8 +686,8 @@ function particleEffectFromEmitter(emitter, name='Effect')
 
 // the 3D pushes: a 3D particle is one view object the emitter reuses, so what differs per particle comes from its
 // randomized lifetime, and distances grow with the emitter's scale
+function particleEffectBehaviorsSet3D(b)
 {
-    const b = particleEffectBehavior;
     const center = (p)=> p.emitter.worldPos3D || p.emitter.pos3D; // where it was this update
     b('wobble').update3D = (p, s)=> p.velocity.x += s * .003 * p.scale * sin(time*6 + p.lifeTime * 97 % 9);
     b('swirl').update3D = (p, s)=>
@@ -770,11 +786,15 @@ function particleEffect3D(nameOrEffect, pos3D=vec3(), options={})
  *  @type {Array<string>}
  *  @memberof ParticleEffects */
 const particleEffectsBuiltIn = [];
+
+// the map of effects by name, holding the built-in ones; a function a bundler may leave out when nothing reads it
+function particleEffectsBuiltInMake()
 {
+    const effects = new Map;
     const add = (name, settings, behaviors=[])=>
     {
         particleEffectsBuiltIn.push(name);
-        particleEffectsAdd({name, settings, behaviors});
+        effects.set(name.toLowerCase(), particleEffectSanitize({name, settings, behaviors}));
     };
     const clear = (h, s, l)=> hsl(h, s, l, 0);
 
@@ -877,4 +897,8 @@ const particleEffectsBuiltIn = [];
         sizeStart:.12, sizeEnd:.06, speed:.08, gravity:-.008, fadeRate:.2, randomness:.4,
         colorStartA:hsl(.58,.8,.7,.8), colorStartB:hsl(.55,.6,.85,.8), colorEndA:hsl(.58,.8,.7,.2),
         colorEndB:hsl(.55,.6,.85,.2)});
+    return effects;
 }
+
+// every effect by its name in lower case, the built-in ones to start with, and those particleEffectsAdd adds
+const particleEffectsByName = /* @__PURE__ */ particleEffectsBuiltInMake();

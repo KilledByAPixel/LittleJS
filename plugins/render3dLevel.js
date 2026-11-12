@@ -17,8 +17,9 @@ const LEVEL3D_VERSION = 1; // the format a level's littlejs3D names
 
 // the level format, Level3D and its parts, is typed in src/engineEditor.js, where the editor's own types see it
 
-// the types a level's objects are made from, by name
-const level3DTypes = new Map;
+// the types a level's objects are made from, by name, the built-in ones to start with; made by a call a bundler may
+// leave out when nothing reads it, so a game with no 3D level does not keep the classes the built-ins make
+const level3DTypes = /* @__PURE__ */ level3DBuiltInTypes();
 
 // the scale each object had when it was made, the level's scale multiplies it
 const level3DBaseScale = new WeakMap;
@@ -747,24 +748,31 @@ function level3DMakeShape(pos, properties, mesh, tileInfo, asSphere=false)
 // the cylinder all Cylinder objects share, built the first time one is made
 let level3DCylinderMesh;
 
-level3DAddType('Box', function(pos, properties) { return level3DMakeShape(pos, properties, render3D.boxMesh); },
-    {color: WHITE, tile: -1, solid: true});
-level3DAddType('Sphere', function(pos, properties)
-    { return level3DMakeShape(pos, properties, render3D.sphereMesh, undefined, true); },
-    {color: WHITE, tile: -1, solid: true});
-level3DAddType('Cylinder', function(pos, properties)
-    { return level3DMakeShape(pos, properties, level3DCylinderMesh ||= buildCylinder()); },
-    {color: WHITE, tile: -1, solid: true});
-// a light, a spotlight with a cone: cone is the angle in degrees from its forward out to the edge of its beam, the
-// object's rotation aims it, softness is how much of the cone fades, shadows makes it the one that casts them, and
-// lensFlare gives it a lens flare; not flare, since a property is also set on the object, where flare is the flare
-level3DAddType('Light', function(pos, properties)
+// the built-in types, as level3DAddType would add them, in a map of their own that becomes level3DTypes
+function level3DBuiltInTypes()
 {
-    const light = new Light3D(pos, properties.radius, properties.color, properties.intensity);
-    light.coneAngle = max(properties.cone, 0) * PI / 180;
-    light.coneSoftness = properties.softness;
-    if (properties.shadows && render3D)
-        render3D.shadowLight = light;
-    properties.lensFlare && light.addFlare();
-    return light;
-}, {color: WHITE, radius: 5, intensity: 1, cone: 0, softness: .2, shadows: false, lensFlare: false});
+    const types = new Map, add = (name, make, defaults)=> types.set(name, {make, defaults, tileInfo: undefined});
+    add('Box', function(pos, properties) { return level3DMakeShape(pos, properties, render3D.boxMesh); },
+        {color: WHITE, tile: -1, solid: true});
+    add('Sphere', function(pos, properties)
+        { return level3DMakeShape(pos, properties, render3D.sphereMesh, undefined, true); },
+        {color: WHITE, tile: -1, solid: true});
+    add('Cylinder', function(pos, properties)
+        { return level3DMakeShape(pos, properties, level3DCylinderMesh ||= buildCylinder()); },
+        {color: WHITE, tile: -1, solid: true});
+    // a light, a spotlight with a cone: cone is the angle in degrees from its forward out to the edge of its beam,
+    // the object's rotation aims it, softness is how much of the cone fades, shadows makes it the one that casts
+    // them, and lensFlare gives it a lens flare; not flare, since a property is also set on the object, where flare
+    // is the flare
+    add('Light', function(pos, properties)
+    {
+        const light = new Light3D(pos, properties.radius, properties.color, properties.intensity);
+        light.coneAngle = max(properties.cone, 0) * PI / 180;
+        light.coneSoftness = properties.softness;
+        if (properties.shadows && render3D)
+            render3D.shadowLight = light;
+        properties.lensFlare && light.addFlare();
+        return light;
+    }, {color: WHITE, radius: 5, intensity: 1, cone: 0, softness: .2, shadows: false, lensFlare: false});
+    return types;
+}

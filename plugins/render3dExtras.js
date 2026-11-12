@@ -1649,10 +1649,12 @@ class FirstPersonCamera3D extends EngineObject3D
 // a particle is this many floats of its emitter's particleData: position, velocity, start color, end color, start
 // and end size, life, age, angle, spin, and how many trail points it has in trailData
 const RENDER3D_PARTICLE_FLOATS = 21;
-// the position, color and size of the particle being drawn, shared by every emitter so the draw loop makes no objects
-const render3DParticlePos = vec3(), render3DParticleColor = new Color, render3DParticleSize = vec2();
+// the position, color and size of the particle being drawn, shared by every emitter so the draw loop makes no objects;
+// marked pure, so a game with no 3D particles does not keep what they are made of
+const render3DParticlePos = /* @__PURE__ */ vec3(), render3DParticleColor = /* @__PURE__ */ new Color,
+    render3DParticleSize = /* @__PURE__ */ vec2();
 // where a particle was and is, for the level collision
-const render3DParticleFrom = vec3(), render3DParticleTo = vec3();
+const render3DParticleFrom = /* @__PURE__ */ vec3(), render3DParticleTo = /* @__PURE__ */ vec3();
 
 // the emitters inside a particle callback now, whose nested calls each get a view of their own
 const render3DParticlesCalling = new Set;

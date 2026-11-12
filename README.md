@@ -175,7 +175,7 @@ LittleJS comes with several demos both for learning and using as starter project
 | [littlejs.esm.js](https://github.com/KilledByAPixel/LittleJS/blob/main/dist/littlejs.esm.js) | Debug | ESM | Debug mode with asserts |
 | [littlejs.esm.min.js](https://github.com/KilledByAPixel/LittleJS/blob/main/dist/littlejs.esm.min.js) | Release | ESM | Optimized for release and minified |
 
-Every build includes the plugins. littlejs.min.js is about 165 KB gzipped, and the 3D plugins are a large part of that. A bundler like Vite leaves out the plugins a game does not use, so a small 2D game comes to about 57 KB gzipped, and a lit 3D scene to about 77 KB.
+Every build includes the plugins. littlejs.min.js is about 165 KB gzipped, and the 3D plugins are a large part of that. A bundler like Vite leaves out the plugins a game does not use, so a small 2D game comes to about 29 KB gzipped, and a lit 3D scene to about 72 KB.
 
 ## Games Made With LittleJS
 

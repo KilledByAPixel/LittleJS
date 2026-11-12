@@ -255,12 +255,13 @@ function uglifyBuildStep(filename)
 };
 
 // Process an ES module with Uglify, compressed so the guarded debug calls are dropped, Closure does that for the
-// script build before its Uglify step
+// script build before its Uglify step; the pure annotations are kept, so a game's bundler can still leave out a
+// plugin's tables, made by calls marked pure, when the game uses nothing of that plugin
 function uglifyModuleBuildStep(filename)
 {
     try
     {
-        runTool('uglify-js/bin/uglifyjs', [filename, '-c', '--module', '-o', filename]);
+        runTool('uglify-js/bin/uglifyjs', [filename, '-c', '--module', '--annotations', '-o', filename]);
     }
     catch (e) { handleError(e,'Failed to run Uglify minification step!'); }
 };

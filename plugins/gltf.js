@@ -872,7 +872,8 @@ function gltfSkinApply(skin, worldOf, modelMatrix, mesh)
     }
     mesh.dirty = true;
 }
-const gltfSkinScratch = [new Matrix4, new Matrix4]; // a joint's matrix and its normal matrix, as it is worked out
+// a joint's matrix and its normal matrix, as it is worked out; pure, so a game that loads no glTF does not keep Matrix4
+const gltfSkinScratch = [/* @__PURE__ */ new Matrix4, /* @__PURE__ */ new Matrix4];
 
 // a node's translation, rotation and scale as arrays to animate, copies so the file's stay as they rest
 function gltfNodeTRS(node)
