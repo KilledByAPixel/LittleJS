@@ -40,14 +40,14 @@ test('emissiveMapColor bumps by its rgb: an equal color does not, a color change
         const r = render3D, v = ()=> r.stateVersion, out = [];
         let v0 = v();
         r.emissiveMapColor = rgb(1, 1, 1, .5); out.push(v() - v0); // alpha is not part of it
-        r.emissiveMapColor = undefined; out.push(v() - v0, r.emissiveMapColor); // undefined is white
+        r.emissiveMapColor = undefined; out.push(v() - v0, r.emissiveMapColor === WHITE); // undefined is white
         const glow = rgb(1, 0, 0);
         v0 = v(); r.emissiveMapColor = glow; out.push(v() - v0, r.emissiveMapColor === glow);
         v0 = v(); glow.g = 1; r.emissiveMapColor = glow; out.push(v() - v0);
         r.emissiveMapColor = WHITE;
         return out;
     `);
-    assert.deepEqual([...result], [0, 0, undefined, 1, true, 1]);
+    assert.deepEqual([...result], [0, 0, true, 1, true, 1]);
 });
 
 test('a batch checks the version first, so while it holds the fields are not compared', () =>

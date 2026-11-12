@@ -388,8 +388,9 @@ function engineAddPlugin(update, render, glContextLost, glContextRestored, preRe
 /** Add something the game loads to what startup waits for: while engineInit and gameInit run, the game loop starts
  *  once it is done, and the loading screen counts it; images from loadTexture and sounds from files are added on
  *  their own, and a load that fails counts as done; after startup it does nothing
- *  @param {Promise<any>} promise
- *  @return {Promise<any>} - The same promise
+ *  @template T
+ *  @param {Promise<T>} promise
+ *  @return {Promise<T>} - The same promise
  *  @example
  *  async function gameInit() { level = await engineAddLoad(fetchJSON('level.json')); }
  *  @memberof Engine */

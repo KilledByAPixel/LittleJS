@@ -856,7 +856,11 @@ class EngineObject
         ASSERT(child instanceof EngineObject, 'child must be an EngineObject');
         ASSERT(!child.destroyed, 'cannot add a destroyed child');
         for (let p = /** @type {EngineObject} */ (this); p; p = p.parent)
+        {
             ASSERT(p !== child, 'cannot add an object as a child of itself or of its own child');
+            if (p === child) return child; // a release build leaves it as it was, a loop would never end
+        }
+        child.parent?.removeChild(child); // and moves one from its old parent, as attach does
         this.children.push(child);
         child.parent = this;
         child.localPos = localPos.copy();

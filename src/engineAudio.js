@@ -18,7 +18,10 @@
 /** Audio context used by the engine, undefined outside a browser, where the engine runs headless
  *  @type {AudioContext}
  *  @memberof Audio */
-let audioContext = typeof AudioContext == 'undefined' ? undefined : new AudioContext;
+let audioContext = typeof AudioContext == 'undefined' ? undefined : audioContextMake();
+// made at load, so a browser that refuses one, at its limit of contexts or by a policy, runs with no audio as one
+// without them does, rather than stopping the engine's script
+function audioContextMake() { try { return new AudioContext; } catch { } }
 
 // resume the audio, a refusal caught so it is not an uncaught error in the console, the next gesture tries again
 function audioResume() { audioContext?.resume()?.catch?.(()=> {}); }
@@ -90,11 +93,13 @@ function audioPageChange()
         if (audioSuspendedByPage || audioContext.state != 'running') return;
         audioSuspendedByPage = true;
         audioContext.suspend();
+        typeof speechSynthesis != 'undefined' && speechSynthesis.pause(); // speech is not in the audio context
     }
     else if (audioSuspendedByPage)
     {
         audioSuspendedByPage = false;
         audioResume();
+        typeof speechSynthesis != 'undefined' && speechSynthesis.resume();
     }
 }
 
@@ -781,7 +786,7 @@ function speak(text, volume=1, rate=1, pitch=1, language='')
     // build utterance and speak
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = language;
-    utterance.volume = clamp(volume*soundVolume);
+    utterance.volume = audioFinite(clamp(volume*soundVolume), 0); // not a number is silence, not a throw
     utterance.rate = rate;
     utterance.pitch = pitch;
     speechSynthesis.speak(utterance);

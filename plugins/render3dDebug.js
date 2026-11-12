@@ -45,6 +45,7 @@ function render3DDebugPush(duration, draw)
 function debugBox3D(pos, size=1, color=WHITE, time=0, rotation)
 {
     const matrix = buildMatrix(pos, rotation, render3DSize3(size));
+    color = color.copy(); // as it is now, a timed one keeps it when the caller changes theirs
     const corner = (i)=> matrix.transformPoint(vec3(i & 1 ? .5 : -.5, i & 2 ? .5 : -.5, i & 4 ? .5 : -.5));
     render3DDebugPush(time, ()=>
     {
@@ -63,7 +64,7 @@ function debugBox3D(pos, size=1, color=WHITE, time=0, rotation)
  *  @memberof Render3D */
 function debugSphere3D(pos, size=1, color=WHITE, time=0)
 {
-    pos = pos.copy(); // where it is now, a timed one stays put when the object moves
+    pos = pos.copy(), color = color.copy(); // as they are now, a timed one stays when the object or color changes
     const circle = render3DCircle(24), r = size / 2;
     render3DDebugPush(time, ()=>
     {
@@ -86,7 +87,8 @@ function debugSphere3D(pos, size=1, color=WHITE, time=0)
  *  @memberof Render3D */
 function debugLine3D(posA, posB, color=WHITE, width=RENDER3D_DEBUG_WIDTH, time=0)
 {
-    posA = posA.copy(), posB = posB.copy(); // where they are now, a timed one stays put when the ends move
+    // as they are now, a timed one stays put when the ends or the color change
+    posA = posA.copy(), posB = posB.copy(), color = color.copy();
     render3DDebugPush(time, ()=> render3D.drawLine(posA, posB, width, color));
 }
 
@@ -98,7 +100,7 @@ function debugLine3D(posA, posB, color=WHITE, width=RENDER3D_DEBUG_WIDTH, time=0
  *  @memberof Render3D */
 function debugPoint3D(pos, color=WHITE, time=0, size=.2)
 {
-    pos = pos.copy(); // where it is now, a timed one stays put when the object moves
+    pos = pos.copy(), color = color.copy(); // as they are now, a timed one stays when the object or color changes
     render3DDebugPush(time, ()=>
     {
         for (const axis of [vec3(size / 2, 0, 0), vec3(0, size / 2, 0), vec3(0, 0, size / 2)])

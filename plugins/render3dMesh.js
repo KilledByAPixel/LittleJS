@@ -1139,6 +1139,7 @@ function render3DBevelBox(half, t, segments, faces)
 function buildBox(size=1, bevel=0, bevelSegments=1)
 {
     ASSERT(isNumber(bevel) && bevel >= 0, 'bevel must be a number, 0 or more');
+    ASSERT(!bevel || bevelSegments * bevelSegments * 8 <= 1e6, 'a bevel of more than a million faces', bevelSegments);
     const half = render3DSize3(size).scale(.5);
     // each face: normal, right axis, up axis (right cross up = normal)
     const faces = [
@@ -1276,4 +1277,4 @@ function buildSky(topColor=hsl(.6, .8, .55), horizonColor=hsl(.6, 1, .9), bottom
 
 // the top, horizon and bottom colors of each sky dome buildSky made, which a reflection shows while that dome is
 // render3D.sky, whether setSky set it or the game did
-const render3DSkyColors = new WeakMap;
+const render3DSkyColors = /* @__PURE__ */ new WeakMap;

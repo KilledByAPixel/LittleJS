@@ -49,8 +49,9 @@ const RENDER3D_MAX_STREAM_VERTS = 32768;
 const RENDER3D_MAX_LIGHTS = 8; // Light3D objects per frame, the shader loops over this many
 // strip order, frozen, and typed as the plain array the uv parameters take
 const RENDER3D_QUAD_UVS = /** @type {Array<Vector2>} */
-    (Object.freeze([vec2(0, 0), vec2(0, 1), vec2(1, 0), vec2(1, 1)].map(uv=> Object.freeze(uv))));
-const RENDER3D_FULL_UV_RECT = Object.freeze({x:0, y:0, w:1, h:1});
+    (/* @__PURE__ */ (()=> Object.freeze([vec2(0, 0), vec2(0, 1), vec2(1, 0), vec2(1, 1)]
+        .map(uv=> Object.freeze(uv))))());
+const RENDER3D_FULL_UV_RECT = /* @__PURE__ */ Object.freeze({x:0, y:0, w:1, h:1});
 // these made on load are marked pure, so a bundler leaves them out of a game that uses no 3D, with what they are
 const RENDER3D_DEFAULT_NORMAL = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ vec3(0, 1, 0));
 const RENDER3D_DEFAULT_UV = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ vec2());
@@ -389,8 +390,8 @@ function render3DFlushInstances(only)
             state.cullBackFaces = !mesh.doubleSided, state.mirrored = mesh.instanceMirrored;
         // a batch of sprites or particles, round from where each pixel is on its quad
         mesh.instanceBillboard && render3DBillboardState(state, state.roundLighting ? 2 : 1);
-        render3DDrawInstanced(mesh, buffer, count, mesh.instanceTextureInfo, state);
-        render3DBillboardMode = 0;
+        try { render3DDrawInstanced(mesh, buffer, count, mesh.instanceTextureInfo, state); }
+        finally { render3DBillboardMode = 0; } // the next draws are surfaces, even after one that threw
     }
     if (!only)
         r.instanceMeshes.length = 0;
@@ -516,7 +517,7 @@ function render3DLightCone(light)
 }
 
 // unit circle directions for a number of sides, [cos, sin, cos, sin, ...] including the closing point, cached
-const render3DCircleCache = new Map;
+const render3DCircleCache = /* @__PURE__ */ new Map;
 function render3DCircle(sides)
 {
     sides |= 0;
@@ -565,6 +566,10 @@ class Render3DPlugin
     constructor()
     {
         ASSERT(!render3D, 'Render3D plugin already initialized');
+        // one made again in a release build, as in a scene's enter, takes the old one's place: what the old one made
+        // on the GPU is given back, and the count of lost contexts goes on, so a mesh uploaded before is not current
+        const old = render3D;
+        old && render3DFreeGL(old);
         render3D = this;
         // the draw state, read at each draw through the accessors below the constructor
         /** @type {Render3DDrawState} */
@@ -779,7 +784,8 @@ class Render3DPlugin
         this.cameraDepthWidth = 0;
         this.cameraDepthHeight = 0;
         this.depthPass = false; // drawing the camera's depth, a shadow pass seen from the camera
-        this.contextGeneration = 0;  // counts context losses, a mesh uploaded under an older one uploads again
+        this.contextGeneration = old?.contextGeneration ?? 0; // counts context losses, a mesh uploaded under an
+                                                              // older one uploads again
         /** @type {WeakMap<WebGLProgram, Object<string, WebGLUniformLocation|null>>} */
         this.uniforms = new WeakMap; // uniform locations by program, weak so a freed one goes with it
         /** @type {Object<string, Array<number>>} */
@@ -827,7 +833,7 @@ class Render3DPlugin
     // Draw state: each field an accessor over drawState, whose setter moves stateVersion only on a real change
 
     /** Apply lighting, when false draws plain vertex color times texture and casts no shadow;
-     *  off for billboards, lines, ribbons and soft discs, an object sets emissive instead
+     *  off for lines, ribbons, soft discs and additive billboards, an object sets emissive instead
      *  @return {boolean} */
     get lighting() { return this.drawState.lighting; }
     set lighting(v) { const d = this.drawState; d.lighting === v || (d.lighting = v, ++this.stateVersion); }
@@ -912,13 +918,13 @@ class Render3DPlugin
     { const d = this.drawState; d.roundLighting === v || (d.roundLighting = v, ++this.stateVersion); }
 
     /** Multiplies the emissive map, set from each object's emissiveMapColor; compared by its rgb, so a Color
-     *  changed in place is seen when it is set again, and undefined is white
+     *  changed in place is seen when it is set again, and set to undefined it is white, so it is always a Color
      *  @return {Color} */
     get emissiveMapColor() { return this.drawState.emissiveMapColor; }
     set emissiveMapColor(v)
     {
         const d = this.drawState, c = v || WHITE;
-        d.emissiveMapColor = v;
+        d.emissiveMapColor = c;
         if (c.r !== d.emissiveR || c.g !== d.emissiveG || c.b !== d.emissiveB)
             d.emissiveR = c.r, d.emissiveG = c.g, d.emissiveB = c.b, ++this.stateVersion;
     }
@@ -1220,8 +1226,12 @@ class Render3DPlugin
         const gl = glContext;
         // billboards, round from the bent normals their corners were written with
         this.streamBillboard && render3DBillboardState(this.streamState, this.streamState.roundLighting ? 0 : 1);
-        render3DSetDrawUniforms(RENDER3D_IDENTITY, this.streamTileInfo, WHITE, RENDER3D_FULL_UV_RECT, this.streamState);
-        render3DBillboardMode = 0;
+        try
+        {
+            render3DSetDrawUniforms(RENDER3D_IDENTITY, this.streamTileInfo, WHITE, RENDER3D_FULL_UV_RECT,
+                this.streamState);
+        }
+        finally { render3DBillboardMode = 0; }
         render3DBindVertexBuffer(this.streamBuffer);
         gl.bufferSubData(gl.ARRAY_BUFFER, 0, this.streamFloats, 0, this.streamCount * RENDER3D_VERTEX_FLOATS);
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, this.streamCount);
@@ -1347,9 +1357,10 @@ class Render3DPlugin
             return; // a plain return, so the method is typed void and a subclass may override it so
         if (!this.sky) return; // a sky box that could not draw, with no dome to draw instead
         // the dome only has to sit between the clip planes, the pass draws it first with no depth test;
-        // a far plane at Infinity has no midpoint, so put it a long way out instead
+        // a far plane at Infinity has no midpoint, so put it a long way out instead; an orthographic camera's near
+        // plane may be at or behind it, which would make it nothing or turn it inside out, so then half way to far
         const {near, far} = this.camera;
-        const radius = far == Infinity ? near * 1e4 : (near + far) / 2;
+        const radius = far == Infinity ? max(near, 1) * 1e4 : near > 0 ? (near + far) / 2 : far / 2;
         render3DWithState({lighting: false, blend: false, depthTest: false, depthWrite: false, fogEnd: 0, shader: undefined,
             emissiveMap: undefined}, ()=>
             this.drawMesh(this.sky, buildMatrix(this.camera.pos, undefined, vec3(radius))));
@@ -1510,7 +1521,10 @@ class Render3DPlugin
         // the normal at each corner: facing the camera, or for round lighting bent out along the quad's own right
         // and up, which the GPU blends across it into the bulge the shader makes from an instance's own uvs
         // a normal map lights it as a card facing the camera, with no bend
-        const round = billboard && this.roundLighting && !this.normalMap, kr = round ? 1 / (hypot(rx, ry, rz) || 1) : 0;
+        // a normal map makes it a card once it is drawn with one, as render3DSetMaterialUniforms decides, and an
+        // instanced billboard is lit
+        const mapped = this.normalScale && render3DTextureOf(this.normalMap)?.glTexture;
+        const round = billboard && this.roundLighting && !mapped, kr = round ? 1 / (hypot(rx, ry, rz) || 1) : 0;
         const ku = round ? 1 / (hypot(ux, uy, uz) || 1) : 0;
         // the bend toward the right and toward the top, the left and the bottom the other way
         const bx = rx * kr, by = ry * kr, bz = rz * kr, cx = ux * ku, cy = uy * ku, cz = uz * ku;
@@ -1621,6 +1635,7 @@ class Render3DPlugin
     drawSoftDisc(pos, size=1, color=WHITE, normal=this.cameraBack, sides=16)
     {
         render3DAssertBlending();
+        ASSERT(sides >= 3 && normal.lengthSquared() > 0, 'drawSoftDisc: sides is 3 or more and normal not zero');
         if (this.transparentQueue && !this.capture)
         {
             const p = pos.copy(), c = color.copy(), n = normal.copy(); // copies, the queue replays later
@@ -1858,7 +1873,7 @@ function render3DVertexSource(vertexCode, declarations='')
             'S=lightViewProj*w;' +
             '}');
 }
-const RENDER3D_VERTEX_SOURCE = render3DVertexSource();
+const RENDER3D_VERTEX_SOURCE = /* @__PURE__ */ render3DVertexSource();
 
 // the names a Shader's snippet can use in 3D, over the plugin's own uniforms and varyings
 const RENDER3D_SNIPPET_NAMES =
@@ -2147,6 +2162,24 @@ function render3DUseProgram(program)
         const face = r.capturingCube?.size; // in a capture the face is the screen
         gl.uniform3f(render3DUniform('iResolution'), face || glCanvas.width, face || glCanvas.height, 1);
     }
+}
+
+// give back what a renderer made on the GPU, for one that takes its place
+function render3DFreeGL(r)
+{
+    const gl = glContext;
+    if (headlessMode || !gl) return;
+    r.program && gl.deleteProgram(r.program);
+    r.shadowShader && gl.deleteProgram(r.shadowShader);
+    r.vao && gl.deleteVertexArray(r.vao);
+    r.streamBuffer && gl.deleteBuffer(r.streamBuffer);
+    for (const buffer of r.instanceBuffers) gl.deleteBuffer(buffer);
+    glDeleteTexture(r.whiteTexture); // the engine made it, and lets go of it
+    for (const sampler of r.samplers?.values() ?? []) gl.deleteSampler(sampler);
+    r.shadowTexture && gl.deleteTexture(r.shadowTexture);
+    r.shadowFramebuffer && gl.deleteFramebuffer(r.shadowFramebuffer);
+    r.cameraDepthTexture && gl.deleteTexture(r.cameraDepthTexture);
+    r.cameraDepthFramebuffer && gl.deleteFramebuffer(r.cameraDepthFramebuffer);
 }
 
 function render3DInitGL()
@@ -2795,7 +2828,7 @@ function render3DLevelAssertPlaced(o)
 // this returns one shared object, so read it before calling again
 const render3DTileUVRect = {x:0, y:0, w:1, h:1};
 // the tiles of objects made from a whole TextureInfo, they cover all of it even after the texture is resized
-const render3DWholeTiles = new WeakSet;
+const render3DWholeTiles = /* @__PURE__ */ new WeakSet;
 function render3DGetTileUVs(tileInfo)
 {
     // a headless tile has no texture, and a whole texture's tile covers it at any size
@@ -3288,7 +3321,7 @@ function render3DSlopeNormal(heightFunction, x, z, ex, ez, halfX, halfZ)
 
 // the half axes of a camera facing quad of a size turned by an angle, right then up, in one shared array
 // so a particle costs no vectors; read it before calling again
-const render3DBillboardAxesScratch = new Float64Array(6);
+const render3DBillboardAxesScratch = /* @__PURE__ */ new Float64Array(6);
 function render3DBillboardAxes(size, angle, upright)
 {
     const r = render3D.cameraRight, u = render3D.cameraUp;

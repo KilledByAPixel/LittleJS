@@ -8,7 +8,7 @@
 
 // import LittleJS module
 import * as LJS from '../../dist/littlejs.esm.js';
-const {vec2, hsl} = LJS;
+const {vec2, hsl} = LJS; // the Breakout Tutorial builds on these two
 
 ///////////////////////////////////////////////////////////////////////////////
 function gameInit()

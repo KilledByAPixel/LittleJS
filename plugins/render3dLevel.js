@@ -22,7 +22,7 @@ const LEVEL3D_VERSION = 1; // the format a level's littlejs3D names
 const level3DTypes = /* @__PURE__ */ level3DBuiltInTypes();
 
 // the scale each object had when it was made, the level's scale multiplies it
-const level3DBaseScale = new WeakMap;
+const level3DBaseScale = /* @__PURE__ */ new WeakMap;
 
 /** Add a type of object, so level3DLoad makes one wherever a level has an object of that type
  *  - The name is a string because minified builds rename classes
@@ -108,6 +108,9 @@ function level3DLoad(level)
     ASSERT(!!level && typeof level === 'object', 'a level is an object, {} for a new one');
     ASSERT(!(level.littlejs3D > LEVEL3D_VERSION), 'the level was made by a newer LittleJS');
     editor3DLevelLoaded(level); // debug builds: the 3D editor takes the level, its autosaved edits go in first
+    // the last level's own prefabs it does not have are no longer types; a prefab the editor opens as a level of its
+    // own keeps them, its instances are of the level's prefabs
+    level3DPrefabLevels.has(level) || level3DPrefabsDrop(level.prefabs);
     level3DPrefabsAdd(level.prefabs);
     level3DSceneApply(level.scene);
     const made = [], map = level3DVoxelMap = level3DVoxelsMake(level.voxels);
@@ -296,7 +299,7 @@ function level3DTerrainMake(terrain)
 
 // the sky domes levels made, a level's sky takes the place of the one before and disposes it; a dome the game made
 // itself is left whole, for the game to put back
-const level3DSkies = new WeakSet;
+const level3DSkies = /* @__PURE__ */ new WeakSet;
 
 // set the scene a level's scene block gives: sky as its top, horizon and bottom colors, with ambient how much of
 // them lights the scene, sunDirection and sunColor, fog as its start and end with fogColor, the horizon without one,
@@ -337,8 +340,8 @@ function level3DSceneApply(scene)
 
 // the cube maps scene blocks loaded, by their six urls, the four used last, so the same ones load once; a load that
 // failed is not kept, and is tried again by the next scene that names it
-const level3DSceneCubeMaps = new Map;
-const level3DSceneCubeLoaded = new WeakMap; // the cube map each of their loads gave, once it has
+const level3DSceneCubeMaps = /* @__PURE__ */ new Map;
+const level3DSceneCubeLoaded = /* @__PURE__ */ new WeakMap; // the cube map each of their loads gave, once it has
 
 // which load each of render3D.skyBox and environment waits for: every scene applied, or the editor putting the
 // game's back, moves it on, and a load that finishes after is dropped
@@ -396,14 +399,14 @@ function level3DVector(value, fallback)
         vec3(value[0], value[1], value[2]) : fallback;
 }
 
-// the defaults of an object's type, a Color or vector copied for each object, then its own properties over them,
+// the defaults of an object's type, copied for each object, then its own properties over them,
 // each read as its default is; one the file got wrong, a value not of its default's type, keeps the default, and
 // one the type has no default for is kept as it is
 function level3DProperties(type, object)
 {
     const properties = {}, own = object.properties;
     for (const [key, value] of Object.entries(type.defaults))
-        properties[key] = value?.copy ? value.copy() : value;
+        properties[key] = objectPropertyCopy(value);
     for (const [key, value] of Object.entries(own && typeof own === 'object' ? own : {}))
     {
         const d = type.defaults[key];
@@ -417,7 +420,7 @@ function level3DProperties(type, object)
         else if (typeof d === 'number')
             level3DFinite(value) && (properties[key] = value);
         else if (d === undefined || typeof value === typeof d && (d === null || value !== null))
-            properties[key] = value; // null is an object to typeof, but not the object a default is
+            properties[key] = objectPropertyCopy(value); // null is an object to typeof, but not a default's object
     }
     return properties;
 }
@@ -495,7 +498,7 @@ function level3DSpawn(type, pos3D=vec3(), rotation3D=vec3(), scale3D=vec3(1), pr
 // block added, which one the game adds takes the place of, and source, the object it was added from, which the
 // level editor knows a level that is a prefab by
 /** @type {Map<string, {attached: boolean, objects: Array<Level3DObject>, fromLevel: boolean, source: Object}>} */
-const level3DPrefabs = new Map;
+const level3DPrefabs = /* @__PURE__ */ new Map;
 
 // how many prefabs deep an instance being made is, a prefab that holds itself is stopped; and how many of those
 // are attached: a prefab inside an attached one is attached too, or its parts would be left behind in the world
@@ -539,6 +542,23 @@ function level3DPrefabSet(name, prefab, fromLevel)
     // a class of its own, so the level editor makes its instances again as it does a class's
     level3DTypes.set(name, {make: class extends Prefab3D { constructor(pos) { super(pos, name); } }, defaults: {},
         tileInfo: undefined});
+}
+
+// the levels the 3D editor made of a prefab to edit it, which leave the prefab types as they are when loaded
+const level3DPrefabLevels = /* @__PURE__ */ new WeakSet;
+
+// take out the prefabs a level added that the given prefabs do not have, and give their names
+function level3DPrefabsDrop(prefabs)
+{
+    const kept = prefabs && typeof prefabs === 'object' && !isArray(prefabs) ? prefabs : {}, removed = new Set;
+    for (const [name, prefab] of level3DPrefabs)
+    {
+        if (!prefab.fromLevel || Object.prototype.hasOwnProperty.call(kept, name) && kept[name]) continue;
+        level3DPrefabs.delete(name);
+        level3DTypes.delete(name);
+        removed.add(name);
+    }
+    return removed;
 }
 
 // add a level's own prefabs, each unless the game added one of that name or it is a plain type's name

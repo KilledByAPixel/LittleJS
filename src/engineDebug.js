@@ -304,6 +304,11 @@ function debugShowErrors()
         document.body.replaceChildren(pre);
     }
     
+    // set on globalThis, the window in a browser, so in Node, which has neither, it does not throw half way
+    globalThis.onunhandledrejection = (event)=>
+        showError(event.reason?.stack || event.reason);
+    globalThis.onerror = (message, source, lineno, colno)=>
+        showError(`${message}\n${source}\nLn ${lineno}, Col ${colno}`);
     const originalAssert = console.assert;
     console.assert = (assertion, ...output)=>
     {
@@ -311,10 +316,6 @@ function debugShowErrors()
         if (!assertion && !debugAsserting) // an ASSERT throws its own error, which says what its values are
             throw new Error('Assertion failed!\n' + output.join(' '));
     };
-    onunhandledrejection = (event)=>
-        showError(event.reason?.stack || event.reason);
-    onerror = (message, source, lineno, colno)=>
-        showError(`${message}\n${source}\nLn ${lineno}, Col ${colno}`);
 }
 
 ///////////////////////////////////////////////////////////////////////////////

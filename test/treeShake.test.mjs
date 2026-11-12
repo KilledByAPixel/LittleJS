@@ -77,6 +77,26 @@ test('no plugin in the release build runs a statement as it loads, so a bundler 
     assert.deepEqual(found.filter((f)=> !allowed.includes(f)), []);
 });
 
+test('a constant a plugin makes on load by new or a call is marked pure, so it goes with the plugin', ()=>
+{
+    // each declarator at the start of a top level line: const name = new ..., or = name(...) or a.b(...)
+    const found = [];
+    for (const file of list('enginePluginFiles'))
+        read(file).split('\n').forEach((line, i)=>
+        {
+            if (!/^(?:const|let|var) /.test(line)) return;
+            for (const m of line.matchAll(/(?:^(?:const|let|var) |, )([\w$]+) = (\/\* @__PURE__ \*\/ )?(new [\w$]|[\w$.]+\s*\()/g))
+                m[2] || found.push(`${file}:${i + 1} ${m[1]}`);
+        });
+    assert.deepEqual(found, []);
+});
+
+test('the built-in effect names are read from the effects map, so a bundler keeping one keeps the other', ()=>
+{
+    assert.match(read('plugins/particleEffects.js'),
+        /^const particleEffectsBuiltIn = \/\* @__PURE__ \*\/ Array\.from\(particleEffectsByName\.values\(\)/m);
+});
+
 test('the tables plugins make on load are made by calls marked pure, and the ES module build keeps the marks', ()=>
 {
     for (const [file, name] of [['plugins/render3dLevel.js', 'level3DTypes'],

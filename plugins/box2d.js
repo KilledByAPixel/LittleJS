@@ -163,7 +163,7 @@ function box2dContactInfo(contact)
 
 // the contacts turned off until they stop touching, by pointer: true for one a one way object lets pass, which
 // the contact callbacks never hear of, false for one a preSolve turned off
-const box2dContactsOff = new Map;
+const box2dContactsOff = /* @__PURE__ */ new Map;
 
 // whether any object needs its contacts before they are solved, found before each step, so the solver's callback
 // does nothing in a game without one
@@ -311,10 +311,10 @@ function box2dRunPending()
 }
 
 // each Box2dJoint by its native pointer, so a joint Box2D destroys along with a body can let go of its wrapper
-const box2dJoints = new Map;
+const box2dJoints = /* @__PURE__ */ new Map;
 
 // the gear joints, kept apart from the others, since every joint that goes looks through them
-const box2dGearJoints = new Set;
+const box2dGearJoints = /* @__PURE__ */ new Set;
 
 // a gear joint keeps pointers to the joints it gears and to their bodies, so it goes before either joint does
 function box2dDestroyGears(joint)
@@ -343,7 +343,7 @@ const box2dUnusedFields = {
     angleDamping: 'setAngularDamping', mass: 'setMass or the density of its shapes',
     friction: 'the friction of its shapes, given to addBox and the rest',
     restitution: 'the restitution of its shapes, given to addBox and the rest'};
-const box2dUnusedWarned = new Set, box2dUnusedStarts = new WeakMap;
+const box2dUnusedWarned = /* @__PURE__ */ new Set, box2dUnusedStarts = /* @__PURE__ */ new WeakMap;
 
 // the values of those fields as numbers, a vector as its two, then gravityScale, kept for the object
 function box2dUnusedFieldValues(o)
@@ -2787,6 +2787,9 @@ class Box2dPlugin
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+/** @type {Promise<Box2dPlugin>|undefined} */
+let box2dInitLoad; // the load box2dInit started, which a second call waits for
+
 /** Box2d Init - Call with await to init box2d
  *  @example
  *  await box2dInit();
@@ -2794,16 +2797,18 @@ class Box2dPlugin
  *  @memberof Box2D */
 async function box2dInit()
 {
-    // called again, as in a scene's enter, it is the world there is: its hooks are added once
+    // called again in a release build, as in a scene's enter, it is the world there is, and a call while the first
+    // still loads waits for the same one: its hooks are added once
     ASSERT(!box2d, 'Box2D already initialized');
     if (box2d) return box2d;
-
-    // load box2d
-    // @ts-ignore - Box2D is the global that box2d.wasm.js defines
-    new Box2dPlugin(await Box2D());
-    setupDebugDraw();
-    engineAddPlugin(box2dUpdate, box2dRender);
-    return box2d;
+    return box2dInitLoad ||= (async ()=>
+    {
+        // @ts-ignore - Box2D is the global that box2d.wasm.js defines
+        new Box2dPlugin(await Box2D());
+        setupDebugDraw();
+        engineAddPlugin(box2dUpdate, box2dRender);
+        return box2d;
+    })();
 
     // add the box2d plugin to the engine
     function box2dUpdate()

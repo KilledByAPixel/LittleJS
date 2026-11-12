@@ -639,12 +639,25 @@ function objectLayersLoad(tileMapData)
     return made;
 }
 
-// the defaults of an object's type, a Color or Vector2 copied for each, then its properties in Tiled over them
+// a property's value for one object of its own: a Color or Vector2 copied, and an array or plain object copied with
+// what is in it, so an object that changes its list does not change every other object's, or the map's
+function objectPropertyCopy(value)
+{
+    if (value?.copy) return value.copy();
+    if (isArray(value)) return value.map(objectPropertyCopy);
+    if (!value || typeof value != 'object' || Object.getPrototypeOf(value) !== Object.prototype) return value;
+    const copy = {};
+    for (const key in value)
+        copy[key] = objectPropertyCopy(value[key]);
+    return copy;
+}
+
+// the defaults of an object's type, each copied for it, then its properties in Tiled over them
 function objectLayersProperties(type, object)
 {
     const properties = {};
     for (const [key, value] of Object.entries(type.defaults))
-        properties[key] = value?.copy ? value.copy() : value;
+        properties[key] = objectPropertyCopy(value);
     for (const property of object.properties || [])
     {
         const {name, value} = property;
@@ -658,7 +671,7 @@ function objectLayersProperties(type, object)
                 (properties[name] = vec2(x, y));
         }
         else
-            properties[name] = value;
+            properties[name] = objectPropertyCopy(value); // a class property is the map's own object
     }
     return properties;
 }
@@ -1200,7 +1213,8 @@ class TileLayer extends CanvasLayer
      *  @param {Vector2}       layerPos - Local position in array
      *  @param {TileLayerData} data - Data to set
      *  @param {boolean}       [redraw] - True draws the cell now, false leaves it as drawn, left out draws it
-     *                                     on the next render, or now inside the layer's own redraw */
+     *                                     on the next render, or now inside the layer's own redraw; when more than
+     *                                     half the cells wait the whole layer is drawn again, clearing paint too */
     setData(layerPos, data, redraw)
     {
         ASSERT(isVector2(layerPos), 'layerPos must be a Vector2');

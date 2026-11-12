@@ -129,8 +129,8 @@ class FollowCamera extends EngineObject
         this.lookTravel = vec2();    // how far the target has gone back against the look since it last went with it
         /** @type {Vector2|undefined} */
         this.lookFrom = undefined;   // where the target was last update, to see which way it moves
-        /** @type {EngineObject|undefined} */
-        this.lookTarget = undefined; // the object lookFrom is of, a new one starts measuring again
+        /** @type {EngineObject|Vector2|undefined} */
+        this.lookTarget = undefined; // the target lookFrom is of, a new object starts measuring again
         this.activate();
         this.snap();
     }
@@ -195,10 +195,14 @@ class FollowCamera extends EngineObject
     // on each axis the first move sets the look; it turns once the target has gone back lookAheadTurn the other way
     updateLook(/** @type {boolean} */ snap=false)
     {
-        if (this.target !== this.lookTarget && this.target instanceof EngineObject)
-            this.lookTarget = this.target, this.lookFrom = undefined; // a new target, not a move
+        // a new target is not a move, an object or one in place of an object; a point given again each update, as
+        // a fresh vec2, is one target that moves
+        const target = this.target;
+        if (target !== this.lookTarget && (target instanceof EngineObject || this.lookTarget instanceof EngineObject))
+            this.lookFrom = undefined;
+        this.lookTarget = target;
         const pos = this.getTargetPos(), from = this.lookFrom;
-        if (!pos) return;
+        if (!pos) return void (this.lookFrom = undefined); // with none, where it comes back is not a move either
         if (from)
         {
             const turn = (axis)=>

@@ -18,7 +18,8 @@
  *  @type {PostProcessPlugin}
  *  @memberof PostProcess */
 let postProcess;
-// its hooks are added once: one made again, as in a scene's enter, takes the old one's place and its hooks drive it
+// its hooks are added once: one made again in a release build, as in a scene's enter, takes the old one's place and
+// its hooks drive it
 let postProcessPluginAdded = false;
 
 /////////////////////////////////////////////////////////////////////////
@@ -47,7 +48,13 @@ class PostProcessPlugin
         ASSERT(engineInitialized || headlessMode, 'create the plugin after engineInit, e.g. in gameInit');
         ASSERT(!postProcess, 'Post process already initialized');
         ASSERT(!(includeMainCanvas && feedbackTexture), 'Post process cannot both include main canvas and use feedback texture');
+        // one made again in a release build takes the old one's place, which gives back what it made on the GPU
+        postProcess?.setShaderCode(postProcess.shaderCode);
         postProcess = this;
+
+        // the options it was made with, read by the hooks from the one in place, as they are added once
+        this.includeMainCanvas = includeMainCanvas;
+        this.feedback = feedbackTexture;
 
         /** @property {string} - The shadertoy style mainImage code it shades with, see setShaderCode */
         this.shaderCode = postProcessShaderCode(shaderCode);
@@ -99,7 +106,7 @@ class PostProcessPlugin
             if (headlessMode || !glEnable) return;
 
             // create resources, the feedback starting black, as if the frame before the first were empty
-            if (feedbackTexture)
+            if (postProcess.feedback)
             {
                 postProcess.feedbackTexture = glCreateTexture();
                 glContext.bindTexture(glContext.TEXTURE_2D, postProcess.feedbackTexture);
@@ -190,7 +197,7 @@ class PostProcessPlugin
                 glContext.texParameteri(glContext.TEXTURE_2D, glContext.TEXTURE_MIN_FILTER, filter);
             };
             setFilter();
-            if (includeMainCanvas)
+            if (postProcess.includeMainCanvas)
             {
                 // copy main canvas to work canvas at the backing store size,
                 // mainCanvasSize is css pixels so it would lose resolution
@@ -220,7 +227,7 @@ class PostProcessPlugin
             }
 
             // the previous frame's output, on the second texture unit
-            if (feedbackTexture)
+            if (postProcess.feedback)
             {
                 glContext.activeTexture(glContext.TEXTURE1);
                 glContext.bindTexture(glContext.TEXTURE_2D, postProcess.feedbackTexture);
@@ -254,7 +261,7 @@ class PostProcessPlugin
             }
             glContext.drawArrays(glContext.TRIANGLE_STRIP, 0, 4);
 
-            if (feedbackTexture)
+            if (postProcess.feedback)
             {
                 // keep this frame's output for the next one, in the feedback texture still bound to the second
                 // unit, then hand the first texture unit back to the engine
@@ -396,7 +403,7 @@ const postProcessNumber = (n)=> typeof n === 'string' ?
 
 // a GLSL name for a value or a setting, which no part of the shader uses already: not the engine's own, i and a
 // capital, nor those of mainImage or an effect's own locals, which start with an underscore, nor a GLSL word
-const postProcessGLSLWords = new Set(('c uv p sceneDepth mainImage main ' +
+const postProcessGLSLWords = /* @__PURE__ */ new Set(('c uv p sceneDepth mainImage main ' +
     // keywords and reserved words
     'attribute const uniform varying layout centroid flat smooth noperspective patch sample break continue do for ' +
     'while switch case default if else subroutine in out inout float double int void bool true false invariant ' +

@@ -62,7 +62,7 @@ function gameInit()
         // set tile data
         const pos = vec2(x, y);
         const tileIndex = 1;
-        const direction = LJS.randInt(4)
+        const direction = LJS.randInt(4);
         const mirror = LJS.randBool();
         const color = LJS.randColor();
         const data = new LJS.TileLayerData(tileIndex, direction, mirror, color);

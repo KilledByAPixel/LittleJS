@@ -504,7 +504,8 @@ function particleEffectBehaviorsSet2D(b)
 /** Add a behavior effects can use by name, or replace one
  *  @param {string} name
  *  @param {function(Particle, number): void} update - Pushes a 2D particle, given the strength
- *  @param {function(Particle3D, number): void} [update3D] - The same for a 3D particle, none leaves 3D alone
+ *  @param {function(Particle3D, number): void} [update3D] - The same for a 3D particle, none does nothing in 3D;
+ *    it replaces a behavior of the same name whole, its 3D push and range too
  *  @param {number} [min] - Strength range the designer offers, and the range a strength is clamped to
  *  @param {number} [max]
  *  @param {number} [value] - Strength when first added
@@ -628,7 +629,7 @@ function particleEffectResolve(nameOrEffect, options)
  *  - A continuous effect (fire, a torch) goes until destroyed or given an emitTime, a one-shot ends itself
  *  - Any setting in the options replaces the effect's own for this play: {emitTime: .5} for a burst of a continuous
  *    effect, {emitTime: 0, emitRate: 30} to keep a one-shot going, or speed, particleTime and the rest
- *  - Attach it to an object with addChild to follow it
+ *  - Attach it to an object with attach(emitter) to follow it, which keeps its angle, where addChild sets the angle
  *  @param {string|ParticleEffect} nameOrEffect - A built-in or added effect's name, or an effect
  *  @param {Vector2} [pos]
  *  @param {ParticleEffectOptions} [options] - What to change for this play, each left out when not wanted:
@@ -648,9 +649,7 @@ function particleEffect(nameOrEffect, pos=vec2(), options={})
     if (!effect) return;
     const emitter = new ParticleEmitter(pos.copy());
     particleEffectSet(emitter, effect);
-    emitter.scale = options.scale ?? 1;
-    if (options.angle !== undefined)
-        emitter.angle = options.angle;
+    emitter.scale = options.scale ?? 1; // the angle is a setting, sanitized with the rest
     const tileInfo = options.tileInfo; // the game's own art in place of the shape, a whole texture as one tile
     if (tileInfo)
         emitter.tileInfo = tileInfo instanceof TextureInfo ? new TileInfo(vec2(), tileInfo.size, tileInfo) : tileInfo;
@@ -768,9 +767,7 @@ function particleEffect3D(nameOrEffect, pos3D=vec3(), options={})
     const effect = particleEffectResolve(nameOrEffect, options);
     if (!effect) return;
     const e = new ParticleEmitter3D(pos3D.copy());
-    particleEffectSet3D(e, effect);
-    if (options.angle !== undefined)
-        e.rotation3D = vec3(0, 0, -options.angle);
+    particleEffectSet3D(e, effect); // the angle is a setting, sanitized with the rest
     e.scale3D = vec3(options.scale ?? 1);
     e.emitFlat = !!options.flatten; // a sphere a disc, a box a sheet, across the way it emits
     e.roundLighting = !!options.roundLighting;
@@ -782,20 +779,12 @@ function particleEffect3D(nameOrEffect, pos3D=vec3(), options={})
 ///////////////////////////////////////////////////////////////////////////////
 // the built-in effects, each tuned around a one unit emitter; one-shots have an emitTime and end themselves
 
-/** The names of the built-in effects, in the order a gallery shows them
- *  @type {Array<string>}
- *  @memberof ParticleEffects */
-const particleEffectsBuiltIn = [];
-
 // the map of effects by name, holding the built-in ones; a function a bundler may leave out when nothing reads it
 function particleEffectsBuiltInMake()
 {
     const effects = new Map;
     const add = (name, settings, behaviors=[])=>
-    {
-        particleEffectsBuiltIn.push(name);
         effects.set(name.toLowerCase(), particleEffectSanitize({name, settings, behaviors}));
-    };
     const clear = (h, s, l)=> hsl(h, s, l, 0);
 
     // fire
@@ -902,3 +891,9 @@ function particleEffectsBuiltInMake()
 
 // every effect by its name in lower case, the built-in ones to start with, and those particleEffectsAdd adds
 const particleEffectsByName = /* @__PURE__ */ particleEffectsBuiltInMake();
+
+// read from the map, so a bundler that keeps the names keeps the map they come from
+/** The names of the built-in effects, in the order a gallery shows them
+ *  @type {Array<string>}
+ *  @memberof ParticleEffects */
+const particleEffectsBuiltIn = /* @__PURE__ */ Array.from(particleEffectsByName.values(), (effect)=> effect.name);

@@ -252,7 +252,7 @@ engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost, ['t
 
 A few common categories of settings:
 
-- **Canvas** — `setCanvasFixedSize`, `setCanvasMaxSize`, `setCanvasMinAspect`, `setCanvasPixelated`, `setCanvasPixelRatio`
+- **Canvas** — `setCanvasFixedSize`, `setCanvasMaxSize`, `setCanvasMinAspect`, `setCanvasMaxAspect`, `setCanvasPixelated`, `setCanvasPixelRatio`
 - **Rendering** — `setGLEnable`, `setTilesPixelated`, `setCanvasClearColor`
 - **Physics** — `setGravity`, `setObjectDefaultDamping`, `setObjectDefaultRestitution`, `setEnablePhysicsSolver`
 - **Audio** — `setSoundEnable`, `setSoundVolume`, `setSoundDefaultRange`

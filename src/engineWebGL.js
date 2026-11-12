@@ -733,8 +733,8 @@ function glSetTextureData(texture, image, pixelated=tilesPixelated)
  *    RGBA bytes, width * height * 4 of them, or an image put in at its own size
  *  @param {number} [x]
  *  @param {number} [y]
- *  @param {number} [width] - Width of a byte array's rectangle, an image's own is used
- *  @param {number} [height] - Height of a byte array's rectangle, an image's own is used
+ *  @param {number} [width] - Width of a byte array's rectangle, which it needs, an image's own is used
+ *  @param {number} [height] - Height of a byte array's rectangle, which it needs, an image's own is used
  *  @memberof WebGL */
 function glSetTextureSubData(texture, pixels, x=0, y=0, width, height)
 {
@@ -751,6 +751,8 @@ function glSetTextureSubData(texture, pixels, x=0, y=0, width, height)
         pixels = context.canvas;
     }
     glContext.pixelStorei(glContext.UNPACK_PREMULTIPLY_ALPHA_WEBGL, glPremultipliedTextures.has(texture));
+    ASSERT(!ArrayBuffer.isView(pixels) || width > 0 && height > 0,
+        'glSetTextureSubData: a byte array needs the width and height of its rectangle');
     if (ArrayBuffer.isView(pixels))
         glContext.texSubImage2D(glContext.TEXTURE_2D, 0, x, y, width, height,
             glContext.RGBA, glContext.UNSIGNED_BYTE, pixels);

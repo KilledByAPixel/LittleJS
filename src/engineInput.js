@@ -187,8 +187,8 @@ function inputClearDevices(keepGamepads=false)
     touchGamepadStickPointerId.length = 0; // release floating sticks so they re-anchor
     gamepadStickData.length = 0;
     gamepadDpadData.length = 0;
-    // gamepadButtonsLast and gamepadAxisCentered describe the pads, not input, so they are kept:
-    // a button held through the clear reads as down, not newly pressed, and axes stay trusted
+    // gamepadButtonsLast and gamepadAxisCentered describe the pads, not input, so they are kept: a button held
+    // through the clear is not newly pressed, and reads up until it is let go, as a key does, and axes stay trusted
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -460,7 +460,7 @@ const inputData = [[]];
 // gamepad internal variables
 const gamepadStickData = [], gamepadDpadData = [], gamepadHadInput = [];
 // per gamepad, each button's raw pressed state from the last poll, kept through inputClear and cleared on
-// disconnect, so a button held through a clear reads as down and not newly pressed
+// disconnect, so a button held through a clear is not newly pressed, and reads up until it is let go
 const gamepadButtonsLast = [];
 // per gamepad, how many consecutive frames each axis has rested inside the
 // dead zone, used to tell stick axes from axes that rest at full deflection
@@ -690,6 +690,8 @@ function inputInit()
             // fix stalled audio requiring user interaction, with touch input off too since the page's sound needs it
             if (soundEnable && !headlessMode && audioContext && !audioIsRunning())
                 audioResume();
+            // a touch anywhere is the player back on the screen, so a touch gamepad always shown shows again
+            e.type === 'touchstart' && (touchGamepadHandedOver = false);
 
             if (!touchInputEnable || touchGamepadEnable && !touchGamepadPassthrough)
             {
@@ -1001,7 +1003,8 @@ function inputUpdate()
                 const wasDown = buttonsLast[j];
                 buttonsLast[j] = button.pressed;
                 // one held that inputClearKey or inputClear let go stays up until it is let go, as a key does
-                data[j] = button.pressed ? wasDown ? data[j] & 1 : 3 : wasDown ? 4 : 0;
+                // and only one that read down is released, so the clear gives no release the game never saw pressed
+                data[j] = button.pressed ? wasDown ? data[j] & 1 : 3 : wasDown && data[j] & 1 ? 4 : 0;
 
                 // check for any input on this gamepad, analog must be full press
                 if (button.pressed && (!button.value || button.value > .9))

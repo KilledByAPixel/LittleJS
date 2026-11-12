@@ -31,10 +31,10 @@ let textureSheetPadding = 1;
 let textureSheets = [];
 
 // pending loads pack through a queue so sheets fill in call order
-let textureSheetQueue = Promise.resolve();
+let textureSheetQueue = /* @__PURE__ */ Promise.resolve();
 let textureSheetPendingCount = 0;
 // what each load handed back by what it was given, so the same image loaded again is packed once
-const textureSheetLoaded = new Map;
+const textureSheetLoaded = /* @__PURE__ */ new Map;
 // a load's key: what it was given, a vector by its numbers
 const textureSheetLoadKey = (...parts)=> parts.map((p)=> isVector2(p) ? p.x + ',' + p.y : String(p)).join('|');
 // a load whose file failed is forgotten, so loading it again tries again, as when the server comes back
@@ -504,7 +504,14 @@ function parseAtlas(data)
         {
             // a tag reaches only frames there are, whatever its numbers say
             const from = max(0, floor(tag.from) || 0), to = min(frames.length - 1, floor(tag.to) || 0);
-            groups.push({name: tag.name, frames: frames.slice(from, to + 1)});
+            const list = frames.slice(from, to + 1), size = list[0]?.sourceSize;
+            // its frames are packed in cells of one size, so a tag of frames of other sizes leaves them alone
+            if (list.some((f)=> f.sourceSize.x !== size.x || f.sourceSize.y !== size.y))
+            {
+                console.warn('loadAtlas: the frames of tag ' + tag.name + ' differ in size, so they stay apart');
+                continue;
+            }
+            groups.push({name: tag.name, frames: list});
             for (let i = from; i <= to; ++i)
                 tagged.add(i);
         }

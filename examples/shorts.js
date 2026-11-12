@@ -465,6 +465,9 @@ async function loadFile(filename, largeExample, fallbackInfo='')
             return;
         setExampleInfo(fallbackInfo);
         setErrorMessage(error.message);
+        // the editor still has the last example's code, which Use strict or Live edit would run under this name
+        codeIsJS = false;
+        clearTimeout(inputTimeout);
     }
 }
 
@@ -804,6 +807,7 @@ function restartCode()
 function setFrameControlsEnabled(enabled=true)
 {
     buttonPause.disabled = !enabled;
+    enabled || (buttonPause.textContent = 'Pause'); // a short paused before a full example, which is not paused
     buttonRestart.disabled = !enabled;
     buttonFullscreen.disabled = !enabled;
     checkboxWebGL.disabled = !enabled;

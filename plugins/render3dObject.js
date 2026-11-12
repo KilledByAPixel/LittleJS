@@ -249,6 +249,8 @@ class EngineObject3D extends EngineObject
      *  - The boxes turn with rotation3D; against height maps and voxel maps an object is still its upright box, and
      *    against a MeshCollider a capsule
      *  - A sync2D object collides in 2D instead, against the 2D size, so set that as well as size3D
+     *  - A stack of objects with mass sinks into itself a few percent a level, as in 2D; the bottom one fixed, mass
+     *    0, or fewer levels keep it tight
      *  @param {boolean} [collideSolidObjects] - Take part in solid collision
      *  @param {boolean} [isSolid] - Block other objects, a pair where neither one blocks passes through;
      *    blocking needs collideSolidObjects, so isSolid on its own is not allowed
@@ -580,7 +582,7 @@ function render3DSolidShape(o)
 
 // a turned solid's three axes, worked out when its rotation changes and kept until then, so the pairs it is tested
 // against each frame do not each work them out again
-const render3DSolidAxesCache = new WeakMap;
+const render3DSolidAxesCache = /* @__PURE__ */ new WeakMap;
 function render3DSolidAxes(o)
 {
     const r = o.rotation3D, kept = render3DSolidAxesCache.get(o);
@@ -748,27 +750,33 @@ function render3DSettleFixed(o, pusher, from)
 
 // what moves shape a back clear of shape b to the side it came from: along an axis the two were clear on where they
 // came from, the least of those, as 2D resolves it from where the object was; undefined when they overlapped on every
-// axis there too, or a box is turned, which keeps the least push
+// axis there too, which keeps the least push. Upright boxes are tried along x, y and z, and a turned box along the
+// axes of the separating axis test, each box's own and the crosses of their edges, so a fast object does not go
+// through a thin turned wall either
 function render3DSolidPushBack(a, b, aFrom, bFrom)
 {
-    if (a.axes || b.axes) return;
-    const half = (shape)=> shape.size ? shape.size.scale(.5) : vec3(shape.radius);
-    const halfA = half(a), halfB = half(b);
-    let axis, amount = Infinity, side = 0;
-    for (const k of ['x', 'y', 'z'])
+    const axesA = a.axes ?? BOX_WORLD_AXES, axesB = b.axes ?? BOX_WORLD_AXES;
+    const tried = a.axes || b.axes ? [...axesA, ...axesB, ...axesA.flatMap((u)=> axesB.map((v)=> u.cross(v)))] :
+        BOX_WORLD_AXES;
+    // how far a shape reaches along a direction from its center: a box by its turned half sizes, a sphere its radius
+    const reach = (shape, axes, n)=> shape.size ? (shape.size.x * abs(axes[0].dot(n)) +
+        shape.size.y * abs(axes[1].dot(n)) + shape.size.z * abs(axes[2].dot(n))) / 2 : shape.radius;
+    const was = aFrom.subtract(bFrom), now = a.pos.subtract(b.pos);
+    let best, amount = Infinity, side = 0;
+    for (const axis of tried)
     {
-        const reach = halfA[k] + halfB[k], was = aFrom[k] - bFrom[k];
-        // it overlapped on this axis before it moved as well; one resting against it touches, which is clear, give or
-        // take the rounding of the push that put it there
-        if (abs(was) < reach - 1e-6) continue;
-        const s = sign(was), need = reach - s * (a.pos[k] - b.pos[k]);
+        const lengthSquared = axis.lengthSquared();
+        if (lengthSquared < 1e-12) continue; // parallel edges give no direction
+        const n = lengthSquared === 1 ? axis : axis.scale(lengthSquared ** -.5);
+        const r = reach(a, axesA, n) + reach(b, axesB, n), along = was.dot(n);
+        // it overlapped along this one before it moved as well; one resting against it touches, which is clear, give
+        // or take the rounding of the push that put it there
+        if (abs(along) < r - 1e-6) continue;
+        const s = sign(along), need = r - s * now.dot(n);
         if (need > 0 && need < amount)
-            axis = k, amount = need, side = s;
+            best = n, amount = need, side = s;
     }
-    if (!axis) return;
-    const push = vec3();
-    push[axis] = side * amount;
-    return push;
+    return best?.scale(side * amount);
 }
 
 // a sprite, a tile with no mesh, which faces the camera however it is turned
@@ -1090,7 +1098,7 @@ function engineObjectsCollect3D(pos, size, objects=engineObjects, testCenters=fa
 
 // how far along a ray an object is hit, or undefined for a miss; a mesh is hit on its triangles, in its own space,
 // and a sprite as the quad it draws
-const render3DRaycastCenter = vec3();
+const render3DRaycastCenter = /* @__PURE__ */ vec3();
 function render3DRaycastObject(ray, o)
 {
     if (o.destroyed || !(o instanceof EngineObject3D)) return;

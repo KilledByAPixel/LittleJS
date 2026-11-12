@@ -170,7 +170,8 @@ bigger than the block being looked at. `setDrawScreenSpace(true)` makes
 - Set `player.jumpSpeed` to `.35` to jump about six blocks high.
 - Reach farther: `map.raycast(ray, 6,` to `map.raycast(ray, 20,`.
 - Start with glass selected: `selected = 1` to `selected = 7`.
-- Walk on water: change `type != 6` to `true`.
+- Walk on water: in `player.collideWithVoxel`, change `type != 6` to
+  `true`.
 
 ## See also
 3D First Person uses the same camera in a maze of solid objects, and 3D

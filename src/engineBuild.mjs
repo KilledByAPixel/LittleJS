@@ -5,7 +5,7 @@
  * - Creates debug and release builds (with/without debug code)
  * - Produces TypeScript definition file (.d.ts)
  * - Includes plugin files in builds
- * - Validates code and checks for errors
+ * - Type checks and minifies, and stops when tsc, Closure or uglify fails
  * - Outputs to dist/ folder, which is left as it was when a step fails
  */
 
@@ -30,6 +30,7 @@ const engineSourceFiles =
 [
     `${SOURCE_FOLDER}/engineMath.js`,
     `${SOURCE_FOLDER}/engineUtilities.js`,
+    `${SOURCE_FOLDER}/engineLogo.js`, // before the settings, whose loadingScreen is its drawLoadingScreen
     `${SOURCE_FOLDER}/engineSettings.js`,
     `${SOURCE_FOLDER}/engineObject.js`,
     `${SOURCE_FOLDER}/engineDraw.js`,
@@ -38,7 +39,6 @@ const engineSourceFiles =
     `${SOURCE_FOLDER}/engineTileLayer.js`,
     `${SOURCE_FOLDER}/engineParticles.js`,
     `${SOURCE_FOLDER}/engineWebGL.js`,
-    `${SOURCE_FOLDER}/engineLogo.js`,
 ];
 const enginePluginFiles =
 [

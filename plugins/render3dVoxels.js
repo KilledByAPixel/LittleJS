@@ -14,14 +14,14 @@ const RENDER3D_VOXEL_CHUNK = 16;
 
 // each face of a block: its normal, then the right and up axes across it, right cross up is the normal, as buildBox
 // has them, in the order setBlockType takes six faces: +x, -x, +y, -y, +z, -z
-const RENDER3D_VOXEL_FACES = [
+const RENDER3D_VOXEL_FACES = /* @__PURE__ */ (()=> [
     [vec3( 1, 0, 0), vec3(0, 0, -1), vec3(0, 1, 0)],
     [vec3(-1, 0, 0), vec3(0, 0, 1),  vec3(0, 1, 0)],
     [vec3(0, 1, 0),  vec3(1, 0, 0),  vec3(0, 0, -1)],
     [vec3(0, -1, 0), vec3(1, 0, 0),  vec3(0, 0, 1)],
     [vec3(0, 0, 1),  vec3(1, 0, 0),  vec3(0, 1, 0)],
     [vec3(0, 0, -1), vec3(-1, 0, 0), vec3(0, 1, 0)],
-];
+])();
 
 // the shade of a corner by how many solid blocks crowd it, from 0, closed in, to 3, open
 const RENDER3D_VOXEL_SHADES = /* @__PURE__ */ [.55, .7, .85, 1].map(v=> Object.freeze(rgb(v, v, v)));

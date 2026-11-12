@@ -100,6 +100,22 @@ class GLTFPart
  * @memberof GLTF
  */
 
+/** A node's place as an animation sets it: its translation, rotation as a quaternion x y z w, and scale
+ *  @typedef {Object} GLTFNodeTRS
+ *  @property {Array<number>} translation
+ *  @property {Array<number>} rotation
+ *  @property {Array<number>} scale
+ *  @memberof GLTF */
+
+/** A model's nodes as an animation needs them: each as the file has it, its parent, and where it rests
+ *  @typedef {Object} GLTFNodeTree
+ *  @property {Array<{name?: string, translation?: Array<number>, rotation?: Array<number>,
+ *    scale?: Array<number>, matrix?: Array<number>}>} nodes - The file's nodes
+ *  @property {Array<number|undefined>} parents - Each node's parent, undefined for a root
+ *  @property {Array<Matrix4>} restInverse - The inverse of where each node is baked in the model
+ *  @property {Array<Matrix4|undefined>} restPose - From where a node is baked to where it rests, when they differ
+ *  @memberof GLTF */
+
 /** What one channel of an animation moves, as the loader reads it
  *  @typedef {Object} GLTFChannel
  *  @property {number} node - The index of the node it moves
@@ -141,7 +157,7 @@ class GLTFAnimation
 class GLTFModel
 {
     /** Make a model from its parts, as the loader does
-     *  @param {Array<GLTFPart>} parts @param {Array<GLTFAnimation>} [animations] @param {Object} [nodeTree] */
+     *  @param {Array<GLTFPart>} parts @param {Array<GLTFAnimation>} [animations] @param {GLTFNodeTree} [nodeTree] */
     constructor(parts, animations=[], nodeTree)
     {
         /** @property {Array<GLTFPart>} - One per primitive of every node that has a mesh */
@@ -149,8 +165,7 @@ class GLTFModel
         /** @property {Array<GLTFAnimation>} - The animations, play one through createObject's GLTFObject
          *  @type {Array<GLTFAnimation>} */
         this.animations = animations;
-        /** @type {{nodes: Array<Object>, parents: Array<number|undefined>, restInverse: Array<Matrix4>,
-         *  restPose: Array<Matrix4|undefined>}|undefined} */
+        /** @type {GLTFNodeTree|undefined} */
         this.nodeTree = nodeTree;             // each node's parent and resting place, for animation
         this.modelMatrix = new Matrix4;       // what center, fit and transform did to the parts, animation works through it
         /** @property {Mesh} - Every part combined, each tinted with its material color; the texture is textureInfo,
@@ -230,7 +245,7 @@ class GLTFModel
     // each part's move from where it rests, with each node's place in the model from worldOf, through what center
     // and fit did: modelMatrix * now * rest inverse * modelMatrix inverse; a skinned part is posed by its joints
     // and stays where it is
-    partPoses(worldOf)
+    partPoses(/** @type {function(number): Matrix4} */ worldOf)
     {
         const tree = this.nodeTree, model = this.modelMatrix, modelInverse = model.copy().invert();
         return this.parts.map(part=> part.skin ? new Matrix4 :
@@ -296,13 +311,14 @@ class GLTFObject extends EngineObject3D
         /** @property {boolean} - Whether it is moving through the animation now */
         this.animationPlaying = false;
         // what a cross-fade comes from: an animation going on as it was, or a pose held, and how far it is
-        /** @type {{animation?: GLTFAnimation, time?: number, speed?: number, loop?: boolean, nodes?: Map<number, Object>}|undefined} */
+        /** @type {{animation?: GLTFAnimation, time?: number, speed?: number, loop?: boolean,
+         *  nodes?: Map<number, GLTFNodeTRS>}|undefined} */
         this.blendFrom = undefined;
         this.blendTime = 0;
         this.blendElapsed = 0;
         // each node's values and place in the model as last posed, for a fade from here and for getJointMatrix, and
         // whether that pose was a mix, as a fade stopped part way holds it
-        /** @type {Map<number, Object>|undefined} */
+        /** @type {Map<number, GLTFNodeTRS>|undefined} */
         this.poseNodes = undefined;
         this.poseMixed = false;
         /** @type {(function(number): Matrix4)|undefined} */
@@ -601,9 +617,6 @@ async function parseGLTF(data, baseUrl='', files)
     // the parts: the scene's nodes walked with their transforms, every primitive of a node's mesh placed by it;
     // each node's parent and resting place are kept, so an animation can move a part from where it rests
     const parts = [], parents = [], restInverse = [], restPose = [], visited = new Set;
-    // every node's parent from the children lists, so a joint outside the scene's nodes keeps its own; the walk
-    // below sets them again for the nodes it reaches
-    (json.nodes || []).forEach((node, i)=> (node.children || []).forEach((child)=> parents[child] ??= i));
     const visit = (index, parentMatrix, parentIndex, parentRest)=>
     {
         // nodes are trees, so one reached again is a cycle or a node with two parents, a file problem
@@ -647,9 +660,12 @@ async function parseGLTF(data, baseUrl='', files)
         for (const child of node.children || [])
             visit(child, matrix, index, rest);
     };
-    let animations;
+    let model;
     try
     {
+        // every node's parent from the children lists, so a joint outside the scene's nodes keeps its own; the walk
+        // below sets them again for the nodes it reaches
+        (json.nodes || []).forEach((node, i)=> (node.children || []).forEach((child)=> parents[child] ??= i));
         const scene = json.scenes?.[json.scene ?? 0];
         if (scene)
             (scene.nodes || []).forEach(i=> visit(i)); // a scene may be empty
@@ -662,7 +678,7 @@ async function parseGLTF(data, baseUrl='', files)
 
         // the animations: each channel that moves a node's translation, rotation or scale, with its keys; morph
         // weights are not read, and a node given as a matrix cannot be animated, the format says
-        animations = (json.animations || []).map((animation, i)=> new GLTFAnimation(animation.name || 'animation ' + i,
+        const animations = (json.animations || []).map((animation, i)=> new GLTFAnimation(animation.name || 'animation ' + i,
             animation.channels.filter(c=> c.target.node !== undefined &&
                 ['translation', 'rotation', 'scale'].includes(c.target.path) && !json.nodes[c.target.node].matrix).map(c=>
             {
@@ -672,6 +688,13 @@ async function parseGLTF(data, baseUrl='', files)
                     values: gltfAccessor(json, buffers, sampler.output).data,
                     components: c.target.path === 'rotation' ? 4 : 3};
             })));
+
+        // a skinned part rests as its joints place it, with nothing moved
+        const nodeTree = {nodes: json.nodes, parents, restInverse, restPose};
+        const restWorlds = gltfNodeWorlds(nodeTree, new Map);
+        for (const part of parts)
+            part.skin && gltfSkinApply(part.skin, restWorlds, RENDER3D_IDENTITY, part.mesh);
+        model = new GLTFModel(parts, animations, nodeTree);
     }
     catch (error)
     {
@@ -685,11 +708,7 @@ async function parseGLTF(data, baseUrl='', files)
     const used = new Set(parts.flatMap(p=> [p.textureInfo, p.normalMap, p.emissiveMap]));
     for (const texture of allTextures)
         texture && !used.has(texture) && texture.destroyWebGLTexture();
-    // a skinned part rests as its joints place it, with nothing moved
-    const nodeTree = {nodes: json.nodes, parents, restInverse, restPose}, restWorlds = gltfNodeWorlds(nodeTree, new Map);
-    for (const part of parts)
-        part.skin && gltfSkinApply(part.skin, restWorlds, RENDER3D_IDENTITY, part.mesh);
-    return new GLTFModel(parts, animations, nodeTree);
+    return model;
 }
 
 // the values of each node an animation moves at a time, a Map of node to its translation, rotation and scale;

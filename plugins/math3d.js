@@ -287,7 +287,7 @@ class Vector3
 ///////////////////////////////////////////////////////////////////////////////
 
 // scratch for multiply, nothing keeps a reference to it
-const matrix4Scratch = new Float32Array(16);
+const matrix4Scratch = /* @__PURE__ */ new Float32Array(16);
 
 /**
  * 4x4 transform matrix for moving, rotating and scaling points in 3D
@@ -891,7 +891,7 @@ function collideSphereOrientedBox3D(pos, radius, boxPos, boxSize, axes)
 }
 
 // the world's axes, for an upright box among turned ones
-const BOX_WORLD_AXES = Object.freeze([vec3(1, 0, 0), vec3(0, 1, 0), vec3(0, 0, 1)]);
+const BOX_WORLD_AXES = /* @__PURE__ */ (()=> Object.freeze([vec3(1, 0, 0), vec3(0, 1, 0), vec3(0, 0, 1)]))();
 
 // the shortest push to move box A out of box B by the separating axis test: each box's three face directions and
 // the nine across an edge of each; a gap on any of them is no touch, and the push is along the least overlap, from

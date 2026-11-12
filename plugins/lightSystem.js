@@ -36,7 +36,8 @@
  *  @type {LightSystemPlugin}
  *  @memberof LightSystem */
 let lightSystem;
-// its hooks are added once: one made again, as in a scene's enter, takes the old one's place and its hooks drive it
+// its hooks are added once: one made again in a release build, as in a scene's enter, takes the old one's place and
+// its hooks drive it
 let lightSystemPluginAdded = false;
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -865,7 +866,8 @@ class LightSystemPlugin
             const wantY = glClampTextureSize(auto ? mainCanvasSize.y : size.y);
             if (made.x !== wantX || made.y !== wantY)
             {
-                auto && (lightSystem.textureSize = vec2(wantX, wantY));
+                // a size given past what the device makes is clamped too, as the viewport and the normals read it
+                lightSystem.textureSize = vec2(wantX, wantY);
                 lightSystem.textureSizeAllocated = vec2(wantX, wantY);
                 glContext.bindTexture(glContext.TEXTURE_2D, lightSystem.texture);
                 glContext.texImage2D(glContext.TEXTURE_2D, 0, glContext.RGBA,

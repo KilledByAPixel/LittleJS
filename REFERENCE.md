@@ -27,7 +27,7 @@ frameRate             // Fixed frame rate for updates (60)
 frame                 // Current update frame
 time                  // Game time since start in seconds (stops when paused, falls behind the clock below 20 FPS)
 timeReal              // Real time since start in seconds (keeps running when paused; the debug speed keys scale it)
-averageFPS            // Frames drawn per second, smoothed
+averageFPS            // Display frames per second, smoothed, whether or not each one drew
 timeDelta             // Seconds the update covers: 1/60, or the display frame's time with engineVariableStep
 timeScale = 1         // Game speed, more or fewer fixed updates per second; with engineVariableStep it scales timeDelta
 paused                // Is the game paused? (set with setPaused)
@@ -435,8 +435,8 @@ cameraShakeDecay = 1     // How much shake fades a second, 1 is a full shake gon
 // Display settings
 canvasMaxSize = (3840, 2160)  // The max size of the canvas in css pixels
 canvasFixedSize = (0, 0)      // Fixed size of the canvas
-canvasMinAspect = 0           // Min aspect ratio, fits to height (0 = disabled)
-canvasMaxAspect = 0           // Max aspect ratio, fits to width (0 = disabled)
+canvasMinAspect = 0           // Min aspect ratio, a narrower window gets a shorter canvas (0 = disabled)
+canvasMaxAspect = 0           // Max aspect ratio, a wider window gets a narrower canvas (0 = disabled)
 canvasPixelRatio = 1          // Scales render resolution only (undefined tracks devicePixelRatio)
 getCanvasPixelRatio()         // Get the pixel ratio currently applied to the backing store
 canvasClearColor = CLEAR_BLACK // Color to clear the canvas to each frame, alpha 0 does not clear
@@ -767,7 +767,8 @@ engineObjectsDestroy(immediate=true) // destroy every object except the persiste
 - Collision layer is separate from visible layers
 - It is recommended to have a visible layer that matches the collision
 - Tile layers made without WebGL can be drawn to using their context with Canvas2D, after the layer has drawn
-  (redraw), and a cell set later clears its square unless setData is given false
+  (redraw), and a cell set later clears its square unless setData is given false; when more than half the cells
+  wait to be drawn the whole layer is drawn again, which clears what was painted over the rest too
 - Drawn with WebGL by default, or straight to the main canvas when made with useWebGL=false
 
 ```javascript
@@ -834,7 +835,7 @@ TileCollisionLayer.setOneWay(tile, direction=vec2(0,1)) // The cells drawing tha
 TileCollisionLayer.oneWayTiles                      // Map of the one way tiles, tile index to direction; delete one
                                                     // to make it solid again
 tileCollisionGetData(pos, solidOnly=true)           // Get tile collision data at pos
-tileCollisionTest(pos, size=(0,0), object)          // Check if collision should occur
+tileCollisionTest(pos, size=(0,0), object, solidOnly=true) // Check if collision should occur
 tileCollisionRaycast(posStart, posEnd, callbackObject, normal, solidOnly=true) // Where the ray meets the first tile hit,
                                                     // or undefined; a normal vec2 passed in is set to the surface's
 tileCollisionLayers                                 // List of all tile collision layers
@@ -2378,18 +2379,19 @@ box2d.pointCast(pos, dynamicOnly=true, includeSensors=false) // The object with 
                                // passed through unless included, so a pickup radius does not grab from afar
 
 // Joints — all extend Box2dJoint; a joint goes along with either of its objects, check joint.isDestroyed()
-// before using a kept one, joint.isActive() is false then
+// before using a kept one, joint.isActive() is false then; collide=true lets the two bodies collide with each other
 new Box2dTargetJoint(object, fixedObject, worldPos) // Drag toward a point (mouse-follow)
-new Box2dDistanceJoint(objectA, objectB, anchorA, anchorB)
-new Box2dPinJoint(objectA, objectB, pos=objectA.pos) // pins the two together at pos, turning freely; a revolute joint
-new Box2dRopeJoint(objectA, objectB, anchorA, anchorB, extraLength=0) // max length is the anchors' distance
-                                                                    // plus extraLength
-new Box2dRevoluteJoint(objectA, objectB, anchor)
-new Box2dPrismaticJoint(objectA, objectB, anchor, axis)
-new Box2dWheelJoint(objectA, objectB, anchor, axis)
-new Box2dWeldJoint(objectA, objectB, anchor)
-new Box2dFrictionJoint(objectA, objectB, anchor)
-new Box2dPulleyJoint(objectA, objectB, groundA, groundB, anchorA, anchorB, ratio)
+new Box2dDistanceJoint(objectA, objectB, anchorA, anchorB, collide=false)
+new Box2dPinJoint(objectA, objectB, pos=objectA.pos, collide=false) // pins the two together at pos, turning freely;
+                                                                    // a revolute joint
+new Box2dRopeJoint(objectA, objectB, anchorA, anchorB, extraLength=0, collide=false) // max length is the anchors'
+                                                                                   // distance plus extraLength
+new Box2dRevoluteJoint(objectA, objectB, anchor, collide=false)
+new Box2dPrismaticJoint(objectA, objectB, anchor, worldAxis=vec2(0,1), collide=false)
+new Box2dWheelJoint(objectA, objectB, anchor, worldAxis=vec2(0,1), collide=false)
+new Box2dWeldJoint(objectA, objectB, anchor, collide=false)
+new Box2dFrictionJoint(objectA, objectB, anchor, collide=false)
+new Box2dPulleyJoint(objectA, objectB, groundAnchorA, groundAnchorB, anchorA, anchorB, ratio=1, collide=false)
 new Box2dMotorJoint(objectA, objectB)
 new Box2dGearJoint(objectA, objectB, joint1, joint2, ratio=1) // turns objectB of each joint, which must be dynamic
 ```

@@ -613,7 +613,7 @@ class SpriteAnimator
  *   premultiplied too. premultipliedTexture is true there, so a snippet that changes the alpha, or makes a see
  *   through color of its own, scales the rgb with it: `if (premultipliedTexture) c.rgb *= k;`
  * - Compiled once per renderer by the first draw that needs it; a bad snippet throws with the GLSL log in debug
- * - Make each Shader once, at init, and share it; every one made lives for the session with its programs
+ * - Make each Shader once, at init, and share it; every one made keeps its programs until dispose()
  * - Names in both renderers: iChannel0 the texture, iTime, iResolution, premultipliedTexture, and localUV, 0 to 1
  *   across the sprite or the mesh's own uv
  * - Names in 3D only: worldPos, worldNormal, cameraPos, sunDirection, sunColor, ambientColor, ambientGroundColor,
@@ -986,6 +986,7 @@ function drawTextureWrapped(pos, size, wrapCount, texture=0, color=WHITE,
     // in that case globalAlpha must NOT also apply color.a
     const alphaBaked = !noTint && additiveColor && !isBlack(additiveColor);
     let source = textureInfo.image;
+    if (!source?.width || !source.height) return; // a failed image, which a tint can not be baked from either
     if (!noTint)
     {
         // a bake is a pass over every pixel, so it is kept for the image until its tint changes; a canvas, which has
@@ -1485,10 +1486,11 @@ function drawFontCheck(context, fontText, font, fontStyle)
     const key = fontStyle + '|' + font;
     if (drawFontsChecked.has(key)) return;
     drawFontsChecked.add(key);
-    const sentinel = '1px littlejs-font-check'; // no font a game draws with
+    const sentinel = '1px littlejs-font-check', was = context.font; // no font a game draws with
     context.font = sentinel;
     context.font = fontText;
     if (context.font === sentinel)
+        context.font = was, // the font it had, as a draw without the check keeps it
         console.warn(`the canvas does not take the font ${font}, so text draws as 10px sans-serif; ` +
             `a family name with spaces or digits goes in quotes, as "'Press Start 2P'"`);
 }
@@ -1577,31 +1579,34 @@ function drawTextScreen(text, pos, size, color=WHITE, lineWidth=0, lineColor=BLA
     const lines = textLines(text); // a Windows line ending too
     // save before style mutations so caller's context state is preserved
     context.save();
-    context.fillStyle = color.toString();
-    context.strokeStyle = lineColor.toString();
-    context.lineWidth = lineWidth;
-    context.textAlign = textAlign;
-    const fontText = fontStyle + ' ' + size + 'px '+ font;
-    debug && drawFontCheck(context, fontText, font, fontStyle);
-    context.font = fontText;
-    context.textBaseline = 'middle';
-    context.translate(pos.x + .5, pos.y + .5); // a screen position is the center of a pixel, as for every other draw
-    context.rotate(angle);
-    let yOffset = -(lines.length-1) * size/2; // center vertically
-    lines.forEach(line=>
+    try
     {
-        // only a line with a registered icon in it takes the icon path, every other draws as it always has
-        const runs = textIcons.size && !textIconsOff && line.includes(':') ? textIconRuns(line) : undefined;
-        if (runs)
-            drawTextIconLine(context, runs, yOffset, size, color, lineWidth, textAlign, maxWidth);
-        else
+        context.fillStyle = color.toString();
+        context.strokeStyle = lineColor.toString();
+        context.lineWidth = lineWidth;
+        context.textAlign = textAlign;
+        const fontText = fontStyle + ' ' + size + 'px '+ font;
+        debug && drawFontCheck(context, fontText, font, fontStyle);
+        context.font = fontText;
+        context.textBaseline = 'middle';
+        context.translate(pos.x + .5, pos.y + .5); // a screen position is the center of a pixel, as for every other draw
+        context.rotate(angle);
+        let yOffset = -(lines.length-1) * size/2; // center vertically
+        lines.forEach(line=>
         {
-            lineWidth && context.strokeText(line, 0, yOffset, maxWidth);
-            context.fillText(line, 0, yOffset, maxWidth);
-        }
-        yOffset += size;
-    });
-    context.restore();
+            // only a line with a registered icon in it takes the icon path, every other draws as it always has
+            const runs = textIcons.size && !textIconsOff && line.includes(':') ? textIconRuns(line) : undefined;
+            if (runs)
+                drawTextIconLine(context, runs, yOffset, size, color, lineWidth, textAlign, maxWidth);
+            else
+            {
+                lineWidth && context.strokeText(line, 0, yOffset, maxWidth);
+                context.fillText(line, 0, yOffset, maxWidth);
+            }
+            yOffset += size;
+        });
+    }
+    finally { context.restore(); }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1664,30 +1669,33 @@ function drawTextIconLine(context, runs, y, size, color, lineWidth, textAlign, m
         run.size.y ? size * run.size.x / run.size.y : 0); // an image that failed to load takes no room
     const total = widths.reduce((a, b)=> a + b, 0);
     context.save();
-    context.textAlign = 'left';
-    if (maxWidth && total > maxWidth)
-        context.scale(maxWidth / total, 1); // about the line's anchor, so the alignment holds
-    // white, or for a shadow black with the shadow's color added on, either faded with the text
-    textIconTint.set(textIconsSilhouette ? 0 : 1, textIconsSilhouette ? 0 : 1, textIconsSilhouette ? 0 : 1, color.a);
-    textIconAdd.set(textIconsSilhouette ? color.r : 0, textIconsSilhouette ? color.g : 0, textIconsSilhouette ? color.b : 0, 0);
-    let x = textAlign === 'left' ? 0 : textAlign === 'right' ? -total : -total / 2;
-    runs.forEach((run, i)=>
+    try
     {
-        if (typeof run == 'string')
+        context.textAlign = 'left';
+        if (maxWidth && total > maxWidth)
+            context.scale(maxWidth / total, 1); // about the line's anchor, so the alignment holds
+        // white, or for a shadow black with the shadow's color added on, either faded with the text
+        textIconTint.set(textIconsSilhouette ? 0 : 1, textIconsSilhouette ? 0 : 1, textIconsSilhouette ? 0 : 1, color.a);
+        textIconAdd.set(textIconsSilhouette ? color.r : 0, textIconsSilhouette ? color.g : 0, textIconsSilhouette ? color.b : 0, 0);
+        let x = textAlign === 'left' ? 0 : textAlign === 'right' ? -total : -total / 2;
+        runs.forEach((run, i)=>
         {
-            lineWidth && context.strokeText(run, x, y);
-            context.fillText(run, x, y);
-        }
-        else if (run.textureInfo?.image && run.textureInfo.size.x)
-        {
-            const pixelated = run.textureInfo.pixelated ?? tilesPixelated;
-            context.imageSmoothingEnabled = !pixelated;
-            drawImageColor(context, run.textureInfo.image, run.pos.x, run.pos.y, run.size.x, run.size.y,
-                x, y - size / 2, widths[i], size, textIconTint, textIconAdd, run.bleed);
-        }
-        x += widths[i];
-    });
-    context.restore();
+            if (typeof run == 'string')
+            {
+                lineWidth && context.strokeText(run, x, y);
+                context.fillText(run, x, y);
+            }
+            else if (run.textureInfo?.image && run.textureInfo.size.x)
+            {
+                const pixelated = run.textureInfo.pixelated ?? tilesPixelated;
+                context.imageSmoothingEnabled = !pixelated;
+                drawImageColor(context, run.textureInfo.image, run.pos.x, run.pos.y, run.size.x, run.size.y,
+                    x, y - size / 2, widths[i], size, textIconTint, textIconAdd, run.bleed);
+            }
+            x += widths[i];
+        });
+    }
+    finally { context.restore(); }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -2259,8 +2267,8 @@ class ImageFont
         // world text, only drawn through screen space, so it still casts in a pass that skips screen space draws
         const skip = glSkipScreenSpace;
         glSkipScreenSpace = false;
-        this.drawTextScreen(text, worldToScreen(pos), size, center, color, useWebGL, context);
-        glSkipScreenSpace = skip;
+        try { this.drawTextScreen(text, worldToScreen(pos), size, center, color, useWebGL, context); }
+        finally { glSkipScreenSpace = skip; }
     }
 
     /** Draw text in screen space using the image font
@@ -2279,6 +2287,7 @@ class ImageFont
         ASSERT(isVector2(size) || typeof size === 'number', 'size must be a vec2 or number');
         ASSERT(typeof center === 'boolean', 'center must be a boolean, the color comes after it, unlike drawText');
         ASSERT(isColor(color), 'color must be a color');
+        if (headlessMode && !context) return; // nothing to draw on, as the other draws, and the font has no texture
 
         // if size is a number, make it a vector
         const glyphSize = typeof size === 'number' ? new Vector2(size, size) : size;

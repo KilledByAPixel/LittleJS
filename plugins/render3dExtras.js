@@ -42,7 +42,8 @@ function render3DSoftDot()
 /** Make a normal map from a height at each pixel, for bumps and grooves with no image file: the slope at each pixel
  *  from its neighbors' heights, taken around the edges so the map tiles; set it as an object's normalMap
  *  @param {Vector2} size - In pixels
- *  @param {function(number, number): number} heightFunction - The height 0 to 1 at a pixel, x across and y down
+ *  @param {function(number, number): number} heightFunction - The height at a pixel, x across and y down, 0 to 1
+ *    by custom, though only how it changes counts
  *  @param {number} [strength] - How steep the slopes are: a height change of 1 over one pixel leans the normal
  *  by strength
  *  @return {TextureInfo} - Wraps; headless it has no image
@@ -500,6 +501,8 @@ class HeightMap extends EngineObject3D
         const p = this.pos3D;
         x -= p.x, z -= p.z;
         const columns = this.columns, rows = this.rows, h = this.heights;
+        if (!isNumber(x) || !isNumber(z) || columns < 2 || rows < 2)
+            return NaN; // no height for a position that is not one, or a map with no cells, which release builds pass
         const u = clamp((x / this.mapSize.x + .5) * (columns - 1), 0, columns - 1);
         const v = clamp((z / this.mapSize.y + .5) * (rows - 1), 0, rows - 1);
         const i = min(floor(u), columns - 2), j = min(floor(v), rows - 2);
@@ -710,7 +713,8 @@ class HeightMap extends EngineObject3D
  *   taken again when it moves; call rebuild() after changing the mesh
  * - Any mesh works, a strip, an indexed one, a loaded model or one given its vertex data; both sides of a triangle
  *   collide
- * - A fast object is moved in steps no longer than half its radius, so it does not go through a thin wall
+ * - A fast object is moved in steps no longer than half its radius, so it does not go through a thin wall, up to 64
+ *   steps a frame, so one moving more than 32 radii a frame may
  * - Particles with collideLevel hit it, render3D.pick and the camera's wall test hit its triangles, both sides
  * @extends EngineObject3D
  * @memberof Render3D
@@ -1205,7 +1209,7 @@ function render3DImageToArray(image, sample)
 }
 
 // extruded glyph meshes by font, and the pixel bytes of a texture, read once per image
-const render3DGlyphCache = new WeakMap, render3DPixelCache = new WeakMap;
+const render3DGlyphCache = /* @__PURE__ */ new WeakMap, render3DPixelCache = /* @__PURE__ */ new WeakMap;
 function render3DReadPixels(textureInfo)
 {
     const image = textureInfo.image;
@@ -1599,8 +1603,8 @@ class FirstPersonCamera3D extends EngineObject3D
         const gravityScale = this.gravityScale;
         if (this.fly)
             this.gravityScale = 0;
-        super.updatePhysics();
-        this.gravityScale = gravityScale;
+        try { super.updatePhysics(); }
+        finally { this.gravityScale = gravityScale; } // a collision callback that throws does not keep it from falling
     }
 
     /** Read the mouse and keys and move, called automatically each frame */
@@ -1657,7 +1661,7 @@ const render3DParticlePos = /* @__PURE__ */ vec3(), render3DParticleColor = /* @
 const render3DParticleFrom = /* @__PURE__ */ vec3(), render3DParticleTo = /* @__PURE__ */ vec3();
 
 // the emitters inside a particle callback now, whose nested calls each get a view of their own
-const render3DParticlesCalling = new Set;
+const render3DParticlesCalling = /* @__PURE__ */ new Set;
 
 // a particle as a ParticleEmitter3D's callbacks see it, set from the particle for each call
 /** @param {ParticleEmitter3D} emitter

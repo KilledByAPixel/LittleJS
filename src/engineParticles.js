@@ -434,7 +434,8 @@ function particleTileSet(tileInfo)
     particleTile = tileInfo;
     const textureInfo = tileInfo?.textureInfo;
     particleTileTextured = !!textureInfo;
-    particleTileEmpty = !!textureInfo && !(tileInfo.size.x && tileInfo.size.y); // like a sprite still loading
+    // like a sprite still loading, or an image that failed, as drawTile skips them
+    particleTileEmpty = !!textureInfo && !(tileInfo.size.x && tileInfo.size.y && textureInfo.size.x);
     if (!textureInfo || particleTileEmpty) return;
 
     ASSERT(!!textureInfo.glTexture, 'texture has no WebGL texture, draw it with useWebGL false');

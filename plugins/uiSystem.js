@@ -1830,7 +1830,7 @@ class UIVideo extends UIObject
         /** @property {HTMLVideoElement} - The video player */
         this.video = document.createElement('video');
         this.video.loop = loop;
-        this.video.volume = clamp(volume * soundVolume);
+        this.video.volume = audioFinite(clamp(volume * soundVolume), 0);
         this.video.muted = !soundEnable;
         /** @private */
         this._soundEnabled = soundEnable; // the sound setting the mute last followed
@@ -1838,6 +1838,9 @@ class UIVideo extends UIObject
         this.video.playsInline = true; // an iPhone would play it fullscreen and block its muted autoplay
         this.video.src = src;
         document.body.appendChild(this.video);
+        uiVideos.add(this);
+        uiVideosListening || document.addEventListener?.('visibilitychange', uiVideosPageChange);
+        uiVideosListening = true;
         autoplay && this.play();
     }
     
@@ -1879,7 +1882,7 @@ class UIVideo extends UIObject
     setVolume(volume)
     {
         this.volume = volume;
-        this.video.volume = clamp(volume * soundVolume);
+        this.video.volume = audioFinite(clamp(volume * soundVolume), 0);
     }
     
     /** Set playback speed
@@ -1914,7 +1917,7 @@ class UIVideo extends UIObject
 
         // update volume based on global sound volume, and the mute when sound is turned on or off,
         // so a game's own mute stays until then
-        this.video.volume = clamp(this.volume * soundVolume);
+        this.video.volume = audioFinite(clamp(this.volume * soundVolume), 0);
         if (this._soundEnabled !== soundEnable)
             this.video.muted = !(this._soundEnabled = soundEnable);
     }
@@ -1945,7 +1948,28 @@ class UIVideo extends UIObject
         this.video.removeAttribute?.('src');
         this.video.load?.();
         this.video.remove();
+        uiVideos.delete(this);
+        uiVideosPaused.delete(this);
         super.destroy();
+    }
+}
+
+// the videos there are, and those paused while the page is hidden, which soundPauseWhenHidden pauses as it does the
+// game's sound, and plays again when the page shows
+const uiVideos = /* @__PURE__ */ new Set, uiVideosPaused = /* @__PURE__ */ new Set;
+let uiVideosListening = false;
+function uiVideosPageChange()
+{
+    if (soundPauseWhenHidden && document.hidden)
+    {
+        for (const video of uiVideos)
+            video.isPaused() || (video.pause(), uiVideosPaused.add(video));
+    }
+    else
+    {
+        for (const video of uiVideosPaused)
+            video.play();
+        uiVideosPaused.clear();
     }
 }
 

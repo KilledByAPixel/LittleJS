@@ -890,6 +890,7 @@ function setTouchGamepadButtonCount(count)
 }
 
 /** Set if the touch gamepad should have a left analog stick (or dpad)
+ *  - Turning it on sets the left button count to 0, and turning it off does not set it back
  *  @param {boolean} enable
  *  @memberof Settings */
 function setTouchGamepadLeftStick(enable)
@@ -911,6 +912,7 @@ function setTouchGamepadLeftButtonCount(count)
 }
 
 /** Set if the touch gamepad right side is an analog stick (or dpad) instead of face buttons
+ *  - Turning it on sets the button count to 0, and turning it off does not set it back
  *  @param {boolean} rightStick
  *  @memberof Settings */
 function setTouchGamepadRightStick(rightStick)

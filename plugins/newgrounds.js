@@ -22,8 +22,8 @@
 let newgrounds;
 
 // Engine internal variables not exposed to documentation
-const newgroundsUnlocksToResend = new Set; // pending medals whose request did not reach the server
-const newgroundsUnlocksRefused = new Set; // medals the server refused this visit, asked again they answer no unsent
+const newgroundsUnlocksToResend = /* @__PURE__ */ new Set; // pending medals whose request did not reach the server
+const newgroundsUnlocksRefused = /* @__PURE__ */ new Set; // medals the server refused this visit, asked again they answer no unsent
 const newgroundsSecureComponents = ['Medal.unlock', 'ScoreBoard.postScore']; // the calls encrypted with a cipher
 const newgroundsSessionErrors = [104, 110, 111]; // expired session, login required, session canceled
 const newgroundsTimeoutMS = 15e3; // how long a request may take before it fails
@@ -130,7 +130,8 @@ class NewgroundsPlugin
 {
     /** Create the global newgrounds object
      *  - Logs a view right away, for a guest and a logged in player alike, so a game does not have to
-     *  - Create the medals first: they take their name and icon from the server once it answers, and when logged in they are locked here until it does
+     *  - Create the medals first: they take their name and icon from the server once it answers, and when logged in they are locked here until it does,
+     *    so unlock one after await newgrounds.ready, or a medal the player already has pops up again
      *  - Call medalsInit too, before or after: an unlock asserts without it, and it keeps the medals while not logged in
      *  @param {string} app_id   - The Newgrounds App ID
      *  @param {string} [cipher] - The encryption key from the app's settings, AES-128 as Base64; medal unlocks and posted

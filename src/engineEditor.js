@@ -730,11 +730,14 @@ function editorLayerRecord(live)
     const map = {type: 'map', version: '1.10', orientation: 'orthogonal', renderorder: 'right-down', infinite: false,
         width, height, tilewidth: size.x, tileheight: size.y, nextlayerid: 2, nextobjectid: 1,
         tilesets: editorTilesets(live), layers: [source]};
-    const record = {map, synthetic: true, fileName: 'level.json', layers: []};
+    const record = {map, synthetic: true, fileName: 'level.json', layers: [], key: ''};
     const layer = {record, source, live, color: WHITE};
     record.layers.push(layer);
     // the records of layers made in code that are gone, as a game that makes them again on a restart leaves them
     editorRetire((other)=> other.synthetic && other.layers.every((l)=> l.live.destroyed));
+    // its key, for the file Save remembers: the order it was made in among them and its size, the same after a
+    // reload as a game makes its layers in the same order, so two layers do not write over one file
+    record.key = `code layer ${editorMapList.filter((other)=> other.synthetic).length} ${width}x${height}`;
     editorMapList.push(record);
     return layer;
 }
@@ -1110,7 +1113,6 @@ function editorPendingFits(record, saved)
         (saved.objects ?? []).every((objects, i)=> i < groups || !objects.length);
 }
 
-// drop the autosaved edits of a file that changed since
 // whether an autosave has the shape one is written in: tile layers of whole numbers, object layers of objects,
 // and a size of whole cells
 function editorSaveValid(saved)
@@ -1299,9 +1301,13 @@ function editorSetCell(layer, pos, gid)
 // paint a cell as part of the stroke being made
 function editorPaint(layer, pos, gid)
 {
-    const before = editorSetCell(layer, pos, gid);
-    if (before === gid) return;
-    (editorStroke ||= []).push({layer, pos: pos.copy(), before, after: gid});
+    const {source, live} = layer, index = pos.x + (live.size.y - 1 - pos.y) * live.size.x, before = source.data[index];
+    // in the stroke once the map changed, even when the game's onTile throws after, so it is undone and saved with it
+    try { editorSetCell(layer, pos, gid); }
+    finally
+    {
+        before === source.data[index] || (editorStroke ||= []).push({layer, pos: pos.copy(), before, after: gid});
+    }
 }
 
 // an edit goes on the undo list, which keeps the last 100, as the 3D editor's does: a fill of a large layer is
@@ -1318,9 +1324,11 @@ function editorStrokeEnd()
 {
     if (editorStroke)
     {
-        editorUndoPush(editorStroke);
-        editorChanged(editorStroke);
+        // taken first, so a game's redraw that throws in editorChanged does not leave it to go on the list again
+        const stroke = editorStroke;
         editorStroke = undefined;
+        editorUndoPush(stroke);
+        editorChanged(stroke);
     }
     // a tile the game put on a cell the map has empty, erased in a bulk edit, changes no map, so no entry draws its
     // layer again: whatever is left to draw whole draws now
@@ -1495,8 +1503,10 @@ function editorSetObjects(layer, list)
         else if (made && !made.destroyed)
         {
             // only what the edit changed, so moving an object keeps its health and the rest of its state from play
+            // a Box2D object moves its body with setPosition, its pos is only a copy of where the body is
             if ('pos' in made && (old.x !== object.x || old.y !== object.y))
-                made.pos = editorObjectPos(record, object);
+                typeof made.setPosition == 'function' ? made.setPosition(editorObjectPos(record, object)) :
+                    made.pos = editorObjectPos(record, object);
             const was = objectLayersProperties(type, old), now = objectLayersProperties(type, object);
             for (const name in now) // a method's name is left out, as objectLayersMake leaves it
                 editorSameData(was[name], now[name]) || typeof made[name] === 'function' || (made[name] = now[name]);
@@ -1678,14 +1688,15 @@ function editorDeleteObjects()
     return true;
 }
 
-// the selected objects into the brush, each a copy with its offset from the lowest corner of their positions, and
-// the selection cleared so the next click places them
+// the selected objects into the brush, each a copy with its offset from the lowest corner of their positions, snapped
+// as a click is, so a paste at a snapped click keeps them where they were in their cells, and the selection cleared
+// so the next click places them
 function editorCopyObjects()
 {
     const objects = editorSelectedObjects();
     if (!objects.length) return false;
     const positions = objects.map((object)=> editorObjectPos(editorObjectLayer.record, object));
-    const low = vec2(min(...positions.map((p)=> p.x)), min(...positions.map((p)=> p.y)));
+    const low = editorSnap(vec2(min(...positions.map((p)=> p.x)), min(...positions.map((p)=> p.y))));
     editorObjectBrush = editorObjectClipboard = objects.map((object, i)=> ({type: object.type || object.class,
         offset: positions[i].subtract(low), object: editorObjectsCopy(object)}));
     editorObjectSelection.clear();
@@ -2376,11 +2387,13 @@ function editorPanelInit()
     const properties = editorElement('div', editorPanel, 'margin:4px 0;padding:4px;background:#222;border-radius:3px');
 
     const file = row();
-    // Save says so for a moment when it saved, Save As shows where a page can write files
+    // Save says so for a moment when it saved, Save As shows where a page can write files,
+    // and a save that failed, as a game's onSave that throws, says why in the console
     const saved = (b, label)=> (result)=> result && (b.textContent = 'Saved', setTimeout(()=> b.textContent = label, 1e3));
-    const save = button(file, 'Save', ()=> editorSave(editorRecord()).then(saved(save, 'Save')),
+    const failed = (error)=> console.error('Save failed:', error);
+    const save = button(file, 'Save', ()=> editorSave(editorRecord()).then(saved(save, 'Save'), failed),
         'Save, to the file picked the first time, or a download');
-    const saveAs = button(file, 'Save As', ()=> editorSave(editorRecord(), true).then(saved(saveAs, 'Save As')),
+    const saveAs = button(file, 'Save As', ()=> editorSave(editorRecord(), true).then(saved(saveAs, 'Save As'), failed),
         'Save As, to a file picked again');
     /** @type {any} */ (globalThis).showSaveFilePicker || (saveAs.style.display = 'none');
 
@@ -2698,11 +2711,13 @@ function editorOnKeyDown(e)
         editorSelectionDrag = undefined;
     }
     let key = e.key === ' ' ? 'Space' : e.key.length === 1 ? e.key.toLowerCase() : e.key;
-    // a digit goes by its key too, so a game's '1' works with Shift held and on AZERTY, where the row types symbols
+    // a digit goes by its key too, so a game's '1' works with Shift held and on AZERTY, where the row types symbols;
+    // a letter key only for a letter, a Dvorak '.' on the E key is punctuation and not the Erase brush
     if (key.length === 1 && !/[a-z?]/.test(key) && !levelEditor.keys[key])
     {
         const match = e.code?.match(/^(?:Key([A-Z])|Digit([0-9]))$/);
-        key = match ? (match[1] ?? match[2]).toLowerCase() : key;
+        if (match && (match[2] || /\p{L}/u.test(key)))
+            key = (match[1] ?? match[2]).toLowerCase();
     }
     // a key of the game's own first, it takes the place of one of the editor's
     const ctrl = e.ctrlKey || e.metaKey, own = levelEditor.keys[(ctrl ? 'ctrl+' : '') + key];

@@ -16,7 +16,7 @@ const PATHFINDER_DIAGONAL_COST = Math.SQRT2;
 
 // Shared 1x1 size vector for per-tile debugRect calls. debugRect copies the
 // argument internally, so reusing one instance is safe.
-const PATHFINDER_TILE_VEC = vec2(1);
+const PATHFINDER_TILE_VEC = /* @__PURE__ */ vec2(1);
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -815,6 +815,8 @@ function pathFinderNearestNode(finder, worldPos, searchRange, test)
 {
     const center = finder.worldToTile(worldPos);
     const centerX = center.x, centerY = center.y;
+    // no ring past the one that reaches the grid's farthest cell holds any, so a range of Infinity is the whole grid
+    searchRange = min(searchRange, max(centerX, finder.size.x - 1 - centerX, centerY, finder.size.y - 1 - centerY));
 
     let nearest = null, nearestDistSq = 0;
     for (let offset = 0; offset <= searchRange; ++offset)

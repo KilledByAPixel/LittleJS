@@ -8,6 +8,19 @@ What changed in each release, newest first. Releases before 1.20.0 are on the
 ### Fixes
 - A game bundled with Vite or another bundler leaves out the plugins it does not use again: the 3D level's built-in types, the particle effect tables and a few 3D constants were made by statements that ran on load, which kept the 3D classes in every game, so a small 2D game bundled to about 57 KB gzipped; it is about 29 KB now. The tables are made by calls marked pure, and the minified ES module build keeps the marks
 - `setTouchGamepadDisplayTime(0)` shows the touch gamepad from the start on a touch device, as its doc says, where it waited for the first touch; using a real gamepad still hides it until the screen is touched again (from Mike on Discord)
+- A fast 3D object stops at a thin wall, floor or platform that is turned, as it does at an upright one, where it went through when it got past the middle in one frame
+- A gamepad button held through `inputClear()`, as when a confirm dialog is answered with it, gives no release when let go, as a key does
+- Loading a 3D level takes away the prefabs the last level brought that this one does not have, so they are not offered in Place or made by name; the game's own stay
+- The engine source loads one file at a time again, as the commented list in the starter and the shorts page has it: `engineLogo.js` comes before `engineSettings.js`
+- A touch anywhere brings back a touch gamepad a real gamepad hid, as the docs say, and not only a touch on one of its controls
+- An array or object a property default holds, in an object layer or a 3D level, is copied for each object, so changing one object's list does not change the others' or the map's
+- A plugin made again in a release build, as in a scene's enter: `PostProcessPlugin` uses the new one's options and gives the old one's shader and textures back, `Render3DPlugin` gives back the old one's programs, buffers and shadow map, `ThreeJSPlugin` takes the old renderer and canvas away and renders once a frame, and two `box2dInit()` calls in a row make one world
+- The 2D level editor: each layer a game makes in code remembers a save file of its own; a paste of objects keeps them where they were in their cells; moving a Box2D object moves its body; a game's `onTile` that throws leaves the edit undoable; a punctuation key on a Dvorak or AZERTY keyboard is not taken for the letter at its place; a Save that fails says why in the console
+- `particleEffect(name, pos, {angle})` with an angle that is not a number keeps the effect's own, as the other options do, and the docs say to follow an object with `attach`, which keeps the effect's angle
+- Release builds: `addChild` moves a child from the parent it had and refuses a loop; `HeightMap.getHeight` gives NaN for a position that is not a number in place of throwing; a video's or speech's volume that is not a number is silence in place of a throw; a browser that refuses an audio context runs without sound in place of stopping the engine
+- A page hidden with `soundPauseWhenHidden` pauses speech and `UIVideo` too; `tweakReset()` goes on past a tweak whose object is gone; `getNearestClearNode` with a range of Infinity searches the grid and returns
+- The sky dome shows with an orthographic camera whose near plane is at or behind it; a round lit sprite with a normal map still loading is lit the same instanced or blended; `render3D.emissiveMapColor` is always a Color; a timed 3D debug draw keeps the color it was given
+- `FollowCamera` look ahead does not turn when its target becomes a point, or comes back after none; `ImageFont` draws nothing in headless mode in place of throwing; `debugShowErrors()` runs in Node; `formatTime` does not wrap past 68 years; `loadAtlas` keeps the frames of an Aseprite tag of mixed sizes apart; a glTF file that fails to load gives back its textures however it fails
 
 ## 1.30.0 - 2026-11-11
 

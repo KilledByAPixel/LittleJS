@@ -32,7 +32,7 @@ let medalDisplaySlideTime = .5;
  *  @type {Vector2}
  *  @default Vector2(640,80)
  *  @memberof Settings */
-let medalDisplaySize = vec2(640, 80);
+let medalDisplaySize = /* @__PURE__ */ vec2(640, 80);
 
 /** Set to stop medals from being unlockable (like if cheats are enabled)
  *  @type {boolean}
@@ -272,31 +272,34 @@ class Medal
 
         // draw containing rect and clip to that region
         context.save();
-        context.beginPath();
-        context.fillStyle = backgroundColor.toString();
-        context.strokeStyle = BLACK.toString();
-        const lineWidth = context.lineWidth = 3;
-        context.rect(x + lineWidth/2, y + lineWidth/2, width - lineWidth, height - lineWidth); // the whole border shows
-        context.fill();
-        context.stroke();
-        context.clip();
+        try
+        {
+            context.beginPath();
+            context.fillStyle = backgroundColor.toString();
+            context.strokeStyle = BLACK.toString();
+            const lineWidth = context.lineWidth = 3;
+            context.rect(x + lineWidth/2, y + lineWidth/2, width - lineWidth, height - lineWidth); // the whole border shows
+            context.fill();
+            context.stroke();
+            context.clip();
 
-        // draw the icon
-        const gap = vec2(.1, .05).scale(height);
-        const iconSize = height - 2*gap.x;
-        this.renderIcon(vec2(x + gap.x + iconSize/2, y + height/2), iconSize);
+            // draw the icon
+            const gap = vec2(.1, .05).scale(height);
+            const iconSize = height - 2*gap.x;
+            this.renderIcon(vec2(x + gap.x + iconSize/2, y + height/2), iconSize);
 
-        // draw the name
-        const nameSize = height*.5;
-        const descriptionSize = height*.3;
-        const pos = vec2(x + iconSize + 2*gap.x, y + gap.y*2 + nameSize/2);
-        const textWidth = width - iconSize - 3*gap.x;
-        drawTextScreen(this.name, pos, nameSize, BLACK, 0, undefined, 'left', undefined, undefined, textWidth);
+            // draw the name
+            const nameSize = height*.5;
+            const descriptionSize = height*.3;
+            const pos = vec2(x + iconSize + 2*gap.x, y + gap.y*2 + nameSize/2);
+            const textWidth = width - iconSize - 3*gap.x;
+            drawTextScreen(this.name, pos, nameSize, BLACK, 0, undefined, 'left', undefined, undefined, textWidth);
 
-        // draw the description
-        pos.y = y + height - gap.y*2 - descriptionSize/2;
-        drawTextScreen(this.description, pos, descriptionSize, BLACK, 0, undefined, 'left', undefined, undefined, textWidth);
-        context.restore();
+            // draw the description
+            pos.y = y + height - gap.y*2 - descriptionSize/2;
+            drawTextScreen(this.description, pos, descriptionSize, BLACK, 0, undefined, 'left', undefined, undefined, textWidth);
+        }
+        finally { context.restore(); }
     }
 
     /** Render the icon for a medal

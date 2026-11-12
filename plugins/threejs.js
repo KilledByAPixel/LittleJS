@@ -17,6 +17,8 @@
  *  @type {ThreeJSPlugin}
  *  @memberof ThreeJS */
 let threeJS;
+// its render hook is added once, and renders the one in place
+let threeJSPluginAdded = false;
 
 ///////////////////////////////////////////////////////////////////////////////
 /** The three.js module; three.js is the game's own and untyped here, so it is any, named for what it is
@@ -55,7 +57,12 @@ class ThreeJSPlugin
     constructor(THREE, cameraFOV=60)
     {
         ASSERT(!threeJS, 'ThreeJS plugin already initialized');
+        // one made again in a release build takes the old one's place: its renderer and canvas go, and the hook,
+        // added once, renders the one in place
+        const old = threeJS;
         threeJS = this;
+        old?.renderer?.dispose();
+        old?.renderer?.domElement.remove();
         if (headlessMode) return;
         ASSERT(mainCanvas, 'ThreeJS plugin must be created after engineInit, call in gameInit');
         ASSERT(THREE && THREE.WebGLRenderer, 'three.js module must be passed in');
@@ -93,7 +100,8 @@ class ThreeJSPlugin
         setBackgroundCanvas(threeCanvas);
 
         // render automatically each frame after the engine renders
-        engineAddPlugin(undefined, ()=> this.render());
+        threeJSPluginAdded || engineAddPlugin(undefined, ()=> threeJS.render());
+        threeJSPluginAdded = true;
     }
 
     /** Position the camera so the z=0 plane exactly matches LittleJS world space,

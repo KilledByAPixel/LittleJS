@@ -571,7 +571,9 @@ function editor3DLevelLoaded(level)
     {
         // before level3DLoad makes anything, so the scene and the map are made with the edits in them
         const parts = editor3DLevelParts(saved);
-        level.objects = editor3DCopy(saved.objects);
+        // as the file's objects were taken: only objects, each with an id of its own
+        level.objects = editor3DCopy(saved.objects).filter(editor3DIsObject);
+        editor3DFixIds(level.objects);
         for (const name of editor3DLevelPartNames)
             parts[name] ? level[name] = editor3DCopy(parts[name]) : delete level[name];
         saved.stale && console.warn(`LittleJS editor: the edits brought back to ${record.fileName} are older than ` +
@@ -650,6 +652,9 @@ function editor3DShadowLight()
         render3D.shadowLight = light;
 }
 
+// an entry of a level's objects that is one, not a null, a number or a list
+const editor3DIsObject = (o)=> !!o && typeof o === 'object' && !isArray(o);
+
 // change the level's objects as part of the edit being made: change edits a copy of the list; the changes until
 // editor3DStrokeEnd are one undo, so a drag is one undo; false when nothing changed
 function editor3DChange(change)
@@ -657,6 +662,9 @@ function editor3DChange(change)
     if (!editor3DLevel || editor3DRecords.get(editor3DLevel)?.pending) return false; // its autosave waits first
     const before = editor3DCopy(editor3DObjects()), after = editor3DCopy(before);
     change(after);
+    // what is not an object, a null a game's change pushed, is dropped, as a level's own are when it loads
+    for (let i = after.length; i--;)
+        editor3DIsObject(after[i]) || after.splice(i, 1);
     if (editor3DSame(before, after)) return false;
     editor3DFixIds(after); // an object added with no id, or with one in use, gets one of its own
     editor3DStroke ||= {before, parts: editor3DLevelParts()}; // first, so a constructor that throws is undone
@@ -689,14 +697,7 @@ function editor3DSetPart(name, part)
 function editor3DPrefabsShow()
 {
     if (editor3DPrefabLevels.has(editor3DLevel)) return; // inside a prefab, the prefabs are the level's
-    const prefabs = editor3DLevelPart('prefabs') ?? {}, removed = new Set;
-    for (const [name, prefab] of level3DPrefabs)
-    {
-        if (!prefab.fromLevel || prefabs[name]) continue;
-        level3DPrefabs.delete(name);
-        level3DTypes.delete(name);
-        removed.add(name);
-    }
+    const prefabs = editor3DLevelPart('prefabs') ?? {}, removed = level3DPrefabsDrop(prefabs);
     level3DPrefabsAdd(prefabs);
     // every object of a prefab's type, one whose type was not there when the objects were set too; an instance of a
     // prefab taken out leaves the game, its object waiting in the level for the prefab to come back
@@ -1506,6 +1507,7 @@ function editor3DPrefabEnter(id)
     const level = {littlejs3D: LEVEL3D_VERSION, ...(prefab.attached ? {attached: true} : {}),
         objects: editor3DCopy(prefab.objects)};
     editor3DPrefabLevels.add(level);
+    level3DPrefabLevels.add(level);
     level3DLoad(level); // the editor takes it as it does any level
     frame.entered = JSON.stringify(editor3DObjects()); // as the editor has it, an edit is what differs from this
     return true;
@@ -1528,6 +1530,8 @@ function editor3DPrefabBack()
         // the prefab as it is now, for whatever is made next; one of the game's own waits to be saved to its file
         const prefab = known?.attached ? {attached: true, objects} : {objects}, fromLevel = !!known?.fromLevel;
         level3DPrefabSet(frame.name, prefab, fromLevel);
+        // the object it was added from stays its source, so Place still knows a prefab made of the level it is in
+        known && (level3DPrefabs.get(frame.name).source = known.source);
         if (fromLevel)
             editor3DPrefabEdits[frame.name] = prefab;
     }

@@ -55,7 +55,10 @@ test('a release build goes on past an error in its first frame, as it does in an
         'setHeadlessMode(true)', 'littlejs.release.js');
     run('var updates = 0');
     const started = await run(`engineInit(()=> {}, ()=> { if (!updates++) throw new Error('first'); }).then(()=> 'started', (e)=> 'rejected ' + e)`);
-    await new Promise((resolve)=> setTimeout(resolve, 200));
+    // the loop runs on its own timer, so wait for the frames to come, with a long deadline, not a fixed time:
+    // a manual step would throw the error back rather than go through the loop that catches it
+    for (let i = 0; i < 250 && run('frame') <= 3; ++i)
+        await new Promise((resolve)=> setTimeout(resolve, 20));
     const frames = run('frame');
     run('setEngineManualStep(true)'); // stops the timer loop, so the test can end
     assert.equal(started, 'started');

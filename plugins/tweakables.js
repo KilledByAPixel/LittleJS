@@ -218,7 +218,10 @@ function tweakSave(t)
 function tweakReset()
 {
     for (const t of tweakList)
-        t.set?.(tweakCopy(t.codeValue));
+    {
+        try { t.set?.(tweakCopy(t.codeValue)); }
+        catch { } // what it tweaks is gone, as a player set to undefined between levels
+    }
     tweakSaved = {};
     writeSaveData(tweakSaveName(), tweakSaved);
 }
