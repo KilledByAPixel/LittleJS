@@ -716,9 +716,14 @@ class Shader
         ASSERT(!!type, 'setUniform: the Shader was not made with this uniform', name);
         ASSERT(glUniformType(value) === type, 'setUniform: a uniform keeps the kind it was made with', name, value);
         if (!type) return;
+        // the same value again, as one set every frame that has not changed, needs no flush and no send
+        const data = glUniformData(value, type), old = this.uniformValues[name];
+        if (typeof data === 'number' ? old === data :
+            typeof old !== 'number' && old?.length === data.length && data.every((v, i)=> old[i] === v))
+            return;
         // what was batched with the old value is drawn first
         glContext && !headlessMode && glBatchShader === this && glFlush();
-        this.uniformValues[name] = glUniformData(value, type);
+        this.uniformValues[name] = data;
         ++this.uniformsVersion;
     }
 
@@ -1928,6 +1933,7 @@ function cameraShake(amount=.5, direction=vec2(1))
 {
     ASSERT(isNumber(amount) && amount >= 0, 'cameraShake: amount must be a number, 0 or more', amount);
     ASSERT(isVector2(direction), 'cameraShake: direction must be a vec2', direction);
+    amount = min(amount, 1); // the shake is at most 1, and Infinity times an axis of 0 would be NaN
     const x = abs(direction.x), y = abs(direction.y);
     cameraShakeAxes = vec2(min(1, cameraShakeAxes.x + amount * x), min(1, cameraShakeAxes.y + amount * y));
     cameraShakeTrauma = min(1, cameraShakeTrauma + amount * max(x, y));

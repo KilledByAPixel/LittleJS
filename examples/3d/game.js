@@ -80,6 +80,12 @@ class Player extends EngineObject3D
         this.engineLoop?.setRate(1 + speed*2);
         this.engineLoop?.setVolume(min(speed*4, .3));
     }
+    destroy()
+    {
+        // the engine sound stops with the player, as when the level editor restarts the level
+        this.engineLoop?.stop();
+        super.destroy();
+    }
 }
 
 ///////////////////////////////////////////////////////////////////////////////

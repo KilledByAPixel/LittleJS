@@ -15,7 +15,7 @@ function skyColor(d)
     const cloud = sin(angle*5 + d.y*9)*sin(d.y*20) - .7;
     c = c.lerp(hsl(.6, .2, .9), clamp(cloud*10)*clamp((.5 - d.y)*10));
     const ridge = .05 + .04*sin(angle*3) + .02*sin(angle*8 + 1);
-    c = c.lerp(hsl(.6, .2, .3 + d.y*2), clamp((ridge - d.y)*200));
+    c = c.lerp(hsl(.6, .2, .3 + min(d.y*2, 1)), clamp((ridge - d.y)*200));
     return c.lerp(hsl(.25, .3, .3 + d.y*.2), clamp(-d.y*200));
 }
 

@@ -18,6 +18,8 @@
  *  @type {PostProcessPlugin}
  *  @memberof PostProcess */
 let postProcess;
+// its hooks are added once: one made again, as in a scene's enter, takes the old one's place and its hooks drive it
+let postProcessPluginAdded = false;
 
 /////////////////////////////////////////////////////////////////////////
 /**
@@ -88,7 +90,9 @@ class PostProcessPlugin
         // the shader is made at the first render, so values the game sets after this, which its code may name, are
         // declared in it
         !headlessMode && !glEnable && console.warn('PostProcessPlugin: WebGL not enabled!');
-        engineAddPlugin(undefined, postProcessRender, postProcessContextLost, postProcessContextRestored);
+        postProcessPluginAdded || engineAddPlugin(undefined, postProcessRender, postProcessContextLost,
+            postProcessContextRestored);
+        postProcessPluginAdded = true;
 
         function initPostProcess()
         {

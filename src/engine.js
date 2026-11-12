@@ -1102,6 +1102,9 @@ function engineObjectsDestroy(immediate=true)
     for (const o of engineObjects)
         o.parent || o.persistent || o.destroy(immediate);
     engineObjects = engineObjects.filter(o=>!o.destroyed);
+    // and the solid lists, so a pause menu that clears the world does not hold what it cleared until play goes on
+    engineObjectsCollide = engineObjectsCollide.filter(o=>!o.destroyed);
+    engineObjectsCollideStaticLast = engineObjectsCollideStaticLast.filter(o=>!o.destroyed);
 }
 
 /** Collects all object within a given area

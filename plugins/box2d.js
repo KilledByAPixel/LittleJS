@@ -2794,6 +2794,10 @@ class Box2dPlugin
  *  @memberof Box2D */
 async function box2dInit()
 {
+    // called again, as in a scene's enter, it is the world there is: its hooks are added once
+    ASSERT(!box2d, 'Box2D already initialized');
+    if (box2d) return box2d;
+
     // load box2d
     // @ts-ignore - Box2D is the global that box2d.wasm.js defines
     new Box2dPlugin(await Box2D());

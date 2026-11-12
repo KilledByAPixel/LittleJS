@@ -36,6 +36,8 @@
  *  @type {LightSystemPlugin}
  *  @memberof LightSystem */
 let lightSystem;
+// its hooks are added once: one made again, as in a scene's enter, takes the old one's place and its hooks drive it
+let lightSystemPluginAdded = false;
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -191,8 +193,9 @@ class LightSystemPlugin
             'out vec2 uv;'+
             'void main(){gl_Position=vec4(p+p-1.,1,1);uv=p;}';
         initLightSystem();
-        engineAddPlugin(undefined, lightSystemRender,
+        lightSystemPluginAdded || engineAddPlugin(undefined, lightSystemRender,
             lightSystemContextLost, lightSystemContextRestored);
+        lightSystemPluginAdded = true;
 
         function initLightSystem()
         {
@@ -490,6 +493,9 @@ class LightSystemPlugin
             cameraAngle = 0;
             canvasClearColor = WHITE;
             glSkipScreenSpace = true; // the map's camera would put them anywhere
+            // an additive draw adds nothing to a map of black casters, as a glow or a fire's particles, so its batch
+            // is dropped rather than drawn; a draw that keeps its color, setShadowTransparent, adds as it always has
+            glSkipAdditive = true;
             ls.shadowPass = true;
             try
             {
@@ -503,6 +509,7 @@ class LightSystemPlugin
                     {
                         if (o.destroyed || !casts(o)) continue;
                         glColorMask = 0xff000000;
+                        glSkipAdditive || (glFlush(), glSkipAdditive = true); // after a transparent one left it off
                         setShader(o.shader); // its own Shader as in the main pass, so a snippet that cuts holes casts the same shape
                         o.renderShadow();
                     }
@@ -528,7 +535,7 @@ class LightSystemPlugin
                 // hand everything back even when a render threw, or every frame after it draws black with no text
                 ls.shadowPass = false;
                 glColorMask = -1;
-                glSkipScreenSpace = false;
+                glSkipScreenSpace = glSkipAdditive = false;
                 glSetRenderTarget();
                 [drawContext, mainCanvasSize, cameraPos, cameraScale, cameraAngle, canvasClearColor, glCustomShader] = saved;
             }
@@ -1202,8 +1209,14 @@ class LightSystemPlugin
     setShadowTransparent(transparent=true)
     {
         // the mask applies as each draw is queued, so nothing needs flushing
-        if (this.shadowPass)
-            glColorMask = transparent ? -1 : 0xff000000;
+        if (!this.shadowPass) return;
+        glColorMask = transparent ? -1 : 0xff000000;
+        // additive draws are dropped from a map of black casters, and kept while a draw keeps its color
+        if (glSkipAdditive === transparent)
+        {
+            glFlush();
+            glSkipAdditive = !transparent;
+        }
     }
 }
 

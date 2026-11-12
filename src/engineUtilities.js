@@ -83,6 +83,7 @@ class Timer
     {
         if (!this.isSet()) return 0;
         if (!(this.setTime > 0)) return 1;
+        if (this.setTime === Infinity) return 0; // a timer that never ends has not begun, not Infinity / Infinity
         return 1 - percent(this.time - this.getGlobalTime(), 0, this.setTime);
     }
 

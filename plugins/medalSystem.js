@@ -147,8 +147,12 @@ function medalsReset()
         // unlock another tab wrote, and those not made yet read theirs when they are made
         const saved = readSaveData(medalsSaveName);
         for (const id in saved)
-            if ((!medals[id] || medals[id].isLocal()) && saved[id] && typeof saved[id] === 'object')
+        {
+            // a key of the save is read as the medal it names only when there is one, not as constructor
+            const medal = Object.prototype.hasOwnProperty.call(medals, id) ? medals[id] : undefined;
+            if ((!medal || medal.isLocal()) && saved[id] && typeof saved[id] === 'object')
                 saved[id].unlocked = false;
+        }
         writeSaveData(medalsSaveName, saved);
     }
     medalsSave();

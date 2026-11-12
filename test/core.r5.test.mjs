@@ -2,6 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import * as LJS from '../dist/littlejs.esm.js';
+import { loadEngine } from './vmEngine.mjs';
 const { EngineObject, engineObjectsUpdate, engineObjectsDestroy, engineObjectsCallback, formatTime, debugShowErrors,
     vec2 } = LJS;
 
@@ -22,18 +23,18 @@ function clearObjects()
     engineObjectsUpdate();
 }
 
-test('solid objects piled on one spot update in reasonable time (collide pair lookup is not a list scan)', () =>
+test('solid objects piled on one spot look each pair up in a map by object, not by scanning a list of pairs', () =>
 {
     // 400 solid objects on nearly the same spot, every pair overlapping and pushed apart, took over 2 seconds a frame
-    // when each pair was looked up by scanning a flat list of every pair asked
-    for (let i = 0; i < 400; ++i)
-        new EngineObject(vec2(300 + i*.001, 300), vec2(1)).setCollision();
-    engineObjectsUpdate();
-    const start = performance.now();
-    engineObjectsUpdate();
-    const ms = performance.now() - start;
-    clearObjects();
-    assert.ok(ms < 1000, `one frame took ${ms.toFixed(0)} ms`);
+    // when each pair was looked up by scanning a flat list of every pair asked; what is kept is checked, not the time
+    const { run } = loadEngine();
+    const kept = run(`setHeadlessMode(true);
+        for (let i = 0; i < 400; ++i) new EngineObject(vec2(300 + i*.001, 300), vec2(1)).setCollision();
+        engineObjectsUpdate();
+        const asked = [...engineObjectsCollidePairs.values()];
+        [engineObjectsCollidePairs instanceof Map, asked.every((m)=> m instanceof Map),
+            asked.reduce((n, m)=> n + m.size, 0) >= 400]`);
+    assert.deepEqual([...kept], [true, true, true]);
 });
 
 test('a child and a grandchild see the parent where it is this frame in their update (children update transforms)', () =>

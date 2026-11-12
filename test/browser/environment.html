@@ -89,7 +89,8 @@ smokeRun(async ()=>
     render3D.environment = undefined;
     engineStep(1);
     const plain = smokePixel(.5, .5);
-    check('with no environment it reflects the sky\'s colors as before', !smokeNear(plain, [...faces.pz, 255], 40), plain);
+    check('with no environment it reflects the sky\'s colors as before',
+        !smokeNear(plain, [...faces.pz, 255], 40) && plain[0] + plain[1] + plain[2] > 60, plain); // drawn, not the face
     sphere.destroy();
 
     // six images loaded by url, each a face's color with a white top left quarter, as a sky box set is drawn: each

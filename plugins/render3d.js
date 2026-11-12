@@ -22,6 +22,8 @@
  *  @type {Render3DPlugin}
  *  @memberof Render3D */
 let render3D;
+// its hooks are added once: one made again, as in a scene's enter, takes the old one's place and its hooks drive it
+let render3DPluginAdded = false;
 
 /** Floats in each vertex of the GPU layout: position xyz, normal xyz, uv, and the color as rgba bytes in the last
  *  one, what meshWriteVertex writes and mesh.setVertexData takes
@@ -208,7 +210,10 @@ function render3DIsAfter2D(o)
 /** @param {Vector3|number} size
  *  @return {Vector3} */
 function render3DSize3(size)
-{ return isNumber(size) ? vec3(/** @type {number} */ (size)) : /** @type {Vector3} */ (size); }
+{
+    ASSERT(isNumber(size) || isVector3(size), 'a size is a number or a vec3', size);
+    return isNumber(size) ? vec3(/** @type {number} */ (size)) : /** @type {Vector3} */ (size);
+}
 
 // a size given as a number or a vec2
 /** @param {Vector2|number} size
@@ -811,8 +816,9 @@ class Render3DPlugin
         this.transparentQueue = undefined; // draws queued during the transparent stage, replayed far to near
 
         render3DInitGL();
-        engineAddPlugin(undefined, render3DRender, render3DContextLost, render3DContextRestored, render3DPreRender,
-            render3DGridRelease);
+        render3DPluginAdded || engineAddPlugin(undefined, render3DRender, render3DContextLost, render3DContextRestored,
+            render3DPreRender, render3DGridRelease);
+        render3DPluginAdded = true;
         engineObjectsPhysicsDone = render3DGridPhysicsDone;
     }
 
@@ -1727,6 +1733,8 @@ class Camera3D
      *  @return {Matrix4} */
     getProjectionMatrix(aspect)
     {
+        ASSERT(aspect > 0 && (this.orthographic > 0 || this.fov > 0),
+            'Camera3D: the aspect and the fov, or orthographic, must be above 0', aspect, this.fov);
         const h = this.orthographic / 2, w = h * aspect;
         return h ? Matrix4.orthographic(-w, w, -h, h, this.near, this.far) :
             Matrix4.perspective(this.fov, aspect, this.near, this.far);
@@ -2567,8 +2575,9 @@ function render3DUniform(name, program=render3D.currentProgram)
 {
     const u = render3D.uniforms;
     let cache = u.get(program);
-    cache || u.set(program, cache = {});
-    return cache[name] ??= glContext.getUniformLocation(program, name);
+    cache || u.set(program, cache = Object.create(null));
+    // a null one is kept too, for a uniform the compiler left out
+    return name in cache ? cache[name] : cache[name] = glContext.getUniformLocation(program, name);
 }
 
 // the model matrix, the tint and the uv rect as constant attributes for one draw
@@ -3009,8 +3018,22 @@ function render3DRenderPass(after2D)
             render3DRenderShadowMap();
             r.shadowMapDrawn = true;
         }
-        // the camera's depth for post processing, from the default layer
+        else if (!r.shadows && r.shadowTextureSize > 1)
+        {
+            // shadows turned off give the map's memory back, one texel keeps the sampler valid
+            const target = gl.getParameter(gl.FRAMEBUFFER_BINDING);
+            render3DUpdateShadowMap(1);
+            gl.bindFramebuffer(gl.FRAMEBUFFER, target);
+        }
+        // the camera's depth for post processing, from the default layer, and its memory back when it is turned off
         r.depthTexture && isDefault && render3DRenderDepth();
+        if (!r.depthTexture && r.cameraDepthTexture)
+        {
+            gl.deleteTexture(r.cameraDepthTexture);
+            gl.deleteFramebuffer(r.cameraDepthFramebuffer);
+            r.cameraDepthFramebuffer = r.cameraDepthTexture = undefined;
+            r.cameraDepthWidth = r.cameraDepthHeight = 0;
+        }
         // the cube maps asked for by capture, drawn with this frame's shadow map
         isDefault && r.cubeCaptures.size && render3DCaptureCubes(objects);
         render3DUseProgram(r.program); // after the shadow map, so the light matrix it sends is this frame's

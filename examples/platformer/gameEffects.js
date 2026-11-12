@@ -2,8 +2,8 @@
     LittleJS Platformer Example - Effects
     - Plays different particle effects which can be persistent
     - Destroys terrain and makes explosions
-    - Outlines tiles based on neighbor types
-    - Draws moving starfield with plants and suns
+    - Outlines tiles again where terrain is destroyed
+    - Draws the sky, a gradient with stars
     - Tracks zzfx sound effects
 */
 
@@ -171,7 +171,7 @@ export function destroyTile(pos, makeSound = 1, cleanup = 1)
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-// sky with background gradient, stars, and planets
+// sky with background gradient and stars
 
 export class Sky extends LJS.EngineObject
 {

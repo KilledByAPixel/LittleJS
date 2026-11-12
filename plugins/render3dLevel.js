@@ -34,8 +34,9 @@ const level3DBaseScale = new WeakMap;
  *  - An EngineObject3D then gets the object's rotation, and its scale times the scale it was made with
  *  - Adding a name again replaces it, Box, Sphere, Cylinder and Light too
  *  @param {string} name - The type the objects have in the level
- *  @param {Function} make - A class made at each object's position, or a function called with it
- *  @param {Object<string, any>} [defaults] - Properties of each one made, the level editor shows inputs for them
+ *  @param {(function(Vector3, ObjectProperties): unknown)|(function(new: unknown, Vector3, ObjectProperties))} make - A
+ *  class made at each object's position, or a function called with it
+ *  @param {ObjectProperties} [defaults] - Properties of each one made, the level editor shows inputs for them
  *  @param {TileInfo} [tileInfo] - An icon for the level editor
  *  @memberof Level3D
  *  @example
@@ -474,7 +475,7 @@ function level3DMakeAt(object, pos, rotation, scale)
  *  @param {Vector3} [pos3D]
  *  @param {Vector3} [rotation3D] - In radians, as an object has it
  *  @param {Vector3} [scale3D] - Times the scale the type makes it with
- *  @param {Object<string, any>} [properties] - Over the type's defaults
+ *  @param {ObjectProperties} [properties] - Over the type's defaults
  *  @return {any} - What the type made, a Prefab3D for a prefab, undefined when there is no such type
  *  @memberof Level3D
  *  @example
@@ -500,6 +501,10 @@ const level3DPrefabs = new Map;
 let level3DPrefabDepth = 0, level3DPrefabAttached = 0;
 // the prefabs being made, one inside the next, so one that holds itself is caught where it does, however many times
 const level3DPrefabMaking = [];
+// the parts one instance makes, its prefabs inside it counted too, at most LEVEL3D_PREFAB_PARTS, so a small file of
+// prefabs that each hold several of the next can not make millions of objects
+let level3DPrefabParts = 0;
+const LEVEL3D_PREFAB_PARTS = 1e4;
 
 /** Add a prefab: a small level, its objects placed about its own origin, to place many times under one name
  *  - It is a type from then on: a level's object of that type, the level editor's Place list and level3DSpawn make
@@ -648,6 +653,7 @@ class Prefab3D extends EngineObject3D
             debug && console.error(`level3DLoad: the prefab ${this.prefabName} holds itself, left out there`);
             return;
         }
+        level3DPrefabDepth || (level3DPrefabParts = 0); // an instance of its own, not a part of another
         level3DPrefabMaking.push(this.prefabName);
         ++level3DPrefabDepth;
         this.attached && ++level3DPrefabAttached;
@@ -656,6 +662,12 @@ class Prefab3D extends EngineObject3D
             const low = vec3(Infinity), high = vec3(-Infinity), children = [];
             for (const object of prefab.objects)
             {
+                if (++level3DPrefabParts > LEVEL3D_PREFAB_PARTS)
+                {
+                    level3DPrefabParts == LEVEL3D_PREFAB_PARTS + 1 && debug && console.error('level3DLoad: the prefab ' +
+                        this.prefabName + ' makes more than ' + LEVEL3D_PREFAB_PARTS + ' parts, the rest left out');
+                    break;
+                }
                 const local = {pos: level3DVector(object.pos, vec3()), scale: level3DVector(object.scale, vec3(1)),
                     rotation: level3DVector(object.rotation, vec3()).scale(PI / 180)};
                 const at = this.attached ? local : level3DPrefabPartTransform(this, object);

@@ -20,6 +20,8 @@
  *  @type {UISystemPlugin}
  *  @memberof UISystem */
 let uiSystem;
+// its hooks are added once: one made again, as in a scene's enter, takes the old one's place and its hooks drive it
+let uiSystemPluginAdded = false;
 
 /** Enable UI system debug drawing
  *  0=off, 1=normal, 2=show invisible
@@ -173,7 +175,8 @@ class UISystemPlugin
             e.type === 'keydown' && o.onKeyDown(e);
         };
 
-        engineAddPlugin(uiUpdate, uiRender);
+        uiSystemPluginAdded || engineAddPlugin(uiUpdate, uiRender);
+        uiSystemPluginAdded = true;
 
         // set object position based on anchor target (parent box, or canvas for roots),
         // self-pivot, and localPos offset
@@ -1638,7 +1641,7 @@ class UICheckbox extends UIObject
     render()
     {
         super.render();
-        if (this.checked)
+        if (this.checked && min(this.size.x, this.size.y) > 0) // a box of no size, as one growing in, has no mark
         {
             const p = this.cornerRadius / min(this.size.x, this.size.y) * 2;
             const length = lerp(1, 2**.5/2, p) / 2;

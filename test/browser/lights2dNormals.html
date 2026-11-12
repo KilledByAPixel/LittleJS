@@ -50,7 +50,7 @@ smokeRun(async ()=>
     console.warn = (...args)=> warnings.push(args.join(' '));
     let [left, right] = leftRight();
     console.warn = warn;
-    check('off: the scene reads as before, the same from either side', Math.abs(left - right) <= 2, [left, right]);
+    check('off: the scene reads as before, the same from either side', Math.abs(left - right) <= 2 && left > 40, [left, right]);
     const said = warnings.filter((text)=> text.includes('normalMaps'));
     check('off: a normal map with normal maps off is warned of once', said.length == 1, warnings);
 

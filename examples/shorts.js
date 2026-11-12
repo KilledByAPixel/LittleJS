@@ -451,6 +451,8 @@ async function loadFile(filename, largeExample, fallbackInfo='')
         {
             codeMirror.setOption('mode', 'javascript');
             codeMirror.setValue(text);
+            codeMirror.off('change', codeInput); // a full example turned live edit off, on once
+            codeMirror.on('change', codeInput);
         }
         else
             textareaCode.value = text;
@@ -748,6 +750,8 @@ function showSharedCode(code)
     {
         codeMirror.setOption('mode', 'javascript');
         codeMirror.setValue(code);
+        codeMirror.off('change', codeInput); // a full example turned live edit off, on once
+        codeMirror.on('change', codeInput);
     }
     else
         textareaCode.value = code;
@@ -791,7 +795,8 @@ function codeInput()
 
 function restartCode()
 {
-    // manually restart/run the code regardless of live edit setting
+    // manually restart/run the code regardless of live edit setting; a full example's code view holds no code
+    if (!codeIsJS) return;
     const code = codeMirror ? codeMirror.getValue() : textareaCode.value;
     setCode(code);
 }

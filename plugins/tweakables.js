@@ -167,7 +167,8 @@ function tweakAdd(name, get, set, toCode, options)
     tweakSaved ||= readSaveData(tweakSaveName(), {});
     const saved = tweakSaved[name];
     if (!saved) return;
-    if (tweakSaveText(saved.code) === tweakSaveText(tweakToSave(t.codeValue)))
+    // a value not of the tweak's type, a save edited by hand or from another version, is dropped as a changed one is
+    if (tweakSaveText(saved.code) === tweakSaveText(tweakToSave(t.codeValue)) && tweakSaveFits(type, saved.value))
         set(tweakFromSave(type, saved.value));
     else
     {
@@ -195,6 +196,12 @@ function tweakFromSave(type, v)
     return type === 'color' ? rgb(...v) : type === 'vector2' ? vec2(...v) : type === 'vector3' ? vec3(...v) : v;
 }
 function tweakSaveText(v) { return JSON.stringify(v); }
+function tweakSaveFits(type, v)
+{
+    const numbers = (n)=> isArray(v) && v.length === n && v.every(isNumber);
+    return type === 'color' ? numbers(4) : type === 'vector2' ? numbers(2) : type === 'vector3' ? numbers(3) :
+        type === 'number' ? isNumber(v) : typeof v === 'boolean';
+}
 
 // remember a tweak's value, or forget it when it is back to the code value
 function tweakSave(t)

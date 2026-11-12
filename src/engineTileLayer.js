@@ -82,7 +82,11 @@
  *  @typedef {Object} TiledProperty
  *  @property {string} name
  *  @property {string} [type] - string, int, float, bool, color, file or object, string when left out
- *  @property {any} value
+ *  @property {string|number|boolean} value - a color is a string, an object an id
+ *  @memberof TileLayers */
+
+/** The properties of an object type, its defaults or the values an object was made with, by name
+ *  @typedef {Object<string, any>} ObjectProperties
  *  @memberof TileLayers */
 
 /** A tileset of a Tiled map
@@ -531,11 +535,15 @@ function tileLayersFromLDtk(ldtk, level=0)
             continue;
         }
 
-        // a layer for each depth in a cell and each opacity, the first tiles drawn solid first
+        // a layer for each depth in a cell and each opacity, the first tiles drawn solid first; at most 32, each a
+        // whole layer, so a small file of many opacities can not make thousands
         const tilesName = values ? name + ' tiles' : name;
+        let full = false;
         const stacks = [{depth: 0, alpha: 1, data: empty()}], stack = (depth, alpha)=>
         {
             let s = stacks.find((s)=> s.depth === depth && s.alpha === alpha);
+            if (!s && stacks.length >= 32)
+                return void (full = true);
             s || stacks.push(s = {depth, alpha, data: empty()});
             return s.data;
         };
@@ -547,11 +555,13 @@ function tileLayersFromLDtk(ldtk, level=0)
             for (const t of tiles)
             {
                 const x = floor(t.px[0] / grid), y = floor(t.px[1] / grid), cell = x + y * width;
-                if (x >= 0 && x < width && y >= 0 && y < height)
-                    stack(depth[cell]++, round(clamp(t.a ?? 1) * 1e3) / 1e3)[cell] =
-                        (t.t + 1 | (t.f & 1 ? 0x80000000 : 0) | (t.f & 2 ? 0x40000000 : 0)) >>> 0;
+                const data = x >= 0 && x < width && y >= 0 && y < height &&
+                    stack(depth[cell]++, round(clamp(t.a ?? 1) * 1e3) / 1e3);
+                if (data)
+                    data[cell] = (t.t + 1 | (t.f & 1 ? 0x80000000 : 0) | (t.f & 2 ? 0x40000000 : 0)) >>> 0;
             }
         }
+        full && console.warn(`tileLayersFromLDtk: layer ${name} stacks tiles and opacities in more than 32 ways, the rest left out`);
         const visible = instance.visible !== false;
         stacks.sort((a, b)=> a.depth - b.depth || b.alpha - a.alpha);
         for (const {depth, alpha, data} of stacks)
@@ -578,8 +588,9 @@ const objectLayersTypes = new Map;
  *  - The defaults, and then the properties the object has in Tiled, are set on what it made
  *  - Adding a name again replaces it
  *  @param {string} name - The type the objects have in Tiled
- *  @param {Function} make - A class made at each object's position, or a function called with it
- *  @param {Object<string, any>} [defaults] - Properties set on each one made, the level editor shows inputs for them
+ *  @param {(function(Vector2): unknown)|(function(new: unknown, Vector2))} make - A class made at each object's
+ *  position, or a function called with it
+ *  @param {ObjectProperties} [defaults] - Properties set on each one made, the level editor shows inputs for them
  *  @param {TileInfo} [tileInfo] - An icon for the level editor
  *  @memberof TileLayers
  *  @example
@@ -1274,14 +1285,24 @@ class TileLayer extends CanvasLayer
         }
         if (!this.dirtyCells.size) return;
 
+        // most of the layer changed, as a new level set with setData, is drawn again whole, in one draw
+        const width = this.size.x;
+        if (this.dirtyCells.size > width * this.size.y / 2)
+            return this.redraw();
+
         // taken first, so the redrawStart below finds nothing waiting and a tile that throws is not tried again
-        const cells = [...this.dirtyCells], width = this.size.x;
+        const cells = [...this.dirtyCells].map((i)=> vec2(i % width, i / width | 0));
         this.dirtyCells.clear();
         this.redrawStart();
         try
         {
-            for (const i of cells)
-                this.drawTileData(vec2(i % width, i / width | 0));
+            // every cell cleared first, then the tiles drawn, so they go in one batch, where a clear between each
+            // tile flushed it, a draw a cell
+            const cellPixels = this.tileInfo?.size ?? vec2(1);
+            for (const cell of cells)
+                this.clearLayerRect(cell.multiply(cellPixels), cellPixels);
+            for (const cell of cells)
+                this.drawTileData(cell, false);
         }
         finally { this.redrawEnd(); }
     }

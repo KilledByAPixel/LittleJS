@@ -505,12 +505,12 @@ function glCreateProgram(vsSource, fsSource)
     return program;
 }
 
-// a uniform location, looked up once per program
+// a uniform location, looked up once per program, a null one too, for a uniform the compiler left out
 function glUniformLocation(program, name)
 {
     let cache = glUniformLocations.get(program);
-    cache || glUniformLocations.set(program, cache = {});
-    return cache[name] ??= glContext.getUniformLocation(program, name);
+    cache || glUniformLocations.set(program, cache = Object.create(null));
+    return name in cache ? cache[name] : cache[name] = glContext.getUniformLocation(program, name);
 }
 
 // a Shader's 2D program, compiled the first time a batch needs it: the snippet's mainImage gives the surface

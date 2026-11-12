@@ -928,6 +928,7 @@ function buildLathe(profile, sides=16, smooth=render3D?.smoothShading, capped=tr
     ASSERT(isArray(profile) && profile.length > 1, 'lathe profile needs at least 2 points');
     sides |= 0;
     ASSERT(sides > 2, 'lathe needs at least 3 sides');
+    ASSERT(sides * profile.length <= 1e6, 'a lathe of more than a million faces', sides, profile.length);
     const mesh = new Mesh;
     const rings = profile.length;
     const point = (i, a)=> vec3(sin(a) * profile[i][0], profile[i][1], cos(a) * profile[i][0]);
@@ -1040,6 +1041,7 @@ function buildLathe(profile, sides=16, smooth=render3D?.smoothShading, capped=tr
 function buildSphere(size=1, sides=16, rings=8, smooth=render3D?.smoothShading)
 {
     ASSERT(rings > 1, 'sphere needs at least 2 rings');
+    ASSERT(sides * rings <= 1e6, 'a sphere of more than a million faces', sides, rings);
     const profile = [];
     for (let i = 0; i <= rings; ++i)
     {

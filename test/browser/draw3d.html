@@ -57,6 +57,13 @@ smokeRun(async ()=>
         behind.emissive = 1;
         behind.shader = new Shader('void mainImage(out vec4 c, vec2 uv) { c = texture(iChannel0, uv);' +
             'vec4 p = viewProjection * vec4(worldPos - vec3(0, 0, 6), 1.); gl_FragDepth = p.z / p.w * .5 + .5; }');
+        // and its twin beside it, its depth where it is, so it shows over the red box: the green box is drawn
+        const front = new EngineObject3D(vec3(-.6, -.6, 3), buildBox(), undefined, rgb(0, 1, 0));
+        front.scale3D = vec3(.5);
+        front.emissive = 1;
+        front.castShadow = false;
+        front.shader = new Shader('void mainImage(out vec4 c, vec2 uv) { c = texture(iChannel0, uv);' +
+            'vec4 p = viewProjection * vec4(worldPos, 1.); gl_FragDepth = p.z / p.w * .5 + .5; }');
 
         // a quad given in the GPU layout, its triangles counter clockwise from the camera, so it is culled if the
         // upload turned them the wrong way
@@ -113,7 +120,7 @@ smokeRun(async ()=>
     pixel('an object draws with its own Shader', at(0, 3.2), (p)=> smokeNear(p, [255, 0, 255, 255]));
     // the green box at z 3 shows at 10 / 7 of its place
     pixel("a Shader sets its depth through viewProjection", at(.6 * 10 / 7, -.6 * 10 / 7),
-        (p)=> smokeNear(p, [255, 0, 0, 255]));
+        (p)=> smokeNear(p, [255, 0, 0, 255]) && smokeNear(smokePixel(...at(-.6 * 10 / 7, -.6 * 10 / 7)), [0, 255, 0, 255]));
     const plainLight = smokePixel(...at(-5, 1.2))[0], bentLight = smokePixel(...at(5, 1.2))[0];
     check("a Shader's mainNormal bends the normal the lighting uses", bentLight > plainLight + 40,
         [plainLight, bentLight]);

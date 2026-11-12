@@ -241,3 +241,18 @@ test('an empty tile layer is kept as an empty layer, so a level that has only on
     assert.deepEqual(map.layers.map((l)=> [l.name, l.type, l.data.join()]), [['Ground', 'tilelayer', '0']]);
     assert.equal(tileLayersLoad(map, sheet(169, 33), 0, undefined, false).length, 1);
 });
+
+test('a cell stacked with tiles of many opacities makes at most 32 layers, the rest left out with a warning', ()=>
+{
+    const project = ldtk(), ground = project.levels[0].layerInstances[2];
+    ground.gridTiles = Array.from({length: 100}, (_, i)=> ({px: [0, 0], src: [0, 0], f: 0, t: 0, a: (i + 1) / 101}));
+    const warn = console.warn, warnings = [];
+    console.warn = (text)=> warnings.push(text);
+    try
+    {
+        const layers = tileLayersFromLDtk(project).layers.filter((l)=> l.name.startsWith('Ground'));
+        assert.equal(layers.length, 32);
+        assert.ok(warnings.some((w)=> /more than 32/.test(w)), warnings.join());
+    }
+    finally { console.warn = warn; }
+});

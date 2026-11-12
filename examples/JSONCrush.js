@@ -171,8 +171,12 @@ uncrush: (string)=>
             // split the string using the current splitCharacter
             let splitArray = uncrushedString.split(character);
 
-            // rejoin the string with the last element from the split
-            uncrushedString = splitArray.join(splitArray.pop());
+            // rejoin the string with the last element from the split; each step can multiply the length, so a
+            // short string made to grow is refused before it takes all the memory
+            const joint = splitArray.pop();
+            if (uncrushedString.length + (splitArray.length - 1) * joint.length > 1e6)
+                throw new Error('JSONCrush: the string uncrushes to more than a million characters');
+            uncrushedString = splitArray.join(joint);
         }
     }
     

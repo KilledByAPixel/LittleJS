@@ -29,6 +29,8 @@ test('every built-in builds in 2D and 3D headless, untextured, and runs a second
         const a = particleEffect(name, vec2()), b = particleEffect3D(name, vec3());
         for (let i = 0; i < 60; ++i) a.update(), b.update();
         assert.ok(a.particles.every(p=> Number.isFinite(p.pos.x) && Number.isFinite(p.pos.y)), name);
+        assert.ok(b.particleData.subarray(0, b.particleCount * 21).every(Number.isFinite), // 21 floats each
+            name + ' in 3D');
         a.destroy(), b.destroy();
     }
 });

@@ -231,7 +231,8 @@ test('drawText scales maxWidth from world units to pixels like the size', () =>
 test('the engine runs headless in plain Node, with no document or requestAnimationFrame', () =>
 {
     const script = "const LJS = await import('./dist/littlejs.esm.js'); LJS.setHeadlessMode(true); let n = 0;" +
-        "await LJS.engineInit(()=>{}, ()=> ++n); setTimeout(()=> { console.log('updates ' + n); process.exit(0); }, 300);";
+        "await LJS.engineInit(()=>{}, ()=> ++n); const done = ()=> { console.log('updates ' + n); process.exit(0); };" +
+        "setInterval(()=> n > 3 && done(), 10); setTimeout(done, 20000);"; // waits for updates, not for a time
     const out = execFileSync(process.execPath, ['--input-type=module', '--no-warnings', '-e', script], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
     const updates = +out.match(/updates ([0-9]+)/)[1];
     assert.ok(updates > 3, out);
