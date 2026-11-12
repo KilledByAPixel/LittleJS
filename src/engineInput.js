@@ -470,6 +470,8 @@ const gamepadAxisCenteredFrames = 15;
 
 // touch gamepad internal variables
 const touchGamepadTimer = new Timer(undefined, true), touchGamepadButtons = [], touchGamepadSticks = [];
+// a real gamepad took over since the last touch, so a touch gamepad always shown stays hidden until touched again
+let touchGamepadHandedOver = false;
 // buttons pressed since the last poll, so a tap that lifts before the poll still counts
 const touchGamepadButtonsPressed = [];
 // floating stick anchors (stage-local CSS pixels) and owning pointer ids, indexed by stick (0=left, 1=right)
@@ -876,10 +878,13 @@ function inputUpdate()
                 vec2();
         };
 
-        // the touch gamepad owns gamepad 0 once touched, until a real gamepad is used: that one takes over and the
-        // touch gamepad hides until the screen is touched again
+        // the touch gamepad owns gamepad 0 once touched, or from the start with a display time of 0, until a real
+        // gamepad is used: that one takes over and the touch gamepad hides until the screen is touched again
+        if (touchGamepadEnable && isTouchDevice && !touchGamepadDisplayTime && !touchGamepadHandedOver &&
+            !touchGamepadTimer.isSet())
+            touchGamepadTimer.set();
         if (touchGamepadEnable && isTouchDevice && touchGamepadTimer.isSet() && gamepadsEnable && inputRealGamepadUsed())
-            touchGamepadTimer.unset();
+            touchGamepadTimer.unset(), touchGamepadHandedOver = true;
         if (touchGamepadEnable && isTouchDevice && touchGamepadTimer.isSet())
         {
             // read virtual analog stick
@@ -1503,6 +1508,7 @@ function touchGamepadPointerDown(e, zone)
     // as Chrome's device mode can; the zone still takes the touch, it only stops following a finger that slides off
     try { zone.setPointerCapture(e.pointerId); } catch { }
     touchGamepadTimer.set();
+    touchGamepadHandedOver = false;
 
     // resume audio on first interaction
     if (soundEnable && !headlessMode && audioContext && !audioIsRunning())

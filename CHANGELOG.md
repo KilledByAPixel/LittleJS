@@ -7,6 +7,7 @@ What changed in each release, newest first. Releases before 1.20.0 are on the
 
 ### Fixes
 - A game bundled with Vite or another bundler leaves out the plugins it does not use again: the 3D level's built-in types, the particle effect tables and a few 3D constants were made by statements that ran on load, which kept the 3D classes in every game, so a small 2D game bundled to about 57 KB gzipped; it is about 29 KB now. The tables are made by calls marked pure, and the minified ES module build keeps the marks
+- `setTouchGamepadDisplayTime(0)` shows the touch gamepad from the start on a touch device, as its doc says, where it waited for the first touch; using a real gamepad still hides it until the screen is touched again (from Mike on Discord)
 
 ## 1.30.0 - 2026-11-11
 

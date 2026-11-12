@@ -423,7 +423,8 @@ let touchGamepadSize = 100;
  *  @memberof Settings */
 let touchGamepadAlpha = .3;
 
-/** How long to display the touch gamepad on screen in seconds, set to 0 to always display
+/** How long to display the touch gamepad on screen in seconds, set to 0 to always display,
+ *  from the start on a touch device; using a real gamepad still hides it until the screen is touched
  *  @type {number}
  *  @default
  *  @memberof Settings */
@@ -939,7 +940,8 @@ function setTouchGamepadSize(size) { touchGamepadSize = size; }
  *  @memberof Settings */
 function setTouchGamepadAlpha(alpha) { touchGamepadAlpha = alpha; }
 
-/** Set how long to display the touch gamepad on screen in seconds, set to 0 to always display
+/** Set how long to display the touch gamepad on screen in seconds, set to 0 to always display,
+ *  from the start on a touch device; using a real gamepad still hides it until the screen is touched
  *  @param {number} time
  *  @memberof Settings */
 function setTouchGamepadDisplayTime(time) { touchGamepadDisplayTime = time; }
