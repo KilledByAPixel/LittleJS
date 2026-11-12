@@ -1,0 +1,45 @@
+<!DOCTYPE html><meta charset=utf-8>
+<title>LittleJS smoke: a full example</title>
+<!-- a full example, example.html?example=breakout, run in a frame as it runs on the site for 30 animation frames: it
+     must make its canvas and throw nothing, and fail no assert, on the way -->
+<script src=smoke.js></script>
+<pre id=result>PENDING</pre>
+<iframe id=frame style=width:320px;height:180px></iframe>
+<script>
+'use strict';
+
+smokeRun(async ()=>
+{
+    const name = new URLSearchParams(location.search).get('example') || '';
+    if (!/^\w+$/.test(name))
+        return check('an example is named', false, name);
+
+    // the example's own page, with its folder as the base and, ahead of everything, what reports to this page:
+    // errors, rejections and failed asserts, before any script of the example runs, and the frames it draws
+    const folder = '../../examples/' + name + '/';
+    const html = await (await fetch(folder + 'index.html')).text();
+    const report = `<base href="${folder}"><script>
+        const report = (text)=> parent.check('no error', false, String(text));
+        addEventListener('error', (e)=> report(e.message));
+        addEventListener('unhandledrejection', (e)=> report(e.reason?.message || e.reason));
+        const assert = console.assert;
+        console.assert = function(condition, ...output)
+        {
+            condition || parent.check('no failed assert', false, output.map(String).join(' '));
+            assert.apply(this, arguments);
+        };
+        // the animation frames it has drawn, the engine asks for one a frame; on a timer, since a tab the runner
+        // has in the background gets almost none
+        let smokeFrames = 0;
+        window.requestAnimationFrame = (callback)=> setTimeout(()=> { ++smokeFrames; callback(performance.now()); }, 16);
+        window.smokeFrameCount = ()=> smokeFrames;
+    <\/script>`;
+    const frame = document.getElementById('frame');
+    frame.srcdoc = html.replace(/<head>|<meta[^>]*>/i, (tag)=> tag + report);
+    const frames = ()=> frame.contentWindow?.smokeFrameCount?.() ?? 0;
+    for (const end = Date.now() + 45e3; frames() < 30 && Date.now() < end;)
+        await new Promise((resolve)=> setTimeout(resolve, 100));
+    check('ran 30 frames', frames() >= 30, frames());
+    check('made its canvas', !!frame.contentDocument?.querySelector('canvas'));
+});
+</script>

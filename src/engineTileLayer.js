@@ -707,7 +707,7 @@ class TileLayerData
      *  @param {number}  [direction] - Integer direction of tile, in 90 degree increments
      *  @param {boolean} [mirror] - If the tile is flipped left to right
      *  @param {Color}   [color] - Color of the tile */
-    constructor(tile, direction=0, mirror=false, color=new Color)
+    constructor(tile, direction=0, mirror=false, color)
     {
         /** @property {number|undefined} - The tile to use, from 0 like tile(); undefined is an empty cell that draws nothing
          *  @type {number|undefined} */
@@ -716,8 +716,8 @@ class TileLayerData
         this.direction = direction;
         /** @property {boolean} - If the tile is flipped left to right */
         this.mirror = mirror;
-        /** @property {Color} - Color of the tile */
-        this.color = color.copy();
+        /** @property {Color} - Color of the tile, its own copy, white when none was given */
+        this.color = color ? color.copy() : new Color; // one Color, not a default copied again, for every empty cell
     }
 
     /** Set this tile to clear, it will not be rendered */
@@ -967,6 +967,8 @@ class CanvasLayer extends EngineObject
 
     /** Draw a tile onto the layer in world space, where it shows in the world, whatever the layer's place, turn and
      *  mirror
+     *  - Each call outside redrawStart and redrawEnd switches to the layer and back, a draw of its own; many in one
+     *    frame, like a splat for each particle, are drawn between one redrawStart() and redrawEnd()
      *  @param {Vector2}  pos
      *  @param {Vector2}  [size=vec2(1)]
      *  @param {TileInfo} [tileInfo]
@@ -1030,6 +1032,7 @@ class CanvasLayer extends EngineObject
     }
 
     /** Draw a rectangle onto the layer in world space, where it shows in the world
+     *  - Like drawTile, many go between one redrawStart() and redrawEnd()
      *  @param {Vector2} pos
      *  @param {Vector2} [size=vec2(1)]
      *  @param {Color}   [color=WHITE]

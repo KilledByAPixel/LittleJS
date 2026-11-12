@@ -116,3 +116,30 @@ test('a Shader uniform set to the value it has does not flush the batch or count
         [same - version, shader.uniformsVersion - version]`);
     assert.deepEqual([...counts], [0, 1]);
 });
+
+test('an editor autosave of the wrong shape is read as broken, a good one as good', () =>
+{
+    const { run } = loadEngine();
+    const valid = run(`[
+        editorSaveValid({hash: 1, width: 2, height: 1, layers: [[0, 3]], objects: [[{id: 1}]], nextobjectid: 2}),
+        editorSaveValid({layers: [[0, 1]]}),
+        editorSaveValid({layers: [[0, 1]], objects: [[null]]}),
+        editorSaveValid({layers: [[0, 1]], objects: {}}),
+        editorSaveValid({layers: [[0, 1]], objects: [5]}),
+        editorSaveValid({layers: [[0, 1]], width: '3'}),
+        editorSaveValid({layers: [['a']]}),
+        editorSaveValid(null)]`);
+    assert.deepEqual([...valid], [true, true, false, false, false, false, false, false]);
+});
+
+test('of the editor autosaves with no file, only the 8 newest are kept, and a file\'s own all stay', () =>
+{
+    const { run } = loadEngine();
+    const keys = run(`const saves = {'levels/a.json': {}};
+        for (let i = 0; i < 12; ++i) editorSavesKeep(saves, '2x1 ground #' + i, {i});
+        editorSavesKeep(saves, '2x1 ground #5', {i: 5}); // written again, it is the newest
+        editorSavesKeep(saves, 'level #77', {});
+        Object.keys(saves)`);
+    assert.deepEqual([...keys], ['levels/a.json', '2x1 ground #6', '2x1 ground #7', '2x1 ground #8', '2x1 ground #9',
+        '2x1 ground #10', '2x1 ground #11', '2x1 ground #5', 'level #77']);
+});

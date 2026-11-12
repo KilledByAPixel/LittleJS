@@ -184,6 +184,9 @@ async function runPage(browser, url, name)
     return {name, checks};
 }
 
+// the full examples, each run for a few seconds as the site runs it; the Three.js one loads Three.js from a CDN
+const fullExamples = ['starter', 'breakout', 'platformer', 'puzzle', 'box2d', 'htmlMenu', 'uiSystem', '3d'];
+
 // the shorts, by the file names examples/shorts.js lists
 function shortNames()
 {
@@ -206,7 +209,8 @@ const browser = await startChrome(chrome);
 const server = await serve(), base = 'http://127.0.0.1:' + server.address().port + '/test/browser/';
 const only = process.argv.slice(2);
 const jobs = [...pages.map((name)=> [name, base + name + '.html']),
-    ...shortNames().map((name)=> ['short ' + name, base + 'short.html?short=' + name])]
+    ...shortNames().map((name)=> ['short ' + name, base + 'short.html?short=' + name]),
+    ...fullExamples.map((name)=> ['example ' + name, base + 'example.html?example=' + name])]
     .filter(([name])=> !only.length || only.some((word)=> name.split(' ').includes(word)));
 
 let failed = 0, passed = 0, next = 0;
@@ -228,7 +232,7 @@ for (const {name, checks} of results)
     for (const check of checks)
     {
         check.ok ? ++passed : ++failed;
-        if (!check.ok || !name.startsWith('short '))
+        if (!check.ok || !name.startsWith('short ') && !name.startsWith('example '))
             console.log((check.ok ? 'ok   ' : 'FAIL ') + name + ': ' + check.name +
                 (check.detail !== undefined ? ' ' + JSON.stringify(check.detail) : ''));
     }

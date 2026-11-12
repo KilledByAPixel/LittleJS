@@ -556,7 +556,14 @@ function editor3DLevelLoaded(level)
     editor3DRedoList = record.redo;
     // an autosave the file already has, from a Save, goes; one of this file, or of the file a Save wrote, comes back
     // a prefab being edited has no autosave, and one of a level with the same objects is not its
-    const saved = editor3DPrefabLevels.has(level) ? undefined : editor3DSaves()[record.key];
+    let saved = editor3DPrefabLevels.has(level) ? undefined : editor3DSaves()[record.key];
+    // one whose objects are not all objects, edited by hand or written by something else, would fail on open
+    if (saved && !(isArray(saved.objects) && saved.objects.every((o)=> !!o && typeof o === 'object' && !isArray(o))))
+    {
+        console.warn(`LittleJS editor: the autosave of ${record.fileName} could not be read, the next autosave ` +
+            'writes over it');
+        saved = undefined;
+    }
     if (saved && isArray(saved.objects) && editor3DSame(saved.objects, original) &&
         editor3DSame(editor3DLevelParts(saved), originalParts))
         editor3DAutosave(level);
@@ -1881,8 +1888,8 @@ function editor3DAutosave(level=editor3DLevel, known)
     if (editor3DSame(objects, record.original) && editor3DSame(parts, record.originalParts) && !record.savedHash)
         delete saves[record.key];
     else
-        saves[record.key] = {hash: record.hash, savedHash: record.savedHash, objects: editor3DCopy(objects),
-            ...parts};
+        editorSavesKeep(saves, record.key, {hash: record.hash, savedHash: record.savedHash,
+            objects: editor3DCopy(objects), ...parts});
     const failed = editorSaveFailed, size = editorAutosaveSize; // the 2D editor's flag and size are its own
     editor3DSaveFailed = editorWriteSaves(saves, record.key, editor3DSaveName());
     editor3DAutosaveSize = editorAutosaveSize;

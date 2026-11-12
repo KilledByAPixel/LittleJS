@@ -642,6 +642,13 @@ function editorMapRestore(map)
 
     const saved = editorSaves()[record.key];
     if (!saved) return map;
+    if (!editorSaveValid(saved))
+    {
+        // one of the wrong shape, edited by hand or written by something else, would fail every load: it goes
+        console.warn(`LittleJS editor: the autosave of ${record.fileName} could not be read and was dropped`);
+        editorDiscardPending(record);
+        return map;
+    }
     // an autosave from before the map's shape was in the hash matches on its tiles and objects, and one from before
     // objects were matches on its tiles; one of a resized map is resized to first
     const sameFile = saved.hash === record.hash || saved.savedHash === record.hash || !saved.width &&
@@ -993,9 +1000,22 @@ function editorAutosave(record)
     if (sameSize && editorSameData(data, record.original) && editorSameData(kept, original) && !record.savedHash)
         delete saves[record.key];
     else
-        saves[record.key] = {hash: record.hash, savedHash: record.savedHash, width: map.width, height: map.height,
-            layers: data, objects: kept, nextobjectid: map.nextobjectid};
+        editorSavesKeep(saves, record.key, {hash: record.hash, savedHash: record.savedHash, width: map.width,
+            height: map.height, layers: data, objects: kept, nextobjectid: map.nextobjectid});
     editorWriteSaves(saves, record.key);
+}
+
+// keep an autosave, the newest last; of the maps and levels with no file, keyed by their hash, a game that makes a
+// different one each run would add one a run until storage is full, so only the newest EDITOR_AUTOSAVE_FILELESS stay
+const EDITOR_AUTOSAVE_FILELESS = 8;
+function editorSavesKeep(saves, key, entry)
+{
+    delete saves[key];
+    saves[key] = entry;
+    if (!key.includes(' #')) return; // a file's own, its key a path
+    const fileless = Object.keys(saves).filter((k)=> k.includes(' #'));
+    for (const old of fileless.slice(0, -EDITOR_AUTOSAVE_FILELESS))
+        delete saves[old];
 }
 
 // a map's lists of objects with the empty ones past count left off: an Objects layer the editor made, empty again,
@@ -1091,6 +1111,20 @@ function editorPendingFits(record, saved)
 }
 
 // drop the autosaved edits of a file that changed since
+// whether an autosave has the shape one is written in: tile layers of whole numbers, object layers of objects,
+// and a size of whole cells
+function editorSaveValid(saved)
+{
+    const plain = (o)=> !!o && typeof o === 'object' && !Array.isArray(o);
+    const whole = (n)=> n === undefined || Number.isInteger(n) && n > 0;
+    return plain(saved) && Array.isArray(saved.layers) &&
+        saved.layers.every((layer)=> Array.isArray(layer) && layer.every((gid)=> Number.isInteger(gid) && gid >= 0)) &&
+        (saved.objects === undefined || Array.isArray(saved.objects) &&
+            saved.objects.every((list)=> Array.isArray(list) && list.every(plain))) &&
+        whole(saved.width) && whole(saved.height) &&
+        (saved.nextobjectid === undefined || Number.isInteger(saved.nextobjectid));
+}
+
 function editorDiscardPending(record)
 {
     if (!record) return;
