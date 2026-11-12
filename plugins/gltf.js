@@ -16,7 +16,8 @@
  *   Blender write it
  * - An OPAQUE material, the default, ignores its texture's alpha as the format says: its texture loads with alpha
  *   set to 1, so the 3D pass cuts no holes in it, as a copy when a MASK or BLEND material uses the texture too;
- *   MASK always cuts at half, alphaCutoff is not read
+ *   MASK always cuts at half by the texture's alpha alone: alphaCutoff, the material's alpha and the vertex alpha
+ *   are not read, so a mask goes in the texture, as exporters write it
  * - Material and vertex colors are linear in glTF and are converted to sRGB at load, the space textures are in
  * - glTF and LittleJS agree on the axes, y up and -z forward, on counter clockwise triangles and on uvs running down
  * - Requires the Render3D plugin

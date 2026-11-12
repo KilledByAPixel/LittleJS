@@ -819,6 +819,7 @@ function render3DCollideSolid(a)
         // both objects hear about it, and either one can take the touch over
         const resolve = render3DCollideAsk(a, b, push, false);
         grid && (render3DGridPlace(grid, a), render3DGridPlace(grid, b)); // a callback may have moved either
+        shapeA = render3DSolidShape(a); // so the next solid is tested where a callback put it, a teleport too
         if (!resolve) continue;
 
         // standing: resting on a box's face within the upper one's groundAngle of level holds it there, the push

@@ -145,3 +145,34 @@ test('the grid follows a callback that grows the other and lets the pair pass', 
                     (other.size3D = other.size3D.scale(1.5)), false);
         });`);
 });
+
+test('a solid a collision callback teleports is tested where it went for the rest of its turn, grid or not', () =>
+{
+    for (const grid of [false, true])
+    {
+        const { run } = loadEngine();
+        const contacts = JSON.parse(run(`
+            setHeadlessMode(true);
+            new Render3DPlugin;
+            engineCollideGridMin = ${grid ? 0 : 1e9};
+            const make = (name, x)=>
+            {
+                const o = new EngineObject3D(vec3(x, 0, 0), render3D.boxMesh);
+                o.name = name; o.mass = 0; o.setCollision(true, true, false); o.collideWithObject = ()=> false;
+                return o;
+            };
+            const portal = make('portal', 0), oldTrigger = make('oldTrigger', 0), arrival = make('arrival', 10);
+            const player = make('player', 0);
+            player.mass = 1;
+            const contacts = [];
+            player.collideWithObject = (other)=>
+            {
+                contacts.push(other.name);
+                other === portal && (player.pos3D.x = 10);
+                return false;
+            };
+            engineObjectsUpdate();
+            JSON.stringify(contacts)`));
+        assert.deepEqual(contacts, ['portal', 'arrival'], 'grid ' + grid);
+    }
+});
