@@ -1371,6 +1371,7 @@ class ThirdPersonCamera3D extends EngineObject3D
         this.cameraNew = true;          // made this update, see cameraUpdatePost
         this.pivot = vec3();            // where the pole starts now, eased toward the target
         this.poleLength = distance;     // how long the pole is now, shorter at a wall
+        /** @type {Vector3|undefined} */
         this.targetFrom = undefined;    // where the target was last update, to see which way it moves
         this.turnTime = -Infinity;      // when it was last turned by hand
         this.activate();
@@ -2680,8 +2681,11 @@ function parseOBJ(text, smooth=render3D?.smoothShading)
                 const corners = parts.slice(1).map(c=> c.split('/'));
                 if (corners.length < 3) break;
                 const facePoints = corners.map(c=> lookup(c[0], positions));
-                ASSERT(facePoints.every(isVector3), 'OBJ face uses a vertex index the file does not have', line);
-                if (!facePoints.every(isVector3)) break; // a release build leaves the face out
+                // and its uv and normal indices, each one given must be one the file has
+                const valid = facePoints.every(isVector3) && corners.every(c=>
+                    (!c[1] || isVector2(lookup(c[1], uvs))) && (!c[2] || isVector3(lookup(c[2], normals))));
+                ASSERT(valid, 'OBJ face uses a vertex, uv or normal index the file does not have', line);
+                if (!valid) break; // a release build leaves the face out
                 const hasNormals = corners.every(c=> c[2]);
                 missingNormals ||= !hasNormals;
                 const faceNormal = hasNormals ? undefined : render3DFaceNormal(facePoints[0], facePoints[1], facePoints[2], facePoints[3]);

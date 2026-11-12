@@ -952,7 +952,8 @@ const engineStepMaxFrames = 36000;
  *  setHeadlessMode(true);
  *  setEngineManualStep(true);
  *  await engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost);
- *  engineStep(600); // 600 updates of 1/60 second; the first is at time 0, so time is then 599/60
+ *  engineStep(600); // 600 updates of 1/60 second; the first is at time 0, so time is then 599/60, with
+ *                   // setEngineVariableStep(true) the first is at 1/60 and time is 600/60
  *  @memberof Engine */
 function engineStep(frames=1)
 {

@@ -38,6 +38,7 @@ The code is very clean and well documented with many examples to get you started
 - 2D lights with soft shadows, tinted glass and emissive objects, a sun with long shadows, spotlight cones and gels, and normal maps
 - Robust particle effect system with a library of ready made effects and an [effect design tool](https://killedbyapixel.github.io/LittleJS/examples/particles/)
 - Parallax background layers that repeat across a level of any size
+- Follow cameras with smoothing, a dead zone, look ahead and level bounds, and camera shake
 - Your own icons inline in text, like a coin beside the score, written by name
 - Load sprites and animations into texture sheets at runtime, or import [TexturePacker](https://www.codeandweb.com/texturepacker) and [Aseprite](https://www.aseprite.org) atlases
 
@@ -174,7 +175,7 @@ LittleJS comes with several demos both for learning and using as starter project
 | [littlejs.esm.js](https://github.com/KilledByAPixel/LittleJS/blob/main/dist/littlejs.esm.js) | Debug | ESM | Debug mode with asserts |
 | [littlejs.esm.min.js](https://github.com/KilledByAPixel/LittleJS/blob/main/dist/littlejs.esm.min.js) | Release | ESM | Optimized for release and minified |
 
-Every build includes the plugins. littlejs.min.js is about 135 KB gzipped, and the 3D plugins are a large part of that. A bundler like Vite leaves out the plugins a game does not use, so a small 2D game comes to about 26 KB gzipped, and a lit 3D scene to about 47 KB.
+Every build includes the plugins. littlejs.min.js is about 165 KB gzipped, and the 3D plugins are a large part of that. A bundler like Vite leaves out the plugins a game does not use, so a small 2D game comes to about 26 KB gzipped, and a lit 3D scene to about 47 KB.
 
 ## Games Made With LittleJS
 

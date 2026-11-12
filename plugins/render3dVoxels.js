@@ -436,7 +436,8 @@ class VoxelMap extends EngineObject3D
         for (let k = 0; k < 3; ++k)
         {
             const a = axes[k], dk = d[a];
-            cell[k] = clamp(floor(start[a]), 0, s[a] - 1);
+            // on a cell edge, the cell the ray goes into: one going down starts in the cell below the edge
+            cell[k] = clamp(dk < 0 ? ceil(start[a]) - 1 : floor(start[a]), 0, s[a] - 1);
             step[k] = sign(dk);
             next[k] = dk ? enter + (cell[k] + (dk > 0 ? 1 : 0) - start[a]) / dk : Infinity;
             delta[k] = dk ? abs(1 / dk) : Infinity;

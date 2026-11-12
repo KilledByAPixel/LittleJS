@@ -864,12 +864,13 @@ function inputUpdate()
     function gamepadsUpdate()
     {
         const deadZoneMin=.3, deadZoneMax=.8;
+        // a round dead zone: how far the stick is pushed, from its edge to full, in the direction it points, so a
+        // diagonal reads as soon as a straight push does and the direction is not pulled toward the axes; y up
         const applyDeadZones = (v)=>
         {
-            const deadZone = (v)=>
-                v > deadZoneMin ? percent(v, deadZoneMin, deadZoneMax) :
-                v < -deadZoneMin ? -percent(-v, deadZoneMin, deadZoneMax) : 0;
-            return vec2(deadZone(v.x), deadZone(-v.y)).clampLength();
+            const length = v.length();
+            return length > deadZoneMin ? vec2(v.x, -v.y).scale(percent(length, deadZoneMin, deadZoneMax) / length) :
+                vec2();
         };
 
         // the touch gamepad owns gamepad 0 once touched, until a real gamepad is used: that one takes over and the
@@ -991,7 +992,8 @@ function inputUpdate()
                 const button = gamepad.buttons[j];
                 const wasDown = buttonsLast[j];
                 buttonsLast[j] = button.pressed;
-                data[j] = button.pressed ? wasDown ? 1 : 3 : wasDown ? 4 : 0;
+                // one held that inputClearKey or inputClear let go stays up until it is let go, as a key does
+                data[j] = button.pressed ? wasDown ? data[j] & 1 : 3 : wasDown ? 4 : 0;
 
                 // check for any input on this gamepad, analog must be full press
                 if (button.pressed && (!button.value || button.value > .9))

@@ -524,3 +524,25 @@ test('a level\'s parts are saved in one order, whatever order they were added in
     const keys = run('editor3DLevelJSON()').match(/^  "\w+"/gm).map((key)=> key.trim());
     assert.deepEqual(keys, ['"littlejs3D"', '"name"', '"scene"', '"prefabs"', '"objects"']);
 });
+
+test('Paste inside a prefab leaves out an instance of it, which would hold itself, and pastes the rest', async ()=>
+{
+    const { run } = await loadGame();
+    run(fileCode + `editor3DSelection.add(1); editor3DSelection.add(2); editor3DCopySelection();
+        editor3DSelection.clear(); editor3DSelection.add(1); editor3DPrefabEnter();`);
+    run('editor3DPaste(); editor3DPrefabBack();');
+    const types = json(run, 'level.prefabs.House.objects.map((o)=> o.type)');
+    assert.ok(!types.includes('House'), 'the house holds no house: ' + types);
+    assert.equal(types.filter((t)=> t === 'Box').length, 3, 'its two boxes and the pasted one');
+});
+
+test('a brush of a type an undo took away is put down, and Place refuses a type the game has not added', async ()=>
+{
+    const { run } = await loadGame();
+    run(fileCode + `editor3DSetOpen(true);
+        editor3DChangePart('prefabs', (p)=> ({...p, Tower: {objects: [{id: 1, type: 'Box'}]}})); editor3DStrokeEnd();
+        editor3DBrush = 'Tower'; editor3DUndo();`);
+    assert.equal(run('level3DTypes.has("Tower")'), false);
+    assert.equal(run('editor3DPlace("Tower", vec3())'), undefined);
+    assert.ok(!json(run, 'list().map((o)=> o.type)').includes('Tower'));
+});

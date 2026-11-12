@@ -149,13 +149,14 @@
  *  @property {function(): Array<Level3DObject>} selected - The selected objects
  *  @property {function(number): any} made - What the game made for an object's id
  *  @property {function(function(Array<Level3DObject>): void): boolean} change - Edit a copy of the object list; false
- *    when nothing changed
+ *    when nothing changed, or when the level can not be edited while its autosave waits for Apply or Drop
  *  @property {function(string, function(any): any): boolean} changePart - Edit the level's scene, voxels, terrain
- *    or prefabs block
+ *    or prefabs block; false as change gives it
  *  @property {function(): void} strokeEnd - End the edit: one undo step, and the autosave
  *  @property {function(): void} strokeCancel - Take the edit being made back
  *  @property {function(string, Vector3): number|undefined} place - Add an object of a type at a position, selected;
- *    its id, undefined when there is no such type or the level can not be edited
+ *    its id, undefined when there is no such type, a prefab would hold itself, or the level can not be edited
+ *    while its autosave waits for Apply or Drop
  *  @property {(object: Level3DObject, pos3D?: Vector3, rotation?: Vector3, scale3D?: Vector3) => void} setTransform -
  *    Write a place, a rotation and a scale on an
  *    object of the list given to change; one left out is kept
@@ -1235,8 +1236,10 @@ function editorSetCell(layer, pos, gid)
     const {source, live, color} = layer;
     const index = pos.x + (live.size.y - 1 - pos.y) * live.size.x;
     const before = source.data[index];
-    if (before === gid && (!gid || live.destroyed || live.getData(pos).tile !== undefined))
-        return before; // the same, unless the layer lost the tile in play, a ghost painted with its own tile
+    // the same, unless the layer lost the tile in play, a ghost painted with its own tile, or the game put a tile on
+    // a cell the map has empty, which erasing takes away
+    if (before === gid && (live.destroyed || (live.getData(pos).tile !== undefined) === !!gid))
+        return before;
     source.data[index] = gid;
     if (live.destroyed) return before; // a layer the game let go of, the map still has the change
 
@@ -1479,11 +1482,10 @@ function editorChangeObjects(layer, change)
 }
 
 // set an object's property as Tiled keeps it, only where it differs from its type's default, a color as #AARRGGBB
-// and a Vector2 as the string x,y
+// and a Vector2 as the string x,y; a number is kept as typed, an int when it and the default are whole, a float
+// otherwise, since a default of 2 may be a float the game scales by
 function editorObjectSetProperty(object, name, value, defaultValue)
 {
-    if (Number.isInteger(defaultValue) && isNumber(value))
-        value = round(value); // an integer stays one, as Tiled keeps an int
     const list = object.properties ?? [], at = list.findIndex((property)=> property.name === name), old = list[at];
     const properties = list.filter((property)=> property.name !== name);
     const text = (v)=> isColor(v) ? v.toString() : isVector2(v) ? v.x + ',' + v.y : JSON.stringify(v);
@@ -1493,7 +1495,7 @@ function editorObjectSetProperty(object, name, value, defaultValue)
         const property = hex ? {name, type: 'color', value: '#' + hex.slice(7, 9) + hex.slice(1, 7)} :
             isVector2(value) ? {name, type: 'string', value: text(value)} :
             {name, type: typeof value === 'boolean' ? 'bool' : typeof value === 'string' ? 'string' :
-            Number.isInteger(defaultValue) ? 'int' : 'float', value};
+            Number.isInteger(defaultValue) && Number.isInteger(value) ? 'int' : 'float', value};
 
         // one the map had keeps its place and its kind where the value fits it, a file stays a file, an object an object
         if (old?.type === 'file' && property.type === 'string' || old?.type === 'object' && property.type === 'int')
@@ -1573,14 +1575,16 @@ function editorObjectAt(layer, pos)
     }
 }
 
-// the ids of the objects whose positions are inside the box between two world positions
-function editorObjectsIn(layer, a, b)
+// the ids of the objects whose positions are inside the box between two world positions; a tile area's box ends where
+// the next cell starts, open there, so an object on that line, as one snapped to the grid is, belongs to the next cell
+function editorObjectsIn(layer, a, b, openHigh=false)
 {
     const low = vec2(min(a.x, b.x), min(a.y, b.y)), high = vec2(max(a.x, b.x), max(a.y, b.y));
     return (layer.group?.objects ?? []).filter((object)=>
     {
         const pos = editorObjectPos(layer.record, object);
-        return pos.x >= low.x && pos.y >= low.y && pos.x <= high.x && pos.y <= high.y;
+        return pos.x >= low.x && pos.y >= low.y &&
+            (openHigh ? pos.x < high.x && pos.y < high.y : pos.x <= high.x && pos.y <= high.y);
     }).map((object)=> object.id);
 }
 
@@ -1618,11 +1622,11 @@ function editorSelectedObjects()
 function editorDeleteObjects()
 {
     if (!editorObjectSelection.size) return false;
-    const selection = editorObjectSelection;
+    const selection = new Set(editorObjectSelection);
     editorStrokeEnd();
     editorChangeObjects(editorObjectLayer, (list)=>
         list.splice(0, list.length, ...list.filter((object)=> !selection.has(object.id))));
-    editorObjectSelection = new Set;
+    editorObjectSelection.clear(); // the same Set, which edit2D.selection hands a game
     editorStrokeEnd();
     return true;
 }
@@ -1646,7 +1650,7 @@ function editorCutObjects()
 {
     const selection = new Set(editorObjectSelection);
     if (!editorCopyObjects()) return false;
-    editorObjectSelection = selection;
+    selection.forEach((id)=> editorObjectSelection.add(id));
     return editorDeleteObjects();
 }
 
@@ -1703,7 +1707,7 @@ function editorUpdateObjects(space)
         if (hit)
         {
             if (!editorObjectSelection.has(hit.id))
-                editorObjectSelection = new Set([hit.id]);
+                editorObjectSelection.clear(), editorObjectSelection.add(hit.id);
             editorObjectDrag = {start: snap(mouse), from: new Map(editorSelectedObjects().map((object)=>
                 [object.id, {x: object.x, y: object.y}]))};
         }
@@ -2029,7 +2033,7 @@ function editorClear()
             const far = editorLayer.live.pos.add(editorSelection.max).add(vec2(1));
             for (const objectLayer of editorObjectLayers(editorLayer.record))
             {
-                const ids = new Set(editorObjectsIn(objectLayer, corner, far));
+                const ids = new Set(editorObjectsIn(objectLayer, corner, far, true));
                 ids.size && editorChangeObjects(objectLayer, (list)=>
                     list.splice(0, list.length, ...list.filter((object)=> !ids.has(object.id))));
             }
@@ -2046,7 +2050,7 @@ function editorAreaObjects(layer, area)
     const corner = layer.live.pos.add(area.min), far = layer.live.pos.add(area.max).add(vec2(1));
     return editorObjectLayers(layer.record).flatMap((objectLayer, group)=>
     {
-        const ids = new Set(editorObjectsIn(objectLayer, corner, far));
+        const ids = new Set(editorObjectsIn(objectLayer, corner, far, true));
         return (objectLayer.group?.objects ?? []).filter((object)=> ids.has(object.id)).map((object)=>
             ({group, type: object.type || object.class, offset: editorObjectPos(layer.record, object).subtract(corner),
             object: editorObjectsCopy(object), tileSize: vec2(layer.record.map.tilewidth || 1, layer.record.map.tileheight || 1)}));
@@ -2110,7 +2114,7 @@ function editorSelectionDragStart(layer, cell)
         const corner = layer.live.pos.add(area.min), far = layer.live.pos.add(area.max).add(vec2(1));
         for (const objectLayer of editorObjectLayers(layer.record))
         {
-            const ids = new Set(editorObjectsIn(objectLayer, corner, far));
+            const ids = new Set(editorObjectsIn(objectLayer, corner, far, true));
             ids.size && objects.push({objectLayer, ids});
         }
     }
@@ -2361,9 +2365,10 @@ function editorPanelInit()
     const resize = editorElement('button', sizeRow, 'flex:1;padding:3px;cursor:pointer', 'Resize');
     const resizeLevel = ()=>
     {
-        // up to 1000 a side from here, editorResize takes any size from code
-        const size = (input)=> clamp(parseInt(input.value) || 1, 1, 1e3);
-        editorResize(editorRecord(), size(sizeX), size(sizeY));
+        // up to 1000 a side from here, editorResize takes any size from code; a field left empty or not a number
+        // resizes nothing, it does not shrink that side to 1
+        const size = (input)=> clamp(parseInt(input.value), 1, 1e3), x = size(sizeX), y = size(sizeY);
+        isNaN(x) || isNaN(y) || editorResize(editorRecord(), x, y);
         resize.blur(); sizeX.blur(); sizeY.blur(); // the fields show the size again
     };
     resize.onclick = resizeLevel;
@@ -2646,8 +2651,12 @@ function editorOnKeyDown(e)
         editorSelectionDrag = undefined;
     }
     let key = e.key === ' ' ? 'Space' : e.key.length === 1 ? e.key.toLowerCase() : e.key;
+    // a digit goes by its key too, so a game's '1' works with Shift held and on AZERTY, where the row types symbols
     if (key.length === 1 && !/[a-z?]/.test(key) && !levelEditor.keys[key])
-        key = e.code?.match(/^Key([A-Z])$/)?.[1].toLowerCase() ?? key;
+    {
+        const match = e.code?.match(/^(?:Key([A-Z])|Digit([0-9]))$/);
+        key = match ? (match[1] ?? match[2]).toLowerCase() : key;
+    }
     // a key of the game's own first, it takes the place of one of the editor's
     const ctrl = e.ctrlKey || e.metaKey, own = levelEditor.keys[(ctrl ? 'ctrl+' : '') + key];
     const action = own ? (shift)=> own.action.call(levelEditor, shift) : (ctrl ? editorCtrlKeys : editorKeys)[key];
@@ -2792,7 +2801,7 @@ function editorPropertiesUpdate(box)
         else if (typeof defaultValue === 'number')
         {
             input.type = 'number';
-            input.step = Number.isInteger(defaultValue) ? '1' : 'any';
+            input.step = 'any'; // any number, the arrows still step by 1
             input.value = String(value);
             input.onchange = ()=> { const v = parseFloat(input.value); isFinite(v) && set(v); }; // 1e999 is not one
         }
@@ -2863,7 +2872,8 @@ function editorUpdate()
         if (editorIsOpen)
         {
             editorApplyCamera(); // the mouse is read through the editor's view
-            editorPlay(screenToWorld(mousePosScreen));
+            // where the mouse is, or over the panel where it was last on the level, not under the panel
+            editorPlay(screenToWorld(editorMouseOnPanel ? editorMouseScreen : mousePosScreen));
         }
         else
             editorSetOpen(true);

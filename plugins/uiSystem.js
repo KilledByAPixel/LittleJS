@@ -1426,7 +1426,7 @@ class UITextInput extends UIObject
      *  @param {boolean} [playSound] */
     click(playSound=true)
     {
-        // an edit in another field ends first, with its onChange, like a Tab to the next field
+        // an edit in another field ends first, with its onChange, as a click away from it ends it
         const editing = uiSystem.keyInputObject;
         if (editing !== this && editing instanceof UITextInput)
             editing.stopEditing();
@@ -1702,8 +1702,8 @@ class UISlider extends UIObject
         // held when the frame began, so a release in the same frame as the last move still reads it
         const wasActive = this.isActiveObject();
         super.update();
-        if (!this.interactive)
-            return;
+        if (!this.interactive || this.destroyed)
+            return; // destroyed by its onUpdate, it no longer follows the mouse or calls onChange
 
         const oldValue = this.value;
         if (wasActive || this.isActiveObject())

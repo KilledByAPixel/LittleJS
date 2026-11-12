@@ -425,6 +425,7 @@ cameraShake(amount=.5, direction=vec2(1)) // Shake for a hit: adds to a shake th
                          // only what is drawn moves, cameraPos and cameraAngle stay the game's own; in 2D and
                          // 3D, held while paused or at time scale 0; direction weights each axis, vec2(0, 1)
                          // shakes only up and down, and each axis fades on its own
+                         // move the camera in an update: while a frame draws, cameraPos is the shaken one
 cameraShakeDistance = .5 // How far a full shake moves the view, world units; setCameraShakeDistance(distance)
 cameraShakeAngle = .05   // How far a full shake turns the view, radians; setCameraShakeAngle(angle)
 cameraShakeDecay = 1     // How much shake fades a second, 1 is a full shake gone in a second; setCameraShakeDecay(decay)
@@ -2453,7 +2454,7 @@ newgrounds.user                      // the logged in player once ready, with id
 newgrounds.medals                    // the server's medal list once ready; each NewgroundsMedal takes its name, image,
                                      // value, difficulty and description with " (value)" added
 newgrounds.scoreboards               // the server's scoreboard list once ready, each with its id and name
-newgrounds.postScore(id, value)      // needs a logged in player and a whole number; result.data.success says if it
+newgrounds.postScore(id, value)      // needs a logged in player, value rounded to a whole number; result.data.success says if it
                                      // posted; an answer that the session is gone drops it, like a failed session check
 await newgrounds.getScores(id, user, social, skip, limit, period) // the scores are in result.data.scores; period
                                      // 'D' today (the server default), 'W', 'M', 'Y', 'A' all time; a user or social

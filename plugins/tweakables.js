@@ -132,7 +132,9 @@ function tweakEngineDefaults()
 {
     if (!debug) return;
     tweakDivider('Engine');
-    tweakAdd('gravity', ()=> gravity, setGravity, (v)=> `setGravity(${v});`, {min: -.05, max: .05});
+    // Box2D takes gravity in units per second squared, the arcade physics per frame
+    const range = typeof box2d !== 'undefined' && box2d ? 30 : .05;
+    tweakAdd('gravity', ()=> gravity, setGravity, (v)=> `setGravity(${v});`, {min: -range, max: range});
     tweakAdd('timeScale', ()=> timeScale, setTimeScale, (v)=> `setTimeScale(${v});`, {min: 0, max: 2});
     tweakAdd('cameraScale', ()=> cameraScale, setCameraScale, (v)=> `setCameraScale(${v});`,
         {min: 1, max: 128, step: 1});
@@ -375,11 +377,16 @@ function tweakNumber(parent, axis, get, set, options, save)
     if (slider)
         Object.assign(slider, {type: 'range', min, max, step});
     Object.assign(box, {type: 'number', step});
+    isNumber(min) && (box.min = String(min));
+    isNumber(max) && (box.max = String(max));
 
     const change = (input)=>
     {
-        const v = parseFloat(input.value);
+        let v = parseFloat(input.value);
         if (!isFinite(v)) return; // a box part way through typing, or 1e999
+        // a number typed past the range is held to it, as the slider is, so a setter's assert is not reached
+        if (isNumber(min) && v < min) v = min;
+        if (isNumber(max) && v > max) v = max;
         set(v);
         save();
     };

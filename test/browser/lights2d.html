@@ -97,6 +97,14 @@ smokeRun(async ()=>
         thrown == 'on purpose' && gl.getParameter(gl.FRAMEBUFFER_BINDING) === null && viewport2[2] == glCanvas.width &&
         viewport2[3] == glCanvas.height && !glAdditive && glCustomShader === shaderBefore && drawContext === mainContext, [thrown, viewport2]);
     glowing.destroy();
+
+    // a lightmap size set later makes the lightmap again at it, so the lights are not drawn into a corner of the old one
+    lightSystem.textureSizeAuto = false;
+    lightSystem.textureSize = vec2(40, 20);
+    engineStep();
+    check('a lightmap size set later makes the lightmap that size',
+        lightSystem.textureSizeAllocated.x == 40 && lightSystem.textureSizeAllocated.y == 20,
+        [lightSystem.textureSizeAllocated.x, lightSystem.textureSizeAllocated.y]);
     checkGLError();
 });
 </script>

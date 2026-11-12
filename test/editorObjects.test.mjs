@@ -425,15 +425,22 @@ test('undoing the first object placed in a map with no object layer forgets the 
     assert.equal(JSON.parse(storage.items['LittleJS editor /game/'])[mapKey], undefined);
 });
 
-test('the properties box takes only a value of the default\'s type, and rounds an integer', async () =>
+test('the properties box takes only a value of the default\'s type, a number as typed, an int when whole', async () =>
 {
     const { run } = await loadGame();
     run(editCode.replace(`{ value: 1, tint: hsl(0, 0, 1) }`, `{ value: 1, tint: hsl(0, 0, 1), offset: vec2(1, 0) }`) +
         'editorSelectLayer(objects); editorObjectSelection.add(1);');
     assert.equal(run(`editorSetSelectedProperty('offset', '( 2, 0 )')`), false);
+    // a default of 1 may be a float the game scales by, so 2.6 is kept, not rounded to 3
     assert.equal(run(`editorSetSelectedProperty('value', 2.6)`), true);
     assert.deepEqual(JSON.parse(run('JSON.stringify([list()[0].properties, made[0].value])')),
-        [[{ name: 'value', type: 'int', value: 3 }], 3]);
+        [[{ name: 'value', type: 'float', value: 2.6 }], 2.6]);
+    assert.equal(run(`editorSetSelectedProperty('value', 4)`), true);
+    assert.deepEqual(JSON.parse(run('JSON.stringify(list()[0].properties)')), [{ name: 'value', type: 'int', value: 4 }]);
+    // and 1.5 is not rounded to the default and dropped
+    assert.equal(run(`editorSetSelectedProperty('value', 1.5)`), true);
+    assert.deepEqual(JSON.parse(run('JSON.stringify(list()[0].properties)')),
+        [{ name: 'value', type: 'float', value: 1.5 }]);
 });
 
 test('a Vector2 field emptied or half typed keeps its value, and a number in it sets it as one undo', async () =>
@@ -711,4 +718,45 @@ test('a mirrored stamp mirrors a polygon\'s points and flips a tile object\'s im
     assert.deepEqual([...run('near(entry(editorStampMirror(stamp)))')], [1.5, .5, 0], 'a polygon\'s place is not moved');
     run(stampOf({ ...box, gid: 5 }));
     assert.equal(run('editorStampMirror(stamp).objects[0].object.gid'), (5 | 0x80000000) >>> 0);
+});
+
+// full pass 3: an area's far edge, the selection Set kept, digits by their key, an empty Size field, a tile the game put
+
+test('a tile area takes the objects inside it and not one on its far edge, where the next cell starts', async () =>
+{
+    const engine = await loadGame();
+    // a third coin at x 2, the line between cells 1 and 2, as a coin snapped to the grid sits
+    engine.run(editCode.replace(`{ id: 1, type: 'Coin', point: true, x: 8, y: 8 },`,
+        `{ id: 1, type: 'Coin', point: true, x: 8, y: 8 }, { id: 3, type: 'Coin', point: true, x: 32, y: 8 },`) +
+        'editorAllLayers = true; editorSelection = editorArea(vec2(0, 0), vec2(1, 1));');
+    typed(engine, 'Delete');
+    assert.deepEqual(positions(engine).map((p)=> p[0]).sort(), [2, 3], 'the coin at x 2 belongs to cell 2');
+});
+
+test('the object selection is one Set, cleared and filled in place, so one a game kept stays current', async () =>
+{
+    const engine = await loadGame();
+    engine.run(editCode + `editorSelectLayer(objects); var kept = levelEditor.edit2D.selection; kept.add(1);`);
+    click(engine, 2.5, 1.5); // coin 2
+    assert.deepEqual([...engine.run('[...kept]')], [2]);
+    typed(engine, 'Delete');
+    assert.deepEqual([...engine.run('[kept.size, kept === levelEditor.edit2D.selection]')], [0, true]);
+});
+
+test('a game key on a digit fires with Shift held and on AZERTY, by the key it is on', async () =>
+{
+    const engine = await loadGame();
+    engine.run(editCode + `var fired = 0; levelEditor.addKey('1', ()=> ++fired);`);
+    for (const key of ['!', '&'])
+        engine.run(`editorOnKeyDown({ key: '${key}', code: 'Digit1', repeat: false, ctrlKey: false, metaKey: false,
+            shiftKey: ${key === '!'}, altKey: false, target: undefined, preventDefault() {} })`);
+    assert.equal(engine.run('fired'), 2);
+});
+
+test('erasing a cell the map has empty takes away a tile the game put there in play', async () =>
+{
+    const engine = await loadGame();
+    engine.run(editCode + `layers[0].setData(vec2(0, 1), new TileLayerData(3));
+        editorPaint(ground, vec2(0, 1), 0); editorStrokeEnd();`);
+    assert.equal(engine.run('layers[0].getData(vec2(0, 1)).tile'), undefined);
 });

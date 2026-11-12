@@ -302,13 +302,14 @@ class NewgroundsPlugin
 
     /** Send message to post score
      *  @param {number} id    - The scoreboard id
-     *  @param {number} value - The score value, a whole number
+     *  @param {number} value - The score value, rounded to a whole number as Wavedash's is
      *  @return {Promise<Object>} - The response JSON object, undefined when the call failed; result.data.success says whether
      *    it posted, which needs a logged in player; an answer that the session is gone makes the game play as not logged
      *    in, and one that timed out may still have posted */
     postScore(id, value)
     {
-        return this.call('ScoreBoard.postScore', {'id':id, 'value':value}).then(response=>
+        ASSERT(isNumber(value), 'Newgrounds postScore: value must be a number', value);
+        return this.call('ScoreBoard.postScore', {'id':id, 'value':round(value)}).then(response=>
         {
             response?.result?.data?.success && newgroundsNotifyPage('ScoreBoard.postScore', id);
             newgroundsSessionLost(response) && this.dropSession();

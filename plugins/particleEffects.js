@@ -545,6 +545,10 @@ function particleEffectSet(emitter, effect)
     for (const setting of particleEffectSettings)
         if (!particleEffectIndirect.includes(setting.name))
             emitter[setting.name] = setting.kind === 'color' ? new Color(...s[setting.name]) : s[setting.name];
+    // a child emitter's angle is the world's, so the effect's angle is taken from its parent's, as a 3D emitter's
+    // rotation3D is; the engine makes that its localAngle when the parent places it again
+    if (emitter.parent)
+        emitter.angle = emitter.parent.angle + emitter.parent.getMirrorSign() * s.angle;
     ended && (emitter.emitTime = -1);
     emitter.emitCircle = !s.emitRect;
     emitter.emitSize = vec2(s.emitSize, s.emitRect ? s.emitHeight : s.emitSize);

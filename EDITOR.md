@@ -264,11 +264,11 @@ setLevelEditor(new MyEditor);
 | `selection` | A `Set` of the selected objects' ids, yours to add to and delete from |
 | `selected()` | The selected objects |
 | `made(id)` | What the game made for an object |
-| `change((list)=> {...})` | Edit a copy of the object list; false when nothing changed |
-| `changePart(name, (part)=> newPart)` | Edit the level's `scene`, `voxels`, `terrain` or `prefabs` block |
+| `change((list)=> {...})` | Edit a copy of the object list; false when nothing changed, or when the level can not be edited while its autosave waits for Apply or Drop |
+| `changePart(name, (part)=> newPart)` | Edit the level's `scene`, `voxels`, `terrain` or `prefabs` block; false as `change` gives it |
 | `strokeEnd()` | End the edit: one undo step, and the autosave |
 | `strokeCancel()` | Take the edit being made back |
-| `place(type, pos3D)` | Add an object of a type, selected; its id, or undefined when there is no such type or the level can not be edited |
+| `place(type, pos3D)` | Add an object of a type, selected; its id, or undefined when there is no such type, a prefab would hold itself, or the level can not be edited while its autosave waits |
 | `setTransform(object, pos3D, rotation, scale3D)` | Inside `change`, on an object of its list: write a place, a rotation in degrees and a scale; leave one out to keep it |
 | `setProperty(object, name, value)` | Inside `change`, on an object of its list: write a property, left out of the file when it is the type's default |
 | `pos(object)`, `rotation(object)`, `scale(object)` | Read them as vectors, the rotation in degrees |

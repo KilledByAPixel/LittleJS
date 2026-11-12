@@ -69,11 +69,13 @@ class LightSystemPlugin
         this.shadersFailed = false; // a shader did not build on this device, so the system draws nothing
         /** @property {Color} - Baseline color applied to unlit areas of the scene. Defaults to BLACK (pitch dark). Set to a small RGB for a faint ambient. The lightmap is cleared to this color each frame, then lights add on top, then the result multiplies the scene. */
         this.ambientColor = (ambientColor || BLACK).copy();
-        /** @property {Vector2|undefined} - Size of the lightmap texture, follows mainCanvasSize (css pixels, so it is not scaled by canvasPixelRatio) unless a size was passed; undefined until the system starts when none was
+        /** @property {Vector2|undefined} - Size of the lightmap texture, follows mainCanvasSize (css pixels, so it is not scaled by canvasPixelRatio) unless a size was passed; undefined until the system starts when none was; a new size set later makes the lightmap again at it, with textureSizeAuto false so the canvas does not set it back
          *  @type {Vector2|undefined} */
         this.textureSize = textureSize ? textureSize.copy() : undefined;
         /** @property {boolean} - True when no size was passed, so the lightmap follows mainCanvasSize */
         this.textureSizeAuto = !textureSize;
+        /** @type {Vector2} */
+        this.textureSizeAllocated = vec2(); // the size the lightmap was made at, it is made again when textureSize changes
 
         /** @property {WebGLTexture|undefined} - The lightmap texture
          *  @type {WebGLTexture|undefined} */
@@ -217,6 +219,7 @@ class LightSystemPlugin
             glContext.texImage2D(glContext.TEXTURE_2D, 0, glContext.RGBA,
                 lightSystem.textureSize.x, lightSystem.textureSize.y, 0,
                 glContext.RGBA, glContext.UNSIGNED_BYTE, null);
+            lightSystem.textureSizeAllocated = lightSystem.textureSize.copy();
             glContext.texParameteri(glContext.TEXTURE_2D, glContext.TEXTURE_MAG_FILTER, glContext.LINEAR);
             glContext.texParameteri(glContext.TEXTURE_2D, glContext.TEXTURE_MIN_FILTER, glContext.LINEAR);
             glContext.texParameteri(glContext.TEXTURE_2D, glContext.TEXTURE_WRAP_S, glContext.CLAMP_TO_EDGE);
@@ -847,13 +850,16 @@ class LightSystemPlugin
             }
             if (lightSystem.shadersFailed) return;
 
-            // an automatic size follows the canvas, so reallocate the lightmap when
-            // the canvas changed size, after the flush so the batch keeps its texture
-            const size = lightSystem.textureSize;
-            const wantX = glClampTextureSize(mainCanvasSize.x), wantY = glClampTextureSize(mainCanvasSize.y);
-            if (lightSystem.textureSizeAuto && (size.x !== wantX || size.y !== wantY))
+            // an automatic size follows the canvas, and a size given may be set again, so reallocate the lightmap
+            // when the size it should be is not the one it was made at, after the flush so the batch keeps its texture
+            const size = lightSystem.textureSize, made = lightSystem.textureSizeAllocated;
+            const auto = lightSystem.textureSizeAuto;
+            const wantX = auto ? glClampTextureSize(mainCanvasSize.x) : size.x;
+            const wantY = auto ? glClampTextureSize(mainCanvasSize.y) : size.y;
+            if (made.x !== wantX || made.y !== wantY)
             {
-                lightSystem.textureSize = vec2(wantX, wantY);
+                auto && (lightSystem.textureSize = vec2(wantX, wantY));
+                lightSystem.textureSizeAllocated = vec2(wantX, wantY);
                 glContext.bindTexture(glContext.TEXTURE_2D, lightSystem.texture);
                 glContext.texImage2D(glContext.TEXTURE_2D, 0, glContext.RGBA,
                     wantX, wantY, 0,

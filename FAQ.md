@@ -292,6 +292,7 @@ Plugins are self-contained features that live alongside the engine but aren't pa
 | `render3dEditor.js` | The free camera and the 3D level editor, in debug builds only |
 | `sceneSystem.js` | Scenes as plain objects, switched with `setScene` |
 | `parallax.js` | `ParallaxLayer`, a background that follows the camera at its own depth and repeats |
+| `camera.js` | `FollowCamera`, a 2D camera that follows a target smoothly, with a dead zone, look ahead and bounds |
 | `particleEffects.js` | A library of ready made particle effects, and their designer's file format |
 
 This self-contained design means the community can also ship plugins independently of the main repo — you can write your own plugin as just a JavaScript file that uses the engine's public API.
@@ -397,7 +398,7 @@ LittleJS has a dedicated [js13k branch](https://github.com/KilledByAPixel/Little
 - **Lean on built-ins to avoid asset files**: `Sound` with ZzFX parameters generates sound effects from a tiny array, and built-in shape drawing avoids shipping image assets.
 - **Use a packer**: the js13k branch is set up to compress the final bundle with Roadroller or a similar packer. Check the branch's build script for the current toolchain.
 
-For normal production (non-13KB) builds, the engine ships `dist/littlejs.release.js` (asserts stripped, about 1.6 MB with every plugin and its comments) and `dist/littlejs.min.js` (minified, about 450 KB, about 135 KB gzipped). A bundler like Vite leaves out the plugins a game does not use, which makes a small game far smaller.
+For normal production (non-13KB) builds, the engine ships `dist/littlejs.release.js` (asserts stripped, about 1.9 MB with every plugin and its comments) and `dist/littlejs.min.js` (minified, about 540 KB, about 165 KB gzipped). A bundler like Vite leaves out the plugins a game does not use, which makes a small game far smaller.
 
 ---
 

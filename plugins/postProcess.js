@@ -558,7 +558,8 @@ function postProcessCurveMouse(strength=.1)
 
 /**
  * Split red and blue apart toward the edges, like a cheap lens; put it before what shades the picture
- * @param {number|string} [strength] - How far apart at the edge, as a part of the screen
+ * @param {number|string} [strength] - How far red and blue each move at the edge, as a part of the screen, so they
+ *   end up twice this apart
  * @return {string}
  * @memberof PostProcess
  */

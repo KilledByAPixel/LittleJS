@@ -1222,7 +1222,8 @@ function editor3DSetProperty(object, name, value, defaultValue)
 // add an object of a type at a position, selected; its id, or undefined when the level can not be edited
 function editor3DPlace(type, pos)
 {
-    if (editor3DPrefabSelf(type)) return; // it would hold itself
+    // a type the game has not added, as one an undo took away, and a prefab that would hold itself are refused
+    if (!level3DTypes.has(type) || editor3DPrefabSelf(type)) return;
     let id;
     const placed = editor3DChange((list)=>
     {
@@ -1586,7 +1587,8 @@ function editor3DCut() { return editor3DCopySelection() === false ? false : edit
 // add the copied objects, moved by an offset, with new ids and selected, as one undo
 function editor3DPaste(offset=vec3())
 {
-    const copied = editor3DClipboard, ids = [];
+    // a prefab's instance is left out inside the prefab it would then hold, as Place refuses it
+    const copied = editor3DClipboard?.filter((o)=> !editor3DPrefabSelf(o.type)), ids = [];
     if (!copied?.length) return false;
     editor3DStrokeEnd();
     const pasted = editor3DChange((list)=>
@@ -2232,6 +2234,8 @@ function editor3DPress(mouse, ray, shift)
         editor3DDrag = {kind, handle, from, grab, start: editor3DDragStart()};
         return;
     }
+    if (editor3DBrush && !level3DTypes.has(editor3DBrush))
+        editor3DBrush = undefined; // its type is gone, as a loaded prefab an undo took away
     if (editor3DBrush)
     {
         // the brush stays when nothing was placed, on nothing or on a level whose autosave waits

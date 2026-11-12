@@ -420,18 +420,26 @@ function render3DDrawInstanced(mesh, buffer, count, textureInfo, state, colorBuf
         gl.enableVertexAttribArray(8);
         gl.vertexAttribDivisor(8, 1);
     }
-    render3DSetDrawUniforms(RENDER3D_IDENTITY, textureInfo, WHITE, RENDER3D_FULL_UV_RECT, state);
-    render3DBindMesh(mesh);
-    gl.drawElementsInstanced(gl.TRIANGLES, mesh.bufferCount, mesh.indexType, 0, count);
-    for (const [location] of RENDER3D_INSTANCE_ATTRIBS)
+    try
     {
-        gl.disableVertexAttribArray(location);
-        gl.vertexAttribDivisor(location, 0);
+        render3DSetDrawUniforms(RENDER3D_IDENTITY, textureInfo, WHITE, RENDER3D_FULL_UV_RECT, state);
+        render3DBindMesh(mesh);
+        gl.drawElementsInstanced(gl.TRIANGLES, mesh.bufferCount, mesh.indexType, 0, count);
     }
-    if (dataBuffer)
+    finally
     {
-        gl.disableVertexAttribArray(8);
-        gl.vertexAttribDivisor(8, 0);
+        // off even when the uniforms throw, a debug assert or a shader that fails to compile, or the next plain
+        // draws read these slots through their divisors
+        for (const [location] of RENDER3D_INSTANCE_ATTRIBS)
+        {
+            gl.disableVertexAttribArray(location);
+            gl.vertexAttribDivisor(location, 0);
+        }
+        if (dataBuffer)
+        {
+            gl.disableVertexAttribArray(8);
+            gl.vertexAttribDivisor(8, 0);
+        }
     }
     ++drawCount;
     primitiveCount += mesh.bufferCount / 3 * count;

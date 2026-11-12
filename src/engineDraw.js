@@ -1001,24 +1001,28 @@ function drawTextureWrapped(pos, size, wrapCount, texture=0, color=WHITE,
 
     context = context || drawContext;
     context.save();
-    // smooth or pixelated as the texture says, as WebGL draws it
-    textureInfo.pixelated === undefined || (context.imageSmoothingEnabled = !textureInfo.pixelated);
-    context.translate(pos.x + .5, pos.y + .5);
-    context.rotate(angle);
-    context.globalAlpha = alphaBaked ? 1 : color.a;
+    try
+    {
+        // smooth or pixelated as the texture says, as WebGL draws it
+        textureInfo.pixelated === undefined || (context.imageSmoothingEnabled = !textureInfo.pixelated);
+        context.translate(pos.x + .5, pos.y + .5);
+        context.rotate(angle);
+        context.globalAlpha = alphaBaked ? 1 : color.a;
 
-    const pattern = context.createPattern(source, 'repeat');
-    // map pattern-source pixels into user space so the rect contains
-    // wrapCount.x × wrapCount.y repeats
-    const m = new DOMMatrix()
-        .translate(-size.x/2, -size.y/2)
-        .scale(size.x / (wrapCount.x * source.width),
-               size.y / (wrapCount.y * source.height));
-    pattern.setTransform(m);
-    context.fillStyle = pattern;
-    context.fillRect(-size.x/2, -size.y/2, size.x, size.y);
-    context.globalAlpha = 1;
-    context.restore();
+        // null for an image that failed to load, which draws nothing
+        const pattern = context.createPattern(source, 'repeat');
+        if (!pattern) return;
+        // map pattern-source pixels into user space so the rect contains
+        // wrapCount.x × wrapCount.y repeats
+        const m = new DOMMatrix()
+            .translate(-size.x/2, -size.y/2)
+            .scale(size.x / (wrapCount.x * source.width),
+                   size.y / (wrapCount.y * source.height));
+        pattern.setTransform(m);
+        context.fillStyle = pattern;
+        context.fillRect(-size.x/2, -size.y/2, size.x, size.y);
+    }
+    finally { context.restore(); } // puts back the alpha, the smoothing and the transform
 }
 
 /** Draw connected lines between a series of points
@@ -1908,7 +1912,9 @@ let cameraShakeSavedPos, cameraShakeSavedAngle = 0, cameraShakeShakenPos, camera
 /** Shake the camera, for a hit or an explosion: adds to the shake, which fades on its own by cameraShakeDecay
  *  - The view moves by smooth noise scaled by the shake squared, so a small one is gentle and a big one is wild,
  *    up to cameraShakeDistance and cameraShakeAngle
- *  - It moves only what is drawn, in 2D and in 3D: cameraPos and cameraAngle are the game's own between frames
+ *  - It moves only what is drawn, in 2D and in 3D: cameraPos and cameraAngle are the game's own between frames;
+ *    move the camera in an update, not while a frame draws, where cameraPos is the shaken one: a new cameraPos set
+ *    there is kept, shake and all, and one changed in place is put back after the frame
  *  - It holds while the game is paused or at a time scale of 0
  *  - A direction puts the shake more on one axis, vec2(0, 1) for a heavy landing; each axis fades on its own, so a
  *    shake on one does not change the other's, and the turn adds the most each shake puts on one axis, so it is never
