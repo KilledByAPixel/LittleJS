@@ -5,6 +5,10 @@ What changed in each release, newest first. Releases before 1.20.0 are on the
 
 ## Unreleased
 
+Nothing yet.
+
+## 1.30.0 - 2026-11-11
+
 ### New Changes
 - `new MeshCollider(mesh, pos3D)` makes a mesh's triangles part of the 3D level's collision, as `HeightMap` and `VoxelMap` are: objects with `collideLevel` land on it, stand on a slope within their `groundAngle` without creeping down, slide along walls, climb steps lower than their round foot and follow a slope downhill, colliding as capsules as tall as their height and as wide as their narrowest side, or as their sphere; a fast one moves in steps so it does not pass through a thin wall. Any mesh works, a strip, an indexed one, a loaded model or one given its vertex data, turned and scaled with the collider, and its triangles are found through a grid; it draws nothing, Debug Physics draws its edges, and particles and picking hit it. The 3D Mesh Collider short walks a level of ramps, stairs and walls (from ZehRhayader on Discord)
 - A `level3DAddMesh` prop's `meshCollision` property collides by its mesh's triangles through a MeshCollider, so a ramp, rock or bridge placed in the 3D level editor is walked on as it is shaped; the type's default is a new last parameter

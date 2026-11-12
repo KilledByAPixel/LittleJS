@@ -35,7 +35,7 @@ const engineName = 'LittleJS';
  *  @type {string}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.29.1';
+const engineVersion = '1.30.0';
 
 /** Frames per second to update
  *  @type {number}
@@ -99,7 +99,8 @@ function setPaused(isPaused=true) { paused = isPaused; }
 // the update running now is frozen, paused or at a time scale of 0, so what follows game time holds
 let engineFrozenTick = false;
 
-/** Frames drawn per second, smoothed over the last few seconds, in release builds too
+/** Display frames per second, the browser's animation frames whether or not one drew, smoothed over about a
+ *  third of a second, in release builds too
  *  @type {number}
  *  @memberof Engine */
 let averageFPS = 0;
@@ -202,6 +203,13 @@ let engineCollideGridMin = 64;
 // cells, and each solid's place in the list, which the contacts are taken in; solids too big for cells are near
 // everything
 let engineCollideGrid;
+
+// true while engineObjectsUpdate runs every object's physics, so a 3D grid made for that pass is not used by an
+// updatePhysics a game calls by hand at another time, with objects moved since
+let engineObjectsPhysicsRunning = false;
+// called with each object once its updatePhysics is done, by a plugin that keeps solids of its own in a grid, as
+// the 3D plugin does, so a solid an override moved after the engine's physics is found where it is
+let engineObjectsPhysicsDone;
 
 // where each object that collides with solids was before this frame's moves, kept only when a one way solid is among
 // them, so a one way test goes by where both were whichever of the two updates first
@@ -457,10 +465,9 @@ function engineLoadingScreenDraw(elapsed)
  *  @param {GameCallback} [gameRenderPost] - Called after objects are rendered, use for drawing UI/overlays
  *  @param {Array<string>|string} [imageSources=[]] - List of image file paths to preload (e.g., ['player.png', 'tiles.png']), or one path
  *  @param {HTMLElement} [rootElement] - Root DOM element to attach canvas to, defaults to document.body; it is
- *                                       styled for a game (no scroll bars or selection, touch-action none),
- *                                       where its own inline style does not say otherwise
- *    It keeps its own inline styles and the canvas centers inside it, but the canvas is still sized from the window,
- *    so set canvasFixedSize or canvasMaxSize to fit a smaller element
+ *    styled for a game (no scroll bars or selection, touch-action none) where its own inline style does not say
+ *    otherwise, and the canvas centers inside it, but the canvas is still sized from the window, so set
+ *    canvasFixedSize or canvasMaxSize to fit a smaller element
  *  @example
  *  // Basic engine startup
  *  engineInit(
@@ -870,7 +877,7 @@ function engineUpdateCanvas()
     }
     else
     {
-        // setting the size also resets the context state, match that, what a game may have left on it too
+        // setting the size also resets the context state, match the parts a game is likely to have left on it
         mainContext.setTransform(1, 0, 0, 1, 0, 0);
         mainContext.globalCompositeOperation = 'source-over';
         mainContext.globalAlpha = 1;
@@ -948,7 +955,8 @@ const engineStepMaxFrames = 36000;
  *  setHeadlessMode(true);
  *  setEngineManualStep(true);
  *  await engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost);
- *  engineStep(600); // 600 updates of 1/60 second; the first is at time 0, so time is then 599/60
+ *  engineStep(600); // 600 updates of 1/60 second; the first is at time 0, so time is then 599/60, with
+ *                   // setEngineVariableStep(true) the first is at 1/60 and time is 600/60
  *  @memberof Engine */
 function engineStep(frames=1)
 {
@@ -1002,6 +1010,7 @@ function engineObjectsUpdate()
     // a one way solid with no mass moves first, nothing pushes it, so what lands on it or passes up through it sees it
     // where it is now and where it was, whatever the render order
     const oneWayFirst = (o)=> o.oneWay && !o.mass;
+    engineObjectsPhysicsRunning = true;
     try
     {
         if (engineObjectsOneWayStart)
@@ -1010,16 +1019,19 @@ function engineObjectsUpdate()
                 {
                     o.updatePhysics();
                     engineCollideGrid?.built && engineCollideGridPlace(engineCollideGrid.built, o);
+                    engineObjectsPhysicsDone?.(o);
                 }
         for (const o of engineObjects)
             if (!o.parent && !o.destroyed && !(engineObjectsOneWayStart && oneWayFirst(o)))
             {
                 o.updatePhysics();
                 engineCollideGrid?.built && engineCollideGridPlace(engineCollideGrid.built, o);
+                engineObjectsPhysicsDone?.(o);
             }
     }
     finally
     {
+        engineObjectsPhysicsRunning = false;
         engineCollideGrid && (engineCollideGrid = undefined);
         engineObjectsOneWayStart && (engineObjectsOneWayStart = undefined);
     }
@@ -1093,6 +1105,9 @@ function engineObjectsDestroy(immediate=true)
     for (const o of engineObjects)
         o.parent || o.persistent || o.destroy(immediate);
     engineObjects = engineObjects.filter(o=>!o.destroyed);
+    // and the solid lists, so a pause menu that clears the world does not hold what it cleared until play goes on
+    engineObjectsCollide = engineObjectsCollide.filter(o=>!o.destroyed);
+    engineObjectsCollideStaticLast = engineObjectsCollideStaticLast.filter(o=>!o.destroyed);
 }
 
 /** Collects all object within a given area
@@ -1263,6 +1278,9 @@ let debugPrimitives = [], debugClearCount = 0, debugPhysics = false, debugRaycas
 ///////////////////////////////////////////////////////////////////////////////
 // Debug helper functions
 
+// if an ASSERT is calling console.assert, which debugShowErrors makes throw for the game's own asserts
+let debugAsserting = false;
+
 /** Asserts if the expression is false, does nothing in release builds
  *  Halts execution if the assert fails and throws an error
  *  @param {*} assert - any value, the assert fails when it is falsy
@@ -1271,7 +1289,9 @@ let debugPrimitives = [], debugClearCount = 0, debugPhysics = false, debugRaycas
 function ASSERT(assert, ...output)
 {
     if (assert) return;
-    console.assert(assert, ...output)
+    debugAsserting = true; // the console says it, and the error below is what is thrown, debugShowErrors or not
+    try { console.assert(assert, ...output); }
+    finally { debugAsserting = false; }
     // the error says what went wrong, so an error box or overlay that shows only the error shows the message too: a
     // value with a toString of its own as that, a vec2 or a color, a plain object as JSON, an object of a class with
     // none by its class's name, each cut at 200 characters, so a whole level is not the message
@@ -1484,12 +1504,8 @@ function debugShowErrors()
     console.assert = (assertion, ...output)=>
     {
         originalAssert(assertion, ...output);
-        if (!assertion)
-        {
-            const message = output.join(' ');
-            const stack = new Error().stack;
-            throw 'Assertion failed!\n' + message + '\n' + stack;
-        }
+        if (!assertion && !debugAsserting) // an ASSERT throws its own error, which says what its values are
+            throw new Error('Assertion failed!\n' + output.join(' '));
     };
     onunhandledrejection = (event)=>
         showError(event.reason?.stack || event.reason);
@@ -1577,7 +1593,7 @@ function debugTilesLabel(layers)
 {
     if (!debugTiles) return '';
     const layer = layers[debugTiles - 2];
-    return layer ? ` (layer ${debugTiles - 1} of ${layers.length}, renderOrder ${layer.renderOrder}${layer instanceof TileCollisionLayer ? ', collision' : ''})` : ' (all)';
+    return layer ? ` (layer ${debugTiles - 1} of ${layers.length}, renderOrder ${layer.renderOrder}${layer instanceof TileCollisionLayer && layer.isSolid ? ', collision' : ''})` : ' (all)';
 }
 
 // Debug Tiles: each layer's bounds, then the collision value of every cell on screen, tinted by value, with the
@@ -1589,7 +1605,8 @@ function debugTileLayers(layers)
     const showValues = cameraScale >= 24;
     for (const layer of debugTileLayersSelected(layers))
     {
-        const isCollision = layer instanceof TileCollisionLayer, size = layer.size, pos = layer.pos;
+        // a layer the solid tests skip, a map's art, is not collision whatever values it has
+        const isCollision = layer instanceof TileCollisionLayer && layer.isSolid, size = layer.size, pos = layer.pos;
         const color = isCollision ? '#f80' : '#0cf';
         debugRect(pos.add(size.scale(.5)), size, color, 0, 0, false, false);
         const label = 'layer ' + (layers.indexOf(layer) + 1) + ', ' + size.x + 'x' + size.y + ', renderOrder ' + layer.renderOrder + (isCollision ? ', collision' : '');
@@ -3457,6 +3474,7 @@ class Timer
     {
         if (!this.isSet()) return 0;
         if (!(this.setTime > 0)) return 1;
+        if (this.setTime === Infinity) return 0; // a timer that never ends has not begun, not Infinity / Infinity
         return 1 - percent(this.time - this.getGlobalTime(), 0, this.setTime);
     }
 
@@ -3546,7 +3564,8 @@ function saveText(text, filename='text', type='text/plain')
  *  @param {number} width - In pixels
  *  @param {number} [height] - In pixels, defaults to the width for a square
  *  @param {boolean} [willReadFrequently] - Keep it in software, faster when getImageData is called on it often
- *  @return {OffscreenCanvasRenderingContext2D}
+ *  @return {OffscreenCanvasRenderingContext2D} An HTMLCanvasElement's context where there is no OffscreenCanvas, as
+ *    in Safari before 16.4, which has the same drawing calls
  *  @memberof Utilities */
 function createCanvasContext(width, height=width, willReadFrequently=false)
 {
@@ -3603,7 +3622,7 @@ function saveDataURL(url, filename='download', revokeTime)
 /** Share content using the native share dialog if available
  *  @param {string} title - title of the share
  *  @param {string} url - url to share
- *  @param {Function} [callback] - Called when share is complete
+ *  @param {function(): void} [callback] - Called when share is complete
  *  @memberof Utilities */
 function shareURL(title, url, callback)
 {
@@ -4233,9 +4252,13 @@ function setCameraPos(pos)
 function setCameraAngle(angle) { cameraAngle = angle; }
 
 /** Set scale of camera in world space
- *  @param {number} scale
+ *  @param {number} scale - Pixels per world unit, above 0
  *  @memberof Settings */
-function setCameraScale(scale) { cameraScale = scale; }
+function setCameraScale(scale)
+{
+    ASSERT(scale > 0, 'camera scale must be above 0');
+    cameraScale = scale;
+}
 
 /** Set how far a full camera shake moves the view, in world units
  *  @param {number} distance
@@ -4337,7 +4360,11 @@ function setTilesPixelated(pixelated) { tilesPixelated = pixelated; }
  *  // render at native resolution, capped so phones don't pay for 3x
  *  setCanvasPixelRatio(min(devicePixelRatio, 2));
  *  @memberof Settings */
-function setCanvasPixelRatio(pixelRatio) { canvasPixelRatio = pixelRatio; }
+function setCanvasPixelRatio(pixelRatio)
+{
+    ASSERT(pixelRatio === undefined || pixelRatio > 0, 'pixel ratio must be above 0, or undefined to track the device');
+    canvasPixelRatio = pixelRatio;
+}
 
 /** Get the pixel ratio currently applied to the canvas backing store
  *  - Resolves canvasPixelRatio, falling back to devicePixelRatio when it is undefined
@@ -4361,7 +4388,11 @@ function setShowSplashScreen(show) { showSplashScreen = show; }
 /** Set the loading screen, drawn after the splash while the game loads, once that takes more than half a second
  *  @param {LoadingScreenCallback} [callback] - Draws on mainContext given the part done, 0 to 1; undefined for none
  *  @memberof Settings */
-function setLoadingScreen(callback) { loadingScreen = callback; }
+function setLoadingScreen(callback)
+{
+    ASSERT(!callback || typeof callback == 'function', 'setLoadingScreen takes a function or undefined');
+    loadingScreen = callback;
+}
 
 /** Set to disable rendering, audio, and input for servers, must be set before engineInit
  *  @param {boolean} headless
@@ -4426,6 +4457,7 @@ function setGLEnable(enable)
         glEnableBeforeLoss = enable;
         return;
     }
+    !enable && glEnable && glFlush(); // what was queued is drawn, not kept for when it is on again
     glEnable = enable;
     if (glCanvas) // hide glCanvas if WebGL is disabled
         glCanvas.style.display = enable ? '' : 'none';
@@ -4498,12 +4530,20 @@ function setObjectDefaultRestitution(restitution) { objectDefaultRestitution = r
 /** Set the fraction of sliding speed objects keep each frame on the ground, 1 is no friction, 0 stops at once
  *  @param {number} friction
  *  @memberof Settings */
-function setObjectDefaultFriction(friction) { objectDefaultFriction = friction; }
+function setObjectDefaultFriction(friction)
+{
+    ASSERT(friction >= 0 && friction <= 1, 'friction must be 0 to 1, the fraction of sliding speed kept each frame');
+    objectDefaultFriction = friction;
+}
 
 /** Set max speed to avoid fast objects missing collisions
- *  @param {number} speed
+ *  @param {number} speed - 0 or more
  *  @memberof Settings */
-function setObjectMaxSpeed(speed) { objectMaxSpeed = speed; }
+function setObjectMaxSpeed(speed)
+{
+    ASSERT(speed >= 0, 'max speed must be 0 or more');
+    objectMaxSpeed = speed;
+}
 
 /** Set how much gravity to apply to objects
  *  @param {Vector2} newGravity
@@ -5095,6 +5135,7 @@ class EngineObject
         // physics sanity checks
         ASSERT(this.angleDamping >= 0 && this.angleDamping <= 1, 'angleDamping must be 0 to 1, the fraction kept each frame');
         ASSERT(this.damping >= 0 && this.damping <= 1, 'damping must be 0 to 1, the fraction of velocity kept each frame');
+        ASSERT(this.friction >= 0 && this.friction <= 1, 'friction must be 0 to 1, the fraction of sliding speed kept each frame');
 
         // apply physics; only collision needs where the object was, so only then is it copied
         const solve = enablePhysicsSolver && this.mass;
@@ -5566,10 +5607,11 @@ class EngineObject
     getMirrorSign() { return this.mirror ? -1 : 1; }
 
     /** Attaches a child to this with a local transform, returns child for chaining
-     *  @param {EngineObject} child
-     *  @param {Vector2}      [localPos=vec2()]
-     *  @param {number}       [localAngle]
-     *  @return {EngineObject} The child object added */
+     *  @template {EngineObject} T
+     *  @param {T}       child
+     *  @param {Vector2} [localPos=vec2()]
+     *  @param {number}  [localAngle]
+     *  @return {T} The child object added */
     addChild(child, localPos=vec2(), localAngle=0)
     {
         ASSERT(!this.destroyed, 'cannot add child to destroyed object');
@@ -5590,12 +5632,13 @@ class EngineObject
 
     /** Attaches a child to this without moving it: the local transform is worked out from where the child is now,
      *  where addChild takes one; a child of something else is moved over, returns child for chaining
-     *  @param {EngineObject} child
-     *  @return {EngineObject} The child object attached */
+     *  @template {EngineObject} T
+     *  @param {T} child
+     *  @return {T} The child object attached */
     attach(child)
     {
         ASSERT(child instanceof EngineObject, 'child must be an EngineObject');
-        ASSERT(child !== this, 'cannot attach self');
+        ASSERT(/** @type {EngineObject} */ (child) !== this, 'cannot attach self');
         child.parent?.removeChild(child);
         // the local values that updateTransforms turns back into the child's current pos and angle
         const mirror = this.getMirrorSign(), local = this.worldToLocal(child.pos);
@@ -5827,7 +5870,8 @@ function tile(index=0, size=tileDefaultSize, texture=0, padding=tileDefaultPaddi
     let x, y;
     if (typeof index === 'number')
     {
-        const cols = textureInfo.size.x / sizePaddedX |0;
+        // at least one, so the first tile of a texture no wider than it is its corner, not NaN
+        const cols = max(1, textureInfo.size.x / sizePaddedX |0);
         x = index % cols;
         y = index / cols |0;
     }
@@ -6057,11 +6101,14 @@ class TextureInfo
         glSetTextureWrap(this.glTexture, wrap);
     }
 
-    /** Make this texture hard edged or smooth on its own, whatever tilesPixelated says for the rest; it is made again
-     *  with the new filtering
+    /** Make this texture hard edged or smooth on its own, whatever tilesPixelated says for the rest; a change makes it
+     *  again from its image with the new filtering, since a smooth one is stored premultiplied with mipmaps, so
+     *  pixels put in with updateData are lost unless the image has them too, as after a lost context
      *  @param {boolean} [pixelated] - undefined follows tilesPixelated again */
     setPixelated(pixelated)
     {
+        // the same setting keeps the texture as it is; undefined remakes it, to follow tilesPixelated as it is now
+        if (pixelated !== undefined && pixelated === this.pixelated) return;
         this.pixelated = pixelated;
         if (!this.glTexture) return;
         this.destroyWebGLTexture();
@@ -6108,7 +6155,8 @@ class SpriteAnimation
         this.frameTime = frameTime;
         /** @property {number} - Rate multiplier, 2 plays twice as fast; set it before starting */
         this.speed = 1;
-        /** @property {string} - How it runs: 'loop', 'once' or 'pingPong', set by loop, play and pingPong */
+        /** @property {'loop'|'once'|'pingPong'} - How it runs, set by loop, play and pingPong
+         *  @type {'loop'|'once'|'pingPong'} */
         this.mode = 'loop';
         /** @property {number} - Engine time it started at */
         this.startTime = time;
@@ -6143,7 +6191,7 @@ class SpriteAnimation
     stop() { this.heldFrame = this.frame; return this; }
 
     /** Start over from the first frame in a mode, with no end callback
-     *  @param {string} [mode] - 'loop', 'once' or 'pingPong', the current mode when left out
+     *  @param {'loop'|'once'|'pingPong'} [mode] - The current mode when left out
      *  @return {SpriteAnimation} */
     restart(mode=this.mode)
     {
@@ -6268,6 +6316,11 @@ class SpriteAnimator
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+/** A value a Shader's snippet reads as a uniform: a number, a boolean, a Vector2, a Vector3, a Color, a Matrix4, or a
+ *  list of 2, 3, 4, 9 or 16 numbers
+ *  @typedef {number|boolean|Vector2|Color|ArrayLike<number>|{x: number, y: number, z: number}|{m: Float32Array}} ShaderUniform
+ *  @memberof Draw */
+
 /**
  * Shader - A custom fragment shader for objects and draws, 2D or 3D
  * - Write a mainImage function in the post processing style, the renderer wraps it with its own program
@@ -6298,10 +6351,17 @@ class SpriteAnimator
  *   each vertex's place and normal in world space, an instance's own in a batch, to move it for wind, waves or a
  *   wobble; it runs in the shadow map and the camera's depth too, so a moved vertex casts and hides where it is
  *   drawn. Its names: iTime, iResolution, cameraPos, iChannel0 (texture or texelFetch in the vertex stage), localUV,
- *   modelMatrix and vertexColor, the vertex color times the tint, which it may change. The object's bounds are not
+ *   modelMatrix, instanceData (the four numbers an InstancedMesh3D's setDataAt gives, the fragment code may read it
+ *   too) and vertexColor, the vertex color times the tint, which it may change. The object's bounds are not
  *   moved with it, so one that moves vertices far needs room to be culled by, like a bigger radius
  * - A Shader of vertex code alone, new Shader('', vertexCode), keeps the 3D plugin's own look; in 2D a Shader's
  *   vertex code is not used
+ * - Values of the game's own, uniforms, are given by name when it is made and read by name in the snippets, which
+ *   need not declare them: new Shader(code, '', {glow: 1, tint: RED}), then shader.setUniform('glow', 2) as often as
+ *   needed, with no recompile; each is declared in the snippets that use it, so one may share a name with an input
+ *   of the engine's in the other stage, and is sent to a program only when it changed; a name the engine's shader
+ *   uses already, like tint or lightColor, fails to compile with the GLSL error naming it; a matrix list is column
+ *   by column; in 3D set a value outside the 3D pass, it holds for the frame
  * @example
  * const fade = new Shader(`
  * void mainImage(out vec4 c, vec2 uv)
@@ -6319,8 +6379,11 @@ class Shader
     /** Create a shader from a fragment snippet that defines void mainImage(out vec4 c, vec2 uv), and in 3D a vertex
      *  snippet that defines void mainVertex(inout vec3 pos, inout vec3 normal)
      *  @param {string} [fragmentCode] - Left out or empty with vertex code, the 3D plugin's own look
-     *  @param {string} [vertexCode] - 3D only */
-    constructor(fragmentCode='', vertexCode='')
+     *  @param {string} [vertexCode] - 3D only
+     *  @param {Object<string, ShaderUniform>} [uniforms] - Values the snippets read by name, declared for them: a
+     *    number is a float, a boolean a bool, a Vector2 a vec2, a Vector3 a vec3, a Color a vec4, and a list of 2, 3,
+     *    4, 9 or 16 numbers, or a Matrix4, a vec2, vec3, vec4, mat3 or mat4; change one with setUniform */
+    constructor(fragmentCode='', vertexCode='', uniforms={})
     {
         ASSERT(isStringLike(fragmentCode) && isStringLike(vertexCode), 'a Shader takes its snippets as strings');
         ASSERT(String(fragmentCode).includes('mainImage') || !fragmentCode && String(vertexCode).includes('mainVertex'),
@@ -6342,9 +6405,47 @@ class Shader
         this.shadowProgram3D = undefined;
         /** @property {boolean} - In 2D, write what mainImage gives as it is, with the draw's alpha, leaving out the
          *  draw's color and additive color, for data rather than a picture, as the light system's normal pass does;
-         *  set it before the shader first draws, its program is built then */
+         *  its output is taken as straight color, not premultiplied, whatever the texture; set it before the shader
+         *  first draws, its program is built then */
         this.noTint = false;
+        // each uniform's GLSL type, fixed by its first value, and its value as the numbers sent, which setUniform
+        // changes and the version counts, so a program is sent them only when they changed since it last was
+        /** @type {Object<string, string>} */
+        this.uniformTypes = {};
+        /** @type {Object<string, number|Float32Array>} */
+        this.uniformValues = {};
+        this.uniformsVersion = 0;
+        for (const name in uniforms)
+        {
+            ASSERT(/^[A-Za-z_][A-Za-z0-9_]*$/.test(name) && !name.startsWith('gl_'),
+                'a Shader uniform is named as a GLSL variable is', name);
+            const type = this.uniformTypes[name] = glUniformType(uniforms[name]);
+            ASSERT(!!type, 'a Shader uniform is a number, boolean, vector, Color, matrix or list of 2, 3, 4, 9 or 16 numbers',
+                name, uniforms[name]);
+            this.uniformValues[name] = glUniformData(uniforms[name], type);
+        }
         glShaderObjects.push(this); // a lost context drops the programs of every one
+    }
+
+    /** Change a uniform's value: in 2D what was drawn with the shader before it keeps the old value, in 3D the
+     *  value holds for the frame, so set it outside the 3D pass
+     *  @param {string} name - One of those the shader was made with
+     *  @param {ShaderUniform} value - Of the same kind it was made with */
+    setUniform(name, value)
+    {
+        const type = this.uniformTypes[name];
+        ASSERT(!!type, 'setUniform: the Shader was not made with this uniform', name);
+        ASSERT(glUniformType(value) === type, 'setUniform: a uniform keeps the kind it was made with', name, value);
+        if (!type) return;
+        // the same value again, as one set every frame that has not changed, needs no flush and no send
+        const data = glUniformData(value, type), old = this.uniformValues[name];
+        if (typeof data === 'number' ? old === data :
+            typeof old !== 'number' && old?.length === data.length && data.every((v, i)=> old[i] === v))
+            return;
+        // what was batched with the old value is drawn first
+        glContext && !headlessMode && glBatchShader === this && glFlush();
+        this.uniformValues[name] = data;
+        ++this.uniformsVersion;
     }
 
     /** Let go of this shader: its compiled programs are freed and it leaves the engine's list of shaders, which
@@ -6579,6 +6680,7 @@ function drawTextureWrapped(pos, size, wrapCount, texture=0, color=WHITE,
             if (glSkipScreenSpace) return;
             [pos, size, angle] = screenToWorldTransform(pos, size, angle);
         }
+        ASSERT(!!textureInfo.glTexture, 'texture has no WebGL texture, draw it with useWebGL false');
         glSetTexture(textureInfo.glTexture);
         glDraw(pos.x, pos.y, size.x, size.y, angle,
             0, 0, wrapCount.x, wrapCount.y,
@@ -6625,28 +6727,32 @@ function drawTextureWrapped(pos, size, wrapCount, texture=0, color=WHITE,
 
     context = context || drawContext;
     context.save();
-    // smooth or pixelated as the texture says, as WebGL draws it
-    textureInfo.pixelated === undefined || (context.imageSmoothingEnabled = !textureInfo.pixelated);
-    context.translate(pos.x + .5, pos.y + .5);
-    context.rotate(angle);
-    context.globalAlpha = alphaBaked ? 1 : color.a;
+    try
+    {
+        // smooth or pixelated as the texture says, as WebGL draws it
+        textureInfo.pixelated === undefined || (context.imageSmoothingEnabled = !textureInfo.pixelated);
+        context.translate(pos.x + .5, pos.y + .5);
+        context.rotate(angle);
+        context.globalAlpha = alphaBaked ? 1 : color.a;
 
-    const pattern = context.createPattern(source, 'repeat');
-    // map pattern-source pixels into user space so the rect contains
-    // wrapCount.x × wrapCount.y repeats
-    const m = new DOMMatrix()
-        .translate(-size.x/2, -size.y/2)
-        .scale(size.x / (wrapCount.x * source.width),
-               size.y / (wrapCount.y * source.height));
-    pattern.setTransform(m);
-    context.fillStyle = pattern;
-    context.fillRect(-size.x/2, -size.y/2, size.x, size.y);
-    context.globalAlpha = 1;
-    context.restore();
+        // null for an image that failed to load, which draws nothing
+        const pattern = context.createPattern(source, 'repeat');
+        if (!pattern) return;
+        // map pattern-source pixels into user space so the rect contains
+        // wrapCount.x × wrapCount.y repeats
+        const m = new DOMMatrix()
+            .translate(-size.x/2, -size.y/2)
+            .scale(size.x / (wrapCount.x * source.width),
+                   size.y / (wrapCount.y * source.height));
+        pattern.setTransform(m);
+        context.fillStyle = pattern;
+        context.fillRect(-size.x/2, -size.y/2, size.x, size.y);
+    }
+    finally { context.restore(); } // puts back the alpha, the smoothing and the transform
 }
 
 /** Draw connected lines between a series of points
- *  @param {Array<Vector2>} points
+ *  @param {Array<Vector2>} points - In its own space, y up, in screen space too, where drawLine's ends go down
  *  @param {number}  [width]
  *  @param {Color}   [color=WHITE]
  *  @param {boolean} [wrap] - Should the last point connect to the first?
@@ -6763,7 +6869,7 @@ const drawRegularPolyPoints = [], drawRegularPolyPool = [];
 /** Draw colored polygon using passed in points
  *  - WebGL fills a polygon whose edges do not cross, concave or not; a self crossing one, like a star through its
  *    outer points, fills wrong there, so draw it as its simple outline or in parts
- *  @param {Array<Vector2>} points - Array of Vector2 points
+ *  @param {Array<Vector2>} points - In its own space, y up, in screen space too, where drawLine's ends go down
  *  @param {Color}   [color=WHITE]
  *  @param {number}  [lineWidth]
  *  @param {Color}   [lineColor=BLACK]
@@ -7046,11 +7152,14 @@ function drawCanvas2D(pos, size, angle=0, mirror=false, drawFunction, screenSpac
         angle -= cameraAngle;
     }
     context.save();
-    context.translate(pos.x+.5, pos.y+.5);
-    context.rotate(angle);
-    context.scale(mirror ? -size.x : size.x, -size.y);
-    drawFunction(context);
-    context.restore();
+    try
+    {
+        context.translate(pos.x+.5, pos.y+.5);
+        context.rotate(angle);
+        context.scale(mirror ? -size.x : size.x, -size.y);
+        drawFunction(context);
+    }
+    finally { context.restore(); } // a callback that throws leaves no transform or clip behind
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -7157,6 +7266,7 @@ function textBaseLetter(code)
 
 /** Draw text in screen space
  *  Automatically splits new lines into rows
+ *  - An icon registered with setTextIcon is drawn where its name is written between colons, ':coin:'
  *  @param {string|number}  text
  *  @param {Vector2} pos
  *  @param {number}  size
@@ -7201,9 +7311,102 @@ function drawTextScreen(text, pos, size, color=WHITE, lineWidth=0, lineColor=BLA
     let yOffset = -(lines.length-1) * size/2; // center vertically
     lines.forEach(line=>
     {
-        lineWidth && context.strokeText(line, 0, yOffset, maxWidth);
-        context.fillText(line, 0, yOffset, maxWidth);
+        // only a line with a registered icon in it takes the icon path, every other draws as it always has
+        const runs = textIcons.size && !textIconsOff && line.includes(':') ? textIconRuns(line) : undefined;
+        if (runs)
+            drawTextIconLine(context, runs, yOffset, size, color, lineWidth, textAlign, maxWidth);
+        else
+        {
+            lineWidth && context.strokeText(line, 0, yOffset, maxWidth);
+            context.fillText(line, 0, yOffset, maxWidth);
+        }
         yOffset += size;
+    });
+    context.restore();
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// Icons in text
+
+// the icons text can show by name, see setTextIcon
+const textIcons = new Map;
+
+// set while uiSystem draws a text's shadow, so its icons are drawn as shapes in the shadow's color
+let textIconsSilhouette = false;
+// set while uiSystem draws text a player typed, which shows as it was typed
+let textIconsOff = false;
+
+/** Register a tile to show in text: written between colons in any text drawTextScreen draws, drawText and the UI
+ *  system's text included, it is drawn in its place, as tall as the text, 'Gold: :coin: 25'
+ *  - Only a registered name is replaced, so other text with colons, like a time of 5:30, stays as it is
+ *  - ImageFont text shows them too, each as tall as a character
+ *  @param {string} name - Letters, digits, _ and -
+ *  @param {TileInfo} [tileInfo] - Left out to take the name off
+ *  @example
+ *  setTextIcon('coin', tile(5));
+ *  drawTextScreen('Gold: :coin: 25', vec2(100, 50), 40);
+ *  @memberof Draw */
+function setTextIcon(name, tileInfo)
+{
+    ASSERT(isStringLike(name) && /^[A-Za-z0-9_-]+$/.test(name), 'setTextIcon: a name is letters, digits, _ and -', name);
+    ASSERT(!tileInfo || tileInfo instanceof TileInfo, 'setTextIcon: tileInfo must be a TileInfo', tileInfo);
+    tileInfo ? textIcons.set(name, tileInfo) : textIcons.delete(name);
+}
+
+// a line split into its text and its icons, in order, or undefined when no registered icon is in it
+function textIconRuns(line)
+{
+    const runs = [], pattern = /:([A-Za-z0-9_-]+):/g;
+    let last = 0, found = false, match;
+    while ((match = pattern.exec(line)))
+    {
+        const icon = textIcons.get(match[1]);
+        if (!icon)
+        {
+            pattern.lastIndex = match.index + 1; // the closing colon may open a name that is registered
+            continue;
+        }
+        match.index > last && runs.push(line.slice(last, match.index));
+        runs.push(icon);
+        last = pattern.lastIndex;
+        found = true;
+    }
+    if (!found) return;
+    last < line.length && runs.push(line.slice(last));
+    return runs;
+}
+
+// draw a line of text and icons, each icon as tall as the text and as wide as its tile's shape, the whole line placed
+// by the alignment and squeezed across to maxWidth as the text alone would be; icons fade with the text's alpha
+const textIconTint = new Color, textIconAdd = new Color(0, 0, 0, 0);
+function drawTextIconLine(context, runs, y, size, color, lineWidth, textAlign, maxWidth)
+{
+    const widths = runs.map(run=> typeof run == 'string' ? context.measureText(run).width :
+        run.size.y ? size * run.size.x / run.size.y : 0); // an image that failed to load takes no room
+    const total = widths.reduce((a, b)=> a + b, 0);
+    context.save();
+    context.textAlign = 'left';
+    if (maxWidth && total > maxWidth)
+        context.scale(maxWidth / total, 1); // about the line's anchor, so the alignment holds
+    // white, or for a shadow black with the shadow's color added on, either faded with the text
+    textIconTint.set(textIconsSilhouette ? 0 : 1, textIconsSilhouette ? 0 : 1, textIconsSilhouette ? 0 : 1, color.a);
+    textIconAdd.set(textIconsSilhouette ? color.r : 0, textIconsSilhouette ? color.g : 0, textIconsSilhouette ? color.b : 0, 0);
+    let x = textAlign === 'left' ? 0 : textAlign === 'right' ? -total : -total / 2;
+    runs.forEach((run, i)=>
+    {
+        if (typeof run == 'string')
+        {
+            lineWidth && context.strokeText(run, x, y);
+            context.fillText(run, x, y);
+        }
+        else if (run.textureInfo?.image && run.textureInfo.size.x)
+        {
+            const pixelated = run.textureInfo.pixelated ?? tilesPixelated;
+            context.imageSmoothingEnabled = !pixelated;
+            drawImageColor(context, run.textureInfo.image, run.pos.x, run.pos.y, run.size.x, run.size.y,
+                x, y - size / 2, widths[i], size, textIconTint, textIconAdd, run.bleed);
+        }
+        x += widths[i];
     });
     context.restore();
 }
@@ -7435,7 +7638,9 @@ let cameraShakeSavedPos, cameraShakeSavedAngle = 0, cameraShakeShakenPos, camera
 /** Shake the camera, for a hit or an explosion: adds to the shake, which fades on its own by cameraShakeDecay
  *  - The view moves by smooth noise scaled by the shake squared, so a small one is gentle and a big one is wild,
  *    up to cameraShakeDistance and cameraShakeAngle
- *  - It moves only what is drawn, in 2D and in 3D: cameraPos and cameraAngle are the game's own between frames
+ *  - It moves only what is drawn, in 2D and in 3D: cameraPos and cameraAngle are the game's own between frames;
+ *    move the camera in an update, not while a frame draws, where cameraPos is the shaken one: a new cameraPos set
+ *    there is kept, shake and all, and one changed in place is put back after the frame
  *  - It holds while the game is paused or at a time scale of 0
  *  - A direction puts the shake more on one axis, vec2(0, 1) for a heavy landing; each axis fades on its own, so a
  *    shake on one does not change the other's, and the turn adds the most each shake puts on one axis, so it is never
@@ -7449,6 +7654,7 @@ function cameraShake(amount=.5, direction=vec2(1))
 {
     ASSERT(isNumber(amount) && amount >= 0, 'cameraShake: amount must be a number, 0 or more', amount);
     ASSERT(isVector2(direction), 'cameraShake: direction must be a vec2', direction);
+    amount = min(amount, 1); // the shake is at most 1, and Infinity times an axis of 0 would be NaN
     const x = abs(direction.x), y = abs(direction.y);
     cameraShakeAxes = vec2(min(1, cameraShakeAxes.x + amount * x), min(1, cameraShakeAxes.y + amount * y));
     cameraShakeTrauma = min(1, cameraShakeTrauma + amount * max(x, y));
@@ -7807,6 +8013,13 @@ class ImageFont
         const centerOffsetY = center ? (lines.length-1) * glyphSize.y / 2 : 0;
         lines.forEach((line, j)=>
         {
+            // only a line with a registered icon in it takes the icon path, every other draws as it always has
+            const runs = textIcons.size && !textIconsOff && line.includes(':') ? textIconRuns(line) : undefined;
+            if (runs)
+            {
+                imageFontIconLine(this, runs, pos, j, glyphSize, centerOffsetY, center, color, useWebGL, context);
+                return;
+            }
             const characters = textCharacters(line);
             const centerOffset = center ? (characters.length-1) * glyphSize.x / 2 : 0;
             for (let i=characters.length; i--;)
@@ -7844,6 +8057,44 @@ class ImageFont
         const glyph = ((t.pos.y - padding) / h |0) * columns + ((t.pos.x - padding) / w |0) + index;
         return pos.set(glyph % columns * w + padding, (glyph / columns |0) * h + padding);
     }
+}
+
+// a line of glyphs and icons, each icon as tall as a glyph and as wide as its tile's shape, in its own colors faded
+// with the text's alpha, the line centered by its whole width; each edge snapped as a glyph's is
+function imageFontIconLine(font, runs, pos, j, glyphSize, centerOffsetY, center, color, useWebGL, context)
+{
+    const items = [], widths = [];
+    for (const run of runs)
+    {
+        if (typeof run == 'string')
+        {
+            const characters = textCharacters(run);
+            for (let i = 0; i < characters.length; ++i)
+                items.push(textCharacterCode(characters, i)), widths.push(glyphSize.x);
+        }
+        else // an image that failed to load takes no room
+            items.push(run), widths.push(run.size.y ? glyphSize.y * run.size.x / run.size.y : 0);
+    }
+    const total = widths.reduce((a, b)=> a + b, 0);
+    const tileInfo = font.tileInfo.frame(0), drawPos = new Vector2, size = new Vector2;
+    const iconColor = new Color(1, 1, 1, color.a);
+    let x = pos.x - (center ? total / 2 : glyphSize.x / 2);
+    const y = ceil(pos.y + j * glyphSize.y - centerOffsetY - glyphSize.y/2) + glyphSize.y/2 - .5;
+    items.forEach((item, i)=>
+    {
+        const w = widths[i];
+        drawPos.set(ceil(x) + w/2 - .5, y);
+        x += w;
+        if (!w) return;
+        if (typeof item == 'number')
+        {
+            font.getGlyphPos(item < 32 || item > 127 ? 95 : item - 32, tileInfo.pos);
+            drawTile(drawPos, glyphSize, tileInfo, color, 0, false, undefined, useWebGL, true, context);
+        }
+        else
+            drawTile(drawPos, size.set(w, glyphSize.y), item, iconColor, 0, false, undefined, useWebGL, true,
+                context);
+    });
 }
 
 // how strong a light's glow is at a distance from its middle, 0 there to 1 at the edge: a bell, full in the middle
@@ -7898,7 +8149,6 @@ async function imageFontInit()
  * - Virtual on-screen gamepad for mobile devices
  * - Automatic gamepad vs keyboard/mouse detection
  * - Input event prevention for canvas focus
- * - Clipboard copy/paste support
  * @namespace Input
  */
 
@@ -8057,11 +8307,14 @@ function inputClearKeyboard()
 
 /** Clears all input
  *  @memberof Input */
-function inputClear()
+function inputClear() { inputClearDevices(); }
+
+// empty every device but keep which gamepad slots exist, so gamepadConnected still reads true through a clear; a
+// disconnect clears its slot in the poll. The clear every frame while the window is unfocused keeps the gamepads'
+// buttons when debug builds still read them then, or one held would read up from the second frame
+function inputClearDevices(keepGamepads=false)
 {
-    // empty every device but keep which gamepad slots exist, so gamepadConnected still reads true through a
-    // clear, like the one every frame while the window is unfocused; a disconnect clears its slot in the poll
-    for (let i = inputData.length; i--;)
+    for (let i = keepGamepads ? 1 : inputData.length; i--;)
         if (!i || inputData[i]) inputData[i] = [];
     inputKeysHeld.clear();
     inputWasTouching = 0;
@@ -8576,13 +8829,14 @@ function inputInit()
             if (soundEnable && !headlessMode && audioContext && !audioIsRunning())
                 audioResume();
 
-            if (!touchInputEnable)
+            if (!touchInputEnable || touchGamepadEnable && !touchGamepadPassthrough)
             {
-                // turned off mid touch, the finger that drove the mouse lets go of it
+                // off, or the touch gamepad owns touch: turned so mid touch, the finger that drove the mouse lets
+                // go of it, and the next touch to drive it presses
                 if (inputWasTouching && (inputData[0][0] & 1))
                     inputData[0][0] = inputData[0][0] & 2 | 4;
                 inputWasTouching = 0;
-                return;
+                if (!touchInputEnable) return;
             }
             inputLastTouchTime = performance.now();
 
@@ -8701,7 +8955,7 @@ function inputUpdate()
 
     // clear input when lost focus (prevent stuck keys)
     if (!(touchInputEnable && isTouchDevice) && !document.hasFocus())
-        inputClear();
+        inputClearDevices(debug && gamepadsEnable);
 
     // update mouse world space position and delta
     mousePos = screenToWorld(mousePosScreen);
@@ -8753,12 +9007,13 @@ function inputUpdate()
     function gamepadsUpdate()
     {
         const deadZoneMin=.3, deadZoneMax=.8;
+        // a round dead zone: how far the stick is pushed, from its edge to full, in the direction it points, so a
+        // diagonal reads as soon as a straight push does and the direction is not pulled toward the axes; y up
         const applyDeadZones = (v)=>
         {
-            const deadZone = (v)=>
-                v > deadZoneMin ? percent(v, deadZoneMin, deadZoneMax) :
-                v < -deadZoneMin ? -percent(-v, deadZoneMin, deadZoneMax) : 0;
-            return vec2(deadZone(v.x), deadZone(-v.y)).clampLength();
+            const length = v.length();
+            return length > deadZoneMin ? vec2(v.x, -v.y).scale(percent(length, deadZoneMin, deadZoneMax) / length) :
+                vec2();
         };
 
         // the touch gamepad owns gamepad 0 once touched, until a real gamepad is used: that one takes over and the
@@ -8880,7 +9135,8 @@ function inputUpdate()
                 const button = gamepad.buttons[j];
                 const wasDown = buttonsLast[j];
                 buttonsLast[j] = button.pressed;
-                data[j] = button.pressed ? wasDown ? 1 : 3 : wasDown ? 4 : 0;
+                // one held that inputClearKey or inputClear let go stays up until it is let go, as a key does
+                data[j] = button.pressed ? wasDown ? data[j] & 1 : 3 : wasDown ? 4 : 0;
 
                 // check for any input on this gamepad, analog must be full press
                 if (button.pressed && (!button.value || button.value > .9))
@@ -9715,13 +9971,6 @@ class Sound
         /** @property {number} - Percentage of this sound currently loaded, sounds
          *  fetched from a url stay at 0 until decoding completes */
         this.loadedPercent = 0;
-        if (!soundEnable || headlessMode || !audioContext) // a browser with no audio makes none either
-        {
-            // no sound is made: it counts as loaded, so a game that waits for its sounds goes on
-            this.loadedPercent = 1;
-            onloadCallback?.(this);
-            return;
-        }
         const rangeIsDefault = range === undefined;
         if (rangeIsDefault)
             range = soundDefaultRange;
@@ -9745,6 +9994,14 @@ class Sound
         this.sampleRate = audioDefaultSampleRate;
         /** @property {number} - How many samples per channel this sound has */
         this.sampleLength = 0;
+
+        if (!soundEnable || headlessMode || !audioContext) // a browser with no audio makes none either
+        {
+            // no sound is made: it counts as loaded, so a game that waits for its sounds goes on
+            this.loadedPercent = 1;
+            onloadCallback?.(this);
+            return;
+        }
         /** @property {AudioBuffer|undefined} - Decoded audio shared by every play of this sound
          *  @type {AudioBuffer|undefined} */
         this.sampleBuffer = undefined;
@@ -10627,7 +10884,11 @@ function zzfxG
  *  @typedef {Object} TiledProperty
  *  @property {string} name
  *  @property {string} [type] - string, int, float, bool, color, file or object, string when left out
- *  @property {any} value
+ *  @property {string|number|boolean} value - a color is a string, an object an id
+ *  @memberof TileLayers */
+
+/** The properties of an object type, its defaults or the values an object was made with, by name
+ *  @typedef {Object<string, any>} ObjectProperties
  *  @memberof TileLayers */
 
 /** A tileset of a Tiled map
@@ -10832,7 +11093,8 @@ function tileLayerTileInfo(t, tile)
  *   visibility carry to the layers inside it
  * - An object or image layer keeps its index, with its slot in the returned array left empty
  * - A hidden layer (visible false) is loaded, its collision included, but not drawn; its render
- *   is a no-op, delete that to show it
+ *   is a no-op, delete that to show it; it casts its solid cells as squares in the light system's shadows
+ *   (shadowSquares), it has no tiles drawn to cast them from, as an LDtk map's collision layer
  *  @param {TiledMap} [tileMapData] - Level data from exported data, a 50 by 50 empty level when left out
  *  @param {TileInfo} [tileInfo] - Default tile info (used for size and texture), tile() by default, none when no image is loaded
  *  @param {number}   [renderOrder] - Render order of the top layer
@@ -10933,7 +11195,10 @@ function tileLayersLoad(tileMapData, tileInfo=tileLayerDefaultTile(), renderOrde
         tileLayer.isSolid = layerIndex === collisionLayer; // the others are art, the solid tests skip them
         tileLayers[layerIndex] = tileLayer;
         if (!visible)
+        {
             tileLayer.render = ()=> {}; // a hidden layer keeps its tiles and collision but is not drawn
+            tileLayer.shadowSquares = true; // and its texture is never drawn, its shadows are its cells
+        }
 
         for (let x=0; x<levelSize.x; ++x)
         for (let y=0; y<levelSize.y; ++y)
@@ -11072,11 +11337,15 @@ function tileLayersFromLDtk(ldtk, level=0)
             continue;
         }
 
-        // a layer for each depth in a cell and each opacity, the first tiles drawn solid first
+        // a layer for each depth in a cell and each opacity, the first tiles drawn solid first; at most 32, each a
+        // whole layer, so a small file of many opacities can not make thousands
         const tilesName = values ? name + ' tiles' : name;
+        let full = false;
         const stacks = [{depth: 0, alpha: 1, data: empty()}], stack = (depth, alpha)=>
         {
             let s = stacks.find((s)=> s.depth === depth && s.alpha === alpha);
+            if (!s && stacks.length >= 32)
+                return void (full = true);
             s || stacks.push(s = {depth, alpha, data: empty()});
             return s.data;
         };
@@ -11088,11 +11357,13 @@ function tileLayersFromLDtk(ldtk, level=0)
             for (const t of tiles)
             {
                 const x = floor(t.px[0] / grid), y = floor(t.px[1] / grid), cell = x + y * width;
-                if (x >= 0 && x < width && y >= 0 && y < height)
-                    stack(depth[cell]++, round(clamp(t.a ?? 1) * 1e3) / 1e3)[cell] =
-                        (t.t + 1 | (t.f & 1 ? 0x80000000 : 0) | (t.f & 2 ? 0x40000000 : 0)) >>> 0;
+                const data = x >= 0 && x < width && y >= 0 && y < height &&
+                    stack(depth[cell]++, round(clamp(t.a ?? 1) * 1e3) / 1e3);
+                if (data)
+                    data[cell] = (t.t + 1 | (t.f & 1 ? 0x80000000 : 0) | (t.f & 2 ? 0x40000000 : 0)) >>> 0;
             }
         }
+        full && console.warn(`tileLayersFromLDtk: layer ${name} stacks tiles and opacities in more than 32 ways, the rest left out`);
         const visible = instance.visible !== false;
         stacks.sort((a, b)=> a.depth - b.depth || b.alpha - a.alpha);
         for (const {depth, alpha, data} of stacks)
@@ -11119,8 +11390,9 @@ const objectLayersTypes = new Map;
  *  - The defaults, and then the properties the object has in Tiled, are set on what it made
  *  - Adding a name again replaces it
  *  @param {string} name - The type the objects have in Tiled
- *  @param {Function} make - A class made at each object's position, or a function called with it
- *  @param {Object<string, any>} [defaults] - Properties set on each one made, the level editor shows inputs for them
+ *  @param {(function(Vector2): unknown)|(function(new: unknown, Vector2))} make - A class made at each object's
+ *  position, or a function called with it
+ *  @param {ObjectProperties} [defaults] - Properties set on each one made, the level editor shows inputs for them
  *  @param {TileInfo} [tileInfo] - An icon for the level editor
  *  @memberof TileLayers
  *  @example
@@ -11237,7 +11509,7 @@ class TileLayerData
      *  @param {number}  [direction] - Integer direction of tile, in 90 degree increments
      *  @param {boolean} [mirror] - If the tile is flipped left to right
      *  @param {Color}   [color] - Color of the tile */
-    constructor(tile, direction=0, mirror=false, color=new Color)
+    constructor(tile, direction=0, mirror=false, color)
     {
         /** @property {number|undefined} - The tile to use, from 0 like tile(); undefined is an empty cell that draws nothing
          *  @type {number|undefined} */
@@ -11246,8 +11518,8 @@ class TileLayerData
         this.direction = direction;
         /** @property {boolean} - If the tile is flipped left to right */
         this.mirror = mirror;
-        /** @property {Color} - Color of the tile */
-        this.color = color.copy();
+        /** @property {Color} - Color of the tile, its own copy, white when none was given */
+        this.color = color ? color.copy() : new Color; // one Color, not a default copied again, for every empty cell
     }
 
     /** Set this tile to clear, it will not be rendered */
@@ -11497,6 +11769,8 @@ class CanvasLayer extends EngineObject
 
     /** Draw a tile onto the layer in world space, where it shows in the world, whatever the layer's place, turn and
      *  mirror
+     *  - Each call outside redrawStart and redrawEnd switches to the layer and back, a draw of its own; many in one
+     *    frame, like a splat for each particle, are drawn between one redrawStart() and redrawEnd()
      *  @param {Vector2}  pos
      *  @param {Vector2}  [size=vec2(1)]
      *  @param {TileInfo} [tileInfo]
@@ -11560,6 +11834,7 @@ class CanvasLayer extends EngineObject
     }
 
     /** Draw a rectangle onto the layer in world space, where it shows in the world
+     *  - Like drawTile, many go between one redrawStart() and redrawEnd()
      *  @param {Vector2} pos
      *  @param {Vector2} [size=vec2(1)]
      *  @param {Color}   [color=WHITE]
@@ -11815,14 +12090,24 @@ class TileLayer extends CanvasLayer
         }
         if (!this.dirtyCells.size) return;
 
+        // most of the layer changed, as a new level set with setData, is drawn again whole, in one draw
+        const width = this.size.x;
+        if (this.dirtyCells.size > width * this.size.y / 2)
+            return this.redraw();
+
         // taken first, so the redrawStart below finds nothing waiting and a tile that throws is not tried again
-        const cells = [...this.dirtyCells], width = this.size.x;
+        const cells = [...this.dirtyCells].map((i)=> vec2(i % width, i / width | 0));
         this.dirtyCells.clear();
         this.redrawStart();
         try
         {
-            for (const i of cells)
-                this.drawTileData(vec2(i % width, i / width | 0));
+            // every cell cleared first, then the tiles drawn, so they go in one batch, where a clear between each
+            // tile flushed it, a draw a cell
+            const cellPixels = this.tileInfo?.size ?? vec2(1);
+            for (const cell of cells)
+                this.clearLayerRect(cell.multiply(cellPixels), cellPixels);
+            for (const cell of cells)
+                this.drawTileData(cell, false);
         }
         finally { this.redrawEnd(); }
     }
@@ -11962,6 +12247,9 @@ class TileCollisionLayer extends TileLayer
         /** @property {boolean} - In the light system's shadow pass, cast only from the cells with collision, drawn
          *  as the layer shows them, so a floor in the same layer stays lit; false casts every tile */
         this.shadowSolidOnly = true;
+        /** @property {boolean} - In the shadow pass, cast each cell with collision as a full square, not the shape
+         *  its tile draws; tileLayersLoad sets it on a hidden layer, which draws no tiles to cast from */
+        this.shadowSquares = false;
         /** @property {Map<number, Vector2>} - The tiles set one way, by tile index, and the way each can be passed
          *  through, see setOneWay
          *  @type {Map<number, Vector2>} */
@@ -11990,11 +12278,11 @@ class TileCollisionLayer extends TileLayer
     }
 
     /** Draw this layer's shadow shape: the cells with collision in the part the shadow map covers, each row of
-     *  them in one draw from that part of the layer's texture, so see through pixels in a tile cast nothing;
-     *  every tile when shadowSolidOnly is off, or when the layer is turned or mirrored */
+     *  them in one draw from that part of the layer's texture, so see through pixels in a tile cast nothing, or as
+     *  squares with shadowSquares; every tile when shadowSolidOnly is off, or when the layer is turned or mirrored */
     renderShadow()
     {
-        if (!this.shadowSolidOnly || this.angle || this.mirror)
+        if (!this.shadowSquares && (!this.shadowSolidOnly || this.angle || this.mirror))
             return super.renderShadow();
 
         // the cells in view, which in the shadow pass is the shadow map
@@ -12011,10 +12299,16 @@ class TileCollisionLayer extends TileLayer
             let end = x + 1; // a run of solid cells along the row
             while (end < x1 && this.collisionData[y*size.x + end] > 0) ++end;
             const count = end - x;
-            const tileInfo = new TileInfo(vec2(x*cellPixels.x, textureHeight - (y+1)*cellPixels.y),
-                vec2(count*cellPixels.x, cellPixels.y), this.textureInfo, 0, 0);
             const pos = vec2(this.pos.x + (x + count/2)*cellWorld.x, this.pos.y + (y + .5)*cellWorld.y);
-            drawTile(pos, vec2(count*cellWorld.x, cellWorld.y), tileInfo, this.color, 0, false, undefined, useWebGL, false);
+            if (this.shadowSquares)
+                drawRect(pos, vec2(count*cellWorld.x, cellWorld.y), WHITE, 0, useWebGL, false);
+            else
+            {
+                const tileInfo = new TileInfo(vec2(x*cellPixels.x, textureHeight - (y+1)*cellPixels.y),
+                    vec2(count*cellPixels.x, cellPixels.y), this.textureInfo, 0, 0);
+                drawTile(pos, vec2(count*cellWorld.x, cellWorld.y), tileInfo, this.color, 0, false, undefined,
+                    useWebGL, false);
+            }
             x = end;
         }
     }
@@ -12551,10 +12845,17 @@ class ParticleEmitter extends EngineObject
         this.additive && setAdditiveBlendMode();
         particleTile = null; // none yet, undefined is the untextured tile
         particleTileBatch = true;
-        for (const particle of this.particles)
-            particle.render();
-        particleTileBatch = false;
-        this.additive && setAdditiveBlendMode(false);
+        try
+        {
+            for (const particle of this.particles)
+                particle.render();
+        }
+        finally
+        {
+            // put back even when a particle's render throws, so the draws after it are not batched or additive
+            particleTileBatch = false;
+            this.additive && setAdditiveBlendMode(false);
+        }
     }
 
     /** is emitter actively spawning
@@ -13386,12 +13687,12 @@ function glCreateProgram(vsSource, fsSource)
     return program;
 }
 
-// a uniform location, looked up once per program
+// a uniform location, looked up once per program, a null one too, for a uniform the compiler left out
 function glUniformLocation(program, name)
 {
     let cache = glUniformLocations.get(program);
-    cache || glUniformLocations.set(program, cache = {});
-    return cache[name] ??= glContext.getUniformLocation(program, name);
+    cache || glUniformLocations.set(program, cache = Object.create(null));
+    return name in cache ? cache[name] : cache[name] = glContext.getUniformLocation(program, name);
 }
 
 // a Shader's 2D program, compiled the first time a batch needs it: the snippet's mainImage gives the surface
@@ -13407,6 +13708,7 @@ function glShaderProgram(shader)
         'uniform vec3 iResolution;' +    // canvas size in pixels
         'uniform float iTime;' +         // engine time
         'uniform bool premultipliedTexture;' + // is the texture premultiplied, a render target or a smooth image
+        glUniformDeclarations(shader, shader.fragmentCode) + // the shader's own
         'in vec2 v,l;in vec4 d,e;out vec4 c;' +
         // main first, the snippet's mainImage declared for it, so a define in the snippet can not reach main's names
         'void mainImage(out vec4,vec2);' +
@@ -13417,6 +13719,65 @@ function glShaderProgram(shader)
         '#define localUV l\n' +
         shader.fragmentCode + '\n');
     return glFailedPrograms.has(program) ? glShader : program;
+}
+
+// the GLSL type of a Shader uniform's value, or undefined for one that can not be a uniform; a vector or matrix is
+// known by its shape, so this core file needs no plugin's class
+function glUniformType(value)
+{
+    if (typeof value == 'number') return 'float';
+    if (typeof value == 'boolean') return 'bool';
+    if (value instanceof Color) return 'vec4';
+    if (value instanceof Vector2) return 'vec2';
+    if (value && isNumber(value.x) && isNumber(value.y) && isNumber(value.z)) return 'vec3';
+    const list = value?.m?.length === 16 ? value.m : value;
+    const n = list && typeof list != 'string' && isNumber(list.length) ? list.length : 0;
+    return {2: 'vec2', 3: 'vec3', 4: 'vec4', 9: 'mat3', 16: 'mat4'}[n];
+}
+
+// a uniform's value as the numbers sent, a copy, so a vector changed after it was given does not change the shader
+function glUniformData(value, type)
+{
+    if (type === 'float') return +value;
+    if (type === 'bool') return value ? 1 : 0;
+    if (value instanceof Color) return new Float32Array([value.r, value.g, value.b, value.a]);
+    if (value instanceof Vector2) return new Float32Array([value.x, value.y]);
+    if (type === 'vec3' && isNumber(value.x)) return new Float32Array([value.x, value.y, value.z]);
+    return Float32Array.from(value.m || value);
+}
+
+// the declarations of a Shader's uniforms for one of its snippets, those it names: a stage that does not use one
+// does not declare it, so a uniform can share a name with something of the engine's in the other stage, like the
+// vertex stage's tint
+function glUniformDeclarations(shader, code)
+{
+    let declarations = '';
+    for (const name in shader.uniformTypes)
+        if (new RegExp('\\b' + name + '\\b').test(code))
+            declarations += 'uniform ' + shader.uniformTypes[name] + ' ' + name + ';';
+    return declarations;
+}
+
+// send a Shader's uniforms to one of its programs, which is in use, when they changed since that program was last
+// sent them; uniformLocation gives a name's place in the program, the renderer's own cached lookup
+const glUniformVersions = new WeakMap;
+function glShaderSendUniforms(shader, program, uniformLocation)
+{
+    if (glUniformVersions.get(program) === shader.uniformsVersion) return;
+    glUniformVersions.set(program, shader.uniformsVersion);
+    const gl = glContext;
+    for (const name in shader.uniformValues)
+    {
+        const location = uniformLocation(name), v = shader.uniformValues[name], type = shader.uniformTypes[name];
+        if (!location) continue; // left out by the compiler, the snippet does not use it
+        if (type === 'float') gl.uniform1f(location, /** @type {number} */ (v));
+        else if (type === 'bool') gl.uniform1i(location, /** @type {number} */ (v));
+        else if (type === 'vec2') gl.uniform2fv(location, /** @type {Float32Array} */ (v));
+        else if (type === 'vec3') gl.uniform3fv(location, /** @type {Float32Array} */ (v));
+        else if (type === 'vec4') gl.uniform4fv(location, /** @type {Float32Array} */ (v));
+        else if (type === 'mat3') gl.uniformMatrix3fv(location, false, /** @type {Float32Array} */ (v));
+        else gl.uniformMatrix4fv(location, false, /** @type {Float32Array} */ (v));
+    }
 }
 
 // a Shader compiled again after dispose is kept for a lost context again
@@ -13514,9 +13875,9 @@ function glSetTextureData(texture, image, pixelated=tilesPixelated)
 {
     if (!glContext) return;
 
-    // build the texture, after drawing what was queued with the old image
+    // build the texture, after drawing what was queued with the old image, or into the texture as the target
     ASSERT(image?.width > 0, 'Invalid image data.');
-    texture === glActiveTexture && glFlush();
+    (texture === glActiveTexture || texture === glRenderTarget) && glFlush();
     glContext.bindTexture(glContext.TEXTURE_2D, texture);
     if (typeof ImageBitmap != 'undefined' && image instanceof ImageBitmap)
     {
@@ -13648,11 +14009,13 @@ function glFlush()
                 const uniform = (name)=> glUniformLocation(program, name);
                 glContext.uniformMatrix4fv(uniform('m'), false, glTransform);
                 glContext.uniform1f(uniform('iTime'), time);
-                // a render target is the size glPreRender gave its viewport
-                const width = glRenderTarget ? mainCanvasSize.x : glCanvas.width;
-                const height = glRenderTarget ? mainCanvasSize.y : glCanvas.height;
+                // a render target is the size glPreRender gave its viewport, the light system's lightmap its own
+                const base = !glRenderTarget && glRenderTargetBase?.[1];
+                const width = glRenderTarget ? mainCanvasSize.x : base ? base.x : glCanvas.width;
+                const height = glRenderTarget ? mainCanvasSize.y : base ? base.y : glCanvas.height;
                 glContext.uniform3f(uniform('iResolution'), width, height, 1);
                 glContext.uniform1i(uniform('premultipliedTexture'), +premultiplied);
+                program === glShader || glShaderSendUniforms(glBatchShader, program, uniform);
                 if (program === glShader)
                     glShaderPremultiplied = premultiplied; // a Shader that did not build draws with the engine's
             }
@@ -13921,8 +14284,8 @@ function glSetRenderTarget(texture, clear=false)
 }
 
 /** Clear out a rectangle area of the WebGL canvas or render target
- *  - In framebuffer pixels from the bottom left: backing store pixels on the canvas, texture pixels in a
- *    render target
+ *  - In framebuffer pixels: backing store pixels from the bottom left on the canvas, texture pixels from the top
+ *    left in a render target, where draws are flipped so row 0 is the top of the picture
  *  @param {number} x
  *  @param {number} y
  *  @param {number} width
@@ -14485,8 +14848,12 @@ function medalsReset()
         // unlock another tab wrote, and those not made yet read theirs when they are made
         const saved = readSaveData(medalsSaveName);
         for (const id in saved)
-            if ((!medals[id] || medals[id].isLocal()) && saved[id] && typeof saved[id] === 'object')
+        {
+            // a key of the save is read as the medal it names only when there is one, not as constructor
+            const medal = Object.prototype.hasOwnProperty.call(medals, id) ? medals[id] : undefined;
+            if ((!medal || medal.isLocal()) && saved[id] && typeof saved[id] === 'object')
                 saved[id].unlocked = false;
+        }
         writeSaveData(medalsSaveName, saved);
     }
     medalsSave();
@@ -14974,13 +15341,14 @@ class NewgroundsPlugin
 
     /** Send message to post score
      *  @param {number} id    - The scoreboard id
-     *  @param {number} value - The score value, a whole number
+     *  @param {number} value - The score value, rounded to a whole number as Wavedash's is
      *  @return {Promise<Object>} - The response JSON object, undefined when the call failed; result.data.success says whether
      *    it posted, which needs a logged in player; an answer that the session is gone makes the game play as not logged
      *    in, and one that timed out may still have posted */
     postScore(id, value)
     {
-        return this.call('ScoreBoard.postScore', {'id':id, 'value':value}).then(response=>
+        ASSERT(isNumber(value), 'Newgrounds postScore: value must be a number', value);
+        return this.call('ScoreBoard.postScore', {'id':id, 'value':round(value)}).then(response=>
         {
             response?.result?.data?.success && newgroundsNotifyPage('ScoreBoard.postScore', id);
             newgroundsSessionLost(response) && this.dropSession();
@@ -14994,7 +15362,7 @@ class NewgroundsPlugin
      *  @param {boolean} [social] - If true, only the scores of the user and their friends, the logged in player when user is left out
      *  @param {number} [skip]    - Number of scores to skip over
      *  @param {number} [limit]   - Number of scores to include in the list
-     *  @param {string} [period]  - 'D' today, which the server assumes when left out, 'W' this week, 'M' this month, 'Y' this year or 'A' all time
+     *  @param {'D'|'W'|'M'|'Y'|'A'} [period]  - 'D' today, which the server assumes when left out, 'W' this week, 'M' this month, 'Y' this year or 'A' all time
      *  @return {Promise<Object>} - The response JSON object, undefined when the call failed; the scores are in
      *    result.data.scores, each with user.name, value and formatted_value; without a user or social it is the whole board
      */
@@ -15278,7 +15646,7 @@ class WavedashMedal extends Medal
 class WavedashPlugin
 {
     /** Start the Wavedash SDK when the game is on Wavedash, and make its leaderboards
-     *  @param {Object<string, {lowerWins?: boolean, display?: string}>} [leaderboards] - The game's leaderboards by
+     *  @param {Object<string, {lowerWins?: boolean, display?: 'number'|'seconds'|'milliseconds'|'ticks'}>} [leaderboards] - The game's leaderboards by
      *    name: lowerWins for times and golf, where a lower score is better, higher wins when left out; display how
      *    Wavedash shows a score, 'number', 'seconds', 'milliseconds' or 'ticks' (60 a second), 'number' when left out
      */
@@ -15292,12 +15660,12 @@ class WavedashPlugin
          *  has made or found it, undefined when it could not
          *  @type {Object<string, Promise<string|undefined>>} */
         this.leaderboards = Object.create(null); // no inherited names, a board may be called constructor
-        /** @type {Object<string, {lowerWins?: boolean, display?: string}>} */
+        /** @type {Object<string, {lowerWins?: boolean, display?: 'number'|'seconds'|'milliseconds'|'ticks'}>} */
         this.leaderboardSettings = leaderboards; // how each one sorts and shows its scores, read as its own entries
         /** @type {Set<string>} */
         this.achievementsSent = new Set; // the achievements Wavedash took this visit, or refused for good
         /** @type {Object<string, number>} */
-        this.achievementTries = Object.create(null); // how many times each one not taken yet was sent
+        this.achievementTries = Object.create(null); // how many retries each one not taken yet was sent in
         /** @type {number|undefined} */
         this.achievementRetry = undefined; // the timer that sends refused ones again
         /** @type {Promise<boolean>|undefined} */
@@ -15594,9 +15962,11 @@ class WavedashPlugin
 
     /** Send every unlocked WavedashMedal's achievement Wavedash has not taken yet, again every two seconds while it
      *  refuses some, as it does until it has loaded the player's achievements; one refused for about a minute is
-     *  taken as an identifier Wavedash does not have, said once in the console, and not sent again this visit
+     *  taken as an identifier Wavedash does not have, said once in the console, and not sent again this visit; only
+     *  the retries count, so many unlocked at once do not use them up
+     *  @param {boolean} [retry] - Sent by the retry timer
      *  @ignore */
-    sendAchievements()
+    sendAchievements(retry=false)
     {
         if (!this.isActive() || debugMedals) return;
         let refused = false;
@@ -15607,7 +15977,7 @@ class WavedashPlugin
             const result = this.call('setAchievement', achievement, true);
             if (result === true || result?.['success'] === true)
                 this.achievementsSent.add(achievement);
-            else if ((this.achievementTries[achievement] = (this.achievementTries[achievement] || 0) + 1) < wavedashRetries)
+            else if ((this.achievementTries[achievement] = (this.achievementTries[achievement] || 0) + +retry) < wavedashRetries)
                 refused = true;
             else
             {
@@ -15617,7 +15987,7 @@ class WavedashPlugin
             }
         });
         clearTimeout(this.achievementRetry);
-        this.achievementRetry = refused ? setTimeout(()=> this.sendAchievements(), wavedashRetryMS) : undefined;
+        this.achievementRetry = refused ? setTimeout(()=> this.sendAchievements(true), wavedashRetryMS) : undefined;
     }
 }
 
@@ -15639,6 +16009,8 @@ class WavedashPlugin
  *  @type {PostProcessPlugin}
  *  @memberof PostProcess */
 let postProcess;
+// its hooks are added once: one made again, as in a scene's enter, takes the old one's place and its hooks drive it
+let postProcessPluginAdded = false;
 
 /////////////////////////////////////////////////////////////////////////
 /**
@@ -15675,6 +16047,12 @@ class PostProcessPlugin
          *  and the feedback texture holds the last frame drawn with it on */
         this.enabled = true;
 
+        /** @property {boolean} - Read the frame with hard edged sampling, so an effect that samples between pixels,
+         *  a blur, glow, the CRT curve or chromatic aberration, steps from pixel to pixel as pixel art does; off, the
+         *  default, it reads smoothly between them, whatever tilesPixelated is; a frame read at its own pixels, as a
+         *  pass-through or a vignette does, looks the same either way */
+        this.pixelated = false;
+
         /** @property {Object<string, number|Array<number>>} - The game's own values for the shader, a uniform each
          *  by its name, a number a float and a list of 2 to 4 numbers a vector, set every frame as they are; an
          *  effect setting can be one of these names, so it changes every frame without making the shader again, all
@@ -15703,7 +16081,9 @@ class PostProcessPlugin
         // the shader is made at the first render, so values the game sets after this, which its code may name, are
         // declared in it
         !headlessMode && !glEnable && console.warn('PostProcessPlugin: WebGL not enabled!');
-        engineAddPlugin(undefined, postProcessRender, postProcessContextLost, postProcessContextRestored);
+        postProcessPluginAdded || engineAddPlugin(undefined, postProcessRender, postProcessContextLost,
+            postProcessContextRestored);
+        postProcessPluginAdded = true;
 
         function initPostProcess()
         {
@@ -15793,6 +16173,14 @@ class PostProcessPlugin
             // setup texture
             glContext.activeTexture(glContext.TEXTURE0);
             glContext.bindTexture(glContext.TEXTURE_2D, postProcess.texture);
+            // smooth or hard edged as pixelated says now, the frame and the feedback alike
+            const filter = postProcess.pixelated ? glContext.NEAREST : glContext.LINEAR;
+            const setFilter = ()=>
+            {
+                glContext.texParameteri(glContext.TEXTURE_2D, glContext.TEXTURE_MAG_FILTER, filter);
+                glContext.texParameteri(glContext.TEXTURE_2D, glContext.TEXTURE_MIN_FILTER, filter);
+            };
+            setFilter();
             if (includeMainCanvas)
             {
                 // copy main canvas to work canvas at the backing store size,
@@ -15827,6 +16215,7 @@ class PostProcessPlugin
             {
                 glContext.activeTexture(glContext.TEXTURE1);
                 glContext.bindTexture(glContext.TEXTURE_2D, postProcess.feedbackTexture);
+                setFilter();
             }
 
             // the 3D depth, when render3D draws it, on the third texture unit, with what sceneDepth needs to read it
@@ -16164,7 +16553,8 @@ function postProcessCurveMouse(strength=.1)
 
 /**
  * Split red and blue apart toward the edges, like a cheap lens; put it before what shades the picture
- * @param {number|string} [strength] - How far apart at the edge, as a part of the screen
+ * @param {number|string} [strength] - How far red and blue each move at the edge, as a part of the screen, so they
+ *   end up twice this apart
  * @return {string}
  * @memberof PostProcess
  */
@@ -16324,6 +16714,8 @@ function postProcessTV({noise=.1, scanlines=.5, scanlineSpacing=6, glow=.4, vign
  *  @type {LightSystemPlugin}
  *  @memberof LightSystem */
 let lightSystem;
+// its hooks are added once: one made again, as in a scene's enter, takes the old one's place and its hooks drive it
+let lightSystemPluginAdded = false;
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -16357,10 +16749,13 @@ class LightSystemPlugin
         this.shadersFailed = false; // a shader did not build on this device, so the system draws nothing
         /** @property {Color} - Baseline color applied to unlit areas of the scene. Defaults to BLACK (pitch dark). Set to a small RGB for a faint ambient. The lightmap is cleared to this color each frame, then lights add on top, then the result multiplies the scene. */
         this.ambientColor = (ambientColor || BLACK).copy();
-        /** @property {Vector2} - Size of the lightmap texture, follows mainCanvasSize (css pixels, so it is not scaled by canvasPixelRatio) unless a size was passed */
+        /** @property {Vector2|undefined} - Size of the lightmap texture, follows mainCanvasSize (css pixels, so it is not scaled by canvasPixelRatio) unless a size was passed; undefined until the system starts when none was; a new size set later makes the lightmap again at it, with textureSizeAuto false so the canvas does not set it back
+         *  @type {Vector2|undefined} */
         this.textureSize = textureSize ? textureSize.copy() : undefined;
         /** @property {boolean} - True when no size was passed, so the lightmap follows mainCanvasSize */
         this.textureSizeAuto = !textureSize;
+        /** @type {Vector2} */
+        this.textureSizeAllocated = vec2(); // the size the lightmap was made at, it is made again when textureSize changes
 
         /** @property {WebGLTexture|undefined} - The lightmap texture
          *  @type {WebGLTexture|undefined} */
@@ -16476,8 +16871,9 @@ class LightSystemPlugin
             'out vec2 uv;'+
             'void main(){gl_Position=vec4(p+p-1.,1,1);uv=p;}';
         initLightSystem();
-        engineAddPlugin(undefined, lightSystemRender,
+        lightSystemPluginAdded || engineAddPlugin(undefined, lightSystemRender,
             lightSystemContextLost, lightSystemContextRestored);
+        lightSystemPluginAdded = true;
 
         function initLightSystem()
         {
@@ -16504,6 +16900,7 @@ class LightSystemPlugin
             glContext.texImage2D(glContext.TEXTURE_2D, 0, glContext.RGBA,
                 lightSystem.textureSize.x, lightSystem.textureSize.y, 0,
                 glContext.RGBA, glContext.UNSIGNED_BYTE, null);
+            lightSystem.textureSizeAllocated = lightSystem.textureSize.copy();
             glContext.texParameteri(glContext.TEXTURE_2D, glContext.TEXTURE_MAG_FILTER, glContext.LINEAR);
             glContext.texParameteri(glContext.TEXTURE_2D, glContext.TEXTURE_MIN_FILTER, glContext.LINEAR);
             glContext.texParameteri(glContext.TEXTURE_2D, glContext.TEXTURE_WRAP_S, glContext.CLAMP_TO_EDGE);
@@ -16650,15 +17047,19 @@ class LightSystemPlugin
         {
             const gl = glContext, ls = lightSystem;
             ls.shadowMap = createTexture(ls.shadowMapSize);
-            ls.shadowTextureA = createTexture(ls.shadowTextureSize);
-            ls.shadowTextureB = createTexture(ls.shadowTextureSize);
             ls.shadowMapSizeAllocated = ls.shadowMapSize;
-            ls.shadowTextureSizeAllocated = ls.shadowTextureSize;
+            if (ls.shadows)
+            {
+                // the point lights' own shadow textures, a sun alone needs only the map
+                ls.shadowTextureA = createTexture(ls.shadowTextureSize);
+                ls.shadowTextureB = createTexture(ls.shadowTextureSize);
+                ls.shadowTextureSizeAllocated = ls.shadowTextureSize;
+            }
             // put back the texture the engine tracks
             if (glActiveTexture)
                 gl.bindTexture(gl.TEXTURE_2D, glActiveTexture);
-            if (ls.shadowCopyShader)
-                return; // the programs are kept while the textures are made again
+            if (ls.shadowCopyShader || !ls.shadows)
+                return; // the programs are kept while the textures are made again, and made only for point lights
 
             // copy: the shadow map around the light into the light's texture, light at the center
             ls.shadowCopyShader = glCreateProgram(quadVertex,
@@ -16737,7 +17138,7 @@ class LightSystemPlugin
             // make the resources the first time, and again when a size changed
             ls.clampTextureSizes();
             if (!ls.shadowMap || ls.shadowMapSize !== ls.shadowMapSizeAllocated
-                || ls.shadowTextureSize !== ls.shadowTextureSizeAllocated)
+                || ls.shadows && (!ls.shadowTextureA || ls.shadowTextureSize !== ls.shadowTextureSizeAllocated))
             {
                 ls.shadowMap && freeShadowTextures();
                 initShadows();
@@ -16770,6 +17171,9 @@ class LightSystemPlugin
             cameraAngle = 0;
             canvasClearColor = WHITE;
             glSkipScreenSpace = true; // the map's camera would put them anywhere
+            // an additive draw adds nothing to a map of black casters, as a glow or a fire's particles, so its batch
+            // is dropped rather than drawn; a draw that keeps its color, setShadowTransparent, adds as it always has
+            glSkipAdditive = true;
             ls.shadowPass = true;
             try
             {
@@ -16783,6 +17187,7 @@ class LightSystemPlugin
                     {
                         if (o.destroyed || !casts(o)) continue;
                         glColorMask = 0xff000000;
+                        glSkipAdditive || (glFlush(), glSkipAdditive = true); // after a transparent one left it off
                         setShader(o.shader); // its own Shader as in the main pass, so a snippet that cuts holes casts the same shape
                         o.renderShadow();
                     }
@@ -16808,7 +17213,7 @@ class LightSystemPlugin
                 // hand everything back even when a render threw, or every frame after it draws black with no text
                 ls.shadowPass = false;
                 glColorMask = -1;
-                glSkipScreenSpace = false;
+                glSkipScreenSpace = glSkipAdditive = false;
                 glSetRenderTarget();
                 [drawContext, mainCanvasSize, cameraPos, cameraScale, cameraAngle, canvasClearColor, glCustomShader] = saved;
             }
@@ -17130,13 +17535,16 @@ class LightSystemPlugin
             }
             if (lightSystem.shadersFailed) return;
 
-            // an automatic size follows the canvas, so reallocate the lightmap when
-            // the canvas changed size, after the flush so the batch keeps its texture
-            const size = lightSystem.textureSize;
-            const wantX = glClampTextureSize(mainCanvasSize.x), wantY = glClampTextureSize(mainCanvasSize.y);
-            if (lightSystem.textureSizeAuto && (size.x !== wantX || size.y !== wantY))
+            // an automatic size follows the canvas, and a size given may be set again, so reallocate the lightmap
+            // when the size it should be is not the one it was made at, after the flush so the batch keeps its texture
+            const size = lightSystem.textureSize, made = lightSystem.textureSizeAllocated;
+            const auto = lightSystem.textureSizeAuto;
+            const wantX = glClampTextureSize(auto ? mainCanvasSize.x : size.x); // to what the device makes
+            const wantY = glClampTextureSize(auto ? mainCanvasSize.y : size.y);
+            if (made.x !== wantX || made.y !== wantY)
             {
-                lightSystem.textureSize = vec2(wantX, wantY);
+                auto && (lightSystem.textureSize = vec2(wantX, wantY));
+                lightSystem.textureSizeAllocated = vec2(wantX, wantY);
                 glContext.bindTexture(glContext.TEXTURE_2D, lightSystem.texture);
                 glContext.texImage2D(glContext.TEXTURE_2D, 0, glContext.RGBA,
                     wantX, wantY, 0,
@@ -17340,8 +17748,9 @@ class LightSystemPlugin
         }
     }
 
-    /** Bring the sizes of the textures it makes down to what the device can make: shadowMapSize, shadowTextureSize
-     *  and a textureSize given by hand; called before they are made, so a size too big falls back instead of failing */
+    /** Bring the sizes of the textures it makes down to what the device can make: shadowMapSize, shadowTextureSize,
+     *  directionalTextureSize and textureSize; called before they are made, so a size too big falls back instead of
+     *  failing */
     clampTextureSizes()
     {
         this.shadowMapSize = glClampTextureSize(this.shadowMapSize);
@@ -17478,8 +17887,14 @@ class LightSystemPlugin
     setShadowTransparent(transparent=true)
     {
         // the mask applies as each draw is queued, so nothing needs flushing
-        if (this.shadowPass)
-            glColorMask = transparent ? -1 : 0xff000000;
+        if (!this.shadowPass) return;
+        glColorMask = transparent ? -1 : 0xff000000;
+        // additive draws are dropped from a map of black casters, and kept while a draw keeps its color
+        if (glSkipAdditive === transparent)
+        {
+            glFlush();
+            glSkipAdditive = !transparent;
+        }
     }
 }
 
@@ -18078,6 +18493,8 @@ class AudioCompressor extends AudioEffect
  *  @type {UISystemPlugin}
  *  @memberof UISystem */
 let uiSystem;
+// its hooks are added once: one made again, as in a scene's enter, takes the old one's place and its hooks drive it
+let uiSystemPluginAdded = false;
 
 /** Enable UI system debug drawing
  *  0=off, 1=normal, 2=show invisible
@@ -18231,7 +18648,8 @@ class UISystemPlugin
             e.type === 'keydown' && o.onKeyDown(e);
         };
 
-        engineAddPlugin(uiUpdate, uiRender);
+        uiSystemPluginAdded || engineAddPlugin(uiUpdate, uiRender);
+        uiSystemPluginAdded = true;
 
         // set object position based on anchor target (parent box, or canvas for roots),
         // self-pivot, and localPos offset
@@ -18596,7 +19014,12 @@ class UISystemPlugin
     {
         const context = uiSystem.uiContext;
         if (textShadow && shadowColor.a > 0)
-            drawTextScreen(text, pos.add(textShadow), size.y, shadowColor, lineWidth, lineColor, align, font, fontStyle, applyMaxWidth ? size.x : undefined, 0, context);
+        {
+            // icons in the text are shapes of the shadow's color in its shadow
+            textIconsSilhouette = true;
+            try { drawTextScreen(text, pos.add(textShadow), size.y, shadowColor, lineWidth, lineColor, align, font, fontStyle, applyMaxWidth ? size.x : undefined, 0, context); }
+            finally { textIconsSilhouette = false; }
+        }
         uiSetShadow(context, shadowColor, shadowBlur, shadowOffset);
         drawTextScreen(text, pos, size.y, color, lineWidth, lineColor, align, font, fontStyle, applyMaxWidth ? size.x : undefined, 0, context);
         context.shadowColor = '#0000';
@@ -19479,7 +19902,7 @@ class UITextInput extends UIObject
      *  @param {boolean} [playSound] */
     click(playSound=true)
     {
-        // an edit in another field ends first, with its onChange, like a Tab to the next field
+        // an edit in another field ends first, with its onChange, as a click away from it ends it
         const editing = uiSystem.keyInputObject;
         if (editing !== this && editing instanceof UITextInput)
             editing.stopEditing();
@@ -19553,8 +19976,14 @@ class UITextInput extends UIObject
         let text = this.text;
         if (this.isKeyInputObject()) // add a cursor to end of text
             text += timeReal%1 < .5 ?  '█' : '░';
-        uiSystem.drawText(text, this.getTextPos(textSize), textSize, 
-            this.textColor, this.textLineWidth, this.textLineColor, this.align, this.font, this.fontStyle, true, this.textShadow);
+        // typed text shows as typed, a :name: of an icon too
+        textIconsOff = true;
+        try
+        {
+            uiSystem.drawText(text, this.getTextPos(textSize), textSize,
+                this.textColor, this.textLineWidth, this.textLineColor, this.align, this.font, this.fontStyle, true, this.textShadow);
+        }
+        finally { textIconsOff = false; }
     }
 }
 
@@ -19685,7 +20114,7 @@ class UICheckbox extends UIObject
     render()
     {
         super.render();
-        if (this.checked)
+        if (this.checked && min(this.size.x, this.size.y) > 0) // a box of no size, as one growing in, has no mark
         {
             const p = this.cornerRadius / min(this.size.x, this.size.y) * 2;
             const length = lerp(1, 2**.5/2, p) / 2;
@@ -19749,8 +20178,8 @@ class UISlider extends UIObject
         // held when the frame began, so a release in the same frame as the last move still reads it
         const wasActive = this.isActiveObject();
         super.update();
-        if (!this.interactive)
-            return;
+        if (!this.interactive || this.destroyed)
+            return; // destroyed by its onUpdate, it no longer follows the mouse or calls onChange
 
         const oldValue = this.value;
         if (wasActive || this.isActiveObject())
@@ -19842,8 +20271,8 @@ class UISlider extends UIObject
  * UIVideo - A UI object that plays video
  * @extends UIObject
  * @example
- * // Create a video player UI object
- * const video = new UIVideo(vec2(400, 300), vec2(320, 240), 'video.mp4', true);
+ * // Create a video player UI object, in the middle of the canvas
+ * const video = new UIVideo(vec2(), vec2(320, 240), 'video.mp4', true);
  * video.play();
  * @memberof UISystem
  */
@@ -20577,6 +21006,7 @@ class Box2dObject extends EngineObject
          *  @type {Array<Array<Vector2>>} */
         this.edgeLoops = [];
         // the fixtures of the edge lists and loops, by pointer, each to the points it is drawn with
+        /** @type {Map<number, Array<Vector2>>} */
         this.edgeListFixtures = new Map;
         /** @property {number} - How fast its surface moves, clockwise around it, in world units per second, like a
          *  conveyor belt: what touches it is carried along by friction, to the right across its top when positive;
@@ -20650,7 +21080,7 @@ class Box2dObject extends EngineObject
      *  @param {Color}   [lineColor]
      *  @param {number}  [lineWidth]
      *  @param {boolean} [useWebGL=glEnable]
-     *  @param {CanvasRenderingContext2D} [context] */
+     *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context] */
     drawFixtures(color=WHITE, lineColor=BLACK, lineWidth=.1, useWebGL, context)
     {
         // draw each fixture, but the edges of an edge list or loop, which draw below as one line
@@ -20671,8 +21101,9 @@ class Box2dObject extends EngineObject
     ///////////////////////////////////////////////////////////////////////////////
     // physics contact callbacks
 
-    /** Called when a contact begins, while the world steps: a destroy or a setter waits until the step is done,
-     *  and creating objects, fixtures or joints must wait until after the step
+    /** Called when a contact begins, while the world steps: a destroy, and a setter that moves a body or changes
+     *  its type or mass, waits until the step is done, and creating objects, fixtures or joints must wait until after
+     *  the step
      *  - The fixtures say which shapes touched, the same objects addBox and the others returned, so a small sensor
      *    under a player's feet can tell standing on the ground from touching a wall
      *  - impactSpeed is how fast they were closing along the contact normal, spin included, in world units per
@@ -20687,8 +21118,9 @@ class Box2dObject extends EngineObject
      *  @param {Box2dContact} [contact] - Where they touched and how hard they hit */
     beginContact(otherObject, fixture, otherFixture, impactSpeed, contact) {}
 
-    /** Called when a contact ends, while the world steps or a body is destroyed: a destroy or a setter waits
-     *  until the step is done, and creating objects, fixtures or joints must wait until after the step
+    /** Called when a contact ends, while the world steps or a body is destroyed: a destroy, and a setter that
+     *  moves a body or changes its type or mass, waits until the step is done, and creating objects, fixtures or
+     *  joints must wait until after the step
      *  @param {Box2dObject} otherObject
      *  @param {b2Fixture} [fixture] - This object's fixture that touched
      *  @param {b2Fixture} [otherFixture] - The other object's fixture that touched */
@@ -21397,6 +21829,7 @@ class Box2dKinematicObject extends Box2dObject
  * Box2d Tile Layer
  * - adds Box2d support to tile layers
  * - creates static box2d fixtures for solid tiles, call buildCollision to rebuild them after the tiles change
+ * - every cell with collision is a box solid from all sides, a one way tile (setOneWay) included
  * @extends Box2dStaticObject
  * @memberof Box2D
  */
@@ -21506,6 +21939,11 @@ class Box2dRaycastResult
         this.fraction = fraction;
     }
 }
+
+// if either object of a joint to be made is destroyed, and a joint def with no bodies, which Box2dJoint makes a
+// destroyed joint, as it would be had the object gone after; a debug build asserts there
+const box2dJointGone = (objectA, objectB)=> !objectA.body || !objectB.body;
+const box2dJointGoneDef = ()=> new box2d.instance.b2DistanceJointDef();
 
 ///////////////////////////////////////////////////////////////////////////////
 /** 
@@ -21618,6 +22056,7 @@ class Box2dTargetJoint extends Box2dJoint
      *  @param {Vector2} worldPos */
     constructor(object, fixedObject, worldPos)
     {
+        if (box2dJointGone(object, fixedObject)) { super(box2dJointGoneDef()); return; } // made destroyed
         ASSERT(object.getBodyType() === box2d.bodyTypeDynamic, 'a target joint needs a dynamic object');
         object.setAwake();
         const jointDef = new box2d.instance.b2MouseJointDef();
@@ -21671,6 +22110,7 @@ class Box2dDistanceJoint extends Box2dJoint
      *  @param {boolean} [collide] */
     constructor(objectA, objectB, anchorA, anchorB, collide=false)
     {
+        if (box2dJointGone(objectA, objectB)) { super(box2dJointGoneDef()); return; } // made destroyed
         anchorA ||= box2d.vec2From(objectA.body.GetPosition());
         anchorB ||= box2d.vec2From(objectB.body.GetPosition());
         const localAnchorA = objectA.worldToLocal(anchorA);
@@ -21736,6 +22176,7 @@ class Box2dRopeJoint extends Box2dJoint
      *  @param {boolean} [collide] */
     constructor(objectA, objectB, anchorA, anchorB, extraLength=0, collide=false)
     {
+        if (box2dJointGone(objectA, objectB)) { super(box2dJointGoneDef()); return; } // made destroyed
         anchorA ||= box2d.vec2From(objectA.body.GetPosition());
         anchorB ||= box2d.vec2From(objectB.body.GetPosition());
         const localAnchorA = objectA.worldToLocal(anchorA);
@@ -21787,6 +22228,7 @@ class Box2dRevoluteJoint extends Box2dJoint
      *  @param {boolean} [collide] */
     constructor(objectA, objectB, anchor, collide=false)
     {
+        if (box2dJointGone(objectA, objectB)) { super(box2dJointGoneDef()); return; } // made destroyed
         anchor ||= box2d.vec2From(objectB.body.GetPosition());
         const localAnchorA = objectA.worldToLocal(anchor);
         const localAnchorB = objectB.worldToLocal(anchor);
@@ -21934,12 +22376,15 @@ class Box2dGearJoint extends Box2dJoint
             'a gear joint joins objectB of joint1 and objectB of joint2, pass those');
         const ratioSign = (joint1 instanceof Box2dRevoluteJoint) === (joint2 instanceof Box2dRevoluteJoint) ? 1 : -1;
         const jointDef = new box2d.instance.b2GearJointDef();
-        jointDef.set_bodyA(objectA.body);
-        jointDef.set_bodyB(objectB.body);
-        jointDef.set_joint1(joint1.box2dJoint);
-        jointDef.set_joint2(joint2.box2dJoint);
-        jointDef.set_ratio(ratio * ratioSign);
-        super(jointDef);
+        if (!box2dJointGone(objectA, objectB) && joint1.box2dJoint && joint2.box2dJoint)
+        {
+            jointDef.set_bodyA(objectA.body);
+            jointDef.set_bodyB(objectB.body);
+            jointDef.set_joint1(joint1.box2dJoint);
+            jointDef.set_joint2(joint2.box2dJoint);
+            jointDef.set_ratio(ratio * ratioSign);
+        }
+        super(jointDef); // with no bodies, when an object or a joint is gone, it is made destroyed
 
         /** @property {Box2dJoint} - The first joint geared, a revolute or prismatic joint */
         this.joint1 = joint1;
@@ -21987,6 +22432,7 @@ class Box2dPrismaticJoint extends Box2dJoint
      *  @param {boolean} [collide] */
     constructor(objectA, objectB, anchor, worldAxis=vec2(0,1), collide=false)
     {
+        if (box2dJointGone(objectA, objectB)) { super(box2dJointGoneDef()); return; } // made destroyed
         anchor ||= box2d.vec2From(objectB.body.GetPosition());
         const localAnchorA = objectA.worldToLocal(anchor);
         const localAnchorB = objectB.worldToLocal(anchor);
@@ -22102,6 +22548,7 @@ class Box2dWheelJoint extends Box2dJoint
      *  @param {boolean} [collide] */
     constructor(objectA, objectB, anchor, worldAxis=vec2(0,1), collide=false)
     {
+        if (box2dJointGone(objectA, objectB)) { super(box2dJointGoneDef()); return; } // made destroyed
         anchor ||= box2d.vec2From(objectB.body.GetPosition());
         const localAnchorA = objectA.worldToLocal(anchor);
         const localAnchorB = objectB.worldToLocal(anchor);
@@ -22199,6 +22646,8 @@ class Box2dWeldJoint extends Box2dJoint
      *  @param {boolean} [collide] */
     constructor(objectA, objectB, anchor, collide=false)
     {
+        if (box2dJointGone(objectA, objectB)) // made destroyed
+            { super(box2dJointGoneDef()); this.referenceAngle = 0; return; }
         anchor ||= box2d.vec2From(objectB.body.GetPosition());
         const localAnchorA = objectA.worldToLocal(anchor);
         const localAnchorB = objectB.worldToLocal(anchor);
@@ -22262,6 +22711,7 @@ class Box2dFrictionJoint extends Box2dJoint
      *  @param {boolean} [collide] */
     constructor(objectA, objectB, anchor, collide=false)
     {
+        if (box2dJointGone(objectA, objectB)) { super(box2dJointGoneDef()); return; } // made destroyed
         anchor ||= box2d.vec2From(objectB.body.GetPosition());
         const localAnchorA = objectA.worldToLocal(anchor);
         const localAnchorB = objectB.worldToLocal(anchor);
@@ -22321,6 +22771,7 @@ class Box2dPulleyJoint extends Box2dJoint
      *  @param {boolean} [collide] */
     constructor(objectA, objectB, groundAnchorA, groundAnchorB, anchorA, anchorB, ratio=1, collide=false)
     {
+        if (box2dJointGone(objectA, objectB)) { super(box2dJointGoneDef()); return; } // made destroyed
         anchorA ||= box2d.vec2From(objectA.body.GetPosition());
         anchorB ||= box2d.vec2From(objectB.body.GetPosition());
         const localAnchorA = objectA.worldToLocal(anchorA);
@@ -22384,6 +22835,7 @@ class Box2dMotorJoint extends Box2dJoint
      *  @param {Box2dObject} objectB */
     constructor(objectA, objectB)
     {
+        if (box2dJointGone(objectA, objectB)) { super(box2dJointGoneDef()); return; } // made destroyed
         const linearOffset = objectA.worldToLocal(box2d.vec2From(objectB.body.GetPosition()));
         const angularOffset = objectB.body.GetAngle() - objectA.body.GetAngle();
         const jointDef = new box2d.instance.b2MotorJointDef();
@@ -22771,7 +23223,7 @@ class Box2dPlugin
      *  @param {Color} [lineColor]
      *  @param {number} [lineWidth]
      *  @param {boolean} [useWebGL=glEnable]
-     *  @param {CanvasRenderingContext2D} [context] */
+     *  @param {CanvasRenderingContext2D|OffscreenCanvasRenderingContext2D} [context] */
     drawFixture(fixture, pos, angle, color=WHITE, lineColor=BLACK, lineWidth=.1, useWebGL, context)
     {
         const shape = box2d.castShapeObject(fixture.GetShape());
@@ -22900,6 +23352,10 @@ class Box2dPlugin
  *  @memberof Box2D */
 async function box2dInit()
 {
+    // called again, as in a scene's enter, it is the world there is: its hooks are added once
+    ASSERT(!box2d, 'Box2D already initialized');
+    if (box2d) return box2d;
+
     // load box2d
     // @ts-ignore - Box2D is the global that box2d.wasm.js defines
     new Box2dPlugin(await Box2D());
@@ -23395,19 +23851,19 @@ function getCrescentPoints(pos, size=1, percent=0, angle=0, invert=false, sides=
  * @namespace TextureSheets
  */
 
-/** Width and height in pixels of texture sheets created by loadSprite
+/** Width and height in pixels of texture sheets created by loadSprite, loadAtlas and loadTiles
  *  @type {number}
  *  @default
  *  @memberof Settings */
 let textureSheetSize = 2048;
 
-/** Default padding pixels around each frame packed by loadSprite
+/** Default padding pixels around each frame packed by loadSprite, loadAtlas and loadTiles
  *  @type {number}
  *  @default
  *  @memberof Settings */
 let textureSheetPadding = 1;
 
-/** Array of texture sheets created by loadSprite
+/** Array of texture sheets created by loadSprite, loadAtlas and loadTiles
  *  @type {Array<TextureSheet>}
  *  @memberof TextureSheets */
 let textureSheets = [];
@@ -23934,7 +24390,7 @@ function parseAtlasNamesCheck(groups)
     return groups;
 }
 
-/** Wait for everything started by loadSprite and loadAtlas to finish packing
+/** Wait for everything started by loadSprite, loadAtlas and loadTiles to finish packing
  *  @return {Promise<void>}
  *  @example
  *  async function gameInit()
@@ -23982,7 +24438,7 @@ function textureSheetAdd(imageSize, frameSize, padding, sourcePadding)
 ///////////////////////////////////////////////////////////////////////////////
 // Texture sheet setting setters
 
-/** Set width and height in pixels of texture sheets created by loadSprite
+/** Set width and height in pixels of texture sheets created by loadSprite, loadAtlas and loadTiles
  *  @param {number} size
  *  @memberof Settings */
 function setTextureSheetSize(size) { textureSheetSize = size; }
@@ -24706,6 +25162,7 @@ let sceneCurrent, sceneLeaving = false, scenePluginAdded = false;
 function setScene(scene)
 {
     ASSERT(!sceneLeaving, 'setScene can not be called from a scene leave');
+    if (sceneLeaving) return; // a release build, the leave would call itself till the stack runs out
     if (!scenePluginAdded)
     {
         scenePluginAdded = true;
@@ -24730,7 +25187,7 @@ function setScene(scene)
 function getScene() { return sceneCurrent; }
 
 // the plugin hooks, update skips the frozen ticks that skip gameUpdate
-function sceneUpdate() { paused || !timeScale || sceneCurrent?.update?.(); }
+function sceneUpdate() { paused || engineFrozenTick || sceneCurrent?.update?.(); }
 function sceneRender() { sceneCurrent?.render?.(); }
 function sceneRenderPost() { sceneCurrent?.renderPost?.(); }
 
@@ -25055,15 +25512,16 @@ class FollowCamera extends EngineObject
      *  this camera is the one driving it */
     snap()
     {
-        if (this.scale !== undefined)
-            setCameraScale(this.scale);
+        // a camera not driving keeps its place for later, and leaves the view and its zoom alone
+        const driving = cameraDriver() === this;
+        driving && this.scale !== undefined && setCameraScale(this.scale);
         this.lookFrom = undefined; // a teleport is not a move to look along
         this.updateLook(true);
         const focus = this.getFocus();
         if (focus)
             this.pos = focus;
         this.pos = this.inBounds(this.pos);
-        cameraDriver() === this && setCameraPos(this.pos); // a camera not driving keeps its place for later
+        driving && setCameraPos(this.pos);
     }
 
     /** Move toward the target and set the view, called by the camera plugin after the objects update */
@@ -25352,13 +25810,14 @@ class PathFinder
         return 0;
     }
 
-    /** Get the node at tile coords, or null if out of bounds
+    /** Get the node at tile coords, or null if out of bounds or not whole numbers
      *  @param {number} x
      *  @param {number} y
      *  @return {PathFinderNode|null} */
     getNode(x, y)
     {
-        if (x < 0 || y < 0 || x >= this.size.x || y >= this.size.y) return null;
+        if (!Number.isInteger(x) || !Number.isInteger(y) || x < 0 || y < 0 || x >= this.size.x || y >= this.size.y)
+            return null;
         return this.nodes[x + y * this.size.x];
     }
 
@@ -27054,6 +27513,8 @@ function raycastBox(ray, pos, size, rotation)
  *  @type {Render3DPlugin}
  *  @memberof Render3D */
 let render3D;
+// its hooks are added once: one made again, as in a scene's enter, takes the old one's place and its hooks drive it
+let render3DPluginAdded = false;
 
 /** Floats in each vertex of the GPU layout: position xyz, normal xyz, uv, and the color as rgba bytes in the last
  *  one, what meshWriteVertex writes and mesh.setVertexData takes
@@ -27086,6 +27547,21 @@ const RENDER3D_DEFAULT_UV = Object.freeze(vec2());
 const RENDER3D_SHADOW_COLOR = Object.freeze(hsl(0, 0, 0, .5));
 const RENDER3D_IDENTITY = new Matrix4; // never modified
 let render3DShadowCut; // the cut last sent to the shadow shader, see render3DSetDrawUniforms
+// how the draw being sent lights its normal, materialParams.w in the shader: 0 as a surface, 1 billboards lit with
+// no direction, 2 billboards lit round from where each pixel is on its quad; set by a batch of billboards as it draws
+let render3DBillboardMode = 0;
+
+// a batch of billboards: an additive one is light of its own and stays unlit, the rest are lit in a mode
+function render3DBillboardState(state, mode)
+{
+    if (state.additive)
+        state.lighting = false; // its own copy of the state
+    else
+    {
+        render3DBillboardMode = mode;
+        state.specular = state.reflectivity = 0; // no surface to shine or reflect
+    }
+}
 ///////////////////////////////////////////////////////////////////////////////
 // Private helpers
 
@@ -27141,13 +27617,14 @@ function render3DCanDraw()
  *  @property {TextureInfo|undefined} emissiveMap
  *  @property {Color} emissiveMapColor
  *  @property {CubeMap|undefined} environmentMap
+ *  @property {boolean} roundLighting
  *  @property {number} emissiveR
  *  @property {number} emissiveG
  *  @property {number} emissiveB
  *  @memberof Render3D */
 const RENDER3D_STATE_FIELDS = ['blend', 'additive', 'depthTest', 'depthWrite', 'cullBackFaces', 'mirrored', 'lighting',
     'emissive', 'receiveShadow', 'specular', 'pixelated', 'shader', 'normalMap', 'normalScale', 'shininess',
-    'reflectivity', 'emissiveMap', 'emissiveMapColor', 'environmentMap'];
+    'reflectivity', 'emissiveMap', 'emissiveMapColor', 'environmentMap', 'roundLighting'];
 
 // a copy of the draw state in one fixed shape, the fields of RENDER3D_STATE_FIELDS written out, and the version
 // it was taken at
@@ -27159,7 +27636,7 @@ function render3DCaptureBatchState()
         receiveShadow: d.receiveShadow, specular: d.specular, pixelated: d.pixelated, shader: d.shader,
         normalMap: d.normalMap, normalScale: d.normalScale, shininess: d.shininess, reflectivity: d.reflectivity,
         emissiveMap: d.emissiveMap, emissiveMapColor: (d.emissiveMapColor || WHITE).copy(), // the caller may change it
-        environmentMap: d.environmentMap, version: r.stateVersion};
+        environmentMap: d.environmentMap, roundLighting: d.roundLighting, version: r.stateVersion};
 }
 
 // put a captured draw state back, written out the same way; the transparent stage does this for every queued draw
@@ -27171,7 +27648,7 @@ function render3DApplyBatchState(s)
     r.receiveShadow = s.receiveShadow, r.specular = s.specular, r.pixelated = s.pixelated, r.shader = s.shader,
     r.normalMap = s.normalMap, r.normalScale = s.normalScale, r.shininess = s.shininess,
     r.reflectivity = s.reflectivity, r.emissiveMap = s.emissiveMap, r.emissiveMapColor = s.emissiveMapColor,
-    r.environmentMap = s.environmentMap;
+    r.environmentMap = s.environmentMap, r.roundLighting = s.roundLighting;
 }
 
 // true when the current draw state differs from a captured one, so a pending batch must flush first; it runs for
@@ -27187,7 +27664,7 @@ function render3DStateChanged(s)
         || d.specular !== s.specular || d.pixelated !== s.pixelated || d.shader !== s.shader
         || d.normalMap !== s.normalMap || d.normalScale !== s.normalScale || d.shininess !== s.shininess
         || d.reflectivity !== s.reflectivity || d.emissiveMap !== s.emissiveMap
-        || d.environmentMap !== s.environmentMap || d.emissiveR !== c.r || d.emissiveG !== c.g || d.emissiveB !== c.b)
+        || d.environmentMap !== s.environmentMap || d.roundLighting !== s.roundLighting || d.emissiveR !== c.r || d.emissiveG !== c.g || d.emissiveB !== c.b)
         return true;
     s.version = r.stateVersion; // set and set back to what it was: the batch goes on, checking the version again
     return false;
@@ -27224,7 +27701,10 @@ function render3DIsAfter2D(o)
 /** @param {Vector3|number} size
  *  @return {Vector3} */
 function render3DSize3(size)
-{ return isNumber(size) ? vec3(/** @type {number} */ (size)) : /** @type {Vector3} */ (size); }
+{
+    ASSERT(isNumber(size) || isVector3(size), 'a size is a number or a vec3', size);
+    return isNumber(size) ? vec3(/** @type {number} */ (size)) : /** @type {Vector3} */ (size);
+}
 
 // a size given as a number or a vec2
 /** @param {Vector2|number} size
@@ -27313,6 +27793,7 @@ function render3DSetObjectState(o)
     r.emissiveMapColor = p?.emissiveMapColor || WHITE;
     ASSERT(!p?.environment || p.environment instanceof CubeMap, 'environment must be a CubeMap');
     r.environmentMap = p?.environment || undefined;
+    r.roundLighting = !!p?.roundLighting;
     r.receiveShadow = !p || p.receiveShadow;
     r.cullBackFaces = r.mirrored = false; // each mesh sets these as it draws
     r.pixelated = !!p?.pixelated;
@@ -27351,18 +27832,18 @@ function render3DInstance(mesh, matrix, tileInfo, color)
 // differs first, and return where its 24 floats go in mesh.instanceData: the matrix, the tint and the uv rect
 // drawMesh passes whether its matrix mirrors, and its batch then culls by the mesh and winds by that at the flush,
 // so it never sets the draw state for them, which would move the state's version at every draw; drawBillboard
-// passes that its batch is unlit, for the same reason
-function render3DInstanceSlot(mesh, textureInfo, mirrored, unlit=false)
+// and the particles pass that the batch is of billboards, lit without a direction, for the same reason
+function render3DInstanceSlot(mesh, textureInfo, mirrored, billboard=false)
 {
     const r = render3D;
     if (mesh.instanceCount && (mesh.instanceTextureInfo !== textureInfo || mesh.instanceMirrored !== mirrored
-        || mesh.instanceUnlit !== unlit || render3DStateChanged(mesh.instanceState)))
+        || mesh.instanceBillboard !== billboard || render3DStateChanged(mesh.instanceState)))
         render3DFlushInstances(mesh);
     if (!mesh.instanceCount)
     {
         mesh.instanceTextureInfo = textureInfo;
         mesh.instanceMirrored = mirrored;
-        mesh.instanceUnlit = unlit;
+        mesh.instanceBillboard = billboard;
         mesh.instanceState = render3DCaptureBatchState();
         r.instanceMeshes.push(mesh);
     }
@@ -27394,11 +27875,12 @@ function render3DFlushInstances(only)
         gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
         gl.bufferData(gl.ARRAY_BUFFER, mesh.instanceData, gl.DYNAMIC_DRAW, 0, count * RENDER3D_INSTANCE_FLOATS);
         const state = mesh.instanceState;
-        if (mesh.instanceMirrored !== undefined) // a drawMesh batch: culled by its mesh, wound by its matrices
+        if (mesh.instanceMirrored !== undefined) // a drawMesh or drawBillboard batch: culled by its mesh, wound by its matrices
             state.cullBackFaces = !mesh.doubleSided, state.mirrored = mesh.instanceMirrored;
-        if (mesh.instanceUnlit) // a batch of sprites
-            state.lighting = false;
+        // a batch of sprites or particles, round from where each pixel is on its quad
+        mesh.instanceBillboard && render3DBillboardState(state, state.roundLighting ? 2 : 1);
         render3DDrawInstanced(mesh, buffer, count, mesh.instanceTextureInfo, state);
+        render3DBillboardMode = 0;
     }
     if (!only)
         r.instanceMeshes.length = 0;
@@ -27414,7 +27896,7 @@ function render3DFlushInstances(only)
 // draw reads these slots as constant attributes, and in Firefox a draw that reads a constant through a slot whose
 // divisor is set leaves the next batch on that slot reading the wrong values
 // colorBuffer holds the tint and uv rect apart from the matrices, as an InstancedMesh3D keeps them
-function render3DDrawInstanced(mesh, buffer, count, textureInfo, state, colorBuffer)
+function render3DDrawInstanced(mesh, buffer, count, textureInfo, state, colorBuffer, dataBuffer)
 {
     const gl = glContext, matrixBytes = RENDER3D_MATRIX_FLOATS * 4;
     for (const [location, size, offset] of RENDER3D_INSTANCE_ATTRIBS)
@@ -27426,13 +27908,34 @@ function render3DDrawInstanced(mesh, buffer, count, textureInfo, state, colorBuf
         gl.enableVertexAttribArray(location);
         gl.vertexAttribDivisor(location, 1);
     }
-    render3DSetDrawUniforms(RENDER3D_IDENTITY, textureInfo, WHITE, RENDER3D_FULL_UV_RECT, state);
-    render3DBindMesh(mesh);
-    gl.drawElementsInstanced(gl.TRIANGLES, mesh.bufferCount, mesh.indexType, 0, count);
-    for (const [location] of RENDER3D_INSTANCE_ATTRIBS)
+    if (dataBuffer)
     {
-        gl.disableVertexAttribArray(location);
-        gl.vertexAttribDivisor(location, 0);
+        // each instance's data on slot 8, its divisor only while its array is on, as for the others
+        gl.bindBuffer(gl.ARRAY_BUFFER, dataBuffer);
+        gl.vertexAttribPointer(8, 4, gl.FLOAT, false, 16, 0);
+        gl.enableVertexAttribArray(8);
+        gl.vertexAttribDivisor(8, 1);
+    }
+    try
+    {
+        render3DSetDrawUniforms(RENDER3D_IDENTITY, textureInfo, WHITE, RENDER3D_FULL_UV_RECT, state);
+        render3DBindMesh(mesh);
+        gl.drawElementsInstanced(gl.TRIANGLES, mesh.bufferCount, mesh.indexType, 0, count);
+    }
+    finally
+    {
+        // off even when the uniforms throw, a debug assert or a shader that fails to compile, or the next plain
+        // draws read these slots through their divisors
+        for (const [location] of RENDER3D_INSTANCE_ATTRIBS)
+        {
+            gl.disableVertexAttribArray(location);
+            gl.vertexAttribDivisor(location, 0);
+        }
+        if (dataBuffer)
+        {
+            gl.disableVertexAttribArray(8);
+            gl.vertexAttribDivisor(8, 0);
+        }
     }
     ++drawCount;
     primitiveCount += mesh.bufferCount / 3 * count;
@@ -27558,8 +28061,8 @@ class Render3DPlugin
         this.drawState = {blend: false, additive: false, depthTest: true, depthWrite: true, cullBackFaces: false,
             mirrored: false, lighting: true, emissive: 0, receiveShadow: true, specular: 0, pixelated: false,
             shader: undefined, normalMap: undefined, normalScale: 1, shininess: 16, reflectivity: 0,
-            emissiveMap: undefined, emissiveMapColor: WHITE, environmentMap: undefined, emissiveR: 1, emissiveG: 1,
-            emissiveB: 1};
+            emissiveMap: undefined, emissiveMapColor: WHITE, environmentMap: undefined, roundLighting: false,
+            emissiveR: 1, emissiveG: 1, emissiveB: 1};
         /** @property {number} - Goes up when a draw state field changes, so a batch sees at a glance that none did */
         this.stateVersion = 0;
         ASSERT(Object.keys(render3DCaptureBatchState()).join() === [...RENDER3D_STATE_FIELDS, 'version'].join(),
@@ -27797,14 +28300,17 @@ class Render3DPlugin
         this.streamTileInfo = undefined;
         /** @type {Object|undefined} */
         this.streamState = undefined; // captured state the pending batch was drawn under, render3DCaptureBatchState's
-        this.streamUnlit = false;     // the pending batch is drawn unlit whatever that state says, billboards are
+        this.streamBillboard = false; // the pending batch is of billboards, lit without a direction
         /** @type {Mesh|undefined} */
         this.capture = undefined;     // the mesh a bake is filling
         /** @type {Array<{distance: number, state: Object, draw: function(): void}>|undefined} */
         this.transparentQueue = undefined; // draws queued during the transparent stage, replayed far to near
 
         render3DInitGL();
-        engineAddPlugin(undefined, render3DRender, render3DContextLost, render3DContextRestored, render3DPreRender);
+        render3DPluginAdded || engineAddPlugin(undefined, render3DRender, render3DContextLost, render3DContextRestored,
+            render3DPreRender, render3DGridRelease);
+        render3DPluginAdded = true;
+        engineObjectsPhysicsDone = render3DGridPhysicsDone;
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -27887,6 +28393,13 @@ class Render3DPlugin
     get environmentMap() { return this.drawState.environmentMap; }
     set environmentMap(v)
     { const d = this.drawState; d.environmentMap === v || (d.environmentMap = v, ++this.stateVersion); }
+
+    /** Light the next billboards as if they bulge toward the camera like a ball, lit on the side toward each light,
+     *  in place of the same all over; set from each object's roundLighting, a normal map overrides it
+     *  @return {boolean} */
+    get roundLighting() { return this.drawState.roundLighting; }
+    set roundLighting(v)
+    { const d = this.drawState; d.roundLighting === v || (d.roundLighting = v, ++this.stateVersion); }
 
     /** Multiplies the emissive map, set from each object's emissiveMapColor; compared by its rgb, so a Color
      *  changed in place is seen when it is set again, and undefined is white
@@ -28013,10 +28526,11 @@ class Render3DPlugin
 
     /** Find the nearest object under a screen position or along a ray, for clicking on things
      *  - A mesh is hit on its triangles, the ones that face the ray as they are drawn, both sides of a doubleSided
-     *    mesh; a sprite is hit as the quad it draws, and a height map or a voxel map on its surface
+     *    mesh; a sprite is hit as the quad it draws, and a height map, voxel map or mesh collider on its surface
      *  - engineObjectsRaycast3D is the other half of this, every object along a ray instead of the nearest
      *  @param {Vector2|Ray3D} from - A screen position like mousePosScreen, or a ray to look along
-     *  @param {Array<EngineObject>} [objects] - Defaults to every object; only those with a mesh or a sprite count
+     *  @param {Array<EngineObject>} [objects] - Defaults to every object; only those with a mesh or a sprite count,
+     *    and the height maps, voxel maps and mesh colliders, on their surfaces
      *  @return {{object: EngineObject3D, distance: number}|undefined} */
     pick(from, objects=engineObjects)
     {
@@ -28106,7 +28620,7 @@ class Render3DPlugin
             return this.queueTransparent(m.getTranslation(), ()=> this.drawMesh(mesh, m, tileInfo, c));
         }
         if (!render3DCanDraw()) return;
-        if (this.shadowPass && !this.lighting) return; // unlit things cast no shadow
+        if (this.shadowPass && !this.depthPass && !this.lighting) return; // unlit casts no shadow, but is in the depth
         render3DMeshUpload(mesh);
         if (!mesh.bufferCount) return;
         const m = matrix.m;
@@ -28194,9 +28708,10 @@ class Render3DPlugin
     {
         if (!this.streamCount || !render3DCanDraw()) return;
         const gl = glContext;
-        if (this.streamUnlit)
-            this.streamState.lighting = false; // its own copy of the state
+        // billboards, round from the bent normals their corners were written with
+        this.streamBillboard && render3DBillboardState(this.streamState, this.streamState.roundLighting ? 0 : 1);
         render3DSetDrawUniforms(RENDER3D_IDENTITY, this.streamTileInfo, WHITE, RENDER3D_FULL_UV_RECT, this.streamState);
+        render3DBillboardMode = 0;
         render3DBindVertexBuffer(this.streamBuffer);
         gl.bufferSubData(gl.ARRAY_BUFFER, 0, this.streamFloats, 0, this.streamCount * RENDER3D_VERTEX_FLOATS);
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, this.streamCount);
@@ -28421,7 +28936,12 @@ class Render3DPlugin
         this.drawMesh(this.sphereMesh, buildMatrix(pos, undefined, vec3(size)), undefined, color);
     }
 
-    /** Draw a flat square that always faces the camera, unlit so it keeps its own colors
+    /** Draw a flat square that always faces the camera
+     *  - Lit with no direction, since it always faces the camera: each light by how near it is, the sun where its
+     *    light reaches, the ambient and the shadows, the same from any side, so a cloud is brighter by a light in
+     *    it; with roundLighting it is lit as a ball, bright on the side toward each light, and with a normal map
+     *    as a card facing the camera; no specular or reflection
+     *  - An additive one is light of its own and stays unlit, and emissive 1 keeps its own colors
      *  - Draw it from onRenderTransparent or a transparent object so it can fade
      *  @param {Vector3} pos - Center
      *  @param {Vector2} [size] - World units
@@ -28441,22 +28961,22 @@ class Render3DPlugin
             return this.queueTransparent(p, ()=> this.drawBillboard(p, s, tileInfo, c, angle, upright));
         }
 
-        // unlit on screen, in the shadow map the object's flag decides; the batch is told, the draw state is not
+        // lit as a billboard on screen, in the shadow map as anything; the batch is told, the draw state is not
         // set, which would move its version at every sprite
-        const unlit = !this.shadowPass;
+        const billboard = !this.shadowPass;
         if (!this.blend && this.depthTest && this.instancing)
         {
             // an opaque sprite is one more instance of the shared quad, as a mesh's uses are: every sprite of a
             // sheet is one instanced draw at the end of the stage, with nothing written per corner; the shader
             // drops its see through texels, so it needs no sorting
-            if (!render3DCanDraw() || this.shadowPass && !this.lighting) return; // unlit things cast no shadow
+            if (!render3DCanDraw() || this.shadowPass && !this.depthPass && !this.lighting) return; // unlit: in depth, no shadow
             if (this.frustumCulling && !render3DSphereVisible(pos.x, pos.y, pos.z, hypot(size.x, size.y) / 2))
                 return;
             const quad = this.billboardMesh, cb = this.cameraBack, uv = render3DGetTileUVs(tileInfo);
             render3DMeshUpload(quad);
             // the quad's half axes, doubled for its unit square
             const a = render3DBillboardAxes(size, angle, upright);
-            const k = render3DInstanceSlot(quad, render3DTextureOf(tileInfo), false, unlit), data = quad.instanceData;
+            const k = render3DInstanceSlot(quad, render3DTextureOf(tileInfo), false, billboard), data = quad.instanceData;
             data[k]    = a[0] * 2; data[k+1]  = a[1] * 2; data[k+2]  = a[2] * 2; data[k+3]  = 0;
             data[k+4]  = a[3] * 2; data[k+5]  = a[4] * 2; data[k+6]  = a[5] * 2; data[k+7]  = 0;
             data[k+8]  = cb.x;     data[k+9]  = cb.y;     data[k+10] = cb.z;     data[k+11] = 0;
@@ -28468,7 +28988,7 @@ class Render3DPlugin
 
         // one that blends is drawn in its sorted place: the quad's six stream vertices written straight in with no
         // vectors made, for sprites that blend, and for particles when instancing is off
-        const uvRect = render3DBeginStrip(6, tileInfo, unlit);
+        const uvRect = render3DBeginStrip(6, tileInfo, billboard);
         if (!uvRect) return;
         const a = render3DBillboardAxes(size, angle, upright);
         const rx = a[0], ry = a[1], rz = a[2], ux = a[3], uy = a[4], uz = a[5];
@@ -28477,13 +28997,26 @@ class Render3DPlugin
         const floats = this.streamFloats, ints = this.streamInts, stride = RENDER3D_VERTEX_FLOATS;
         let j = this.streamCount * stride;
         this.streamCount += 6;
+        // the normal at each corner: facing the camera, or for round lighting bent out along the quad's own right
+        // and up, which the GPU blends across it into the bulge the shader makes from an instance's own uvs
+        // a normal map lights it as a card facing the camera, with no bend
+        const round = billboard && this.roundLighting && !this.normalMap, kr = round ? 1 / (hypot(rx, ry, rz) || 1) : 0;
+        const ku = round ? 1 / (hypot(ux, uy, uz) || 1) : 0;
+        // the bend toward the right and toward the top, the left and the bottom the other way
+        const bx = rx * kr, by = ry * kr, bz = rz * kr, cx = ux * ku, cy = uy * ku, cz = uz * ku;
+        const tx = n.x + cx, ty = n.y + cy, tz = n.z + cz, dx = n.x - cx, dy = n.y - cy, dz = n.z - cz;
         // the corners in strip order with the repeats: top left twice, bottom left, top right, bottom right twice
-        render3DWriteVertex(floats, ints, j, x - rx + ux, y - ry + uy, z - rz + uz, n, u0, v0, rgba);
-        render3DWriteVertex(floats, ints, j += stride, x - rx + ux, y - ry + uy, z - rz + uz, n, u0, v0, rgba);
-        render3DWriteVertex(floats, ints, j += stride, x - rx - ux, y - ry - uy, z - rz - uz, n, u0, v1, rgba);
-        render3DWriteVertex(floats, ints, j += stride, x + rx + ux, y + ry + uy, z + rz + uz, n, u1, v0, rgba);
-        render3DWriteVertex(floats, ints, j += stride, x + rx - ux, y + ry - uy, z + rz - uz, n, u1, v1, rgba);
-        render3DWriteVertex(floats, ints, j += stride, x + rx - ux, y + ry - uy, z + rz - uz, n, u1, v1, rgba);
+        meshWriteVertex(floats, ints, j, x - rx + ux, y - ry + uy, z - rz + uz, tx - bx, ty - by, tz - bz, u0, v0, rgba);
+        meshWriteVertex(floats, ints, j += stride, x - rx + ux, y - ry + uy, z - rz + uz, tx - bx, ty - by, tz - bz,
+            u0, v0, rgba);
+        meshWriteVertex(floats, ints, j += stride, x - rx - ux, y - ry - uy, z - rz - uz, dx - bx, dy - by, dz - bz,
+            u0, v1, rgba);
+        meshWriteVertex(floats, ints, j += stride, x + rx + ux, y + ry + uy, z + rz + uz, tx + bx, ty + by, tz + bz,
+            u1, v0, rgba);
+        meshWriteVertex(floats, ints, j += stride, x + rx - ux, y + ry - uy, z + rz - uz, dx + bx, dy + by, dz + bz,
+            u1, v1, rgba);
+        meshWriteVertex(floats, ints, j += stride, x + rx - ux, y + ry - uy, z + rz - uz, dx + bx, dy + by, dz + bz,
+            u1, v1, rgba);
     }
 
     /** Draw a quad from four corners in loop order, counter clockwise seen from the front, a is the top left of the texture
@@ -28691,6 +29224,8 @@ class Camera3D
      *  @return {Matrix4} */
     getProjectionMatrix(aspect)
     {
+        ASSERT(aspect > 0 && (this.orthographic > 0 || this.fov > 0),
+            'Camera3D: the aspect and the fov, or orthographic, must be above 0', aspect, this.fov);
         const h = this.orthographic / 2, w = h * aspect;
         return h ? Matrix4.orthographic(-w, w, -h, h, this.near, this.far) :
             Matrix4.perspective(this.fov, aspect, this.near, this.far);
@@ -28781,7 +29316,7 @@ const RENDER3D_VERTEX_SNIPPET_NAMES =
 
 // given a Shader's vertex code, its mainVertex moves the world position and normal after the model matrix, with the
 // color worked out first so it can change it, and the rest uses what it gives; without, the source is as it was
-function render3DVertexSource(vertexCode)
+function render3DVertexSource(vertexCode, declarations='')
 {
     return '#version 300 es\n' +
         'precision highp float;' +
@@ -28800,7 +29335,7 @@ function render3DVertexSource(vertexCode)
             'gl_Position=viewProj*w;' +
             'P=q;' +
             'S=lightViewProj*w;' +
-            '}\n' + RENDER3D_VERTEX_SNIPPET_NAMES + vertexCode + '\n'
+            '}\n' + RENDER3D_VERTEX_SNIPPET_NAMES + declarations + vertexCode + '\n'
         :
             'void main(){' +
             'vec4 w=mat4(m0,m1,m2,m3)*vec4(p,1.);' +
@@ -28838,9 +29373,10 @@ const RENDER3D_SNIPPET_NAMES =
 //   fogFade (x = fogFadeStart, y = fogFadeEnd, 0 skips the fade, z = 1 measures fog along the view),
 //   cameraPos, cameraDir (the view's forward), tex, shadowMap, shadowParams (x = shadows on, y = bias, z = blur step in texture space,
 //   w = how the draw finishes: 1 opaque and alpha tested, 0 blended, -1 additive),
-//   materialParams (x = normal map scale, 0 skips it, y = shininess, z = reflectivity), emissiveTint (rgb, a = the
+//   materialParams (x = normal map scale, 0 skips it, y = shininess, z = reflectivity, w = how a billboard is lit,
+//   see render3DBillboardMode), emissiveTint (rgb, a = the
 //   emissive map is on), skyTop, skyHorizon, skyBottom (what a reflection shows), normalTex, emissiveTex
-function render3DFragmentSource(fragmentCode)
+function render3DFragmentSource(fragmentCode, declarations='')
 {
     const hasNormal = /\bmainNormal\s*\(/.test(fragmentCode || '');
     return '#version 300 es\n' +
@@ -28888,6 +29424,14 @@ function render3DFragmentSource(fragmentCode)
         'vec3 m=texture(normalTex,T).xyz*2.-1.;' +
         'm.xy*=materialParams.x;' +
         'return normalize((u*m.x-v*m.y)*inversesqrt(k)+n*m.z);}' +
+        // a billboard lit round: bent out toward where the pixel is on its quad, from the quad's own uvs and the same
+        // frame, as the bent corner normals of one in the stream blend across it
+        'vec3 roundNormal(vec3 n){' +
+        'vec3 p1=dFdx(P),p2=dFdy(P);vec2 t1=dFdx(L),t2=dFdy(L);' +
+        'vec3 a=cross(p2,n),b=cross(n,p1),u=a*t1.x+b*t2.x,v=a*t1.y+b*t2.y;' +
+        'if(dot(u,u)<=0.||dot(v,v)<=0.)return n;' +
+        'vec2 q=L*2.-1.;' +
+        'return normalize(n+normalize(u)*q.x+normalize(v)*q.y);}' +
         // a snippet's mainImage is declared here and written after main, so a define in it can not reach main
         (fragmentCode ? 'void mainImage(out vec4,vec2);' : '') +
         (hasNormal ? 'void mainNormal(inout vec3);' : '') +
@@ -28899,14 +29443,18 @@ function render3DFragmentSource(fragmentCode)
         'if(e<1.){' +
         'vec3 n=dot(N,N)>0.?normalize(N):vec3(0,1,0);' +
         'if(!gl_FrontFacing)n=-n;' + // only a double sided mesh shows a back face, light it on the side that is seen
-        'if(materialParams.x!=0.)n=normalMapNormal(n);' +
+        // materialParams.w: 0 a surface, 1 a billboard lit with no direction, 2 one lit round; a normal map makes a
+        // billboard a card facing the camera, lit as a surface
+        // a Shader's mainNormal lights it as a surface too, so it has a normal to bend
+        (hasNormal ? 'float bm=0.;' : 'float bm=materialParams.x!=0.?0.:materialParams.w;') +
+        'if(materialParams.x!=0.)n=normalMapNormal(n);else if(bm==2.)n=roundNormal(n);' +
         (hasNormal ? 'mainNormal(n);n=normalize(n);' : '') +
-        'float nl=dot(n,-lightDir.xyz);' +
+        'float nl=bm==1.?1.:dot(n,-lightDir.xyz);' +
         // the shadow is the sun's, or one spotlight's: shadowParams.x is 1 for the sun, 2 and up for that Light3D
         'float sh=shadow(),s=shadowParams.x<1.5?sh:1.;' +
         'int si=int(shadowParams.x+.5)-2;' +
         // the ambient: one color, or blended from the ground color below to the sky color above by the way the face points
-        'vec3 l=(ambientGround.a>0.?mix(ambientGround.rgb,ambientFog.rgb,n.y*.5+.5):ambientFog.rgb)+lightColor.rgb*max(nl,0.)*s;' +
+        'vec3 l=(ambientGround.a>0.?mix(ambientGround.rgb,ambientFog.rgb,bm==1.?.5:n.y*.5+.5):ambientFog.rgb)+lightColor.rgb*max(nl,0.)*s;' +
         // the Light3D objects: a point light falls off with distance, a directional one does not and carries the
         // direction toward it in xyz, marked by a negative radius; each adds its own highlight when there is a strength
         'vec3 eye=lightColor.a>0.?normalize(cameraPos-P):vec3(0),sp=vec3(0);' +
@@ -28918,7 +29466,7 @@ function render3DFragmentSource(fragmentCode)
         'float d=length(v);' +
         'float a=directional?1.:max(0.,1.-d/L.w);' +
         'v/=max(d,1e-6);' +
-        'float ln=dot(n,v);' +
+        'float ln=bm==1.?1.:dot(n,v);' +
         'vec3 lc=extraLightColors[i].rgb*extraLightColors[i].a*a*a;' +
         // a spotlight's cone: full where its fade starts, nothing at its edge, smooth between; 1 with no cone
         'vec4 K=extraLightCones[i];' +
@@ -28962,7 +29510,7 @@ function render3DFragmentSource(fragmentCode)
         'if(shadowParams.w>0.&&t.a<.5)discard;' +
         'o=vec4(c.rgb,shadowParams.w>0.?1.:c.a);' +
         '}' +
-        (fragmentCode ? '\n' + RENDER3D_SNIPPET_NAMES + fragmentCode + '\n' : '');
+        (fragmentCode ? '\n' + RENDER3D_SNIPPET_NAMES + declarations + fragmentCode + '\n' : '');
 }
 
 // a Shader's 3D program, compiled the first time a draw needs it
@@ -28970,16 +29518,39 @@ function render3DShaderProgram(shader)
 {
     ASSERT(shader instanceof Shader, 'render3D.shader must be a Shader, not the snippet itself');
     shader.program3D || glShaderTrack(shader); // one let go of and drawn again is kept for a lost context again
-    const program = shader.program3D ||= glCreateProgram(render3DVertexSource(shader.vertexCode),
-        render3DFragmentSource(shader.fragmentCode));
+    // its own uniforms, declared in the stages that use them, and an instance's data when it reads it
+    const program = shader.program3D ||= glCreateProgram(
+        render3DInstanceDataVertex(render3DVertexSource(shader.vertexCode,
+            glUniformDeclarations(shader, shader.vertexCode)),
+            render3DUsesInstanceData(shader.fragmentCode + ' ' + shader.vertexCode), true),
+        render3DInstanceDataFragment(render3DFragmentSource(shader.fragmentCode,
+            glUniformDeclarations(shader, shader.fragmentCode)), render3DUsesInstanceData(shader.fragmentCode)));
     return glFailedPrograms.has(program) ? render3D.program : program; // one that did not build draws as with none
+}
+
+// whether a snippet reads an instance's data, the four numbers an InstancedMesh3D's setDataAt gives each instance;
+// only a program of a Shader that does takes the input, so the plugin's own and every other stay as they were
+const render3DUsesInstanceData = (code)=> /\binstanceData\b/.test(code);
+
+// the vertex stage of a program that reads the data: the input on slot 8, passed on to the fragment stage when
+// it reads it too; slot 8 holds zeros for any draw that is not of a set with data
+function render3DInstanceDataVertex(source, data, passOn)
+{
+    if (!data) return source;
+    return source.replace('void main(){', 'layout(location=8) in vec4 instanceData;' +
+        (passOn ? 'out vec4 instanceDataV;void main(){instanceDataV=instanceData;' : 'void main(){'));
+}
+function render3DInstanceDataFragment(source, data)
+{
+    return data ? source.replace('out vec4 o;', 'out vec4 o;in vec4 instanceDataV;\n#define instanceData instanceDataV\n') :
+        source;
 }
 
 // the depth only program for the shadow map and the camera's depth, same vertex layout; see through pixels cast
 // nothing, so sprites and cut out textures cast their outline, and a blended object faded below half its alpha
 // casts nothing, as it draws; an opaque one draws solid whatever its tint alpha, and casts so; given a Shader's
 // vertex code, its mainVertex moves the vertex as it does on the screen, with the world normal and a color of its own
-function render3DShadowVertexSource(vertexCode)
+function render3DShadowVertexSource(vertexCode, declarations='')
 {
     return '#version 300 es\n' +
         'precision highp float;' +
@@ -28991,7 +29562,7 @@ function render3DShadowVertexSource(vertexCode)
             'void main(){T=uvRect.xy+t*uvRect.zw;C=c*tint;' +
             'vec4 w=mat4(m0,m1,m2,m3)*vec4(p,1.);' + RENDER3D_VERTEX_NORMAL +
             'vec3 q=w.xyz;mainVertex(q,N);A=C.a;gl_Position=viewProj*vec4(q,1.);}\n' +
-            RENDER3D_VERTEX_SNIPPET_NAMES + vertexCode + '\n'
+            RENDER3D_VERTEX_SNIPPET_NAMES + declarations + vertexCode + '\n'
         :
             'void main(){T=uvRect.xy+t*uvRect.zw;A=c.a*tint.a;gl_Position=viewProj*mat4(m0,m1,m2,m3)*vec4(p,1.);}');
 }
@@ -29009,10 +29580,14 @@ function render3DShadowProgram(shader)
     const r = render3D;
     if (!shader?.vertexCode) return r.shadowShader;
     shader.shadowProgram3D || glShaderTrack(shader);
-    const program = shader.shadowProgram3D ||= glCreateProgram(render3DShadowVertexSource(shader.vertexCode),
-        RENDER3D_SHADOW_FRAGMENT_SOURCE);
+    const program = shader.shadowProgram3D ||= glCreateProgram(render3DInstanceDataVertex(
+        render3DShadowVertexSource(shader.vertexCode, glUniformDeclarations(shader, shader.vertexCode)),
+        render3DUsesInstanceData(shader.vertexCode), false), RENDER3D_SHADOW_FRAGMENT_SOURCE);
     return glFailedPrograms.has(program) ? r.shadowShader : program; // one that did not build casts as with none
 }
+
+// a uniform's place in the depth program in use
+const render3DShadowUniform = (name)=> render3DUniform(name, render3D.shadowProgram);
 
 // make a depth program current for the shadow map or the camera's depth and send it the pass's matrix, plus for a
 // Shader's the names its vertex code reads, the camera's own place so a vertex moves as it does on the screen
@@ -29080,6 +29655,7 @@ function render3DInitGL()
     r.uniformValues = {};
     render3DShadowCut = undefined; // the shadow shader is new too
     r.attribValues = []; // a fresh context has its own attribute defaults, so nothing sent before it counts
+    gl.vertexAttrib4f(8, 0, 0, 0, 0); // an instance's data, zeros for every draw that is not of a set with data
 
     // the shader, see RENDER3D_VERTEX_SOURCE and render3DFragmentSource
     r.program = glCreateProgram(RENDER3D_VERTEX_SOURCE, render3DFragmentSource());
@@ -29191,7 +29767,9 @@ class CubeMap
     /** Free its texture, which is made again if it is used after */
     dispose()
     {
-        this.glTexture && glContext?.deleteTexture(this.glTexture);
+        // a texture of a context lost since is gone with it
+        this.glTexture && this.contextGeneration === render3D?.contextGeneration &&
+            glContext?.deleteTexture(this.glTexture);
         this.glTexture = undefined;
         render3D?.cubeCaptures.delete(this);
     }
@@ -29488,8 +30066,9 @@ function render3DUniform(name, program=render3D.currentProgram)
 {
     const u = render3D.uniforms;
     let cache = u.get(program);
-    cache || u.set(program, cache = {});
-    return cache[name] ??= glContext.getUniformLocation(program, name);
+    cache || u.set(program, cache = Object.create(null));
+    // a null one is kept too, for a uniform the compiler left out
+    return name in cache ? cache[name] : cache[name] = glContext.getUniformLocation(program, name);
 }
 
 // the model matrix, the tint and the uv rect as constant attributes for one draw
@@ -29586,7 +30165,8 @@ function render3DSetMaterialUniforms(state)
 {
     const r = render3D, loaded = (map)=> render3DTextureOf(map)?.glTexture ? map : undefined;
     const normalMap = state.normalScale ? loaded(state.normalMap) : undefined, emissiveMap = loaded(state.emissiveMap);
-    render3DUniform4f('materialParams', normalMap ? state.normalScale : 0, max(state.shininess, 1e-3), state.reflectivity, 0);
+    render3DUniform4f('materialParams', normalMap ? state.normalScale : 0, max(state.shininess, 1e-3), state.reflectivity,
+        render3DBillboardMode);
     const ec = state.emissiveMapColor || WHITE;
     emissiveMap ? render3DUniform4f('emissiveTint', ec.r, ec.g, ec.b, 1) : render3DUniform4f('emissiveTint', 0, 0, 0, 0);
     render3DBindMap(2, normalMap, state);
@@ -29682,9 +30262,8 @@ function render3DBindMesh(mesh)
 // the texture a draw samples: a tile's texture, a TextureInfo as it is, or undefined for white
 function render3DTextureOf(tileInfo) { return tileInfo instanceof TileInfo ? tileInfo.textureInfo : tileInfo; }
 
-// where a tile sits in its texture, pulled in slightly at the edges so neighbors do not bleed in
-// the level's solid geometry in 3D, the height maps and voxel maps that objects with collideLevel collide with, as
-// tileCollisionLayers is in 2D; each joins when made and leaves when destroyed
+// the level's solid geometry in 3D, the height maps, voxel maps and mesh colliders that objects with collideLevel
+// collide with, as tileCollisionLayers is in 2D; each joins when made and leaves when destroyed
 const render3DLevel = [];
 
 // take one of the level's parts out of it, when it is destroyed
@@ -29694,13 +30273,15 @@ function render3DLevelLeave(o)
     i >= 0 && render3DLevel.splice(i, 1);
 }
 
-// the level's parts are looked up in world space, so they stay upright and unscaled at the root
+// a height map's and a voxel map's cells are looked up in world space, so they stay upright and unscaled at the
+// root; a mesh collider bakes its own turn and scale and calls none of this
 function render3DLevelAssertPlaced(o)
 {
     ASSERT(!o.parent && !o.rotation3D.lengthSquared() && o.scale3D.x === 1 && o.scale3D.y === 1 && o.scale3D.z === 1,
         'a height map or voxel map stays upright and unscaled at the root, its lookups are in world space');
 }
 
+// where a tile sits in its texture, pulled in slightly at the edges so neighbors do not bleed in
 // this returns one shared object, so read it before calling again
 const render3DTileUVRect = {x:0, y:0, w:1, h:1};
 // the tiles of objects made from a whole TextureInfo, they cover all of it even after the texture is resized
@@ -29737,6 +30318,7 @@ function render3DSetDrawUniforms(matrix, tileInfo, tint, uvRect, state=render3D)
         // texture's as an opaque draw
         const program = render3DShadowProgram(state.shader);
         program === r.shadowProgram || render3DUseShadowProgram(program);
+        program === r.shadowShader || glShaderSendUniforms(state.shader, program, render3DShadowUniform);
         const cut = state.blend ? 1 : 0;
         if (render3DShadowCut !== cut)
             glContext.uniform1f(render3DUniform('cut', program), render3DShadowCut = cut);
@@ -29746,6 +30328,7 @@ function render3DSetDrawUniforms(matrix, tileInfo, tint, uvRect, state=render3D)
     // the program: a Shader's own, compiled by its first draw, or the plugin's; switching sends the pass uniforms
     const program = state.shader ? render3DShaderProgram(state.shader) : r.program;
     program === r.currentProgram || render3DUseProgram(program);
+    program === r.program || glShaderSendUniforms(state.shader, program, render3DUniform); // its own, when they changed
 
     // blending, matches the engine's 2D blend functions
     if (state.blend)
@@ -29845,9 +30428,13 @@ function render3DPreRender()
 // the render hook, after gameRenderPost: the layer on top of the 2D scene
 function render3DRender()
 {
-    render3DRenderPass(true);
-    editor3DCameraEnd();
-    render3DShakeEnd();
+    // the game's own camera back, the editor's and the shaken one taken out, even when a draw in the pass throws
+    try { render3DRenderPass(true); }
+    finally
+    {
+        editor3DCameraEnd();
+        render3DShakeEnd();
+    }
 }
 
 // one 3D pass for the objects of a layer: take over the gl state, draw the shadow map once a frame and the stages, hand
@@ -29922,8 +30509,22 @@ function render3DRenderPass(after2D)
             render3DRenderShadowMap();
             r.shadowMapDrawn = true;
         }
-        // the camera's depth for post processing, from the default layer
+        else if (!r.shadows && r.shadowTextureSize > 1)
+        {
+            // shadows turned off give the map's memory back, one texel keeps the sampler valid
+            const target = gl.getParameter(gl.FRAMEBUFFER_BINDING);
+            render3DUpdateShadowMap(1);
+            gl.bindFramebuffer(gl.FRAMEBUFFER, target);
+        }
+        // the camera's depth for post processing, from the default layer, and its memory back when it is turned off
         r.depthTexture && isDefault && render3DRenderDepth();
+        if (!r.depthTexture && r.cameraDepthTexture)
+        {
+            gl.deleteTexture(r.cameraDepthTexture);
+            gl.deleteFramebuffer(r.cameraDepthFramebuffer);
+            r.cameraDepthFramebuffer = r.cameraDepthTexture = undefined;
+            r.cameraDepthWidth = r.cameraDepthHeight = 0;
+        }
         // the cube maps asked for by capture, drawn with this frame's shadow map
         isDefault && r.cubeCaptures.size && render3DCaptureCubes(objects);
         render3DUseProgram(r.program); // after the shadow map, so the light matrix it sends is this frame's
@@ -29934,6 +30535,7 @@ function render3DRenderPass(after2D)
         // hand the state back to the engine's 2D batching, even when a draw threw
         r.isRendering = false;
         r.currentProgram = undefined; // the engine's 2D program takes over below
+        render3DBillboardMode = 0; // a batch that threw while drawing leaves no billboard lighting behind
         r.streamCount = 0;
         r.capture = r.transparentQueue = undefined;
         gl.disable(gl.DEPTH_TEST);
@@ -30115,23 +30717,23 @@ function render3DRenderDepth()
 // which way they face, so keeping the count even keeps every strip facing out.
 
 // make room in the stream for a strip of count vertices under the current state and texture, flushing a batch that
-// differs first; returns the uv rect to map the vertices with, or undefined when nothing can be drawn; unlit draws
-// the batch unlit whatever the state says, so a billboard does not set the state and set it back at every draw
-function render3DBeginStrip(count, tileInfo, unlit=false)
+// differs first; returns the uv rect to map the vertices with, or undefined when nothing can be drawn; billboard
+// lights the batch as billboards are lit, so a billboard does not set the state and set it back at every draw
+function render3DBeginStrip(count, tileInfo, billboard=false)
 {
     const r = render3D;
     if (!render3DCanDraw()) return;
-    if (r.shadowPass && !r.lighting) return; // unlit things cast no shadow
+    if (r.shadowPass && !r.depthPass && !r.lighting) return; // unlit casts no shadow, but is in the depth
     ASSERT(count <= RENDER3D_MAX_STREAM_VERTS, 'strip is too large for the stream, bake it into a mesh');
     if (count > RENDER3D_MAX_STREAM_VERTS) return;
     const textureInfo = render3DTextureOf(tileInfo);
-    if (r.streamCount && (textureInfo !== r.streamTileInfo || r.streamUnlit !== unlit
+    if (r.streamCount && (textureInfo !== r.streamTileInfo || r.streamBillboard !== billboard
         || render3DStateChanged(r.streamState) || r.streamCount + count > RENDER3D_MAX_STREAM_VERTS))
         r.flush();
     render3DFlushBeforeOverlay();
     if (!r.streamCount)
         r.streamState = render3DCaptureBatchState();
-    r.streamUnlit = unlit;
+    r.streamBillboard = billboard;
     r.streamTileInfo = textureInfo;
     return render3DGetTileUVs(tileInfo);
 }
@@ -30860,7 +31462,8 @@ class Mesh
         return this.transform(Matrix4.scaling(vec3(scale)));
     }
 
-    /** Measure the bounding sphere around the origin into radius, called by upload
+    /** Measure the bounding sphere around the origin into radius; upload measures it as it packs, and calls this
+     *  only with no WebGL
      *  @return {number} */
     computeRadius()
     {
@@ -30874,7 +31477,8 @@ class Mesh
 
     /** Derive normals from the triangles, of the strip or of the index list
      *  @param {boolean} [smooth] - Round the lighting across faces instead of giving each face a hard edge; flat
-     *    normals on an indexed mesh give every corner its own vertex
+     *    normals on an indexed mesh give every corner its own vertex, and a strip that folds, where neighbors share
+     *    vertices that can hold only one normal, is made indexed first
      *  @return {Mesh} */
     computeNormals(smooth=false)
     {
@@ -30938,6 +31542,16 @@ class Mesh
             // triangles in a strip alternate which way they wind, so every other one is flipped back
             // a zero normal means a flat triangle joining two strips, so skip it
             faceNormals.push(normal.lengthSquared() ? normal.normalize(i & 1 ? 1 : -1) : undefined);
+        }
+
+        // a triangle in a strip shares vertices with the two before it, which hold one normal each, so a strip folded
+        // where faces meet becomes the list form, a vertex per corner, as the list's flat normals are
+        for (let i = 1; i < faceNormals.length; ++i)
+        for (let k = 1; k <= 2 && k <= i; ++k)
+        {
+            const a = faceNormals[i-k], b = faceNormals[i];
+            if (a && b && a.distanceSquared(b) > 1e-12)
+                return this.toIndexed().computeNormals(false);
         }
 
         // then hand those to the vertices: every triangle writes its own three corners, so the only vertices left
@@ -31120,6 +31734,7 @@ function buildLathe(profile, sides=16, smooth=render3D?.smoothShading, capped=tr
     ASSERT(isArray(profile) && profile.length > 1, 'lathe profile needs at least 2 points');
     sides |= 0;
     ASSERT(sides > 2, 'lathe needs at least 3 sides');
+    ASSERT(sides * profile.length <= 1e6, 'a lathe of more than a million faces', sides, profile.length);
     const mesh = new Mesh;
     const rings = profile.length;
     const point = (i, a)=> vec3(sin(a) * profile[i][0], profile[i][1], cos(a) * profile[i][0]);
@@ -31232,6 +31847,7 @@ function buildLathe(profile, sides=16, smooth=render3D?.smoothShading, capped=tr
 function buildSphere(size=1, sides=16, rings=8, smooth=render3D?.smoothShading)
 {
     ASSERT(rings > 1, 'sphere needs at least 2 rings');
+    ASSERT(sides * rings <= 1e6, 'a sphere of more than a million faces', sides, rings);
     const profile = [];
     for (let i = 0; i <= rings; ++i)
     {
@@ -31492,7 +32108,8 @@ const render3DSkyColors = new WeakMap;
  * - setCollision takes the same flags as in 2D, but the solid collision happens in 3D against size3D
  * - The solid box turns with rotation3D, so a turned wall or a ramp collides as it looks; resting on one no steeper
  *   than groundAngle stands there
- * - Its tile and raycast halves are 2D only so they default off here, and a child sits solid collision out
+ * - Its tile and raycast halves are 2D only, collideLevel collides with the 3D level instead: the height maps, voxel
+ *   maps and mesh colliders; a child sits solid collision out
  * - A sync2D object collides in 2D instead, which needs the 2D size set as well as size3D
  * - setMesh swaps the mesh and frees the old one, for text and terrain that get built again
  * - addChild attaches the 3D transform, and a child's pos3D, rotation3D and scale3D are then relative to its parent,
@@ -31612,6 +32229,9 @@ class EngineObject3D extends EngineObject
         this.groundAngle = PI / 4;
         /** @property {boolean} - Darkened by the shadow map when render3D.shadows is on */
         this.receiveShadow = true;
+        /** @property {boolean} - A sprite or particle lit as a ball bulging toward the camera, bright on the side
+         *  toward each light, in place of the same all over; a normal map takes its place */
+        this.roundLighting = false;
         /** @property {boolean|undefined} - Draw this object over the 2D scene, undefined uses render3D.renderAfter2D
          *  @type {boolean|undefined} */
         this.renderAfter2D = undefined;
@@ -31662,7 +32282,7 @@ class EngineObject3D extends EngineObject
         const solve = enablePhysicsSolver && !this.sync2D;
         const cap = this.clampSpeed && solve && (this.collideSolidObjects || this.collideLevel && this.mass) ?
             objectMaxSpeed : undefined; // 0 holds it still, as in 2D
-        // a moving object keeps out of the level, the height maps and voxel maps, from where it was before it moved,
+        // a moving object keeps out of the level, the height maps, voxel maps and mesh colliders, from where it was,
         // and a solid it hits sends it back to the side it came from
         const oldPos = (this.collideLevel || this.collideSolidObjects) && this.mass && !this.sync2D ?
             this.pos3D.copy() : undefined;
@@ -31710,12 +32330,14 @@ class EngineObject3D extends EngineObject
 
     /** Set how this object collides, the same flags as in 2D
      *  - Solid collision happens in 3D here, against size3D boxes or spheres; a child sits it out
-     *  - The boxes turn with rotation3D, against height maps and voxel maps an object is still its upright box
+     *  - The boxes turn with rotation3D; against height maps and voxel maps an object is still its upright box, and
+     *    against a MeshCollider a capsule
      *  - A sync2D object collides in 2D instead, against the 2D size, so set that as well as size3D
      *  @param {boolean} [collideSolidObjects] - Take part in solid collision
      *  @param {boolean} [isSolid] - Block other objects, a pair where neither one blocks passes through;
      *    blocking needs collideSolidObjects, so isSolid on its own is not allowed
-     *  @param {boolean} [collideLevel] - Collide with the level, the height maps and voxel maps, or the 2D tile layers
+     *  @param {boolean} [collideLevel] - Collide with the level, the height maps, voxel maps and mesh colliders, or
+     *    the 2D tile layers
      *    for a sync2D object
      *  @param {boolean} [collideRaycast] - Raycasts, 2D only; 3D has render3D.pick and engineObjectsRaycast3D */
     setCollision(collideSolidObjects=true, isSolid=true, collideLevel=true, collideRaycast=false)
@@ -31811,10 +32433,11 @@ class EngineObject3D extends EngineObject
 
     /** Attaches a child, its pos3D, rotation3D and scale3D taken as the offset from this one; returns child for chaining
      *  - The 2D offset arguments do nothing for an EngineObject3D child, set its pos3D
-     *  @param {EngineObject} child
+     *  @template {EngineObject} T
+     *  @param {T} child
      *  @param {Vector2} [localPos]
      *  @param {number} [localAngle]
-     *  @return {EngineObject} The child object attached */
+     *  @return {T} The child object attached */
     addChild(child, localPos, localAngle)
     {
         // addChild brings the child's transform up to date, which is not a step: it already moved this pass as
@@ -31828,8 +32451,9 @@ class EngineObject3D extends EngineObject
      *  parent to keep its world transform, where addChild takes them as the offset; returns child for chaining
      *  - A parent scaled unevenly and a child turned under it make a shear, which those three values cannot hold,
      *    so the child comes out as close as they can get; a uniform scale is exact
-     *  @param {EngineObject} child
-     *  @return {EngineObject} The child object attached */
+     *  @template {EngineObject} T
+     *  @param {T} child
+     *  @return {T} The child object attached */
     attach(child)
     {
         if (!(child instanceof EngineObject3D))
@@ -31903,7 +32527,7 @@ class EngineObject3D extends EngineObject
 const RENDER3D_PART_SETTINGS = {emissive: 0, additive: false, specular: 0, shininess: 16, reflectivity: 0,
     normalMap: undefined, normalScale: 1, emissiveMap: undefined, emissiveMapColor: WHITE, receiveShadow: true,
     castShadow: true, pixelated: false, shader: undefined, environment: undefined, renderAfter2D: undefined,
-    renderOrder: 0};
+    renderOrder: 0, roundLighting: false};
 
 // make a part draw with its owner's settings: it draws with the owner's where the owner set it away from the default,
 // and its own otherwise, so a model's unlit or rough part keeps what its file gave it; a link the renderer follows
@@ -32000,7 +32624,8 @@ function render3DMove(o, cap)
     // damped first and gravity added after, the order EngineObject.updatePhysics uses,
     // so the same mass, damping and gravity fall the same way in both
     v.x *= d, v.y *= d, v.z *= d;
-    if (o.mass && !o.sync2D) // a 2D driven object gets the 2D gravity instead
+    // a 2D driven object gets the 2D gravity instead, and a child none, its parent holds it
+    if (o.mass && !o.sync2D && !o.parent)
     {
         const g = render3D.gravity, s = o.gravityScale;
         v.x += g.x * s, v.y += g.y * s, v.z += g.z * s;
@@ -32145,7 +32770,7 @@ function render3DPushFrom(shapeA, shapeB, a, b, push)
 
 // the solids that do not move, mass 0, in the order of the engine's list, gathered once a pass for the settles, which
 // would otherwise walk every collider for each push between two movers
-const render3DFixed = {pass: -1, list: []};
+const render3DFixed = {pass: -1, list: [], set: new Set};
 function render3DFixedSolids()
 {
     if (render3DFixed.pass !== engineObjectsUpdateCount)
@@ -32153,6 +32778,7 @@ function render3DFixedSolids()
         render3DFixed.pass = engineObjectsUpdateCount;
         render3DFixed.list = engineObjectsCollide.filter((b)=> !b.mass && b instanceof EngineObject3D &&
             !b.parent && !b.sync2D);
+        render3DFixed.set = new Set(render3DFixed.list); // the grid's settle meets the same solids
     }
     return render3DFixed.list;
 }
@@ -32166,8 +32792,11 @@ function render3DSettleFixed(o, pusher, from)
     if (o.destroyed || !o.collideSolidObjects) return;
     let shape = render3DSolidShape(o);
     const reachO = render3DSolidReach(o);
-    for (const b of render3DFixedSolids())
+    // with many solids the ones near where it is, through the grid; the movers there are skipped below
+    const grid = render3DSolidGrid(), fixed = render3DFixedSolids();
+    for (const b of grid ? render3DGridWalk(grid, reachO, ()=> shape.pos, Infinity) : fixed)
     {
+        if (grid && !render3DFixed.set.has(b)) continue; // the fixed solids of the pass, as the list has them
         // a pair where neither is solid passes through, as in the pair loop; a solid against one that is not still meets
         if (b === o || b === pusher || b.mass || b.destroyed || !o.isSolid && !b.isSolid)
             continue;
@@ -32178,7 +32807,9 @@ function render3DSettleFixed(o, pusher, from)
         let push = render3DSolidPush(shape, shapeB);
         if (!push || push.lengthSquared() < 1e-12) continue;
         push = render3DPushFrom(shape, shapeB, o, b, push);
-        if (!render3DCollideAsk(o, b, push)) continue;
+        const resolve = render3DCollideAsk(o, b, push);
+        grid && (render3DGridPlace(grid, o), render3DGridPlace(grid, b)); // a callback may have moved either
+        if (!resolve) continue;
         // standing as in a pair: a push off a face within its groundAngle of up holds it there, turned straight up
         const lengthSquared = push.lengthSquared(), up = push.y / lengthSquared ** .5;
         if (up > 0 && o.mass && up >= cos(o.groundAngle) && render3DOnFace(push, shapeB))
@@ -32245,7 +32876,12 @@ function render3DCollideSolid(a)
 {
     let shapeA = render3DSolidShape(a);
     const reachA = render3DSolidReach(a);
-    for (const b of engineObjectsCollide)
+    // with many solids the ones before it near where its shape is, through the grid, where its own move put it
+    const grid = render3DSolidGrid();
+    grid && render3DGridPlace(grid, a);
+    const solids = grid ? render3DGridWalk(grid, reachA, ()=> shapeA.pos, grid.index.get(a) ?? Infinity) :
+        engineObjectsCollide;
+    for (const b of solids)
     {
         if (b === a) break;
         // a child is part of its parent
@@ -32265,7 +32901,10 @@ function render3DCollideSolid(a)
         push = render3DPushFrom(shapeA, shapeB, a, b, push);
 
         // both objects hear about it, and either one can take the touch over
-        if (!render3DCollideAsk(a, b, push, false)) continue;
+        const resolve = render3DCollideAsk(a, b, push, false);
+        grid && (render3DGridPlace(grid, a), render3DGridPlace(grid, b)); // a callback may have moved either
+        shapeA = render3DSolidShape(a); // so the next solid is tested where a callback put it, a teleport too
+        if (!resolve) continue;
 
         // standing: resting on a box's face within the upper one's groundAngle of level holds it there, the push
         // turned straight up, as far as it takes to leave the surface, so it does not creep down a ramp; only what
@@ -32320,6 +32959,157 @@ function render3DCollideSolid(a)
         }
         if (weightA)
             shapeA = render3DSolidShape(a); // it moved, so the next solid must be tested against where it is now
+        grid && (render3DGridPlace(grid, a), render3DGridPlace(grid, b)); // where the push and the settles left them
+    }
+}
+
+// with three times engineCollideGridMin 3D solids or more, 192 by default, a solid finds the ones near it through a
+// grid of cells, as in 2D, rather than checking every one before it in the list, which is quicker below that
+// (measured: the grid 1.9 ms an update at 64 and 8.3 at 300, every pair 1.2 and 12.7, and at 1000 34 against 120
+// to 160); it meets the same ones in the same order, so a game plays the same either way. The grid of a pass is
+// made the first time a solid asks in it, and only while the engine runs the physics of every object: {size, cells, at, index, big, seen, stamp, byIndex}, each cell's solids, the cells
+// each one covers, its place in the list, the ones too big for cells, and what a query found
+const render3DGrid = {pass: -1, grid: undefined};
+
+// place a solid again once its updatePhysics is done, which an override may have moved after the engine's
+function render3DGridPhysicsDone(o)
+{
+    const kept = render3DGrid;
+    kept.grid && kept.pass === engineObjectsUpdateCount && render3DGridPlace(kept.grid, o);
+}
+
+// let go of the pass's grid and fixed solids once every object has moved, so a level taken down is not kept
+function render3DGridRelease()
+{
+    render3DGrid.grid = undefined, render3DGrid.pass = -1;
+    render3DFixed.list = [], render3DFixed.set = new Set, render3DFixed.pass = -1;
+}
+function render3DSolidGrid()
+{
+    if (!engineObjectsPhysicsRunning) return;
+    const kept = render3DGrid;
+    if (kept.pass === engineObjectsUpdateCount) return kept.grid;
+    kept.pass = engineObjectsUpdateCount;
+    const list = engineObjectsCollide.filter((b)=> b instanceof EngineObject3D && !b.parent && !b.sync2D);
+    if (list.length < engineCollideGridMin * 3) return kept.grid = undefined;
+    // cells about twice a typical solid across, so most are in one to eight
+    let extent = 0;
+    for (const o of list)
+        extent += min(2 * render3DSolidReach(o), 16) || 0;
+    const index = new Map;
+    const grid = kept.grid = {size: max(2 * extent / list.length, .5), cells: new Map, at: new Map, index,
+        big: new Set, seen: new Map, stamp: 0, byIndex: (a, b)=> index.get(a) - index.get(b)};
+    list.forEach((o, i)=> { index.set(o, i); render3DGridPlace(grid, o); });
+    return grid;
+}
+
+// the cells of the cube around a place out to a reach, first and last along x, y and z, in one kept array; a solid
+// within reach of another shares a cell with it, so the distance test before the exact one never misses a pair
+const render3DGridBox = [0, 0, 0, 0, 0, 0];
+function render3DGridCells(grid, p, reach)
+{
+    const s = grid.size, box = render3DGridBox;
+    box[0] = floor((p.x - reach) / s), box[1] = floor((p.y - reach) / s), box[2] = floor((p.z - reach) / s);
+    box[3] = floor((p.x + reach) / s), box[4] = floor((p.y + reach) / s), box[5] = floor((p.z + reach) / s);
+    return box;
+}
+
+// whether a cube of cells is kept in its cells: not over 4096 of them, and within 2^31 cells of the origin, past which
+// a cell loop would not end; one with no finite place does not fit either, and is near everything
+function render3DGridFits(b)
+{
+    return (b[3] - b[0] + 1) * (b[4] - b[1] + 1) * (b[5] - b[2] + 1) <= 4096 &&
+        max(abs(b[0]), abs(b[1]), abs(b[2]), abs(b[3]), abs(b[4]), abs(b[5])) < 2**31;
+}
+
+// a cell's key, its three numbers mixed into one; two cells that share a key share a list, which only adds solids
+// the distance test then rejects
+const render3DGridKey = (x, y, z)=> Math.imul(x, 73856093) ^ Math.imul(y, 19349663) ^ Math.imul(z, 83492791);
+
+// put a solid in the cells its reach covers now, out of those it was in
+function render3DGridPlace(grid, o)
+{
+    if (!grid.index.has(o)) return;
+    const b = render3DGridCells(grid, o.pos3D, render3DSolidReach(o)), big = !render3DGridFits(b);
+    const was = grid.at.get(o);
+    if (was && was[6] === big && was[0] === b[0] && was[1] === b[1] && was[2] === b[2] && was[3] === b[3] &&
+        was[4] === b[4] && was[5] === b[5])
+        return;
+    if (was && !was[6])
+        for (let x = was[0]; x <= was[3]; ++x)
+        for (let y = was[1]; y <= was[4]; ++y)
+        for (let z = was[2]; z <= was[5]; ++z)
+        {
+            const cell = grid.cells.get(render3DGridKey(x, y, z));
+            cell.splice(cell.indexOf(o), 1);
+        }
+    grid.big.delete(o);
+    if (big)
+        grid.big.add(o);
+    else
+        for (let x = b[0]; x <= b[3]; ++x)
+        for (let y = b[1]; y <= b[4]; ++y)
+        for (let z = b[2]; z <= b[5]; ++z)
+        {
+            const key = render3DGridKey(x, y, z), cell = grid.cells.get(key);
+            cell ? cell.push(o) : grid.cells.set(key, [o]);
+        }
+    grid.at.set(o, [b[0], b[1], b[2], b[3], b[4], b[5], big]);
+}
+
+// the solids near a place out to a reach, between two places in the list, in list order, filled into near
+function render3DGridNear(grid, p, reach, after, before, near)
+{
+    const b = render3DGridCells(grid, p, reach), stamp = ++grid.stamp;
+    near.length = 0;
+    for (const other of grid.big)
+        render3DGridAdd(grid, other, after, before, stamp, near);
+    if (render3DGridFits(b))
+    {
+        for (let x = b[0]; x <= b[3]; ++x)
+        for (let y = b[1]; y <= b[4]; ++y)
+        for (let z = b[2]; z <= b[5]; ++z)
+        {
+            const cell = grid.cells.get(render3DGridKey(x, y, z));
+            if (cell)
+                for (const other of cell)
+                    render3DGridAdd(grid, other, after, before, stamp, near);
+        }
+    }
+    else
+        for (const other of grid.index.keys()) // a reach too big for cells is near everything
+            render3DGridAdd(grid, other, after, before, stamp, near);
+    near.length > 1 && near.sort(grid.byIndex);
+}
+
+// add a solid to what a query found, once, when it is between the two places in the list
+function render3DGridAdd(grid, other, after, before, stamp, near)
+{
+    if (grid.seen.get(other) === stamp) return;
+    grid.seen.set(other, stamp);
+    const i = grid.index.get(other);
+    i > after && i < before && near.push(other);
+}
+
+// the solids before a place in the list a shape meets, as checking every one would reach them: in list order, and
+// found again from where it is whenever the place its center gives has moved, as a push does
+function* render3DGridWalk(grid, reach, center, before)
+{
+    let after = -1, x, y, z, k = 0;
+    const near = [];
+    for (;;)
+    {
+        const p = center();
+        if (p.x !== x || p.y !== y || p.z !== z)
+        {
+            x = p.x, y = p.y, z = p.z;
+            render3DGridNear(grid, p, reach, after, before, near);
+            k = 0;
+        }
+        if (k >= near.length) return;
+        const other = near[k++];
+        after = grid.index.get(other);
+        yield other;
     }
 }
 
@@ -32388,8 +33178,8 @@ const render3DRaycastCenter = vec3();
 function render3DRaycastObject(ray, o)
 {
     if (o.destroyed || !(o instanceof EngineObject3D)) return;
-    // a height map or voxel map is hit on its surface, not its box
-    if (o instanceof HeightMap || o instanceof VoxelMap) return o.levelRaycast3D(ray);
+    // a height map, voxel map or mesh collider is hit on its surface, not its box
+    if (o instanceof HeightMap || o instanceof VoxelMap || o instanceof MeshCollider) return o.levelRaycast3D(ray);
     if (!(o.mesh || o.tileInfo)) return;
     if (o instanceof InstancedMesh3D) return; // its instances are not objects, and its one sphere is not a thing to hit
     const matrix = render3DObjectMatrix(o), mesh = o.mesh;
@@ -32501,7 +33291,8 @@ function render3DRaycastDisc(ray, center, radius)
  * - The ray has no end, so everything along it counts however far away it is
  * - Use render3D.pick for the nearest one on its own, with the distance to it
  * @param {Ray3D} ray - From render3D.screenToRay, or any ray
- * @param {Array<EngineObject>} [objects] - Defaults to every object; only those with a mesh or a sprite count
+ * @param {Array<EngineObject>} [objects] - Defaults to every object; only those with a mesh or a sprite count, and
+ *   the height maps, voxel maps and mesh colliders, on their surfaces
  * @return {Array<EngineObject3D>}
  * @memberof Render3D
  */
@@ -32588,6 +33379,15 @@ class InstancedMesh3D extends EngineObject3D
         this.colorDirtyStart = 0;
         /** @property {number} - One past the last instance whose color uploads */
         this.colorDirtyEnd = count;
+        /** @property {Float32Array|undefined} - Each instance's data, 4 floats, made by the first setDataAt: what a
+         *  Shader's snippets read as vec4 instanceData; edit it directly and call markDataDirty for the instances
+         *  changed
+         *  @type {Float32Array|undefined} */
+        this.dataValues = undefined;
+        this.dataDirtyStart = Infinity; // the instances whose data uploads before the next draw
+        this.dataDirtyEnd = 0;
+        /** @type {WebGLBuffer|undefined} */
+        this.dataBuffer = undefined;  // the GPU copy of dataValues
         // the farthest any instance's position has been from the origin, and the largest scale any has had, both
         // squared, and the instances set since radius last took them in: setting one does no bounds work at all
         this.reachSquared = 0;
@@ -32706,6 +33506,33 @@ class InstancedMesh3D extends EngineObject3D
         this.markColorDirty(i);
     }
 
+    /** Give an instance four numbers of the game's own, which a Shader's snippets read as vec4 instanceData, in the
+     *  vertex code and the fragment code, the shadow map too, like a tile's height or a sprite's foot line; an
+     *  instance not given any reads zeros, and so does every draw that is not of a set with data
+     *  @param {number} i
+     *  @param {number} [x]
+     *  @param {number} [y]
+     *  @param {number} [z]
+     *  @param {number} [w] */
+    setDataAt(i, x=0, y=0, z=0, w=0)
+    {
+        ASSERT(i >= 0 && i < this.maxCount, 'instance index out of range');
+        const data = this.dataValues ||= new Float32Array(this.maxCount * 4), k = i * 4;
+        data[k] = x, data[k+1] = y, data[k+2] = z, data[k+3] = w;
+        this.markDataDirty(i);
+    }
+
+    /** Note that a run of instances' data changed, for code that writes dataValues directly; setDataAt calls this
+     *  @param {number} start - First instance
+     *  @param {number} [end] - One past the last */
+    markDataDirty(start, end=start + 1)
+    {
+        ASSERT(start >= 0 && end <= this.maxCount && start <= end, 'instance range out of range');
+        this.dataValues ||= new Float32Array(this.maxCount * 4);
+        if (start < this.dataDirtyStart) this.dataDirtyStart = start;
+        if (end > this.dataDirtyEnd) this.dataDirtyEnd = end;
+    }
+
     /** Note that an instance's matrix changed, so it uploads before the next draw and the bounds take it in when
      *  they are read; setTransformAt and setMatrixAt call this, and so must an edit made straight to matrixData
      *  @param {number} i */
@@ -32776,7 +33603,7 @@ class InstancedMesh3D extends EngineObject3D
         if (r.transparentQueue) // sorted as one thing with the other transparent draws
             return r.queueTransparent(this.getWorldPos3D(), ()=> this.render3D());
         if (!mesh || !this.count || !render3DCanDraw()) return;
-        if (r.shadowPass && !r.lighting) return; // unlit things cast no shadow
+        if (r.shadowPass && !r.depthPass && !r.lighting) return; // unlit casts no shadow, but is in the depth
         render3DMeshUpload(mesh);
         if (!mesh.bufferCount) return;
         if (r.frustumCulling && !render3DSphereVisible(0, 0, 0, this.radius)) return;
@@ -32799,6 +33626,7 @@ class InstancedMesh3D extends EngineObject3D
             gl.bufferData(gl.ARRAY_BUFFER, this.matrixData, gl.DYNAMIC_DRAW);
             gl.bindBuffer(gl.ARRAY_BUFFER, this.colorBuffer = gl.createBuffer());
             gl.bufferData(gl.ARRAY_BUFFER, this.colorData, gl.DYNAMIC_DRAW);
+            this.dataBuffer = undefined; // made again below when there is data
         }
         else
         {
@@ -32812,13 +33640,30 @@ class InstancedMesh3D extends EngineObject3D
             upload(this.colorBuffer, this.colorData, RENDER3D_COLOR_FLOATS, this.colorDirtyStart, this.colorDirtyEnd);
         }
         this.dirtyStart = this.colorDirtyStart = Infinity, this.dirtyEnd = this.colorDirtyEnd = 0;
+        // each instance's data, once it has any: all of it the first time and under a fresh context, then what changed
+        if (this.dataValues)
+        {
+            if (!this.dataBuffer)
+            {
+                gl.bindBuffer(gl.ARRAY_BUFFER, this.dataBuffer = gl.createBuffer());
+                gl.bufferData(gl.ARRAY_BUFFER, this.dataValues, gl.DYNAMIC_DRAW);
+            }
+            else if (this.dataDirtyEnd > this.dataDirtyStart)
+            {
+                gl.bindBuffer(gl.ARRAY_BUFFER, this.dataBuffer);
+                gl.bufferSubData(gl.ARRAY_BUFFER, this.dataDirtyStart * 16, this.dataValues, this.dataDirtyStart * 4,
+                    (this.dataDirtyEnd - this.dataDirtyStart) * 4);
+            }
+            this.dataDirtyStart = Infinity, this.dataDirtyEnd = 0;
+        }
 
         // one draw under the object's state, the mesh setting the culling as drawMesh does
         r.flush();
         render3DFlushBeforeOverlay(); // as in drawMesh, what was drawn before goes under it
         const cullBackFaces = r.cullBackFaces, tileInfo = this.tileInfo;
         r.cullBackFaces = !mesh.doubleSided;
-        render3DDrawInstanced(mesh, this.buffer, this.count, render3DTextureOf(tileInfo), r, this.colorBuffer);
+        render3DDrawInstanced(mesh, this.buffer, this.count, render3DTextureOf(tileInfo), r, this.colorBuffer,
+            this.dataBuffer);
         r.cullBackFaces = cullBackFaces;
     }
 
@@ -32827,8 +33672,11 @@ class InstancedMesh3D extends EngineObject3D
     destroy(immediate)
     {
         if (this.buffer && this.bufferGeneration === render3D?.contextGeneration)
+        {
             glContext?.deleteBuffer(this.buffer), glContext?.deleteBuffer(this.colorBuffer);
-        this.buffer = this.colorBuffer = undefined;
+            this.dataBuffer && glContext?.deleteBuffer(this.dataBuffer);
+        }
+        this.buffer = this.colorBuffer = this.dataBuffer = undefined;
         super.destroy(immediate);
     }
 }
@@ -32983,7 +33831,8 @@ class DirectionalLight3D extends Light3D
 /*
  * LittleJS 3D Extras Plugin
  * - Things built on the 3D renderer that it does not need in order to draw: the rest of the shape builders,
- *   HeightMap terrain, the camera controls, ParticleEmitter3D and Trail3D, and the OBJ loader
+ *   normalMapFromHeight, HeightMap terrain and MeshCollider, the camera controls, ParticleEmitter3D and Trail3D,
+ *   LensFlare3D, the OBJ loader and CSG
  * - Requires the Render3D plugin and goes after it, everything here is part of its Render3D namespace
  */
 
@@ -33182,7 +34031,7 @@ function buildCapsule(size=1, height=1, sides=16, rings=4, smooth=render3D?.smoo
  */
 function buildTorus(size=1, tubeSize=.3, sides=16, tubeSides=8, smooth=render3D?.smoothShading)
 {
-    ASSERT(tubeSize <= size, 'the tube must fit inside the torus');
+    ASSERT(tubeSize <= size / 2, 'the tube must fit inside the torus, at most half its size, or the ring turns inside out');
     const profile = [], radius = (size - tubeSize) / 2, tubeRadius = tubeSize / 2;
     for (let i = 0; i <= tubeSides; ++i)
     {
@@ -33454,7 +34303,8 @@ class HeightMap extends EngineObject3D
         this.height = height;
         /** @property {boolean} - Smooth shading, rebuild() after changing it */
         this.smooth = !!smooth;
-        this.size3D = vec3(mapSize.x, height, mapSize.y);
+        // its box, centered on pos3D, reaches a full height above and below, so it holds the surface rising from it
+        this.size3D = vec3(mapSize.x, 2 * abs(height), mapSize.y);
         this.rebuild();
         render3DLevel.push(this);
     }
@@ -33675,6 +34525,482 @@ class HeightMap extends EngineObject3D
     }
 }
 
+///////////////////////////////////////////////////////////////////////////////
+/**
+ * MeshCollider - A level shape made of a mesh's triangles, which objects with collideLevel land on, slide along and
+ * walk up, as on a HeightMap: a level's floors, walls, ramps and rocks, often a low poly mesh made for collision
+ * - It draws nothing: make an EngineObject3D with the same mesh to see it, or with a mesh of its own to show more
+ *   than collides; Debug Physics on the debug overlay draws its edges
+ * - An object collides with it as a capsule as tall as its height and as wide as its narrowest side, so it rides up
+ *   a step lower than its round foot and over small bumps, and one with collideAsSphere3D as its sphere; a flat
+ *   wide object, as a plank, is a sphere as thick as it is, at its middle, and its turn is not taken into account
+ * - Its triangles are taken from the mesh in world space where it is, through its pos3D, rotation3D and scale3D, and
+ *   taken again when it moves; call rebuild() after changing the mesh
+ * - Any mesh works, a strip, an indexed one, a loaded model or one given its vertex data; both sides of a triangle
+ *   collide
+ * - A fast object is moved in steps no longer than half its radius, so it does not go through a thin wall
+ * - Particles with collideLevel hit it, render3D.pick and the camera's wall test hit its triangles, both sides
+ * @extends EngineObject3D
+ * @memberof Render3D
+ * @example
+ * const level = await loadOBJ('level-collision.obj');
+ * new MeshCollider(level.mesh);
+ */
+class MeshCollider extends EngineObject3D
+{
+    /** Make a mesh a level shape, it joins the level's collision
+     *  @param {Mesh} mesh
+     *  @param {Vector3} [pos3D] */
+    constructor(mesh, pos3D=vec3())
+    {
+        ASSERT(mesh instanceof Mesh, 'a MeshCollider needs a Mesh');
+        super(pos3D, mesh);
+        /** @type {Float64Array} */
+        this.triangles = new Float64Array(0); // each triangle's corners in world space, 9 numbers a triangle
+        /** @type {Float64Array} */
+        this.normals = new Float64Array(0);   // each one's unit normal, 3 numbers a triangle
+        this.triangleCount = 0;
+        /** @type {Float64Array|undefined} */
+        this.bakedMatrix = undefined;         // the world matrix the triangles were taken under
+        /** @type {{size: number, cells: Map<number, Array<number>>, big: Array<number>, min: Vector3, max: Vector3,
+         *  seen: Int32Array, stamp: number}|undefined} */
+        this.grid = undefined;                // the triangles by the cells they cover, see meshColliderNear
+        render3DLevel.push(this);
+    }
+
+    /** Take the triangles from the mesh again, after it changed */
+    rebuild() { this.bakedMatrix = undefined; }
+
+    /** It draws nothing, the game draws what it wants seen
+     *  @return {void} */
+    render3D() {}
+
+    /** Draws its edges while Debug Physics is on, called automatically each frame */
+    update()
+    {
+        super.update();
+        if (!debugPhysics) return;
+        meshColliderBake(this);
+        const t = this.triangles, color = hsl(.3, 1, .5, .6), count = min(this.triangleCount, 5000);
+        for (let i = 0; i < count; ++i)
+        {
+            const k = i * 9, a = vec3(t[k], t[k+1], t[k+2]), b = vec3(t[k+3], t[k+4], t[k+5]);
+            const c = vec3(t[k+6], t[k+7], t[k+8]);
+            debugLine3D(a, b, color), debugLine3D(b, c, color), debugLine3D(c, a, color);
+        }
+    }
+
+    /** Keep an object out of the triangles, called by the engine for each object with collideLevel
+     *  @param {EngineObject3D} o
+     *  @param {Vector3} oldPos - Where it was before it moved
+     *  @param {boolean} [wasOn] - It stood on this one last frame
+     *  @ignore */
+    levelCollide3D(o, oldPos, wasOn) { meshColliderCollide(this, o, oldPos, wasOn); }
+
+    /** Where a short move first meets a triangle, for a particle's move in one frame: the part of the move made
+     *  before it, 0 to 1, and the triangle's normal facing back along the move; undefined when it meets none
+     *  @param {Vector3} from
+     *  @param {Vector3} to
+     *  @return {{distance: number, normal: Vector3}|undefined}
+     *  @ignore */
+    levelSegment3D(from, to)
+    {
+        meshColliderBake(this);
+        const dx = to.x - from.x, dy = to.y - from.y, dz = to.z - from.z;
+        const near = meshColliderNear(this, min(from.x, to.x), min(from.y, to.y), min(from.z, to.z),
+            max(from.x, to.x), max(from.y, to.y), max(from.z, to.z));
+        let best = Infinity, normal;
+        for (const i of near)
+        {
+            const d = meshColliderRayTriangle(this.triangles, i * 9, from.x, from.y, from.z, dx, dy, dz);
+            // one starting on a face, as an emitter on the floor makes them, leaves it, whichever way it goes
+            if (d !== undefined && d > 1e-9 && d <= 1 && d < best)
+                best = d, normal = i;
+        }
+        if (normal === undefined) return;
+        const n = this.normals, k = normal * 3, s = n[k] * dx + n[k+1] * dy + n[k+2] * dz > 0 ? -1 : 1;
+        return {distance: best, normal: vec3(n[k] * s, n[k+1] * s, n[k+2] * s)};
+    }
+
+    /** How far along a ray its nearest triangle is, either side, in the ray's own units, for picking and the camera's
+     *  wall test, or undefined
+     *  @param {Ray3D} ray
+     *  @return {number|undefined}
+     *  @ignore */
+    levelRaycast3D(ray)
+    {
+        meshColliderBake(this);
+        const o = ray.origin, d = ray.direction, g = this.grid;
+        if (!g || !this.triangleCount) return;
+        // the box around every triangle first, which most rays miss
+        let enter = 0, exit = Infinity;
+        for (const axis of ['x', 'y', 'z'])
+        {
+            if (!d[axis])
+            {
+                if (o[axis] < g.min[axis] || o[axis] > g.max[axis]) return;
+                continue;
+            }
+            const a = (g.min[axis] - o[axis]) / d[axis], b = (g.max[axis] - o[axis]) / d[axis];
+            enter = max(enter, min(a, b)), exit = min(exit, max(a, b));
+        }
+        if (enter > exit) return;
+        let best;
+        for (let i = 0; i < this.triangleCount; ++i)
+        {
+            const t = meshColliderRayTriangle(this.triangles, i * 9, o.x, o.y, o.z, d.x, d.y, d.z);
+            if (t !== undefined && !(t >= best))
+                best = t;
+        }
+        return best;
+    }
+
+    /** Destroy it, it leaves the level's collision
+     *  @param {boolean} [immediate] */
+    destroy(immediate)
+    {
+        render3DLevelLeave(this);
+        super.destroy(immediate);
+    }
+}
+
+// take a collider's triangles from its mesh in world space, when its world matrix changed since, and grid them: each
+// triangle in the cells its box covers, cells about the size of a typical triangle, between half a unit and 16
+function meshColliderBake(collider)
+{
+    const m = render3DObjectMatrix(collider).m, baked = collider.bakedMatrix;
+    if (baked)
+    {
+        let same = true;
+        for (let j = 0; same && j < 16; ++j)
+            same = baked[j] === m[j];
+        if (same) return;
+    }
+    collider.bakedMatrix = Float64Array.from(m);
+    const mesh = collider.mesh, data = mesh.vertexData;
+    let indices, place;
+    if (data)
+    {
+        indices = mesh.vertexIndices;
+        place = (i)=> [data[i * RENDER3D_VERTEX_FLOATS], data[i * RENDER3D_VERTEX_FLOATS + 1], data[i * RENDER3D_VERTEX_FLOATS + 2]];
+    }
+    else
+    {
+        const triangles = mesh.getTriangles(), points = mesh.points;
+        indices = triangles.indices;
+        place = (i)=> { const p = points[triangles.vertices[i]]; return [p.x, p.y, p.z]; };
+    }
+    const tris = [], normals = [];
+    for (let j = 0; j + 2 < indices.length; j += 3)
+    {
+        const corners = [indices[j], indices[j+1], indices[j+2]].map((i)=>
+        {
+            const [x, y, z] = place(i);
+            return [m[0]*x + m[4]*y + m[8]*z + m[12], m[1]*x + m[5]*y + m[9]*z + m[13], m[2]*x + m[6]*y + m[10]*z + m[14]];
+        });
+        const [a, b, c] = corners;
+        const ux = b[0] - a[0], uy = b[1] - a[1], uz = b[2] - a[2], vx = c[0] - a[0], vy = c[1] - a[1], vz = c[2] - a[2];
+        const nx = uy*vz - uz*vy, ny = uz*vx - ux*vz, nz = ux*vy - uy*vx, length = hypot(nx, ny, nz);
+        if (!(length > 1e-12)) continue; // no area, nothing to push out of
+        tris.push(...a, ...b, ...c);
+        normals.push(nx / length, ny / length, nz / length);
+    }
+    const t = collider.triangles = Float64Array.from(tris), count = collider.triangleCount = tris.length / 9;
+    collider.normals = Float64Array.from(normals);
+
+    // the grid, and the box around every triangle
+    let extent = 0;
+    const lo = vec3(Infinity), hi = vec3(-Infinity);
+    for (let i = 0; i < count; ++i)
+    {
+        const k = i * 9;
+        extent += max(max(t[k], t[k+3], t[k+6]) - min(t[k], t[k+3], t[k+6]), max(t[k+1], t[k+4], t[k+7]) -
+            min(t[k+1], t[k+4], t[k+7]), max(t[k+2], t[k+5], t[k+8]) - min(t[k+2], t[k+5], t[k+8]));
+        for (let c = 0; c < 9; c += 3)
+        {
+            lo.x = min(lo.x, t[k+c]), lo.y = min(lo.y, t[k+c+1]), lo.z = min(lo.z, t[k+c+2]);
+            hi.x = max(hi.x, t[k+c]), hi.y = max(hi.y, t[k+c+1]), hi.z = max(hi.z, t[k+c+2]);
+        }
+    }
+    const size = clamp(count ? extent / count : 1, .5, 16);
+    const grid = collider.grid = {size, cells: new Map, big: [], min: lo, max: hi, seen: new Int32Array(count), stamp: 0};
+    for (let i = 0; i < count; ++i)
+    {
+        const k = i * 9;
+        const x0 = floor(min(t[k], t[k+3], t[k+6]) / size), x1 = floor(max(t[k], t[k+3], t[k+6]) / size);
+        const y0 = floor(min(t[k+1], t[k+4], t[k+7]) / size), y1 = floor(max(t[k+1], t[k+4], t[k+7]) / size);
+        const z0 = floor(min(t[k+2], t[k+5], t[k+8]) / size), z1 = floor(max(t[k+2], t[k+5], t[k+8]) / size);
+        if ((x1 - x0 + 1) * (y1 - y0 + 1) * (z1 - z0 + 1) > 4096) // too big for cells, near everything
+        {
+            grid.big.push(i);
+            continue;
+        }
+        for (let x = x0; x <= x1; ++x)
+        for (let y = y0; y <= y1; ++y)
+        for (let z = z0; z <= z1; ++z)
+        {
+            const key = render3DGridKey(x, y, z), cell = grid.cells.get(key);
+            cell ? cell.push(i) : grid.cells.set(key, [i]);
+        }
+    }
+}
+
+// the triangles whose cells a box touches, each once, in the order they are in the mesh, so a collision comes out the
+// same however the cells hold them; none when the box is clear of every triangle's
+function meshColliderNear(collider, x0, y0, z0, x1, y1, z1)
+{
+    const grid = collider.grid, near = [];
+    if (!grid || x1 < grid.min.x || y1 < grid.min.y || z1 < grid.min.z || x0 > grid.max.x || y0 > grid.max.y ||
+        z0 > grid.max.z)
+        return near;
+    const s = grid.size, stamp = ++grid.stamp, seen = grid.seen;
+    const add = (i)=> seen[i] === stamp || (seen[i] = stamp, near.push(i));
+    grid.big.forEach(add);
+    const cx0 = floor(x0 / s), cy0 = floor(y0 / s), cz0 = floor(z0 / s);
+    const cx1 = floor(x1 / s), cy1 = floor(y1 / s), cz1 = floor(z1 / s);
+    if ((cx1 - cx0 + 1) * (cy1 - cy0 + 1) * (cz1 - cz0 + 1) > 4096)
+        for (let i = 0; i < collider.triangleCount; ++i) add(i); // a box too big for cells meets every triangle
+    else
+        for (let x = cx0; x <= cx1; ++x)
+        for (let y = cy0; y <= cy1; ++y)
+        for (let z = cz0; z <= cz1; ++z)
+            grid.cells.get(render3DGridKey(x, y, z))?.forEach(add);
+    return near.sort((a, b)=> a - b);
+}
+
+// the closest point of a triangle to a point, written into out: Ericson's Real-Time Collision Detection, 5.1.5
+function meshColliderClosestOnTriangle(t, k, px, py, pz, out)
+{
+    const ax = t[k], ay = t[k+1], az = t[k+2];
+    const abx = t[k+3] - ax, aby = t[k+4] - ay, abz = t[k+5] - az, acx = t[k+6] - ax, acy = t[k+7] - ay, acz = t[k+8] - az;
+    const apx = px - ax, apy = py - ay, apz = pz - az;
+    const d1 = abx*apx + aby*apy + abz*apz, d2 = acx*apx + acy*apy + acz*apz;
+    let u, v; // the point as a + u * ab + v * ac
+    const bpx = px - t[k+3], bpy = py - t[k+4], bpz = pz - t[k+5];
+    const d3 = abx*bpx + aby*bpy + abz*bpz, d4 = acx*bpx + acy*bpy + acz*bpz;
+    const cpx = px - t[k+6], cpy = py - t[k+7], cpz = pz - t[k+8];
+    const d5 = abx*cpx + aby*cpy + abz*cpz, d6 = acx*cpx + acy*cpy + acz*cpz;
+    const vc = d1*d4 - d3*d2, vb = d5*d2 - d1*d6, va = d3*d6 - d5*d4;
+    if (d1 <= 0 && d2 <= 0) u = 0, v = 0;
+    else if (d3 >= 0 && d4 <= d3) u = 1, v = 0;
+    else if (vc <= 0 && d1 >= 0 && d3 <= 0) u = d1 / (d1 - d3), v = 0;
+    else if (d6 >= 0 && d5 <= d6) u = 0, v = 1;
+    else if (vb <= 0 && d2 >= 0 && d6 <= 0) u = 0, v = d2 / (d2 - d6);
+    else if (va <= 0 && d4 - d3 >= 0 && d5 - d6 >= 0)
+        v = (d4 - d3) / (d4 - d3 + d5 - d6), u = 1 - v;
+    else
+    {
+        const denom = 1 / (va + vb + vc);
+        u = vb * denom, v = vc * denom;
+    }
+    out[0] = ax + abx*u + acx*v, out[1] = ay + aby*u + acy*v, out[2] = az + abz*u + acz*v;
+}
+
+// the closest points of two segments, p to q and r to s, the first's written into out at 0 and the other's at 3:
+// Ericson's Real-Time Collision Detection, 5.1.9
+function meshColliderClosestSegments(px, py, pz, qx, qy, qz, rx, ry, rz, sx, sy, sz, out)
+{
+    const d1x = qx - px, d1y = qy - py, d1z = qz - pz, d2x = sx - rx, d2y = sy - ry, d2z = sz - rz;
+    const wx = px - rx, wy = py - ry, wz = pz - rz;
+    const a = d1x*d1x + d1y*d1y + d1z*d1z, e = d2x*d2x + d2y*d2y + d2z*d2z, f = d2x*wx + d2y*wy + d2z*wz;
+    let s, t;
+    if (a <= 1e-12 && e <= 1e-12)
+        s = t = 0;
+    else if (a <= 1e-12)
+        s = 0, t = clamp(f / e);
+    else
+    {
+        const c = d1x*wx + d1y*wy + d1z*wz;
+        if (e <= 1e-12)
+            t = 0, s = clamp(-c / a);
+        else
+        {
+            const b = d1x*d2x + d1y*d2y + d1z*d2z, denom = a*e - b*b;
+            s = denom ? clamp((b*f - c*e) / denom) : 0;
+            t = (b*s + f) / e;
+            if (t < 0)
+                t = 0, s = clamp(-c / a);
+            else if (t > 1)
+                t = 1, s = clamp((b - c) / a);
+        }
+    }
+    out[0] = px + d1x*s, out[1] = py + d1y*s, out[2] = pz + d1z*s;
+    out[3] = rx + d2x*t, out[4] = ry + d2y*t, out[5] = rz + d2z*t;
+}
+
+// how far along a ray a triangle is, either side, in the ray's own units, or undefined: Moller and Trumbore
+function meshColliderRayTriangle(t, k, ox, oy, oz, dx, dy, dz)
+{
+    const e1x = t[k+3] - t[k], e1y = t[k+4] - t[k+1], e1z = t[k+5] - t[k+2];
+    const e2x = t[k+6] - t[k], e2y = t[k+7] - t[k+1], e2z = t[k+8] - t[k+2];
+    const hx = dy*e2z - dz*e2y, hy = dz*e2x - dx*e2z, hz = dx*e2y - dy*e2x, det = e1x*hx + e1y*hy + e1z*hz;
+    if (abs(det) < 1e-12) return;
+    const sx = ox - t[k], sy = oy - t[k+1], sz = oz - t[k+2], u = (sx*hx + sy*hy + sz*hz) / det;
+    if (u < 0 || u > 1) return;
+    const qx = sy*e1z - sz*e1y, qy = sz*e1x - sx*e1z, qz = sx*e1y - sy*e1x, v = (dx*qx + dy*qy + dz*qz) / det;
+    if (v < 0 || u + v > 1) return;
+    const d = (e2x*qx + e2y*qy + e2z*qz) / det;
+    return d >= 0 ? d : undefined;
+}
+
+// how a capsule's segment, from a to b, is pushed out of a triangle to be radius clear of it, written into push, its
+// length the depth; false when it is clear. The closest points of the two come from the segment's ends against the
+// triangle and its edges against the segment, unless the segment goes through it, which is pushed along the normal
+// to the side its middle is on, out past its deeper end
+const meshColliderPoint = [0, 0, 0], meshColliderPair = [0, 0, 0, 0, 0, 0];
+function meshColliderPush(collider, i, ax, ay, az, bx, by, bz, radius, push)
+{
+    const t = collider.triangles, k = i * 9, n = collider.normals, nk = i * 3;
+    const nx = n[nk], ny = n[nk+1], nz = n[nk+2];
+    const da = nx*(ax - t[k]) + ny*(ay - t[k+1]) + nz*(az - t[k+2]);
+    const db = nx*(bx - t[k]) + ny*(by - t[k+1]) + nz*(bz - t[k+2]);
+    if (min(da, db) > radius || max(da, db) < -radius) return false; // clear of its plane by more than the radius
+    const out = meshColliderPoint;
+    if (da * db < 0)
+    {
+        // it crosses the plane: through the triangle when the crossing is on it
+        const f = da / (da - db), x = ax + (bx - ax) * f, y = ay + (by - ay) * f, z = az + (bz - az) * f;
+        meshColliderClosestOnTriangle(t, k, x, y, z, out);
+        if ((out[0] - x)**2 + (out[1] - y)**2 + (out[2] - z)**2 < 1e-18)
+        {
+            const middle = (da + db) / 2, s = middle >= 0 ? 1 : -1, depth = radius + max(-da * s, -db * s);
+            push[0] = nx * s * depth, push[1] = ny * s * depth, push[2] = nz * s * depth;
+            return true;
+        }
+    }
+    // the nearest of the ends to the triangle and the segment to its edges
+    meshColliderClosestOnTriangle(t, k, ax, ay, az, out);
+    let sx = ax, sy = ay, sz = az, tx = out[0], ty = out[1], tz = out[2];
+    let best = (sx - tx)**2 + (sy - ty)**2 + (sz - tz)**2;
+    if (ax !== bx || ay !== by || az !== bz)
+    {
+        meshColliderClosestOnTriangle(t, k, bx, by, bz, out);
+        let d = (bx - out[0])**2 + (by - out[1])**2 + (bz - out[2])**2;
+        if (d < best)
+            best = d, sx = bx, sy = by, sz = bz, tx = out[0], ty = out[1], tz = out[2];
+        const pair = meshColliderPair;
+        for (let e = 0; e < 9; e += 3)
+        {
+            const f = (e + 3) % 9;
+            meshColliderClosestSegments(ax, ay, az, bx, by, bz, t[k+e], t[k+e+1], t[k+e+2], t[k+f], t[k+f+1], t[k+f+2], pair);
+            d = (pair[0] - pair[3])**2 + (pair[1] - pair[4])**2 + (pair[2] - pair[5])**2;
+            if (d < best)
+                best = d, sx = pair[0], sy = pair[1], sz = pair[2], tx = pair[3], ty = pair[4], tz = pair[5];
+        }
+    }
+    if (best >= radius * radius) return false;
+    const distance = best ** .5;
+    if (distance > 1e-9)
+    {
+        const scale = (radius - distance) / distance;
+        push[0] = (sx - tx) * scale, push[1] = (sy - ty) * scale, push[2] = (sz - tz) * scale;
+    }
+    else
+    {
+        // touching, the way out is the side of the plane its middle is on
+        const s = da + db >= 0 ? 1 : -1;
+        push[0] = nx * s * radius, push[1] = ny * s * radius, push[2] = nz * s * radius;
+    }
+    return true;
+}
+
+// push a capsule standing at a center out of a collider's triangles near it, the deepest touch first each pass, so the
+// face under it is met before the edges of the ones beside it; it stands on what faces within groundAngle of
+// straight up, a face or an edge of one, as a step's, which lifts it onto the step; a push on such a face goes
+// straight up, so it does not creep down a slope; the rest are walls, their unit normals kept for the velocity
+const meshColliderPushed = [0, 0, 0];
+function meshColliderResolve(collider, center, half, radius, groundAngle, walls)
+{
+    let ground = false;
+    const push = meshColliderPushed, cosGround = cos(groundAngle), n = collider.normals;
+    for (let pass = 0; pass < 8; ++pass)
+    {
+        const near = meshColliderNear(collider, center.x - radius, center.y - half - radius, center.z - radius,
+            center.x + radius, center.y + half + radius, center.z + radius);
+        // two triangles that meet at an edge it touches push the same, a step's front and its top: the one facing
+        // more upward wins the tie, so a step's edge lifts it onto the step rather than bouncing it off as a wall
+        let deepest = -1, depth = 1e-18, up = -Infinity, px = 0, py = 0, pz = 0;
+        for (const i of near)
+        {
+            if (!meshColliderPush(collider, i, center.x, center.y - half, center.z, center.x, center.y + half, center.z,
+                radius, push))
+                continue;
+            const d = push[0]**2 + push[1]**2 + push[2]**2, k = i * 3;
+            const faceUp = n[k+1] * sign(n[k]*push[0] + n[k+1]*push[1] + n[k+2]*push[2]);
+            if (d > depth * (1 + 1e-6) || d > depth * (1 - 1e-6) && faceUp > up)
+                deepest = i, depth = d, up = faceUp, px = push[0], py = push[1], pz = push[2];
+        }
+        if (deepest < 0) break;
+        // the triangle's own normal, on the side it pushes to
+        const k = deepest * 3, along = n[k]*px + n[k+1]*py + n[k+2]*pz, length = depth ** .5;
+        if (n[k+1] * sign(along) >= cosGround && py > 0)
+        {
+            ground = true;
+            if (abs(along) > length * .999) // on the face, straight up
+                center.y += depth / py;
+            else // off its edge, as it is
+                center.x += px, center.y += py, center.z += pz;
+        }
+        else
+        {
+            center.x += px, center.y += py, center.z += pz;
+            walls.push(vec3(px / length, py / length, pz / length));
+        }
+    }
+    return ground;
+}
+
+// keep an object out of a collider: its move from where it was in steps no longer than half its width, each pushed out
+// of the triangles near it; a fall stopped by ground stands it there and bounces by restitution, a wall takes the
+// speed into it; one that stood on it last frame and is not rising follows it down a slope as far as it moved across
+function meshColliderCollide(collider, o, oldPos, wasOn)
+{
+    meshColliderBake(collider);
+    if (!collider.triangleCount) return;
+    const k = o.scale3D, sx = o.size3D.x * abs(k.x), sy = o.size3D.y * abs(k.y), sz = o.size3D.z * abs(k.z);
+    const radius = o.collideAsSphere3D ? max(sx, sy, sz) / 2 : min(sx, sy, sz) / 2;
+    const half = o.collideAsSphere3D ? 0 : max(0, sy / 2 - radius);
+    if (!(radius > 0)) return;
+    const p = o.pos3D, from = oldPos || p;
+    const mx = p.x - from.x, my = p.y - from.y, mz = p.z - from.z, move = hypot(mx, my, mz);
+    // nothing near where it went or came from, which is most objects most of the time
+    const g = collider.grid, reach = radius + half;
+    if (max(p.x, from.x) + radius < g.min.x || min(p.x, from.x) - radius > g.max.x ||
+        max(p.y, from.y) + reach < g.min.y || min(p.y, from.y) - reach > g.max.y ||
+        max(p.z, from.z) + radius < g.min.z || min(p.z, from.z) - radius > g.max.z)
+        return;
+    const steps = min(64, max(1, ceil(move / (radius / 2))));
+    const center = from.copy(), walls = [];
+    let ground = false;
+    for (let step = 1; step <= steps; ++step)
+    {
+        center.x += mx / steps, center.y += my / steps, center.z += mz / steps;
+        ground = meshColliderResolve(collider, center, half, radius, o.groundAngle, walls); // where it ends up
+    }
+    if (!ground && wasOn && o.velocity3D.y <= 0)
+    {
+        // down a slope: try it as far below as it moved across, and keep that if it lands
+        const follow = hypot(mx, mz) + 1e-3, below = center.copy();
+        below.y -= follow;
+        if (meshColliderResolve(collider, below, half, radius, o.groundAngle, []) && below.y < center.y)
+            center.set(below.x, below.y, below.z), ground = true;
+    }
+    p.set(center.x, center.y, center.z);
+    const v = o.velocity3D, restitution = max(o.restitution, collider.restitution);
+    for (const n of walls)
+    {
+        const into = v.dot(n);
+        if (into < 0)
+            v.set(v.x - n.x * into * (1 + restitution), v.y - n.y * into * (1 + restitution), v.z - n.z * into * (1 + restitution));
+    }
+    if (ground)
+    {
+        if (v.y < 0)
+            v.y *= -restitution;
+        o.groundObject = collider;
+    }
+}
+
 // read an image's pixel bytes through the engine's work canvas, as {data, width, height}
 function render3DImageData(image)
 {
@@ -33818,7 +35144,7 @@ class ThirdPersonCamera3D extends EngineObject3D
     /** Make a third person camera, the view goes to it at once
      *  @param {EngineObject3D|Vector3} [target] - What to follow, an object or a position
      *  @param {number} [distance] - How long the pole is
-     *  @param {number} [pitch] - Angle of the pole above level, PI/2 looks straight down */
+     *  @param {number} [pitch] - Angle of the pole above level, held to pitchRange, -.4 to 1.2 by default */
     constructor(target, distance=6, pitch=.3)
     {
         ASSERT(!target || target instanceof EngineObject3D || isVector3(target),
@@ -33873,6 +35199,7 @@ class ThirdPersonCamera3D extends EngineObject3D
         this.cameraNew = true;          // made this update, see cameraUpdatePost
         this.pivot = vec3();            // where the pole starts now, eased toward the target
         this.poleLength = distance;     // how long the pole is now, shorter at a wall
+        /** @type {Vector3|undefined} */
         this.targetFrom = undefined;    // where the target was last update, to see which way it moves
         this.turnTime = -Infinity;      // when it was last turned by hand
         this.activate();
@@ -33882,11 +35209,14 @@ class ThirdPersonCamera3D extends EngineObject3D
     /** Make this the camera that drives the view */
     activate() { cameraActivate(this); }
 
-    /** Taking over from another camera, it turns to look the way that one did */
+    /** Taking over from another camera, it starts where that one left the view, looking the way it looked, and eases
+     *  to its target from there */
     takeView()
     {
         this.yaw = render3D.camera.rotation.y;
         this.pitch = clamp(-render3D.camera.rotation.x, this.pitchRange.x, this.pitchRange.y);
+        this.poleLength = this.distance; // a wall it was pulled in by before is found again on the next update
+        this.pivot = render3D.camera.pos.subtract(this.getPoleDirection().scale(this.poleLength));
     }
 
     /** Turn it by hand, as the mouse and stick do, which holds the swing for swingDelay seconds
@@ -33907,9 +35237,8 @@ class ThirdPersonCamera3D extends EngineObject3D
         if (!pos)
         {
             this.takeView();
-            this.poleLength = this.distance;
-            this.pivot = render3D.camera.pos.subtract(this.getPoleDirection().scale(this.distance));
-            return this.placeCamera();
+            cameraDriver() === this && this.placeCamera(); // one not driving leaves the camera alone
+            return;
         }
         this.pivot = pos.add(this.pivotOffset);
         this.targetFrom = pos.copy();
@@ -34063,7 +35392,7 @@ class FirstPersonCamera3D extends EngineObject3D
         /** @property {number} - Radians a second a stick pushed all the way turns the view */
         this.stickSpeed = 3;
         /** @property {number} - Speed of a jump in world units a frame, 0 for none; Space or gamepad button 0 jumps
-         *  while it stands on something, a height map, a voxel map or a solid, see groundObject */
+         *  while it stands on something, a height map, a voxel map, a mesh collider or a solid, see groundObject */
         this.jumpSpeed = 0;
         /** @property {number} - How far above its position the eye is, in its own space, so with a size3D the eye can
          *  sit toward the top of the body instead of its middle; keep it under half the body's height, or the eye is
@@ -34191,7 +35520,7 @@ function render3DParticleView(emitter)
 /**
  * @callback Particle3DCollideCallback - Decides whether a particle stops where it hits the level, a filter as in 2D
  * @param {Particle3D} particle
- * @param {EngineObject3D} level - The HeightMap or VoxelMap it hit
+ * @param {EngineObject3D} level - The HeightMap, VoxelMap or MeshCollider it hit
  * @param {Vector3} pos - Where it hit
  * @return {boolean|void} - true to stop it there; a callback that returns nothing lets it pass through
  * @memberof Render3D
@@ -34212,8 +35541,8 @@ function render3DParticleView(emitter)
  * - An emitter with an emitTime destroys itself once its last particle is gone, like the 2D emitter
  * - Callbacks as the 2D emitter's: particleCreateCallback, particleUpdateCallback, particleCollideCallback and
  *   particleDestroyCallback, each given a Particle3D, one object the emitter reuses for every particle and call
- * - collideLevel, off by default, has particles hit the height maps and voxel maps, bouncing by restitution and
- *   sliding by friction
+ * - collideLevel, off by default, has particles hit the level, height maps, voxel maps and mesh colliders, bouncing
+ *   by restitution and sliding by friction
  * @extends EngineObject3D
  * @memberof Render3D
  * @example
@@ -34310,8 +35639,8 @@ class ParticleEmitter3D extends EngineObject3D
         this.trailData = undefined;
         /** @property {number} - Trail points kept per particle, from trailTime */
         this.trailMax = 0;
-        /** @property {boolean} - Particles hit the level, the height maps and voxel maps, bouncing by restitution and
-         *  sliding along by friction; off by default, it tests each particle's move against the level every frame */
+        /** @property {boolean} - Particles hit the level, height maps, voxel maps and mesh colliders, bouncing by
+         *  restitution and sliding along by friction; off by default, it tests each particle's move against the level every frame */
         this.collideLevel = false;
         /** @property {number} - How much a particle grips where it lands, 0 to 1: its speed along the surface is
          *  cut by this much on each hit, on top of the friction, 1 stops it there */
@@ -34606,14 +35935,12 @@ class ParticleEmitter3D extends EngineObject3D
         // the instanced path: one matrix per particle, its right and up axes the quad's size long, facing the camera,
         // written straight into the batch; the batch draws at the end so the order of the transparent stage holds
         const quad = r.billboardMesh, instanced = texture && r.instancing && !r.capture && render3DCanDraw();
-        let data, textureInfo, uv, lit;
+        let data, textureInfo, uv;
         if (instanced)
         {
             render3DMeshUpload(quad);
             textureInfo = render3DTextureOf(texture);
             uv = render3DGetTileUVs(texture);
-            lit = r.lighting;
-            r.lighting = r.shadowPass && lit; // unlit on screen, in the shadow map the object's flag decides
             r.cullBackFaces = r.mirrored = false;
         }
         const cb = r.cameraBack;
@@ -34646,7 +35973,8 @@ class ParticleEmitter3D extends EngineObject3D
                 else if (instanced)
                 {
                     // the quad's half axes, turned as drawBillboard turns them, doubled for billboardMesh's unit square
-                    const a = render3DBillboardAxes(size, angle, false), k = render3DInstanceSlot(quad, textureInfo);
+                    const a = render3DBillboardAxes(size, angle, false);
+                    const k = render3DInstanceSlot(quad, textureInfo, undefined, !r.shadowPass); // lit as billboards
                     data = quad.instanceData;
                     data[k]    = a[0] * 2; data[k+1] = a[1] * 2; data[k+2]  = a[2] * 2; data[k+3]  = 0;
                     data[k+4]  = a[3] * 2; data[k+5] = a[4] * 2; data[k+6]  = a[5] * 2; data[k+7]  = 0;
@@ -34669,7 +35997,6 @@ class ParticleEmitter3D extends EngineObject3D
         {
             if (instanced)
             {
-                r.lighting = lit;
                 r.flush(); // whatever the stream holds from before this emitter draws first
                 render3DFlushInstances(quad);
             }
@@ -34857,7 +36184,7 @@ function render3DFlareTile(shape)
  * @property {number|Vector2} size - How big across, as a part of the screen's height, a vector for a part wider
  *  than it is tall
  * @property {Color} color - Its color, the alpha how bright
- * @property {string} [shape] - glow, disc, ring, hex, streak or star, a glow when left out
+ * @property {'glow'|'disc'|'ring'|'hex'|'streak'|'star'} [shape] - A glow when left out
  * @property {TileInfo} [tileInfo] - A tile of the game's own to draw in place of a shape, best white on clear
  * @property {number} [angle] - How far it is turned, in radians
  * @memberof Render3D
@@ -34909,7 +36236,7 @@ class LensFlare3D extends EngineObject3D
         /** @property {Array<string>|undefined} - The shapes the ghosts are picked from, glow, disc, ring, hex,
          *  streak or star: ['hex'] makes every ghost a hexagon, and a shape listed twice is picked twice as often;
          *  discs, rings and glows when not set
-         *  @type {Array<string>|undefined} */
+         *  @type {Array<'glow'|'disc'|'ring'|'hex'|'streak'|'star'>|undefined} */
         this.shapes = undefined;
         /** @property {number} - Scales the glow at the sun, 0 for none */
         this.glowSize = 1;
@@ -35182,8 +36509,11 @@ function parseOBJ(text, smooth=render3D?.smoothShading)
                 const corners = parts.slice(1).map(c=> c.split('/'));
                 if (corners.length < 3) break;
                 const facePoints = corners.map(c=> lookup(c[0], positions));
-                ASSERT(facePoints.every(isVector3), 'OBJ face uses a vertex index the file does not have', line);
-                if (!facePoints.every(isVector3)) break; // a release build leaves the face out
+                // and its uv and normal indices, each one given must be one the file has
+                const valid = facePoints.every(isVector3) && corners.every(c=>
+                    (!c[1] || isVector2(lookup(c[1], uvs))) && (!c[2] || isVector3(lookup(c[2], normals))));
+                ASSERT(valid, 'OBJ face uses a vertex, uv or normal index the file does not have', line);
+                if (!valid) break; // a release build leaves the face out
                 const hasNormals = corners.every(c=> c[2]);
                 missingNormals ||= !hasNormals;
                 const faceNormal = hasNormals ? undefined : render3DFaceNormal(facePoints[0], facePoints[1], facePoints[2], facePoints[3]);
@@ -36098,14 +37428,15 @@ class VoxelMap extends EngineObject3D
             if (t0 > enter) enter = t0, entryAxis = k;
             exit = min(exit, t1);
         }
-        if (enter > exit) return;
+        if (enter >= exit) return; // a miss, or a touch of its outside, as a ray leaving from its far face
 
         // walk the cells, stepping across whichever cell edge comes next
         const start = o.add(d.scale(enter)), cell = [], step = [], next = [], delta = [];
         for (let k = 0; k < 3; ++k)
         {
             const a = axes[k], dk = d[a];
-            cell[k] = clamp(floor(start[a]), 0, s[a] - 1);
+            // on a cell edge, the cell the ray goes into: one going down starts in the cell below the edge
+            cell[k] = clamp(dk < 0 ? ceil(start[a]) - 1 : floor(start[a]), 0, s[a] - 1);
             step[k] = sign(dk);
             next[k] = dk ? enter + (cell[k] + (dk > 0 ? 1 : 0) - start[a]) / dk : Infinity;
             delta[k] = dk ? abs(1 / dk) : Infinity;
@@ -36235,8 +37566,9 @@ const level3DBaseScale = new WeakMap;
  *  - An EngineObject3D then gets the object's rotation, and its scale times the scale it was made with
  *  - Adding a name again replaces it, Box, Sphere, Cylinder and Light too
  *  @param {string} name - The type the objects have in the level
- *  @param {Function} make - A class made at each object's position, or a function called with it
- *  @param {Object<string, any>} [defaults] - Properties of each one made, the level editor shows inputs for them
+ *  @param {(function(Vector3, ObjectProperties): unknown)|(function(new: unknown, Vector3, ObjectProperties))} make - A
+ *  class made at each object's position, or a function called with it
+ *  @param {ObjectProperties} [defaults] - Properties of each one made, the level editor shows inputs for them
  *  @param {TileInfo} [tileInfo] - An icon for the level editor
  *  @memberof Level3D
  *  @example
@@ -36251,20 +37583,28 @@ function level3DAddType(name, make, defaults={}, tileInfo)
 }
 
 /** Add a type that is a mesh and nothing more, a static prop with no class to write, for a built mesh or a model
- *  - Each object has a color and a solid property, solid collides as the box around the mesh
+ *  - Each object has a color, a solid property, which collides as the box around the mesh, and a meshCollision
+ *    property, which makes the level's ground and walls of the mesh's own triangles in its place, with a
+ *    MeshCollider as its child, so what moves over it follows its shape: a ramp, a rock, a bridge
  *  @param {string} name - The type the objects have in the level
  *  @param {Mesh} mesh - Shared by every object of the type
  *  @param {TileInfo} [tileInfo] - Its texture
  *  @param {Color} [color] - Its color, an object's own color property goes over it
+ *  @param {boolean} [meshCollision] - Whether objects of the type collide by the mesh's triangles unless they say not
  *  @memberof Level3D
  *  @example
- *  level3DAddMesh('Tree', treeMesh, tile(4)); */
-function level3DAddMesh(name, mesh, tileInfo, color=WHITE)
+ *  level3DAddMesh('Tree', treeMesh, tile(4));
+ *  level3DAddMesh('Ramp', rampMesh, tile(2), WHITE, true); */
+function level3DAddMesh(name, mesh, tileInfo, color=WHITE, meshCollision=false)
 {
     ASSERT(mesh instanceof Mesh, 'mesh must be a Mesh');
     ASSERT(isColor(color), 'color must be a color');
-    level3DAddType(name, function(pos, properties) { return level3DMakeShape(pos, properties, mesh, tileInfo); },
-        {color, solid: false}, tileInfo);
+    level3DAddType(name, function(pos, properties)
+    {
+        const o = level3DMakeShape(pos, properties, mesh, tileInfo);
+        properties.meshCollision && o.addChild(new MeshCollider(mesh));
+        return o;
+    }, {color, solid: false, meshCollision: !!meshCollision}, tileInfo);
 }
 
 /** Make the objects of a level, each from the type added for its name
@@ -36607,8 +37947,8 @@ function level3DProperties(type, object)
                 (properties[key] = vec2(value[0], value[1]));
         else if (typeof d === 'number')
             level3DFinite(value) && (properties[key] = value);
-        else if (d === undefined || typeof value === typeof d)
-            properties[key] = value;
+        else if (d === undefined || typeof value === typeof d && (d === null || value !== null))
+            properties[key] = value; // null is an object to typeof, but not the object a default is
     }
     return properties;
 }
@@ -36667,7 +38007,7 @@ function level3DMakeAt(object, pos, rotation, scale)
  *  @param {Vector3} [pos3D]
  *  @param {Vector3} [rotation3D] - In radians, as an object has it
  *  @param {Vector3} [scale3D] - Times the scale the type makes it with
- *  @param {Object<string, any>} [properties] - Over the type's defaults
+ *  @param {ObjectProperties} [properties] - Over the type's defaults
  *  @return {any} - What the type made, a Prefab3D for a prefab, undefined when there is no such type
  *  @memberof Level3D
  *  @example
@@ -36693,6 +38033,10 @@ const level3DPrefabs = new Map;
 let level3DPrefabDepth = 0, level3DPrefabAttached = 0;
 // the prefabs being made, one inside the next, so one that holds itself is caught where it does, however many times
 const level3DPrefabMaking = [];
+// the parts one instance makes, its prefabs inside it counted too, at most LEVEL3D_PREFAB_PARTS, so a small file of
+// prefabs that each hold several of the next can not make millions of objects
+let level3DPrefabParts = 0;
+const LEVEL3D_PREFAB_PARTS = 1e4;
 
 /** Add a prefab: a small level, its objects placed about its own origin, to place many times under one name
  *  - It is a type from then on: a level's object of that type, the level editor's Place list and level3DSpawn make
@@ -36789,7 +38133,7 @@ class Prefab3D extends EngineObject3D
         this.originOffset = vec3();
         /** @type {Array<Level3DObject>} */
         this.partObjects = []; // the prefab's object of each part
-        this.partsPlaced = ''; // where the handle was when its parts were last placed, undefined parts not made
+        this.partsPlaced = ''; // where the handle was when its parts were last placed, '' before they are
         this.partsMade = false;
     }
 
@@ -36841,6 +38185,7 @@ class Prefab3D extends EngineObject3D
             debug && console.error(`level3DLoad: the prefab ${this.prefabName} holds itself, left out there`);
             return;
         }
+        level3DPrefabDepth || (level3DPrefabParts = 0); // an instance of its own, not a part of another
         level3DPrefabMaking.push(this.prefabName);
         ++level3DPrefabDepth;
         this.attached && ++level3DPrefabAttached;
@@ -36849,6 +38194,12 @@ class Prefab3D extends EngineObject3D
             const low = vec3(Infinity), high = vec3(-Infinity), children = [];
             for (const object of prefab.objects)
             {
+                if (++level3DPrefabParts > LEVEL3D_PREFAB_PARTS)
+                {
+                    level3DPrefabParts == LEVEL3D_PREFAB_PARTS + 1 && debug && console.error('level3DLoad: the prefab ' +
+                        this.prefabName + ' makes more than ' + LEVEL3D_PREFAB_PARTS + ' parts, the rest left out');
+                    break;
+                }
                 const local = {pos: level3DVector(object.pos, vec3()), scale: level3DVector(object.scale, vec3(1)),
                     rotation: level3DVector(object.rotation, vec3()).scale(PI / 180)};
                 const at = this.attached ? local : level3DPrefabPartTransform(this, object);
@@ -37041,11 +38392,12 @@ const particleEffectSettings = [];
  *  the whole effect, the built-ins fitting a one unit object at 1; hue, which turns its colors around the color wheel,
  *  1 all the way; saturation, which multiplies it, 0 gray; angle, its direction, 0 up; tileInfo, the game's own art in
  *  place of the shape, tinted by its colors, a TextureInfo drawn whole; and in 3D flatten, a flat spawn area across
- *  the way it emits; emitSize may be a vec2, a rectangle; shape is one of the built-in names, so a misspelled one is
- *  caught, where an effect's settings, read from JSON, take any string
+ *  the way it emits, and roundLighting, each particle lit as a ball, bright on the side toward each light; emitSize
+ *  may be a vec2, a rectangle; shape is one of the built-in names, so a misspelled one is caught, where an effect's
+ *  settings, read from JSON, take any string
  *  @typedef {Omit<ParticleEffectSettings, 'emitSize'|'shape'> & {scale?: number, hue?: number, saturation?: number,
- *  angle?: number, tileInfo?: TileInfo|TextureInfo, flatten?: boolean, emitSize?: number|Vector2,
- *  shape?: ''|'dot'|'soft'|'glow'|'smoke'|'spark'|'square'|'triangle'|'ring'|'star'|'plus'}} ParticleEffectOptions
+ *  angle?: number, tileInfo?: TileInfo|TextureInfo, flatten?: boolean, roundLighting?: boolean,
+ *  emitSize?: number|Vector2, shape?: ''|'dot'|'soft'|'glow'|'smoke'|'spark'|'square'|'triangle'|'ring'|'star'|'plus'}} ParticleEffectOptions
  *  @memberof ParticleEffects */
 let particleEffectSettingGroup; // the group settings are being added to
 
@@ -37494,6 +38846,10 @@ function particleEffectSet(emitter, effect)
     for (const setting of particleEffectSettings)
         if (!particleEffectIndirect.includes(setting.name))
             emitter[setting.name] = setting.kind === 'color' ? new Color(...s[setting.name]) : s[setting.name];
+    // a child emitter's angle is the world's, so the effect's angle is taken from its parent's, as a 3D emitter's
+    // rotation3D is; the engine makes that its localAngle when the parent places it again
+    if (emitter.parent)
+        emitter.angle = emitter.parent.angle + emitter.parent.getMirrorSign() * s.angle;
     ended && (emitter.emitTime = -1);
     emitter.emitCircle = !s.emitRect;
     emitter.emitSize = vec2(s.emitSize, s.emitRect ? s.emitHeight : s.emitSize);
@@ -37503,7 +38859,7 @@ function particleEffectSet(emitter, effect)
 }
 
 // the options a play takes besides the settings
-const PARTICLE_EFFECT_OPTIONS = ['hue', 'saturation', 'scale', 'angle', 'tileInfo', 'flatten'];
+const PARTICLE_EFFECT_OPTIONS = ['hue', 'saturation', 'scale', 'angle', 'tileInfo', 'flatten', 'roundLighting'];
 
 // whether an option is a value its setting takes, as particleEffectSanitize keeps one
 function particleEffectOptionValid(setting, value)
@@ -37687,7 +39043,8 @@ function particleEffectSet3D(emitter, effect)
  *  @param {string|ParticleEffect} nameOrEffect - A built-in or added effect's name, or an effect
  *  @param {Vector3} [pos3D]
  *  @param {ParticleEffectOptions} [options] - scale, hue, saturation, angle, tileInfo and any setting as particleEffect; angle turns it
- *    about z, so 0 is up; flatten makes the spawn area flat across the way it emits
+ *    about z, so 0 is up; flatten makes the spawn area flat across the way it emits; roundLighting lights each
+ *    particle as a ball, for smoke and clouds a light shines into
  *  @return {ParticleEmitter3D|undefined} - undefined when there is no such effect
  *  @memberof ParticleEffects */
 function particleEffect3D(nameOrEffect, pos3D=vec3(), options={})
@@ -37701,6 +39058,7 @@ function particleEffect3D(nameOrEffect, pos3D=vec3(), options={})
         e.rotation3D = vec3(0, 0, -options.angle);
     e.scale3D = vec3(options.scale ?? 1);
     e.emitFlat = !!options.flatten; // a sphere a disc, a box a sheet, across the way it emits
+    e.roundLighting = !!options.roundLighting;
     if (options.tileInfo) // a whole texture too, the 3D emitter draws one as a tile
         e.tileInfo = /** @type {TileInfo} */ (options.tileInfo);
     return e;
@@ -37838,9 +39196,10 @@ const particleEffectsBuiltIn = [];
  *   color texture's uvs; roughness, metalness and occlusion maps are not loaded
  * - The base color texture reads the uv set its texCoord names, moved by KHR_texture_transform as gltfpack and
  *   Blender write it
- * - An OPAQUE material, the default, ignores its texture's alpha as the format says: a texture only such materials
- *   use loads with its alpha set to 1, so the 3D pass cuts no holes in it; MASK always cuts at half, alphaCutoff
- *   is not read
+ * - An OPAQUE material, the default, ignores its texture's alpha as the format says: its texture loads with alpha
+ *   set to 1, so the 3D pass cuts no holes in it, as a copy when a MASK or BLEND material uses the texture too;
+ *   MASK always cuts at half by the texture's alpha alone: alphaCutoff, the material's alpha and the vertex alpha
+ *   are not read, so a mask goes in the texture, as exporters write it
  * - Material and vertex colors are linear in glTF and are converted to sRGB at load, the space textures are in
  * - glTF and LittleJS agree on the axes, y up and -z forward, on counter clockwise triangles and on uvs running down
  * - Requires the Render3D plugin
@@ -38382,8 +39741,8 @@ async function parseGLTF(data, baseUrl='', files)
     const usedTextures = new Set((json.materials || []).flatMap(m=> [m.pbrMetallicRoughness?.baseColorTexture?.index,
         m.normalTexture?.index, m.emissiveTexture?.index]));
     const normalTextures = new Set((json.materials || []).map(m=> m.normalTexture?.index));
-    const opaqueTextures = gltfOpaqueTextures(json);
-    const textures = await Promise.all((json.textures || []).map(async (texture, index)=>
+    const {opaque: opaqueTextures, copies: opaqueCopies} = gltfOpaqueTextures(json);
+    const loadTexture = async (texture, index, opaqueOnly)=>
     {
         if (!glContext || typeof createImageBitmap == 'undefined' || !usedTextures.has(index)) return;
         try
@@ -38399,9 +39758,9 @@ async function parseGLTF(data, baseUrl='', files)
                 const view = json.bufferViews[image.bufferView];
                 blob = new Blob([new Uint8Array(buffers[view.buffer], view.byteOffset || 0, view.byteLength)], {type: image.mimeType});
             }
-            // an OPAQUE material ignores its texture's alpha, which the 3D pass would cut holes by, so a texture only
-            // those use has it set to 1; decoded as stored for that, and a jpeg has no alpha to set
-            const opaque = opaqueTextures.has(index) && blob.type !== 'image/jpeg';
+            // an OPAQUE material ignores its texture's alpha, which the 3D pass would cut holes by, so a texture for
+            // those has it set to 1; decoded as stored for that, and a jpeg has no alpha to set
+            const opaque = opaqueOnly && blob.type !== 'image/jpeg';
             // a normal map is directions, not colors, so it is decoded as stored; one a material also uses as a
             // color, an odd file, is decoded that way too
             const bitmap = normalTextures.has(index) ?
@@ -38411,7 +39770,13 @@ async function parseGLTF(data, baseUrl='', files)
             return new TextureInfo(bitmap, true, [sampler.wrapS ?? 10497, sampler.wrapT ?? 10497], sampler.magFilter === 9728);
         }
         catch (e) { console.warn('glTF image not loaded, left out: ' + (e?.message || e)); }
-    }));
+    };
+    const textures = await Promise.all((json.textures || []).map((texture, index)=>
+        loadTexture(texture, index, opaqueTextures.has(index))));
+    // a texture OPAQUE and MASK or BLEND materials share keeps its alpha, and the OPAQUE ones get a copy without
+    const copies = new Map(await Promise.all([...opaqueCopies].map(async (index)=>
+        /** @type {[number, TextureInfo|undefined]} */ ([index, await loadTexture(json.textures[index], index, true)]))));
+    const allTextures = [...textures, ...copies.values()];
 
     // the parts: the scene's nodes walked with their transforms, every primitive of a node's mesh placed by it;
     // each node's parent and resting place are kept, so an animation can move a part from where it rests
@@ -38450,7 +39815,7 @@ async function parseGLTF(data, baseUrl='', files)
             {
                 const skinned = skin?.joints?.length && primitive.attributes.JOINTS_0 !== undefined &&
                     primitive.attributes.WEIGHTS_0 !== undefined;
-                const part = gltfPart(json, buffers, textures, primitive, skinned ? new Matrix4 : matrix,
+                const part = gltfPart(json, buffers, textures, copies, primitive, skinned ? new Matrix4 : matrix,
                     node.name || mesh.name || 'part ' + parts.length);
                 if (!part) continue;
                 part.node = index;
@@ -38491,14 +39856,14 @@ async function parseGLTF(data, baseUrl='', files)
     catch (error)
     {
         // a file that fails partway leaves no model to dispose, so the textures it made go now
-        for (const texture of textures)
+        for (const texture of allTextures)
             texture?.destroyWebGLTexture();
         throw error;
     }
 
     // a texture none of the parts draws with, another scene's, goes now too, since dispose finds them by the parts
     const used = new Set(parts.flatMap(p=> [p.textureInfo, p.normalMap, p.emissiveMap]));
-    for (const texture of textures)
+    for (const texture of allTextures)
         texture && !used.has(texture) && texture.destroyWebGLTexture();
     // a skinned part rests as its joints place it, with nothing moved
     const nodeTree = {nodes: json.nodes, parents, restInverse, restPose}, restWorlds = gltfNodeWorlds(nodeTree, new Map);
@@ -38696,20 +40061,23 @@ function gltfNodeTRS(node)
         scale: [...(node.scale || [1, 1, 1])]};
 }
 
-// the base color textures that only OPAQUE materials use, the default mode, which the format says ignores alpha;
-// one a MASK or BLEND material also uses keeps its alpha for that
+// the base color textures of OPAQUE materials, the default mode, which the format says ignores alpha: opaque, the
+// ones only those use, loaded with alpha 1; copies, the ones a MASK or BLEND material uses too, which keep their
+// alpha for that and get a copy with alpha 1 for the OPAQUE ones; only materials a primitive draws with count
 function gltfOpaqueTextures(json)
 {
+    const drawn = new Set((json.meshes || []).flatMap(m=> (m.primitives || []).map(p=> p.material)));
     const opaque = new Set, cut = new Set;
-    for (const material of json.materials || [])
+    (json.materials || []).forEach((material, i)=>
     {
         const index = material.pbrMetallicRoughness?.baseColorTexture?.index;
-        if (index !== undefined)
+        if (index !== undefined && drawn.has(i))
             (!material.alphaMode || material.alphaMode === 'OPAQUE' ? opaque : cut).add(index);
-    }
+    });
+    const copies = new Set([...opaque].filter((index)=> cut.has(index)));
     for (const index of cut)
         opaque.delete(index);
-    return opaque;
+    return {opaque, copies};
 }
 
 // an image decoded without premultiplied alpha, given alpha 1 all over and its colors as they are; read back through
@@ -38929,7 +40297,7 @@ function gltfAccessor(json, buffers, index)
 }
 
 // one primitive as a part: its attributes into a mesh, the indices as triangles, then placed and given its material
-function gltfPart(json, buffers, textures, primitive, matrix, name)
+function gltfPart(json, buffers, textures, copies, primitive, matrix, name)
 {
     const mode = primitive.mode ?? 4; // triangles
     if (mode < 4)
@@ -38979,9 +40347,11 @@ function gltfPart(json, buffers, textures, primitive, matrix, name)
     // only a blending material reads its alpha, an opaque or masked one is solid whatever the factor says
     const transmission = material.extensions?.KHR_materials_transmission?.transmissionFactor || 0;
     const blend = material.alphaMode === 'BLEND', alpha = (blend ? factor[3] : 1) * (1 - .8 * transmission);
+    const opaqueMaterial = !material.alphaMode || material.alphaMode === 'OPAQUE';
     const texture = textureRef && json.textures?.[textureRef.index];
     const part = new GLTFPart(name, mesh, rgb(gltfSRGB(factor[0]), gltfSRGB(factor[1]), gltfSRGB(factor[2]), alpha),
-        textureRef ? textures[textureRef.index] : undefined, blend || transmission > 0);
+        textureRef ? opaqueMaterial && copies.get(textureRef.index) || textures[textureRef.index] : undefined,
+        blend || transmission > 0);
     part.pixelated = json.samplers?.[texture?.sampler]?.magFilter === 9728; // NEAREST
     part.vertexSource = vertexSource;
     part.unlit = !!material.extensions?.KHR_materials_unlit;
@@ -39259,8 +40629,9 @@ const tweakPathRegex = /^[A-Za-z_$][\w$]*(\.[A-Za-z_$][\w$]*)*$/;
 
 /** Options for a tweak
  *  @typedef {Object} TweakOptions
- *  @property {number} [min] - Lowest value on the slider, the slider shows when min and max are both set
- *  @property {number} [max] - Highest value on the slider
+ *  @property {number} [min] - Lowest value on the slider, the slider shows when min and max are both set; a value
+ *  typed lower is raised to it
+ *  @property {number} [max] - Highest value on the slider, and a value typed higher is lowered to it
  *  @property {number} [step] - Step for the slider and number box, a thousandth of the range by default
  *  @property {string} [label] - Name to show in place of the path, and the name it is saved by with an object
  *  @property {object} [object] - Object the path is a field of, in place of a global, for an ES module game
@@ -39360,7 +40731,10 @@ function tweakEngineDefaults()
 {
     if (!debug) return;
     tweakDivider('Engine');
-    tweakAdd('gravity', ()=> gravity, setGravity, (v)=> `setGravity(${v});`, {min: -.05, max: .05});
+    // Box2D takes gravity in units per second squared, the arcade physics per frame; called before Box2D is ready
+    // the range still takes in the gravity the game set, four times over
+    const range = typeof box2d !== 'undefined' && box2d ? 30 : max(.05, abs(gravity.x) * 4, abs(gravity.y) * 4);
+    tweakAdd('gravity', ()=> gravity, setGravity, (v)=> `setGravity(${v});`, {min: -range, max: range});
     tweakAdd('timeScale', ()=> timeScale, setTimeScale, (v)=> `setTimeScale(${v});`, {min: 0, max: 2});
     tweakAdd('cameraScale', ()=> cameraScale, setCameraScale, (v)=> `setCameraScale(${v});`,
         {min: 1, max: 128, step: 1});
@@ -39391,7 +40765,8 @@ function tweakAdd(name, get, set, toCode, options)
     tweakSaved ||= readSaveData(tweakSaveName(), {});
     const saved = tweakSaved[name];
     if (!saved) return;
-    if (tweakSaveText(saved.code) === tweakSaveText(tweakToSave(t.codeValue)))
+    // a value not of the tweak's type, a save edited by hand or from another version, is dropped as a changed one is
+    if (tweakSaveText(saved.code) === tweakSaveText(tweakToSave(t.codeValue)) && tweakSaveFits(type, saved.value))
         set(tweakFromSave(type, saved.value));
     else
     {
@@ -39419,6 +40794,12 @@ function tweakFromSave(type, v)
     return type === 'color' ? rgb(...v) : type === 'vector2' ? vec2(...v) : type === 'vector3' ? vec3(...v) : v;
 }
 function tweakSaveText(v) { return JSON.stringify(v); }
+function tweakSaveFits(type, v)
+{
+    const numbers = (n)=> isArray(v) && v.length === n && v.every(isNumber);
+    return type === 'color' ? numbers(4) : type === 'vector2' ? numbers(2) : type === 'vector3' ? numbers(3) :
+        type === 'number' ? isNumber(v) : typeof v === 'boolean';
+}
 
 // remember a tweak's value, or forget it when it is back to the code value
 function tweakSave(t)
@@ -39555,7 +40936,7 @@ function tweakRow(t)
 
     tweakElement('div', row, '', label);
     if (t.type === 'number')
-        return tweakNumber(row, '', t.get, t.set, t.options, save);
+        return tweakNumber(row, '', ()=> t.get(), (n)=> t.set(n), t.options, save); // added again, the new object's
 
     // a part of a vector or color is a number of its own, set as a new copy with that part changed
     const part = (key, options)=> tweakNumber(row, key, ()=> t.get()?.[key],
@@ -39603,11 +40984,16 @@ function tweakNumber(parent, axis, get, set, options, save)
     if (slider)
         Object.assign(slider, {type: 'range', min, max, step});
     Object.assign(box, {type: 'number', step});
+    isNumber(min) && (box.min = String(min));
+    isNumber(max) && (box.max = String(max));
 
     const change = (input)=>
     {
-        const v = parseFloat(input.value);
+        let v = parseFloat(input.value);
         if (!isFinite(v)) return; // a box part way through typing, or 1e999
+        // a number typed past the range is held to it, as the slider is, so a setter's assert is not reached
+        if (isNumber(min) && v < min) v = min;
+        if (isNumber(max) && v > max) v = max;
         set(v);
         save();
     };
@@ -39893,13 +41279,14 @@ function debugPoint3D(pos, color=WHITE, time=0, size=.2)
  *  @property {function(): Array<Level3DObject>} selected - The selected objects
  *  @property {function(number): any} made - What the game made for an object's id
  *  @property {function(function(Array<Level3DObject>): void): boolean} change - Edit a copy of the object list; false
- *    when nothing changed
+ *    when nothing changed, or when the level can not be edited while its autosave waits for Apply or Drop
  *  @property {function(string, function(any): any): boolean} changePart - Edit the level's scene, voxels, terrain
- *    or prefabs block
+ *    or prefabs block; false as change gives it
  *  @property {function(): void} strokeEnd - End the edit: one undo step, and the autosave
  *  @property {function(): void} strokeCancel - Take the edit being made back
  *  @property {function(string, Vector3): number|undefined} place - Add an object of a type at a position, selected;
- *    its id, undefined when there is no such type or the level can not be edited
+ *    its id, undefined when there is no such type, a prefab would hold itself, or the level can not be edited
+ *    while its autosave waits for Apply or Drop
  *  @property {(object: Level3DObject, pos3D?: Vector3, rotation?: Vector3, scale3D?: Vector3) => void} setTransform -
  *    Write a place, a rotation and a scale on an
  *    object of the list given to change; one left out is kept
@@ -40027,7 +41414,8 @@ class LevelEditor
      *  @param {string} key - A letter or digit, 'k', or a key's name in any case, 'Delete', 'F2', 'Enter', 'Space';
      *    'ctrl+k' with Ctrl or Cmd
      *  @param {function(boolean): unknown} action - Called with whether Shift is held; returning false says it did
-     *    nothing, and the key is left to the browser
+     *    nothing, and the key is left to the browser in the 2D editor; the 3D editor reads keys in its update, after
+     *    the browser has them, so it keeps every key added here from the browser
      *  @param {string} [helpLine] - A line for the editor's help */
     addKey(key, action, helpLine)
     {
@@ -40384,6 +41772,13 @@ function editorMapRestore(map)
 
     const saved = editorSaves()[record.key];
     if (!saved) return map;
+    if (!editorSaveValid(saved))
+    {
+        // one of the wrong shape, edited by hand or written by something else, would fail every load: it goes
+        console.warn(`LittleJS editor: the autosave of ${record.fileName} could not be read and was dropped`);
+        editorDiscardPending(record);
+        return map;
+    }
     // an autosave from before the map's shape was in the hash matches on its tiles and objects, and one from before
     // objects were matches on its tiles; one of a resized map is resized to first
     const sameFile = saved.hash === record.hash || saved.savedHash === record.hash || !saved.width &&
@@ -40735,9 +42130,22 @@ function editorAutosave(record)
     if (sameSize && editorSameData(data, record.original) && editorSameData(kept, original) && !record.savedHash)
         delete saves[record.key];
     else
-        saves[record.key] = {hash: record.hash, savedHash: record.savedHash, width: map.width, height: map.height,
-            layers: data, objects: kept, nextobjectid: map.nextobjectid};
+        editorSavesKeep(saves, record.key, {hash: record.hash, savedHash: record.savedHash, width: map.width,
+            height: map.height, layers: data, objects: kept, nextobjectid: map.nextobjectid});
     editorWriteSaves(saves, record.key);
+}
+
+// keep an autosave, the newest last; of the maps and levels with no file, keyed by their hash, a game that makes a
+// different one each run would add one a run until storage is full, so only the newest EDITOR_AUTOSAVE_FILELESS stay
+const EDITOR_AUTOSAVE_FILELESS = 8;
+function editorSavesKeep(saves, key, entry)
+{
+    delete saves[key];
+    saves[key] = entry;
+    if (!key.includes(' #')) return; // a file's own, its key a path
+    const fileless = Object.keys(saves).filter((k)=> k.includes(' #'));
+    for (const old of fileless.slice(0, -EDITOR_AUTOSAVE_FILELESS))
+        delete saves[old];
 }
 
 // a map's lists of objects with the empty ones past count left off: an Objects layer the editor made, empty again,
@@ -40833,6 +42241,20 @@ function editorPendingFits(record, saved)
 }
 
 // drop the autosaved edits of a file that changed since
+// whether an autosave has the shape one is written in: tile layers of whole numbers, object layers of objects,
+// and a size of whole cells
+function editorSaveValid(saved)
+{
+    const plain = (o)=> !!o && typeof o === 'object' && !Array.isArray(o);
+    const whole = (n)=> n === undefined || Number.isInteger(n) && n > 0;
+    return plain(saved) && Array.isArray(saved.layers) &&
+        saved.layers.every((layer)=> Array.isArray(layer) && layer.every((gid)=> Number.isInteger(gid) && gid >= 0)) &&
+        (saved.objects === undefined || Array.isArray(saved.objects) &&
+            saved.objects.every((list)=> Array.isArray(list) && list.every(plain))) &&
+        whole(saved.width) && whole(saved.height) &&
+        (saved.nextobjectid === undefined || Number.isInteger(saved.nextobjectid));
+}
+
 function editorDiscardPending(record)
 {
     if (!record) return;
@@ -40978,8 +42400,10 @@ function editorSetCell(layer, pos, gid)
     const {source, live, color} = layer;
     const index = pos.x + (live.size.y - 1 - pos.y) * live.size.x;
     const before = source.data[index];
-    if (before === gid && (!gid || live.destroyed || live.getData(pos).tile !== undefined))
-        return before; // the same, unless the layer lost the tile in play, a ghost painted with its own tile
+    // the same, unless the layer lost the tile in play, a ghost painted with its own tile, or the game put a tile on
+    // a cell the map has empty, which erasing takes away
+    if (before === gid && (live.destroyed || (live.getData(pos).tile !== undefined) === !!gid))
+        return before;
     source.data[index] = gid;
     if (live.destroyed) return before; // a layer the game let go of, the map still has the change
 
@@ -41022,10 +42446,17 @@ function editorUndoPush(stroke)
 // the stroke is done, it can be undone as one
 function editorStrokeEnd()
 {
-    if (!editorStroke) return;
-    editorUndoPush(editorStroke);
-    editorChanged(editorStroke);
-    editorStroke = undefined;
+    if (editorStroke)
+    {
+        editorUndoPush(editorStroke);
+        editorChanged(editorStroke);
+        editorStroke = undefined;
+    }
+    // a tile the game put on a cell the map has empty, erased in a bulk edit, changes no map, so no entry draws its
+    // layer again: whatever is left to draw whole draws now
+    for (const live of editorRedrawWhole)
+        live.destroyed || live.redraw();
+    editorRedrawWhole.clear();
 }
 
 // undo the stroke being made, with no undo entry, as if it was never made
@@ -41211,21 +42642,21 @@ function editorChangeObjects(layer, change)
     const before = editorObjectList(layer), after = editorObjectsCopy(before);
     change(after);
     if (editorSameData(before, after)) return false;
-    editorSetObjects(layer, after);
+    // in the stroke first, so a constructor that throws as the objects are made is undone
     const last = editorStroke?.[editorStroke.length - 1];
     if (last?.objectLayer === layer)
         last.after = after;
     else
         (editorStroke ||= []).push({objectLayer: layer, before, after});
+    editorSetObjects(layer, after);
     return true;
 }
 
 // set an object's property as Tiled keeps it, only where it differs from its type's default, a color as #AARRGGBB
-// and a Vector2 as the string x,y
+// and a Vector2 as the string x,y; a number is kept as typed, an int when it and the default are whole, a float
+// otherwise, since a default of 2 may be a float the game scales by
 function editorObjectSetProperty(object, name, value, defaultValue)
 {
-    if (Number.isInteger(defaultValue) && isNumber(value))
-        value = round(value); // an integer stays one, as Tiled keeps an int
     const list = object.properties ?? [], at = list.findIndex((property)=> property.name === name), old = list[at];
     const properties = list.filter((property)=> property.name !== name);
     const text = (v)=> isColor(v) ? v.toString() : isVector2(v) ? v.x + ',' + v.y : JSON.stringify(v);
@@ -41235,10 +42666,11 @@ function editorObjectSetProperty(object, name, value, defaultValue)
         const property = hex ? {name, type: 'color', value: '#' + hex.slice(7, 9) + hex.slice(1, 7)} :
             isVector2(value) ? {name, type: 'string', value: text(value)} :
             {name, type: typeof value === 'boolean' ? 'bool' : typeof value === 'string' ? 'string' :
-            Number.isInteger(defaultValue) ? 'int' : 'float', value};
+            Number.isInteger(defaultValue) && Number.isInteger(value) ? 'int' : 'float', value};
 
         // one the map had keeps its place and its kind where the value fits it, a file stays a file, an object an object
-        if (old?.type === 'file' && property.type === 'string' || old?.type === 'object' && property.type === 'int')
+        if (old?.type === 'file' && property.type === 'string' || old?.type === 'object' && property.type === 'int' ||
+            old?.type === 'float' && property.type === 'int')
             property.type = old.type;
         at < 0 ? properties.push(property) : properties.splice(at, 0, property);
     }
@@ -41315,14 +42747,21 @@ function editorObjectAt(layer, pos)
     }
 }
 
-// the ids of the objects whose positions are inside the box between two world positions
-function editorObjectsIn(layer, a, b)
+// the ids of the objects whose positions are inside the box between two world positions; a tile area's box ends where
+// the next cell starts, open there, so an object on that line, as one snapped to the grid is, belongs to the next cell
+function editorObjectsIn(layer, a, b, openHigh=false)
 {
     const low = vec2(min(a.x, b.x), min(a.y, b.y)), high = vec2(max(a.x, b.x), max(a.y, b.y));
     return (layer.group?.objects ?? []).filter((object)=>
     {
         const pos = editorObjectPos(layer.record, object);
-        return pos.x >= low.x && pos.y >= low.y && pos.x <= high.x && pos.y <= high.y;
+        if (!openHigh)
+            return pos.x >= low.x && pos.y >= low.y && pos.x <= high.x && pos.y <= high.y;
+        // a cell takes what is on its low x edge and leaves its high one to the next, and the same up the y for a
+        // tile object, which hangs from its bottom; a rectangle, ellipse or point hangs from its top, so on y it
+        // takes its high edge and leaves the low one, as a resize does
+        return pos.x >= low.x && pos.x < high.x && (object.gid !== undefined ?
+            pos.y >= low.y && pos.y < high.y : pos.y > low.y && pos.y <= high.y);
     }).map((object)=> object.id);
 }
 
@@ -41360,11 +42799,11 @@ function editorSelectedObjects()
 function editorDeleteObjects()
 {
     if (!editorObjectSelection.size) return false;
-    const selection = editorObjectSelection;
+    const selection = new Set(editorObjectSelection);
     editorStrokeEnd();
     editorChangeObjects(editorObjectLayer, (list)=>
         list.splice(0, list.length, ...list.filter((object)=> !selection.has(object.id))));
-    editorObjectSelection = new Set;
+    editorObjectSelection.clear(); // the same Set, which edit2D.selection hands a game
     editorStrokeEnd();
     return true;
 }
@@ -41388,7 +42827,7 @@ function editorCutObjects()
 {
     const selection = new Set(editorObjectSelection);
     if (!editorCopyObjects()) return false;
-    editorObjectSelection = selection;
+    selection.forEach((id)=> editorObjectSelection.add(id));
     return editorDeleteObjects();
 }
 
@@ -41445,7 +42884,7 @@ function editorUpdateObjects(space)
         if (hit)
         {
             if (!editorObjectSelection.has(hit.id))
-                editorObjectSelection = new Set([hit.id]);
+                editorObjectSelection.clear(), editorObjectSelection.add(hit.id);
             editorObjectDrag = {start: snap(mouse), from: new Map(editorSelectedObjects().map((object)=>
                 [object.id, {x: object.x, y: object.y}]))};
         }
@@ -41771,7 +43210,7 @@ function editorClear()
             const far = editorLayer.live.pos.add(editorSelection.max).add(vec2(1));
             for (const objectLayer of editorObjectLayers(editorLayer.record))
             {
-                const ids = new Set(editorObjectsIn(objectLayer, corner, far));
+                const ids = new Set(editorObjectsIn(objectLayer, corner, far, true));
                 ids.size && editorChangeObjects(objectLayer, (list)=>
                     list.splice(0, list.length, ...list.filter((object)=> !ids.has(object.id))));
             }
@@ -41788,7 +43227,7 @@ function editorAreaObjects(layer, area)
     const corner = layer.live.pos.add(area.min), far = layer.live.pos.add(area.max).add(vec2(1));
     return editorObjectLayers(layer.record).flatMap((objectLayer, group)=>
     {
-        const ids = new Set(editorObjectsIn(objectLayer, corner, far));
+        const ids = new Set(editorObjectsIn(objectLayer, corner, far, true));
         return (objectLayer.group?.objects ?? []).filter((object)=> ids.has(object.id)).map((object)=>
             ({group, type: object.type || object.class, offset: editorObjectPos(layer.record, object).subtract(corner),
             object: editorObjectsCopy(object), tileSize: vec2(layer.record.map.tilewidth || 1, layer.record.map.tileheight || 1)}));
@@ -41852,7 +43291,7 @@ function editorSelectionDragStart(layer, cell)
         const corner = layer.live.pos.add(area.min), far = layer.live.pos.add(area.max).add(vec2(1));
         for (const objectLayer of editorObjectLayers(layer.record))
         {
-            const ids = new Set(editorObjectsIn(objectLayer, corner, far));
+            const ids = new Set(editorObjectsIn(objectLayer, corner, far, true));
             ids.size && objects.push({objectLayer, ids});
         }
     }
@@ -42103,9 +43542,10 @@ function editorPanelInit()
     const resize = editorElement('button', sizeRow, 'flex:1;padding:3px;cursor:pointer', 'Resize');
     const resizeLevel = ()=>
     {
-        // up to 1000 a side from here, editorResize takes any size from code
-        const size = (input)=> clamp(parseInt(input.value) || 1, 1, 1e3);
-        editorResize(editorRecord(), size(sizeX), size(sizeY));
+        // up to 1000 a side from here, editorResize takes any size from code; a field left empty or not a number
+        // resizes nothing, it does not shrink that side to 1
+        const size = (input)=> clamp(parseInt(input.value), 1, 1e3), x = size(sizeX), y = size(sizeY);
+        isNaN(x) || isNaN(y) || editorResize(editorRecord(), x, y);
         resize.blur(); sizeX.blur(); sizeY.blur(); // the fields show the size again
     };
     resize.onclick = resizeLevel;
@@ -42388,12 +43828,18 @@ function editorOnKeyDown(e)
         editorSelectionDrag = undefined;
     }
     let key = e.key === ' ' ? 'Space' : e.key.length === 1 ? e.key.toLowerCase() : e.key;
+    // a digit goes by its key too, so a game's '1' works with Shift held and on AZERTY, where the row types symbols
     if (key.length === 1 && !/[a-z?]/.test(key) && !levelEditor.keys[key])
-        key = e.code?.match(/^Key([A-Z])$/)?.[1].toLowerCase() ?? key;
+    {
+        const match = e.code?.match(/^(?:Key([A-Z])|Digit([0-9]))$/);
+        key = match ? (match[1] ?? match[2]).toLowerCase() : key;
+    }
     // a key of the game's own first, it takes the place of one of the editor's
     const ctrl = e.ctrlKey || e.metaKey, own = levelEditor.keys[(ctrl ? 'ctrl+' : '') + key];
     const action = own ? (shift)=> own.action.call(levelEditor, shift) : (ctrl ? editorCtrlKeys : editorKeys)[key];
-    if (action && action(e.shiftKey) !== false)
+    if (action && editorObjectDrag)
+        e.preventDefault(); // the keys wait for a drag of objects to let go, an undo would be moved again
+    else if (action && action(e.shiftKey) !== false)
         e.preventDefault();
 }
 
@@ -42532,7 +43978,7 @@ function editorPropertiesUpdate(box)
         else if (typeof defaultValue === 'number')
         {
             input.type = 'number';
-            input.step = Number.isInteger(defaultValue) ? '1' : 'any';
+            input.step = 'any'; // any number, the arrows still step by 1
             input.value = String(value);
             input.onchange = ()=> { const v = parseFloat(input.value); isFinite(v) && set(v); }; // 1e999 is not one
         }
@@ -42603,7 +44049,8 @@ function editorUpdate()
         if (editorIsOpen)
         {
             editorApplyCamera(); // the mouse is read through the editor's view
-            editorPlay(screenToWorld(mousePosScreen));
+            // where the mouse is, or over the panel where it was last on the level, not under the panel
+            editorPlay(screenToWorld(editorMouseOnPanel ? editorMouseScreen : mousePosScreen));
         }
         else
             editorSetOpen(true);
@@ -42722,7 +44169,7 @@ function editorToolAt()
     const pos = screenToWorld(editorMouseScreen);
     return {pos, cell: layer && !editorMouseOnPanel ? editorCellAt(layer.live, pos) || undefined : undefined,
         ray: undefined, shift: keyIsDown('ShiftLeft') || keyIsDown('ShiftRight'),
-        ctrl: keyIsDown('ControlLeft') || keyIsDown('ControlRight')};
+        ctrl: keyIsDown('ControlLeft') || keyIsDown('ControlRight') || keyIsDown('MetaLeft') || keyIsDown('MetaRight')};
 }
 
 // the game's tool, when one is on: the left button is its, a press, a drag and a release one undo, the right
@@ -43140,7 +44587,8 @@ function editor3DSegmentDistance(screenPos, a, b)
     return screenPos.distance(sa.add(ab.scale(t)));
 }
 
-// the first point a ray hits: on an object, a height map or a voxel map, leaving some out, or on the ground plane
+// the first point a ray hits: on an object, a height map, voxel map or mesh collider, leaving some out, or on the
+// ground plane
 // at height 0 when it hits none
 function editor3DSurface(ray, ignore=new Set)
 {
@@ -43188,9 +44636,10 @@ let editor3DLevel;
 // what the game made for each object of the level, by the object's id
 const editor3DInstances = new Map;
 
-// what the editor keeps for each level: {fileName, key, original, hash, pending, fileHandle, undo, redo}, the file
-// it came from, the file's objects and their hash for the autosave, an autosave waiting for a file that changed,
-// and its undo and redo lists
+// what the editor keeps for each level: {fileName, key, original, originalParts, sceneBase, hash, savedHash,
+// pending, fileHandle, saving, undo, redo}, the file it came from, the file's objects and parts and their hash for
+// the autosave, the scene the game set, the hash of the file a Save wrote, an autosave waiting for a file that
+// changed, the file picked, a save being written, and its undo and redo lists
 const editor3DRecords = new WeakMap;
 
 // if the editor is open, and if it was opened and not exited, while Escape switches between playing and editing
@@ -43207,7 +44656,7 @@ let editor3DBrush;
 let editor3DClipboard;
 /** @type {Map<Object, {size: Vector3, offset: Vector3}>} */
 let editor3DClipboardBoxes = new Map;
-// the level's, each entry its object list and its parts, the scene and the blocks, before and after an edit
+// the level's, each entry its object list and its parts, see editor3DLevelPartNames, before and after an edit
 let editor3DUndoList = [], editor3DRedoList = [];
 // the edit being made, a drag is one: the objects and the parts as they were before it, and painted when blocks
 // were set in the game's map and are not in the level yet
@@ -43223,8 +44672,8 @@ const editor3DObjects = ()=> isArray(editor3DLevel?.objects) ? editor3DLevel.obj
 const editor3DObject = (id)=> editor3DObjects().find((o)=> o.id === id);
 const editor3DSelected = ()=> editor3DObjects().filter((o)=> editor3DSelection.has(o.id));
 
-// the parts of a level beside its objects that the editor edits: its scene block and its map of blocks; each is
-// undone, autosaved, reset and saved as the objects are
+// the parts of a level beside its objects that the editor edits: its scene block, its map of blocks, its terrain
+// and its own prefabs; each is undone, autosaved, reset and saved as the objects are
 const editor3DLevelPartNames = ['scene', 'voxels', 'terrain', 'prefabs'];
 
 // the last copy made of each part, as its text and the copy: a part that has not changed since is not copied
@@ -43466,7 +44915,14 @@ function editor3DLevelLoaded(level)
     editor3DRedoList = record.redo;
     // an autosave the file already has, from a Save, goes; one of this file, or of the file a Save wrote, comes back
     // a prefab being edited has no autosave, and one of a level with the same objects is not its
-    const saved = editor3DPrefabLevels.has(level) ? undefined : editor3DSaves()[record.key];
+    let saved = editor3DPrefabLevels.has(level) ? undefined : editor3DSaves()[record.key];
+    // one whose objects are not all objects, edited by hand or written by something else, would fail on open
+    if (saved && !(isArray(saved.objects) && saved.objects.every((o)=> !!o && typeof o === 'object' && !isArray(o))))
+    {
+        console.warn(`LittleJS editor: the autosave of ${record.fileName} could not be read, the next autosave ` +
+            'writes over it');
+        saved = undefined;
+    }
     if (saved && isArray(saved.objects) && editor3DSame(saved.objects, original) &&
         editor3DSame(editor3DLevelParts(saved), originalParts))
         editor3DAutosave(level);
@@ -43562,8 +45018,8 @@ function editor3DChange(change)
     change(after);
     if (editor3DSame(before, after)) return false;
     editor3DFixIds(after); // an object added with no id, or with one in use, gets one of its own
+    editor3DStroke ||= {before, parts: editor3DLevelParts()}; // first, so a constructor that throws is undone
     editor3DSetObjects(after);
-    editor3DStroke ||= {before, parts: editor3DLevelParts()};
     return true;
 }
 
@@ -44132,7 +45588,8 @@ function editor3DSetProperty(object, name, value, defaultValue)
 // add an object of a type at a position, selected; its id, or undefined when the level can not be edited
 function editor3DPlace(type, pos)
 {
-    if (editor3DPrefabSelf(type)) return; // it would hold itself
+    // a type the game has not added, as one an undo took away, and a prefab that would hold itself are refused
+    if (!level3DTypes.has(type) || editor3DPrefabSelf(type)) return;
     let id;
     const placed = editor3DChange((list)=>
     {
@@ -44494,9 +45951,14 @@ function editor3DCopySelection()
 function editor3DCut() { return editor3DCopySelection() === false ? false : editor3DDelete(); }
 
 // add the copied objects, moved by an offset, with new ids and selected, as one undo
+// the clipboard as it pastes here: a type no longer there, as one an undo took away, is left out, and a prefab's
+// instance inside the prefab it would then hold, as Place refuses both
+function editor3DPasteList()
+{ return editor3DClipboard?.filter((o)=> level3DTypes.has(o.type) && !editor3DPrefabSelf(o.type)); }
+
 function editor3DPaste(offset=vec3())
 {
-    const copied = editor3DClipboard, ids = [];
+    const copied = editor3DPasteList(), ids = [];
     if (!copied?.length) return false;
     editor3DStrokeEnd();
     const pasted = editor3DChange((list)=>
@@ -44519,9 +45981,10 @@ function editor3DPaste(offset=vec3())
 // copy the selected objects where they are and select the copies, the clipboard stays as it was
 function editor3DDuplicate()
 {
-    const clipboard = editor3DClipboard;
+    const clipboard = editor3DClipboard, boxes = editor3DClipboardBoxes;
     const done = editor3DCopySelection() === false ? false : editor3DPaste();
     editor3DClipboard = clipboard;
+    editor3DClipboardBoxes = boxes; // what was cut has nothing left to measure
     return done;
 }
 
@@ -44561,13 +46024,14 @@ function editor3DSetOpen(open)
     {
         editor3DSetFreeCamera(false);
         pointerLockIsActive() && pointerLockExit(); // the game's captured mouse is let go, the editor needs it
-        editor3DLevel || editor3DLevelLoaded({}); // a new level, with nothing loaded
+        editor3DLevel || level3DLoad({}); // a new level, with nothing loaded, and its autosave made
         editor3DCamera || editor3DCameraStart();
         editor3DGamePaused = paused;
         setPaused(true);
         setDebugOverlay(false); // out of the way of the level
         editor3DIsOpen = true;
         editor3DRestore();
+        inputCapture(editor3DViewOn()); // before the game's hook, which may throw
         editorCall('onOpen');
         editorKeyClashes();
     }
@@ -44581,9 +46045,9 @@ function editor3DSetOpen(open)
         editor3DToolHeld = false;
         editor3DIsOpen = false;
         setPaused(editor3DGamePaused);
+        inputCapture(editor3DViewOn()); // the game's input back before its hook, which may throw
         editorCall('onClose');
     }
-    inputCapture(editor3DViewOn());
 }
 
 // open the editor, a new session starts at the game's camera and a return keeps the editor's
@@ -44783,8 +46247,8 @@ function editor3DAutosave(level=editor3DLevel, known)
     if (editor3DSame(objects, record.original) && editor3DSame(parts, record.originalParts) && !record.savedHash)
         delete saves[record.key];
     else
-        saves[record.key] = {hash: record.hash, savedHash: record.savedHash, objects: editor3DCopy(objects),
-            ...parts};
+        editorSavesKeep(saves, record.key, {hash: record.hash, savedHash: record.savedHash,
+            objects: editor3DCopy(objects), ...parts});
     const failed = editorSaveFailed, size = editorAutosaveSize; // the 2D editor's flag and size are its own
     editor3DSaveFailed = editorWriteSaves(saves, record.key, editor3DSaveName());
     editor3DAutosaveSize = editorAutosaveSize;
@@ -44908,9 +46372,11 @@ async function editor3DSave(pickAgain=false)
 // write one save of a level, the one before it done
 async function editor3DSaveText(level, record, text, pickAgain)
 {
-    const file = JSON.parse(text), written = editor3DCopy(file.objects), writtenParts = editor3DLevelParts(file);
+    const file = JSON.parse(text), writtenObjects = editor3DCopy(file.objects);
+    const writtenParts = editor3DLevelParts(file);
     const picker = /** @type {any} */ (globalThis).showSaveFilePicker;
     const fileKey = (globalThis.location?.pathname ?? '') + ' 3D ' + record.key;
+    let written = false;
     if (picker)
     {
         try
@@ -44931,21 +46397,28 @@ async function editor3DSaveText(level, record, text, pickAgain)
             const writable = await record.fileHandle.createWritable();
             await writable.write(text);
             await writable.close();
-            if (record.fileHandle.name === record.fileName)
-            {
-                record.original = written;
-                record.originalParts = writtenParts;
-                record.savedHash = editor3DContentHash(written, writtenParts);
-                editor3DAutosave(level);
-            }
-            return 'written';
+            written = true;
         }
         catch (error)
         {
             if (error?.name === 'AbortError') return; // the picker was closed, nothing saved
             record.fileHandle = undefined; // a file it could not write, a download instead, and not kept
             editorFileStore.set(fileKey, undefined);
+            console.warn(`LittleJS editor: ${record.fileName} could not be written, downloaded instead`, error);
         }
+    }
+    if (written)
+    {
+        // outside the write's catch, so an error here is its own and not a failed write that downloads a copy;
+        // the browser gives the picked file's name but not its folder, so the name is what says it is the level's
+        if (record.fileHandle.name === record.fileName)
+        {
+            record.original = writtenObjects;
+            record.originalParts = writtenParts;
+            record.savedHash = editor3DContentHash(writtenObjects, writtenParts);
+            editor3DAutosave(level);
+        }
+        return 'written';
     }
     saveText(text, record.fileName, 'application/json');
     return 'downloaded';
@@ -45133,7 +46606,8 @@ function editor3DPress(mouse, ray, shift)
     }
     if (editor3DBrush)
     {
-        editor3DPlaceAt(editor3DBrush, ray);
+        // the brush stays when nothing was placed, on nothing or on a level whose autosave waits
+        if (!editor3DPlaceAt(editor3DBrush, ray)) return;
         shift || (editor3DBrush = undefined);
         editor3DTool = 'move';
         return;
@@ -45164,14 +46638,15 @@ function editor3DPress(mouse, ray, shift)
         start: editor3DDragStart(), level: editor3DPlanePoint(ray, pos, normal) ?? pos};
 }
 
-// place an object of a type where a ray lands, standing on what is there, snapped, selected, as one undo
+// place an object of a type where a ray lands, standing on what is there, snapped, selected, as one undo; true
+// when one was placed
 function editor3DPlaceAt(type, ray)
 {
     const point = editor3DSurface(ray);
-    if (!point) return;
+    if (!point) return false;
     editor3DStrokeEnd();
     const id = editor3DPlace(type, point);
-    if (id === undefined) return;
+    if (id === undefined) return false;
     const object = editor3DObject(id), size = editor3DSize(object), offset = editor3DBoxOffset(object);
     const ignore = new Set(editor3DParts(editor3DInstances.get(id)));
     const snapped = editor3DSnapPos(editor3DRest(point, size), size, editor3DGrid ? editor3DMoveStep : 0);
@@ -45180,6 +46655,7 @@ function editor3DPlaceAt(type, ray)
     const to = vec3(snapped.x, y, snapped.z).subtract(offset);
     editor3DChange((list)=> editor3DSetTransform(list.find((o)=> o.id === id), to));
     editor3DStrokeEnd();
+    return true;
 }
 
 // the mouse moved with a drag held: the selection goes from where the drag started to where the mouse says
@@ -45338,7 +46814,7 @@ function editor3DDropSelection()
 // the first of them; where they were when the mouse is over nothing
 function editor3DPasteAtMouse()
 {
-    const copied = editor3DClipboard, point = !editor3DMouseOnPanel && editor3DMousePoint();
+    const copied = editor3DPasteList(), point = !editor3DMouseOnPanel && editor3DMousePoint();
     if (!copied?.length) return false;
     if (!point) return editor3DPaste();
     const center = copied.reduce((sum, o)=> sum.add(editor3DPos(o)), vec3()).scale(1 / copied.length);
@@ -45362,7 +46838,7 @@ const editor3DKeys =
     KeyR: ()=> { editor3DPickTool('scale'); },
     KeyB: ()=> { editor3DPickTool('blocks'); editor3DBrush = undefined; },
     KeyT: ()=> { editor3DPickTool('terrain'); editor3DBrush = undefined; },
-    KeyP: ()=> editor3DTool === 'blocks' && editor3DVoxelPick(render3D.screenToRay(mousePosScreen)),
+    KeyP: ()=> !editor3DMouseOnPanel && editor3DTool === 'blocks' && editor3DVoxelPick(render3D.screenToRay(mousePosScreen)),
     KeyX: ()=> editor3DTool === 'terrain' ? editor3DTerrainNextBrush() :
         editor3DTool === 'blocks' && (editor3DBlockBox = !editor3DBlockBox),
     KeyG: ()=> { editor3DGrid = !editor3DGrid; },
@@ -45512,7 +46988,12 @@ if (debug && globalThis.document?.addEventListener)
 {
     document.addEventListener('keydown', (e)=>
     {
-        if (editor3DIsOpen && (e.ctrlKey || e.metaKey) && /^Key[ZYCXVDG]$/.test(e.code) && !editorIsTextField(e.target))
+        if (!editor3DIsOpen || editorIsTextField(e.target)) return;
+        const ctrl = e.ctrlKey || e.metaKey;
+        // a key of the game's own, Ctrl+S or F5, is the game's: its action runs in the update, after this
+        const own = Object.keys(levelEditor.keys).some((spelled)=> spelled.startsWith('ctrl+') === ctrl &&
+            editor3DKeyCode(spelled.slice(spelled.startsWith('ctrl+') ? 5 : 0)) === e.code);
+        if (own || ctrl && /^Key[ZYCXVDG]$/.test(e.code))
             e.preventDefault();
     });
     // a page going away writes what is waiting, the last event it is sure to get
@@ -46511,6 +47992,10 @@ function editor3DUpdate()
     if (!render3D) return;
     if (editor3DFreeCamera)
         return inputCaptureRead(()=> editor3DFreeCameraUpdate(seconds));
+    // a brush Place would refuse is put down, its hint and its preview with it: its type gone, as a loaded prefab an
+    // undo took away, or a prefab that would hold itself, inside it
+    if (editor3DBrush && (!level3DTypes.has(editor3DBrush) || editor3DPrefabSelf(editor3DBrush)))
+        editor3DBrush = undefined;
     if (editor3DIsOpen)
         return inputCaptureRead(()=> editor3DWithView(()=> editor3DEditorUpdate(seconds)));
 
@@ -46868,6 +48353,7 @@ export
     drawCanvas2D,
     drawText,
     drawTextScreen,
+    setTextIcon,
     setAdditiveBlendMode,
     setShader,
     setBackgroundCanvas,
@@ -47179,6 +48665,7 @@ export
     buildExtrude,
     buildText3D,
     HeightMap,
+    MeshCollider,
     VoxelMap,
     Light3D,
     DirectionalLight3D,
