@@ -854,8 +854,8 @@ class LightSystemPlugin
             // when the size it should be is not the one it was made at, after the flush so the batch keeps its texture
             const size = lightSystem.textureSize, made = lightSystem.textureSizeAllocated;
             const auto = lightSystem.textureSizeAuto;
-            const wantX = auto ? glClampTextureSize(mainCanvasSize.x) : size.x;
-            const wantY = auto ? glClampTextureSize(mainCanvasSize.y) : size.y;
+            const wantX = glClampTextureSize(auto ? mainCanvasSize.x : size.x); // to what the device makes
+            const wantY = glClampTextureSize(auto ? mainCanvasSize.y : size.y);
             if (made.x !== wantX || made.y !== wantY)
             {
                 auto && (lightSystem.textureSize = vec2(wantX, wantY));

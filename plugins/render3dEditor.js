@@ -1585,10 +1585,14 @@ function editor3DCopySelection()
 function editor3DCut() { return editor3DCopySelection() === false ? false : editor3DDelete(); }
 
 // add the copied objects, moved by an offset, with new ids and selected, as one undo
+// the clipboard as it pastes here: a type no longer there, as one an undo took away, is left out, and a prefab's
+// instance inside the prefab it would then hold, as Place refuses both
+function editor3DPasteList()
+{ return editor3DClipboard?.filter((o)=> level3DTypes.has(o.type) && !editor3DPrefabSelf(o.type)); }
+
 function editor3DPaste(offset=vec3())
 {
-    // a prefab's instance is left out inside the prefab it would then hold, as Place refuses it
-    const copied = editor3DClipboard?.filter((o)=> !editor3DPrefabSelf(o.type)), ids = [];
+    const copied = editor3DPasteList(), ids = [];
     if (!copied?.length) return false;
     editor3DStrokeEnd();
     const pasted = editor3DChange((list)=>
@@ -2234,8 +2238,6 @@ function editor3DPress(mouse, ray, shift)
         editor3DDrag = {kind, handle, from, grab, start: editor3DDragStart()};
         return;
     }
-    if (editor3DBrush && !level3DTypes.has(editor3DBrush))
-        editor3DBrush = undefined; // its type is gone, as a loaded prefab an undo took away
     if (editor3DBrush)
     {
         // the brush stays when nothing was placed, on nothing or on a level whose autosave waits
@@ -2446,7 +2448,7 @@ function editor3DDropSelection()
 // the first of them; where they were when the mouse is over nothing
 function editor3DPasteAtMouse()
 {
-    const copied = editor3DClipboard, point = !editor3DMouseOnPanel && editor3DMousePoint();
+    const copied = editor3DPasteList(), point = !editor3DMouseOnPanel && editor3DMousePoint();
     if (!copied?.length) return false;
     if (!point) return editor3DPaste();
     const center = copied.reduce((sum, o)=> sum.add(editor3DPos(o)), vec3()).scale(1 / copied.length);
@@ -2470,7 +2472,7 @@ const editor3DKeys =
     KeyR: ()=> { editor3DPickTool('scale'); },
     KeyB: ()=> { editor3DPickTool('blocks'); editor3DBrush = undefined; },
     KeyT: ()=> { editor3DPickTool('terrain'); editor3DBrush = undefined; },
-    KeyP: ()=> editor3DTool === 'blocks' && editor3DVoxelPick(render3D.screenToRay(mousePosScreen)),
+    KeyP: ()=> !editor3DMouseOnPanel && editor3DTool === 'blocks' && editor3DVoxelPick(render3D.screenToRay(mousePosScreen)),
     KeyX: ()=> editor3DTool === 'terrain' ? editor3DTerrainNextBrush() :
         editor3DTool === 'blocks' && (editor3DBlockBox = !editor3DBlockBox),
     KeyG: ()=> { editor3DGrid = !editor3DGrid; },
@@ -3624,6 +3626,10 @@ function editor3DUpdate()
     if (!render3D) return;
     if (editor3DFreeCamera)
         return inputCaptureRead(()=> editor3DFreeCameraUpdate(seconds));
+    // a brush Place would refuse is put down, its hint and its preview with it: its type gone, as a loaded prefab an
+    // undo took away, or a prefab that would hold itself, inside it
+    if (editor3DBrush && (!level3DTypes.has(editor3DBrush) || editor3DPrefabSelf(editor3DBrush)))
+        editor3DBrush = undefined;
     if (editor3DIsOpen)
         return inputCaptureRead(()=> editor3DWithView(()=> editor3DEditorUpdate(seconds)));
 

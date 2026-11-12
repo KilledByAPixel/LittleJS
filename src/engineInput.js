@@ -167,11 +167,14 @@ function inputClearKeyboard()
 
 /** Clears all input
  *  @memberof Input */
-function inputClear()
+function inputClear() { inputClearDevices(); }
+
+// empty every device but keep which gamepad slots exist, so gamepadConnected still reads true through a clear; a
+// disconnect clears its slot in the poll. The clear every frame while the window is unfocused keeps the gamepads'
+// buttons when debug builds still read them then, or one held would read up from the second frame
+function inputClearDevices(keepGamepads=false)
 {
-    // empty every device but keep which gamepad slots exist, so gamepadConnected still reads true through a
-    // clear, like the one every frame while the window is unfocused; a disconnect clears its slot in the poll
-    for (let i = inputData.length; i--;)
+    for (let i = keepGamepads ? 1 : inputData.length; i--;)
         if (!i || inputData[i]) inputData[i] = [];
     inputKeysHeld.clear();
     inputWasTouching = 0;
@@ -812,7 +815,7 @@ function inputUpdate()
 
     // clear input when lost focus (prevent stuck keys)
     if (!(touchInputEnable && isTouchDevice) && !document.hasFocus())
-        inputClear();
+        inputClearDevices(debug && gamepadsEnable);
 
     // update mouse world space position and delta
     mousePos = screenToWorld(mousePosScreen);

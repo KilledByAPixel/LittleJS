@@ -59,7 +59,7 @@ font's first character in an image laid out the same way.
 - Change `'Engine Font'` to a text of your own.
 - Change the title's size from `2` to `vec2(1,3)`: a size can be a
   vector, and the characters are then narrow and tall.
-- Color the characters: change the last call to
+- Color the characters: change the call that draws them all to
   `font.drawText(s, vec2(), 1, true, hsl(.1,1,.5));`. The argument
   before the color says whether to center the text, and it must be
   `true` or `false`.

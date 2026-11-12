@@ -1282,10 +1282,17 @@ function editorUndoPush(stroke)
 // the stroke is done, it can be undone as one
 function editorStrokeEnd()
 {
-    if (!editorStroke) return;
-    editorUndoPush(editorStroke);
-    editorChanged(editorStroke);
-    editorStroke = undefined;
+    if (editorStroke)
+    {
+        editorUndoPush(editorStroke);
+        editorChanged(editorStroke);
+        editorStroke = undefined;
+    }
+    // a tile the game put on a cell the map has empty, erased in a bulk edit, changes no map, so no entry draws its
+    // layer again: whatever is left to draw whole draws now
+    for (const live of editorRedrawWhole)
+        live.destroyed || live.redraw();
+    editorRedrawWhole.clear();
 }
 
 // undo the stroke being made, with no undo entry, as if it was never made
@@ -1498,7 +1505,8 @@ function editorObjectSetProperty(object, name, value, defaultValue)
             Number.isInteger(defaultValue) && Number.isInteger(value) ? 'int' : 'float', value};
 
         // one the map had keeps its place and its kind where the value fits it, a file stays a file, an object an object
-        if (old?.type === 'file' && property.type === 'string' || old?.type === 'object' && property.type === 'int')
+        if (old?.type === 'file' && property.type === 'string' || old?.type === 'object' && property.type === 'int' ||
+            old?.type === 'float' && property.type === 'int')
             property.type = old.type;
         at < 0 ? properties.push(property) : properties.splice(at, 0, property);
     }
@@ -1583,8 +1591,13 @@ function editorObjectsIn(layer, a, b, openHigh=false)
     return (layer.group?.objects ?? []).filter((object)=>
     {
         const pos = editorObjectPos(layer.record, object);
-        return pos.x >= low.x && pos.y >= low.y &&
-            (openHigh ? pos.x < high.x && pos.y < high.y : pos.x <= high.x && pos.y <= high.y);
+        if (!openHigh)
+            return pos.x >= low.x && pos.y >= low.y && pos.x <= high.x && pos.y <= high.y;
+        // a cell takes what is on its low x edge and leaves its high one to the next, and the same up the y for a
+        // tile object, which hangs from its bottom; a rectangle, ellipse or point hangs from its top, so on y it
+        // takes its high edge and leaves the low one, as a resize does
+        return pos.x >= low.x && pos.x < high.x && (object.gid !== undefined ?
+            pos.y >= low.y && pos.y < high.y : pos.y > low.y && pos.y <= high.y);
     }).map((object)=> object.id);
 }
 

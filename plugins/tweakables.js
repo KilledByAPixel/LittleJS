@@ -31,8 +31,9 @@ const tweakPathRegex = /^[A-Za-z_$][\w$]*(\.[A-Za-z_$][\w$]*)*$/;
 
 /** Options for a tweak
  *  @typedef {Object} TweakOptions
- *  @property {number} [min] - Lowest value on the slider, the slider shows when min and max are both set
- *  @property {number} [max] - Highest value on the slider
+ *  @property {number} [min] - Lowest value on the slider, the slider shows when min and max are both set; a value
+ *  typed lower is raised to it
+ *  @property {number} [max] - Highest value on the slider, and a value typed higher is lowered to it
  *  @property {number} [step] - Step for the slider and number box, a thousandth of the range by default
  *  @property {string} [label] - Name to show in place of the path, and the name it is saved by with an object
  *  @property {object} [object] - Object the path is a field of, in place of a global, for an ES module game
@@ -132,8 +133,9 @@ function tweakEngineDefaults()
 {
     if (!debug) return;
     tweakDivider('Engine');
-    // Box2D takes gravity in units per second squared, the arcade physics per frame
-    const range = typeof box2d !== 'undefined' && box2d ? 30 : .05;
+    // Box2D takes gravity in units per second squared, the arcade physics per frame; called before Box2D is ready
+    // the range still takes in the gravity the game set, four times over
+    const range = typeof box2d !== 'undefined' && box2d ? 30 : max(.05, abs(gravity.x) * 4, abs(gravity.y) * 4);
     tweakAdd('gravity', ()=> gravity, setGravity, (v)=> `setGravity(${v});`, {min: -range, max: range});
     tweakAdd('timeScale', ()=> timeScale, setTimeScale, (v)=> `setTimeScale(${v});`, {min: 0, max: 2});
     tweakAdd('cameraScale', ()=> cameraScale, setCameraScale, (v)=> `setCameraScale(${v});`,

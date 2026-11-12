@@ -546,3 +546,15 @@ test('a brush of a type an undo took away is put down, and Place refuses a type 
     assert.equal(run('editor3DPlace("Tower", vec3())'), undefined);
     assert.ok(!json(run, 'list().map((o)=> o.type)').includes('Tower'));
 });
+
+test('Paste leaves out a type an undo took away, and a brush of one is put down before the next click', async ()=>
+{
+    const { run } = await loadGame();
+    run(fileCode + `editor3DSetOpen(true);
+        editor3DChangePart('prefabs', (p)=> ({...p, Tower: {objects: [{id: 1, type: 'Box'}]}})); editor3DStrokeEnd();
+        editor3DPlace('Tower', vec3(4, 0, 0)); editor3DStrokeEnd(); editor3DCopySelection();
+        editor3DUndo(); editor3DUndo(); editor3DBrush = 'Tower'; editor3DUpdate();`);
+    assert.equal(run('editor3DBrush'), undefined, 'the brush is down');
+    assert.equal(run('editor3DPaste()'), false, 'nothing left to paste');
+    assert.ok(!json(run, 'list().map((o)=> o.type)').includes('Tower'));
+});

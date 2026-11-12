@@ -205,3 +205,11 @@ test('the release build adds nothing and never reads the saved values', () =>
     assert.equal(run('speed'), 5);
     assert.equal(run('typeof tweakList'), 'undefined', 'none of its code is in the release build');
 });
+
+test('the gravity tweak takes in the gravity the game set when Box2D is not ready yet', () =>
+{
+    const engine = game(makeStorage(), `setGravity(vec2(0, -10)); tweakEngineDefaults();`);
+    assert.equal(engine.run(`tweakList.find(t=> t.name === 'gravity').options.max`), 40);
+    const plain = game(makeStorage(), `tweakEngineDefaults();`);
+    assert.equal(plain.run(`tweakList.find(t=> t.name === 'gravity').options.max`), .05);
+});

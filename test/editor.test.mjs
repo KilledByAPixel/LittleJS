@@ -1577,3 +1577,14 @@ test('a press on a level with nothing waiting paints and says nothing more', asy
     assert.equal(engine.run('editorPendingNudgeTime'), undefined);
     assert.notEqual(engine.run('editorHint()'), engine.run('EDITOR_PENDING_HINT'));
 });
+
+test('with the mouse over the panel, Escape to play starts from where the mouse was last on the level', async () =>
+{
+    const engine = await loadGame();
+    engine.run(mapCode + `var from = [];
+        levelEditor.onPlayFrom = (pos)=> from.push([+pos.x.toFixed(1), +pos.y.toFixed(1)]);
+        levelEditor.open(); editorCameraPos = vec2(1.5, .5); editorCameraScale = 100; editorPlayFromMouse = true;
+        editorMouseScreen = vec2(700, 400); editorMouseOnPanel = true; mousePosScreen = vec2(10, 10);`);
+    press(engine, 'Escape');
+    assert.deepEqual(JSON.parse(engine.run('JSON.stringify(from)')), [[3.5, 1.5]], 'not the panel at the top left');
+});

@@ -414,7 +414,7 @@ function level3DProperties(type, object)
                 (properties[key] = vec2(value[0], value[1]));
         else if (typeof d === 'number')
             level3DFinite(value) && (properties[key] = value);
-        else if (d === undefined || typeof value === typeof d && (value === null) === (d === null))
+        else if (d === undefined || typeof value === typeof d && (d === null || value !== null))
             properties[key] = value; // null is an object to typeof, but not the object a default is
     }
     return properties;

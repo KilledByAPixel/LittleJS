@@ -425,7 +425,7 @@ test('undoing the first object placed in a map with no object layer forgets the 
     assert.equal(JSON.parse(storage.items['LittleJS editor /game/'])[mapKey], undefined);
 });
 
-test('the properties box takes only a value of the default\'s type, a number as typed, an int when whole', async () =>
+test('the properties box takes only a value of the default\'s type, a number as typed, an int when whole and new', async () =>
 {
     const { run } = await loadGame();
     run(editCode.replace(`{ value: 1, tint: hsl(0, 0, 1) }`, `{ value: 1, tint: hsl(0, 0, 1), offset: vec2(1, 0) }`) +
@@ -435,8 +435,9 @@ test('the properties box takes only a value of the default\'s type, a number as 
     assert.equal(run(`editorSetSelectedProperty('value', 2.6)`), true);
     assert.deepEqual(JSON.parse(run('JSON.stringify([list()[0].properties, made[0].value])')),
         [[{ name: 'value', type: 'float', value: 2.6 }], 2.6]);
+    // a whole number in a property the map holds as a float keeps it a float, as Tiled would
     assert.equal(run(`editorSetSelectedProperty('value', 4)`), true);
-    assert.deepEqual(JSON.parse(run('JSON.stringify(list()[0].properties)')), [{ name: 'value', type: 'int', value: 4 }]);
+    assert.deepEqual(JSON.parse(run('JSON.stringify(list()[0].properties)')), [{ name: 'value', type: 'float', value: 4 }]);
     // and 1.5 is not rounded to the default and dropped
     assert.equal(run(`editorSetSelectedProperty('value', 1.5)`), true);
     assert.deepEqual(JSON.parse(run('JSON.stringify(list()[0].properties)')),
@@ -720,7 +721,7 @@ test('a mirrored stamp mirrors a polygon\'s points and flips a tile object\'s im
     assert.equal(run('editorStampMirror(stamp).objects[0].object.gid'), (5 | 0x80000000) >>> 0);
 });
 
-// full pass 3: an area's far edge, the selection Set kept, digits by their key, an empty Size field, a tile the game put
+// full pass 3: an area's far edge, the selection Set kept, digits by their key, a tile the game put
 
 test('a tile area takes the objects inside it and not one on its far edge, where the next cell starts', async () =>
 {
@@ -759,4 +760,37 @@ test('erasing a cell the map has empty takes away a tile the game put there in p
     engine.run(editCode + `layers[0].setData(vec2(0, 1), new TileLayerData(3));
         editorPaint(ground, vec2(0, 1), 0); editorStrokeEnd();`);
     assert.equal(engine.run('layers[0].getData(vec2(0, 1)).tile'), undefined);
+});
+
+// full pass 4
+
+test('a tile area takes a rectangle that fills one of its cells, which hangs from its top, in any row', async () =>
+{
+    const engine = await loadGame();
+    // a rectangle over cell (1, 1), the top row, its top left at x 16, y 0
+    engine.run(editCode.replace(`{ id: 1, type: 'Coin', point: true, x: 8, y: 8 },`,
+        `{ id: 1, type: 'Coin', point: true, x: 8, y: 8 }, { id: 3, type: 'Coin', x: 16, y: 0, width: 16, height: 16 },`) +
+        'editorAllLayers = true; editorSelection = editorArea(vec2(1, 1), vec2(1, 1));');
+    typed(engine, 'Delete');
+    assert.deepEqual(engine.run('list().map((o)=> o.id)'), [1, 2]);
+});
+
+test('a bulk erase of a tile only the game put there draws the layer again', async () =>
+{
+    const engine = await loadGame();
+    engine.run(editCode + `layers[0].setData(vec2(1, 1), new TileLayerData(3));
+        var redraws = 0; const redraw = layers[0].redraw.bind(layers[0]); layers[0].redraw = ()=> (++redraws, redraw());
+        editorAllLayers = true; editorSelection = editorArea(vec2(1, 1), vec2(1, 1));`);
+    typed(engine, 'Delete');
+    assert.deepEqual([...engine.run('[layers[0].getData(vec2(1, 1)).tile, redraws > 0]')], [undefined, true]);
+});
+
+test('a property the map holds as a float stays a float when it is given a whole number', async () =>
+{
+    const { run } = await loadGame();
+    const types = run(`const object = { properties: [{ name: 'value', type: 'float', value: 1.5 }] };
+        editorObjectSetProperty(object, 'value', 3, 1); const kept = object.properties[0].type;
+        const fresh = {}; editorObjectSetProperty(fresh, 'value', 3, 1);
+        [kept, fresh.properties[0].type]`);
+    assert.deepEqual([...types], ['float', 'int']);
 });

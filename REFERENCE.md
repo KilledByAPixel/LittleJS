@@ -1192,6 +1192,8 @@ new LightSystemPlugin(undefined, rgb(.1,.1,.15)) // Faint moonlight ambient
 // Tunables
 lightSystem.enabled       = true              // Skip the render pass entirely when false
 lightSystem.ambientColor  = rgb(0, 0, 0)      // Color of unlit areas
+lightSystem.textureSize   = vec2(320, 180)    // the lightmap's size, the canvas's unless one was given; set it later
+lightSystem.textureSizeAuto = false           // with this, and the lightmap is made again at it
 
 // Shadows: once a frame every object draws black into a shadow map, and each light's rays stop at them
 lightSystem.shadows          = false  // on for shadows; off costs nothing
@@ -2602,7 +2604,8 @@ async function gameInit()
 
 ```javascript
 tweak(path, options)       // Add a global, or a dotted path to a field on one, call it at the end of gameInit
-                           // options: {min, max, step, label, object}, the slider shows when min and max are set
+                           // options: {min, max, step, label, object}, the slider shows when min and max are set,
+                           // and a typed value is held to them
 tweak('speed', {object: settings}) // A field of an object, for an ES module game; with two objects that share a
                                    // field, give each a label, the name it is known and saved by
 tweakDivider(label)        // Add a divider with a label for the tweaks after it
