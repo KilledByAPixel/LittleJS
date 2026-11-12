@@ -1613,7 +1613,7 @@ let textIconsOff = false;
 /** Register a tile to show in text: written between colons in any text drawTextScreen draws, drawText and the UI
  *  system's text included, it is drawn in its place, as tall as the text, 'Gold: :coin: 25'
  *  - Only a registered name is replaced, so other text with colons, like a time of 5:30, stays as it is
- *  - Text drawn with ImageFont does not show icons
+ *  - ImageFont text shows them too, each as tall as a character
  *  @param {string} name - Letters, digits, _ and -
  *  @param {TileInfo} [tileInfo] - Left out to take the name off
  *  @example
@@ -2286,6 +2286,13 @@ class ImageFont
         const centerOffsetY = center ? (lines.length-1) * glyphSize.y / 2 : 0;
         lines.forEach((line, j)=>
         {
+            // only a line with a registered icon in it takes the icon path, every other draws as it always has
+            const runs = textIcons.size && !textIconsOff && line.includes(':') ? textIconRuns(line) : undefined;
+            if (runs)
+            {
+                imageFontIconLine(this, runs, pos, j, glyphSize, centerOffsetY, center, color, useWebGL, context);
+                return;
+            }
             const characters = textCharacters(line);
             const centerOffset = center ? (characters.length-1) * glyphSize.x / 2 : 0;
             for (let i=characters.length; i--;)
@@ -2323,6 +2330,44 @@ class ImageFont
         const glyph = ((t.pos.y - padding) / h |0) * columns + ((t.pos.x - padding) / w |0) + index;
         return pos.set(glyph % columns * w + padding, (glyph / columns |0) * h + padding);
     }
+}
+
+// a line of glyphs and icons, each icon as tall as a glyph and as wide as its tile's shape, in its own colors faded
+// with the text's alpha, the line centered by its whole width; each edge snapped as a glyph's is
+function imageFontIconLine(font, runs, pos, j, glyphSize, centerOffsetY, center, color, useWebGL, context)
+{
+    const items = [], widths = [];
+    for (const run of runs)
+    {
+        if (typeof run == 'string')
+        {
+            const characters = textCharacters(run);
+            for (let i = 0; i < characters.length; ++i)
+                items.push(textCharacterCode(characters, i)), widths.push(glyphSize.x);
+        }
+        else // an image that failed to load takes no room
+            items.push(run), widths.push(run.size.y ? glyphSize.y * run.size.x / run.size.y : 0);
+    }
+    const total = widths.reduce((a, b)=> a + b, 0);
+    const tileInfo = font.tileInfo.frame(0), drawPos = new Vector2, size = new Vector2;
+    const iconColor = new Color(1, 1, 1, color.a);
+    let x = pos.x - (center ? total / 2 : glyphSize.x / 2);
+    const y = ceil(pos.y + j * glyphSize.y - centerOffsetY - glyphSize.y/2) + glyphSize.y/2 - .5;
+    items.forEach((item, i)=>
+    {
+        const w = widths[i];
+        drawPos.set(ceil(x) + w/2 - .5, y);
+        x += w;
+        if (!w) return;
+        if (typeof item == 'number')
+        {
+            font.getGlyphPos(item < 32 || item > 127 ? 95 : item - 32, tileInfo.pos);
+            drawTile(drawPos, glyphSize, tileInfo, color, 0, false, undefined, useWebGL, true, context);
+        }
+        else
+            drawTile(drawPos, size.set(w, glyphSize.y), item, iconColor, 0, false, undefined, useWebGL, true,
+                context);
+    });
 }
 
 // how strong a light's glow is at a distance from its middle, 0 there to 1 at the edge: a bell, full in the middle

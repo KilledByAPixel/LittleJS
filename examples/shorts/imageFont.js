@@ -14,11 +14,20 @@ function gameRender()
     }
 
     font.drawText(s, vec2());
+
+    // a tile named with setTextIcon shows in the text between colons
+    font.drawText(':ghost: x 3', vec2(0,-3), 2);
+}
+
+function gameInit()
+{
+    setTextIcon('ghost', tile(9));
 }
 
 /* info
-Text drawn with the engine's built-in image font: a title, and under it
-every character the font has. There is nothing to press.
+Text drawn with the engine's built-in image font: a title, under it
+every character the font has, and a line with an icon from the tile
+sheet in it. There is nothing to press.
 
 ## How it works
 An `ImageFont` draws text with tiles from an image, one tile for each
@@ -39,6 +48,10 @@ goes in whenever `i` is a multiple of 32 after the first, which gives
 rows of 32 characters. A character with a code outside 32 to 127 is drawn as the
 font's last one.
 
+`setTextIcon('ghost', tile(9))` in `gameInit` names a tile, and text
+shows it wherever `:ghost:` is written, as tall as a character and in
+its own colors. A name that was not given a tile stays text.
+
 A font of your own is `new ImageFont(tileInfo)`, where the tile is the
 font's first character in an image laid out the same way.
 
@@ -50,6 +63,7 @@ font's first character in an image laid out the same way.
   `font.drawText(s, vec2(), 1, true, hsl(.1,1,.5));`. The argument
   before the color says whether to center the text, and it must be
   `true` or `false`.
+- Write `:ghost:` into the title too, `'Engine Font :ghost:'`.
 
 ## See also
 Hello World draws text with `drawText`, and the Breakout Game example

@@ -320,7 +320,8 @@ drawCanvas2D(pos, size, angle=0, mirror=false, drawFunction, screenSpace=drawScr
 drawText(text, pos, size=1, color=WHITE, lineWidth=0, lineColor=BLACK, textAlign='center', font, fontStyle, maxWidth, angle=0)
 drawTextScreen(text, pos, size, color=WHITE, lineWidth=0, lineColor=BLACK, textAlign='center', font, fontStyle, maxWidth, angle=0)
 setTextIcon(name, tileInfo)  // a tile shown in any text where its name is written between colons, 'Gold: :coin: 25',
-                             // as tall as the text; only registered names are replaced, no tileInfo takes it off
+                             // as tall as the text, in ImageFont text too; only registered names are replaced, no
+                             // tileInfo takes it off
 
 // Utility drawing functions
 setAdditiveBlendMode(additive)
@@ -409,6 +410,7 @@ ImageFont.drawText(text, pos, size=1, center=true, color=WHITE, useWebGL=glEnabl
 ImageFont.drawTextScreen(text, pos, size, center=true, color=WHITE, useWebGL=glEnable, context)
                         // Draw text in screen space, size in pixels is required
                         // for both, center also centers the lines of multi-line text on pos, like the engine's drawText
+                        // a setTextIcon name between colons draws its icon, as tall as a character, in its own colors
 
 // Camera settings
 cameraPos = (0,0)        // Position of camera in world space

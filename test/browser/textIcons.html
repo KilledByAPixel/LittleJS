@@ -7,7 +7,7 @@
 'use strict';
 
 // an icon registered with setTextIcon draws in text where its name is: as tall as the text, placed by the alignment,
-// squeezed with the text by maxWidth, faded with its alpha, and as a shape of the shadow's color in a UI text shadow
+// squeezed with the text by maxWidth, in ImageFont text too, faded with its alpha, and as a shape of the shadow's color in a UI text shadow
 // read from the main canvas, where text is drawn, in its pixels from the top left
 smokeRun(async ()=>
 {
@@ -31,6 +31,7 @@ smokeRun(async ()=>
         textIconsSilhouette = true;
         drawTextScreen(':red:', vec2(64, 80), 16, rgb(0, 0, 1));                     // a shadow's shape
         textIconsSilhouette = false;
+        engineImageFont.drawTextScreen(':red:', vec2(100, 56), 16, false, WHITE, false); // x 92 to 108, on the canvas
     });
     engineStep();
     const pixel = (x, y)=> [...mainContext.getImageData(x, y, 1, 1).data];
@@ -40,6 +41,7 @@ smokeRun(async ()=>
     near('maxWidth squeezes the line, two icons in the width of one', pixel(10, 32), [255, 0, 0, 255]);
     near('nothing past that width', pixel(26, 32), [0, 0, 0, 0]); // the main canvas is clear over the WebGL one
     near('an icon fades with the text, centered', pixel(64, 56), [255, 0, 0, 128]);
+    near('ImageFont text shows it too, at its place', pixel(100, 56), [255, 0, 0, 255]);
     near("in a shadow it is a shape of the shadow's color", pixel(64, 80), [0, 0, 255, 255]);
 });
 </script>

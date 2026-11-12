@@ -44,3 +44,21 @@ test('no tile takes a name off, and names are checked', () =>
     assert.throws(()=> run(`setTextIcon('a coin', new TileInfo)`));
     assert.throws(()=> run(`setTextIcon('coin', 5)`));
 });
+
+test('ImageFont text shows icons, as tall as a character, the line centered by its whole width', () =>
+{
+    const { run } = loadEngine();
+    const draws = JSON.parse(run(`
+        const draws = [];
+        drawTile = (pos, size, tileInfo, color)=> draws.push([pos.x, pos.y, size.x, size.y, tileInfo.pos.x, color.a]);
+        const font = new ImageFont(new TileInfo(vec2(), vec2(8), new TextureInfo({width: 128, height: 64})));
+        setTextIcon('wide', new TileInfo(vec2(64, 0), vec2(16, 8)));
+        font.drawTextScreen('A:wide:', vec2(100, 50), 10, true, rgb(1, 0, 0, .5));
+        font.drawTextScreen('A:nope:', vec2(100, 50), 10, false);
+        JSON.stringify(draws)
+    `));
+    // 'A' 10 wide and the icon 20 wide, twice as wide as it is tall, 30 in all from 85 to 115
+    assert.deepEqual(draws[0], [89.5, 49.5, 10, 10, 8, .5], 'the A, glyph 33, column 1 of 16, in the text color');
+    assert.deepEqual(draws[1], [104.5, 49.5, 20, 10, 64, .5], 'the icon, its own colors faded with the text');
+    assert.equal(draws.length, 9, 'a name not registered stays text, seven glyphs');
+});
