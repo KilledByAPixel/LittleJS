@@ -27,6 +27,7 @@ What changed in each release, newest first. Releases before 1.20.0 are on the
 - A UI widget that throws while drawing leaves no transform or clip on the UI canvas
 - The 2D level editor draws over the light system, so a dark lit level does not hide its grid, brush and selection
 - `buildSphere`, `buildCapsule` and `buildTorus` round a fraction of rings or tube sides down, as the sides already were, where the shape came out open; the builders warn in debug builds when they round a count
+- Past the edge of `postProcessCurve` stays black with `postProcessChromatic`, `postProcessGlow`, a blur or the outline after it, where they read the picture's edge there, stretched out to the screen's edge, and chromatic aberration turned it purple
 
 ## 1.30.0 - 2026-11-11
 

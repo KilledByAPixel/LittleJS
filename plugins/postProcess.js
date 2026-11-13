@@ -394,6 +394,10 @@ function postProcessBloom(threshold=.6, strength=1, size=6, includeMainCanvas=fa
 // order into one shader; a piece works on c, the pixel's color, and uv, where it is on the screen from 0 to 1, with p
 // its pixel; one that bends uv or samples the frame, the curve, chromatic and glow, goes before the ones that shade
 
+// whether the pixel is on the picture: past the curve's edge uv is off it, where the curve left black, and an effect
+// that reads the picture again leaves the pixel alone, or a read there takes the picture's edge, stretched out
+const postProcessOnPicture = 'all(lessThanEqual(abs(uv - .5), vec2(.5)))';
+
 // a number as GLSL writes it, a float with a point
 // an effect setting: a number written into the code, or the name of a postProcess value, read from it each frame
 const postProcessNumber = (n)=> typeof n === 'string' ?
@@ -479,7 +483,10 @@ function postProcessGlow(threshold=.6, strength=1, size=6)
         }`;
     }
     return `        // glow
-        vec3 _glow = vec3(0);${code}
+        vec3 _glow = vec3(0);
+        if (${postProcessOnPicture})
+        {${code}
+        }
         c.rgb += _glow * ${typeof strength === 'string' ? postProcessNumber(strength) + ' / ' + taps + '.' :
             (strength / taps).toFixed(6)};`; // a number as before, a value's name divided in the shader
 }
@@ -578,8 +585,8 @@ function postProcessChromatic(strength=.005)
 {
     return `        // chromatic
         vec2 _d = (uv - .5) * ${postProcessNumber(strength)} * 2.;
-        c.r = texture(iChannel0, uv + _d).r;
-        c.b = texture(iChannel0, uv - _d).b;`;
+        if (${postProcessOnPicture})
+            c.r = texture(iChannel0, uv + _d).r, c.b = texture(iChannel0, uv - _d).b;`;
 }
 
 // a blur's widest is 32 pixels, past which its 24 taps sit far enough apart to show; a value's is the game's to keep
@@ -601,7 +608,7 @@ function postProcessDiscBlur(weight)
             _sum += texture(iChannel0, _puv).rgb * _w;
             _total += _w;
         }
-        c.rgb = _total > 0. ? _sum / _total : c.rgb;`;
+        c.rgb = _total > 0. && ${postProcessOnPicture} ? _sum / _total : c.rgb;`;
 }
 
 /**
@@ -664,7 +671,7 @@ function postProcessOutline(color=BLACK, thickness=1, threshold=.02)
         float _dx = abs(sceneDepth(uv + vec2(_o.x, 0)) + sceneDepth(uv - vec2(_o.x, 0)) - 2. * _d);
         float _dy = abs(sceneDepth(uv + vec2(0, _o.y)) + sceneDepth(uv - vec2(0, _o.y)) - 2. * _d);
         vec4 _line = vec4(${n(color.r)}, ${n(color.g)}, ${n(color.b)}, ${n(color.a)});
-        if (LJS_HAS_DEPTH)
+        if (LJS_HAS_DEPTH && ${postProcessOnPicture})
             c.rgb = mix(c.rgb, _line.rgb, _line.a * step(${n(threshold)}, max(_dx, _dy) / max(abs(_d), 1e-6)));`;
 }
 

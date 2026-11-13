@@ -8,7 +8,8 @@
 
 // tilt shift keeps its band sharp and blurs above and below, over stripes a pixel wide; a postProcess value moves the
 // band frame to frame with the same shader; depth of field keeps the edge of a box in focus crisp, nothing smeared
-// over the blurred background beside it, and blurs the edge of a box far away
+// over the blurred background beside it, and blurs the edge of a box far away; and the effects that read the picture
+// again leave past the curve's edge black
 smokeRun(async ()=>
 {
     setShowSplashScreen(false);
@@ -68,6 +69,15 @@ smokeRun(async ()=>
     const plain = [smokePixel(.5, .5), smokePixel(.5 + 1 / 128, .5)];
     check('the outline with no depth texture leaves the picture as it is', Math.max(plain[0][0], plain[1][0]) > 200 &&
         Math.min(plain[0][0], plain[1][0]) < 10 && plain.every((p)=> p[1] === p[0]), plain);
+
+    // past the curve's edge is black with chromatic aberration, glow and tilt shift after it, where they read the
+    // picture's edge there, stretched out, and chromatic set red and blue from it, purple
+    postProcess.setShaderCode(postProcessEffects(postProcessCurve(.2), postProcessChromatic(.02),
+        postProcessGlow(0, 1, 4), postProcessTiltShift(.5, .25, 6)));
+    engineStep(2);
+    const corner = smokePixel(.01, .01), middle = Math.max(smokePixel(.5, .5)[0], smokePixel(.5 + 1 / 128, .5)[0]);
+    check('effects after the curve leave past its edge black', smokeNear(corner, [0, 0, 0, 255], 2) && middle > 100,
+        {corner, middle});
 
     // a box in focus 10 away on the left, one far away on the right, the rest nothing, blurred
     stripes = false;
