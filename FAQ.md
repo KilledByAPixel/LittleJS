@@ -49,6 +49,9 @@ If you don't find an answer here, feel free to ask the community or check the do
 - [Can I use physics with LittleJS?](#can-i-use-physics-with-littlejs)
 - [How do I add particle effects to my game?](#how-do-i-add-particle-effects-to-my-game)
 - [How do I use timers?](#how-do-i-use-timers)
+- [How do I make a title screen, a menu and game over?](#how-do-i-make-a-title-screen-a-menu-and-game-over)
+- [How do I pause the game?](#how-do-i-pause-the-game)
+- [How do I animate a value smoothly, like a fade or a slide?](#how-do-i-animate-a-value-smoothly-like-a-fade-or-a-slide)
 - [How do I save and load game state?](#how-do-i-save-and-load-game-state)
 - [How do I use the medals (achievements) system?](#how-do-i-use-the-medals-achievements-system)
 
@@ -904,6 +907,58 @@ const uiFade = new Timer(.5, true); // useRealTime = true
 
 Real-time timers track `timeReal` instead of `time` — unaffected by pause or time scale. You can also flip an existing timer between modes with `timer.setUseRealTime(true)` while it's unset.
 
+### How do I make a title screen, a menu and game over?
+
+Make each a scene, an object with the hooks it needs, and switch with `setScene`, which leaves the current one, destroys every object that is not `persistent` and enters the next. Buttons come from the UI plugin, made once in `gameInit`. UI objects are not objects of the scene and stay after `setScene`, so a scene that makes them ends them in its `leave`:
+
+```javascript
+const titleScene =
+{
+    enter()
+    {
+        const play = new UIButton(vec2(0, 60), vec2(200, 60), 'Play');
+        play.onClick = ()=> setScene(gameScene);
+    },
+    leave() { uiSystem.destroyObjects(); }, // or the Play button stays on screen in the game
+    renderPost() { drawTextScreen('My Game', mainCanvasSize.scale(.5).add(vec2(0, -80)), 80); },
+};
+const gameScene = { enter() { new Player(vec2()); } };
+
+function gameInit()
+{
+    new UISystemPlugin;
+    setScene(titleScene);
+}
+```
+
+Setting the current scene again restarts it. From a Box2D contact callback `setScene` waits for the physics step to end, so it is the safe way to restart when the player touches spikes. The [Scenes](https://killedbyapixel.github.io/LittleJS/examples/?example=Scenes) example is a title, the game and game over, and [UI System](https://killedbyapixel.github.io/LittleJS/examples/?example=UI%20System) shows the buttons, sliders and checkboxes.
+
+### How do I pause the game?
+
+`setPaused(true)` stops the objects, physics and `gameUpdate`; `gameUpdatePost` and the render hooks keep running, so a pause menu can still be drawn and clicked, and `paused` says whether it is on:
+
+```javascript
+function gameUpdatePost()
+{
+    if (keyWasPressed('KeyP'))
+        setPaused(!paused);
+}
+```
+
+In a debug build Escape is the debug key, which opens the debug overlay, so a pause on Escape opens that too. Pick another key for the debugger with `setDebugKey('Backquote')`, or none with `setDebugKey('')`, before `engineInit`; a release build has no debug key. A tween or timer with `useRealTime` keeps going while paused.
+
+### How do I animate a value smoothly, like a fade or a slide?
+
+A tween moves a value from one end to another over a time, along an easing curve. `tweenProperty` tweens a property of an object by its path:
+
+```javascript
+tweenProperty(player, 'pos.y', 0, 3, .5).setEase(Ease.OUT(Ease.SINE)); // rise and slow down
+tweenProperty(sprite, 'color', WHITE, CLEAR_WHITE, 1).then(()=> sprite.destroy()); // fade out, then go
+tweenProperty(button, 'size', vec2(1), vec2(1.2), .3).pingPong(); // pulse for ever
+```
+
+An ease is a curve, as `Ease.SINE`; `Ease.OUT`, `Ease.IN_OUT` and `Ease.POWER(n)` make one from another. A tween on an object stops when the object is destroyed, and `tweenStopAll()` stops every tween, as a restart should. The [Tween](https://killedbyapixel.github.io/LittleJS/examples/?example=Tween) and [Tween Advanced](https://killedbyapixel.github.io/LittleJS/examples/?example=Tween%20Advanced) examples show more.
+
 ### How do I save and load game state?
 
 LittleJS has built-in helpers for localStorage-backed save data — no need to roll your own JSON serialization:
@@ -916,7 +971,7 @@ const saveData = readSaveData('MyGame', { highScore: 0, level: 1 });
 writeSaveData('MyGame', { highScore: 99999, level: 5 });
 ```
 
-The `saveName` should be unique per game so multiple LittleJS games on the same host don't collide. The data object must be JSON-serializable (no functions, no circular references). Under the hood these are thin wrappers around `localStorage` + `JSON.stringify` / `JSON.parse`.
+The `saveName` should be unique per game so multiple LittleJS games on the same host don't collide. The data object must be JSON-serializable (no functions, no circular references). A value whose default is a `vec2` or a Color comes back as one, though JSON keeps only its numbers. Under the hood these are thin wrappers around `localStorage` + `JSON.stringify` / `JSON.parse`.
 
 ### How do I use the medals (achievements) system?
 

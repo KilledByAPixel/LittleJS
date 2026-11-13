@@ -607,6 +607,12 @@ function particleEffectResolve(nameOrEffect, options)
                 ASSERT(false, 'particleEffect: no option named ' + key + (meant ? ', did you mean ' + meant + '?' : '') +
                     '\nOptions:', ...names);
             }
+    // the play's own options: 0, a negative or not a number made empty, mirrored or NaN particles
+    ASSERT(options.scale === undefined || isNumber(options.scale) && options.scale > 0,
+        'particleEffect: scale must be a number above 0', options.scale);
+    ASSERT(options.hue === undefined || isNumber(options.hue), 'particleEffect: hue must be a number', options.hue);
+    ASSERT(options.saturation === undefined || isNumber(options.saturation) && options.saturation >= 0,
+        'particleEffect: saturation must be a number, 0 or more', options.saturation);
     // any setting in the options replaces the effect's own for this play, emitTime for a burst or a loop; one that is
     // not a value of its kind keeps the effect's own, where the sanitizing would put the library's default
     const settings = {...found.settings};

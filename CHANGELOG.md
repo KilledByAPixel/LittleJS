@@ -11,6 +11,10 @@ What changed in each release, newest first. Releases before 1.20.0 are on the
 - A debug build asserts on a key name that does not start with a capital, as `'space'` for `'Space'`, which was always up, and on a color where `drawLine` takes its width
 - `engineObjectsRaycast` and `isIntersecting` make no vectors, and `drawEllipseGradient` and `drawCircleGradient` none past the first call; Back from a prefab in the 3D editor builds each instance once
 - `speak()` says nothing while the page's sound is paused, where the browser said it all at once on return; `engineObjectsRaycast` says its hits are in list order
+- `readSaveData` gives back a `vec2`, a Color or another value with a `copy` method where its default is one, where it gave a plain object of numbers
+- `particleEffect` asserts in debug builds on a `scale`, `hue` or `saturation` that would make empty, mirrored or NaN particles
+- `tileLayersLoad` warns of a map that is not orthogonal, read as square cells, and names the CSV or array layer format when a layer's data can not be read; glTF data uris are read in any case
+- The FAQ answers how to make a title screen, a menu and game over, how to pause, and how to animate a value with tweens, and says Escape is the debug key, with `setDebugKey`
 
 ### Fixes
 - `ThirdPersonCamera3D` no longer shakes from side to side when the player walks back toward it: its swing behind the way the target moves fades out as the move turns toward the camera, where the short way round flipped sides each frame, and keys that move the way the camera faces turned the move with it

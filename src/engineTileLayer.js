@@ -309,6 +309,9 @@ function tileLayersLoad(tileMapData, tileInfo=tileLayerDefaultTile(), renderOrde
         const s = 50;
         tileMapData = {width: s, height: s, layers: [{data: new Array(s*s).fill(0)}]};
     }
+    // an isometric, staggered or hexagonal map is read as a square grid, every tile somewhere else
+    debug && tileMapData.orientation && tileMapData.orientation !== 'orthogonal' && console.warn(
+        `tileLayersLoad: a map of ${tileMapData.orientation} orientation is read as orthogonal, square cells`);
 
     // the editor, in debug builds, keeps the map as the source of its edits and brings back autosaved ones
     tileMapData = editorMapRestore(tileMapData);
@@ -382,7 +385,8 @@ function tileLayersLoad(tileMapData, tileInfo=tileLayerDefaultTile(), renderOrde
         const tiles = dataLayer.data; // a list of gids, or a typed array of them
         if (color && (!(isArray(tiles) || ArrayBuffer.isView(tiles)) || dataLayer.data.length !== levelSize.area()))
             throw new Error(`tileLayersLoad: layer ${dataLayer.name ?? layerIndex} has ${dataLayer.data?.length} tiles for a map of ` +
-                `${levelSize.area()}; infinite maps and compressed layers are not read`);
+                `${levelSize.area()}; save the map with the CSV or array layer format, base64, compressed and infinite ` +
+                'maps are not read');
     }
     for (let layerIndex=layerCount; layerIndex--;)
     {

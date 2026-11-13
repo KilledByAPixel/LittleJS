@@ -245,6 +245,8 @@ function shareURL(title, url, callback)
 
 /** Read save data from local storage
  *  - The result has the type of defaultSaveData, or any when there is none
+ *  - A value whose default is a vec2, a Color or another value with a copy method comes back as one, where JSON
+ *    keeps only its numbers
  *  @template {Object<string, any>} [T=any]
  *  @param {string} saveName - unique name for the game/save
  *  @param {T} [defaultSaveData] - default values, result is {...default, ...loaded} so this must be an object
@@ -274,7 +276,16 @@ function readSaveData(saveName, defaultSaveData)
         }
     }
     catch { LOG('readSaveData: localStorage unavailable — using defaults'); }
-    return { .../** @type {object} */ (defaultSaveData), ...loadedData };
+    const result = { .../** @type {object} */ (defaultSaveData), ...loadedData };
+    // a vec2 or a Color written as JSON is only its numbers, made one again from its default
+    for (const key in defaultSaveData ?? {})
+    {
+        const value = defaultSaveData[key], saved = loadedData[key];
+        if (value && typeof value === 'object' && typeof value.copy === 'function' && saved && typeof saved === 'object'
+            && Object.prototype.toString.call(saved) === '[object Object]')
+            result[key] = Object.assign(value.copy(), saved);
+    }
+    return result;
 }
 
 /** Write save data to local storage, an object as readSaveData gives it back

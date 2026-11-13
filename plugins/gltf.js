@@ -1044,7 +1044,7 @@ function gltfFetch(uri, baseUrl, files)
         return Promise.reject(new Error('glTF needs ' + path + (named.size ? ', and more than one file has its name' :
             ', which is not among the files given')));
     }
-    if (uri.startsWith('data:'))
+    if (/^data:/i.test(uri)) // the scheme in any case, as the files branch takes it
     {
         const comma = uri.indexOf(','), bytes = atob(uri.slice(comma + 1)), data = new Uint8Array(bytes.length);
         for (let i = 0; i < bytes.length; ++i)

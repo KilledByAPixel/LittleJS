@@ -233,6 +233,30 @@ test('getRotation keeps the turn of a matrix scaled to 0 on one axis, and an att
     assert.equal(result.angle, .5);
 });
 
+test('improvements: particle effect options checked, a saved vec2 and Color come back as one, a map that is not ' +
+    'orthogonal is said, a glTF data uri in capitals is read', async ()=>
+{
+    const warnings = [], items = {};
+    const localStorage = { getItem: (k)=> items[k] ?? null, setItem: (k, v)=> { items[k] = String(v); } };
+    const { run } = loadEngine({ localStorage, atob, Response,
+        console: { ...console, warn: (...a)=> warnings.push(a.join(' ')) } });
+    run('setHeadlessMode(true); new Render3DPlugin');
+    for (const options of ['{scale: 0}', '{scale: -1}', '{hue: NaN}', '{saturation: -1}'])
+        assert.throws(()=> run(`particleEffect('fire', vec2(), ${options})`), /particleEffect: \w+ must be/, options);
+    const saved = run(`writeSaveData('game', {spawn: vec2(3, 4), tint: hsl(.5, 1, .5), best: 7});
+        const data = readSaveData('game', {spawn: vec2(), tint: WHITE, best: 0});
+        JSON.stringify([data.spawn instanceof Vector2, data.spawn.add(vec2(1)).x, data.tint instanceof Color, data.best])`);
+    assert.deepEqual(JSON.parse(saved), [true, 4, true, 7]);
+    run(`tileLayersLoad({width: 1, height: 1, tilewidth: 16, tileheight: 16, orientation: 'isometric',
+        layers: [{type: 'tilelayer', name: 'a', width: 1, height: 1, data: [0]}]}, undefined, 0, 0, false)`);
+    assert.ok(warnings.some((w)=> w.includes('isometric orientation')), warnings.join('\n'));
+    const floats = Buffer.from(new Float32Array([0, 0, 0, 1, 0, 0, 0, 1, 0]).buffer).toString('base64');
+    const gltf = {asset: {version: '2.0'}, buffers: [{byteLength: 36, uri: 'DATA:application/octet-stream;base64,' + floats}],
+        bufferViews: [{buffer: 0, byteLength: 36}], accessors: [{bufferView: 0, count: 3, type: 'VEC3', componentType: 5126}],
+        meshes: [{primitives: [{attributes: {POSITION: 0}}]}], nodes: [{mesh: 0}], scenes: [{nodes: [0]}]};
+    assert.equal(await run(`parseGLTF(${JSON.stringify(gltf)}).then((m)=> m.parts.length, (e)=> e.message)`), 1);
+});
+
 test('the touch gamepad taking over from a real pad in slot 0 lets go of what that pad held', ()=>
 {
     const pad = { mapping: 'standard', axes: [0, 0, 0, 0],
