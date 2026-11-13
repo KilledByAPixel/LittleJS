@@ -470,7 +470,7 @@ this.tileInfo = tile(3, 16); // now showing tile index 3
 **For frame-based animation**, store a base `TileInfo` and use `.frame(n)` to offset along the row:
 
 ```javascript
-const baseSprite = tile(2, 16);
+const baseSprite = tile(2, 16); // in gameInit or later, once the images have loaded, as every tile() call
 this.tileInfo = baseSprite.frame(animationFrame); // 0, 1, 2... walks to the right
 ```
 
@@ -493,22 +493,24 @@ That's called tile bleeding — pixels from one tile blend into a neighboring ti
 Use `SpriteAnimation`, which steps through frames laid out left-to-right on your sprite sheet, and can loop, play once or ping-pong, pausing with the game:
 
 ```javascript
-const walk = new SpriteAnimation(tile(0, 16), 4, .1); // four frames, a tenth of a second each
-const attack = new SpriteAnimation(tile(4, 16), 3, .05).play(); // once, then holds the last frame
+// in the object's constructor, made in gameInit or later, once the images have loaded
+this.walk = new SpriteAnimation(tile(0, 16), 4, .1); // four frames, a tenth of a second each
+this.attack = new SpriteAnimation(tile(4, 16), 3, .05).play(); // once, then holds the last frame
 
 // in update()
+const {walk, attack} = this;
 this.tileInfo = (attack.isDone ? walk : attack).tileInfo;
 ```
 
 To do it by hand, use the `TileInfo.frame(n)` method to offset along the row of frames from a base sprite:
 
 ```javascript
-// store the base sprite (the first frame of the animation)
-const playerSprite = tile(0, 16);
+// store the base sprite (the first frame of the animation), in the constructor, made in gameInit or later
+this.playerSprite = tile(0, 16);
 
 // inside update(), advance the frame based on time
 const animationFrame = Math.floor(time * 10) % 4; // 4-frame loop at 10 FPS
-this.tileInfo = playerSprite.frame(animationFrame);
+this.tileInfo = this.playerSprite.frame(animationFrame);
 ```
 
 `time` is a global updated by the engine each frame (in seconds). The `% 4` keeps the index inside the 4 frames you actually drew on the sheet — adjust to match your animation length.
@@ -815,6 +817,8 @@ A map's object layers place your game's own objects. Name each type once with `o
 ```javascript
 objectLayersAddType('Enemy', Enemy, {health: 3}); // made with new Enemy(pos), then its properties are set
 ```
+
+The type is the object's Class in Tiled, not its Name. A tile object is placed by its bottom left corner and a rectangle by its top left corner, as Tiled keeps them, so snap a rectangle to a cell and move to its middle in the constructor if you want it centered.
 
 You can also build a layer in code with `setData` and `setCollisionData`, as the [Tile Layer](https://killedbyapixel.github.io/LittleJS/examples/?example=Tile%20Layer) example does. The [Level Editor](https://killedbyapixel.github.io/LittleJS/examples/?example=Level%20Editor) example loads a map with objects, and the [platformer](https://killedbyapixel.github.io/LittleJS/examples/platformer/) is a whole game built on one.
 

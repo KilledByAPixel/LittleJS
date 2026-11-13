@@ -26,6 +26,8 @@ function vec3(x=0, y, z)
 
 /**
  * Check if the object is a valid Vector3, a type guard in TypeScript
+ *  - One with a component that is not a number is not valid and reads as not one, and TypeScript takes it as not
+ *    one in the else branch too
  * @param {any} v
  * @return {v is Vector3}
  * @memberof Math3D
@@ -549,17 +551,23 @@ class Matrix4
      *  @return {Vector3} */
     getRotation()
     {
-        // the axes at unit length, see Matrix4.rotation for which element is which
+        // the axes at unit length, see Matrix4.rotation for which element is which; one scaled to nothing has no
+        // direction, so it is made again from the other two, as an object hidden by a scale of 0 keeps its turn
         const m = this.m, s = this.getScale();
         const sx = s.x || 1, sy = s.y || 1, sz = s.z || 1;
-        const m1 = m[1] / sx, m5 = m[5] / sy, m8 = m[8] / sz, m9 = m[9] / sz, m10 = m[10] / sz;
+        let x = [m[0] / sx, m[1] / sx, m[2] / sx], y = [m[4] / sy, m[5] / sy, m[6] / sy], z = [m[8] / sz, m[9] / sz, m[10] / sz];
+        const cross = (a, b)=> [a[1]*b[2] - a[2]*b[1], a[2]*b[0] - a[0]*b[2], a[0]*b[1] - a[1]*b[0]];
+        const zeros = (s.x ? 0 : 1) + (s.y ? 0 : 1) + (s.z ? 0 : 1);
+        if (zeros === 1)
+            !s.x ? x = cross(y, z) : !s.y ? y = cross(z, x) : z = cross(x, y);
+        const m1 = x[1], m5 = y[1], m8 = z[0], m9 = z[1], m10 = z[2];
         // the pitch from its cosine as well as its sine, which stays exact near straight up where the sine alone
         // loses its precision
         const c = hypot(m8, m10), pitch = atan2(-m9, c);
         if (c > 1e-9)
             return new Vector3(pitch, atan2(m8, m10), atan2(m1, m5));
         // straight up or down: yaw and roll turn about the same axis, so the roll is zero and yaw takes it all
-        return new Vector3(pitch, atan2(m[4] / sy * -m9, m[0] / sx), 0);
+        return new Vector3(pitch, atan2(y[0] * -m9, x[0]), 0);
     }
 
     /** Returns a string representation of this matrix for debugging

@@ -91,6 +91,17 @@ smokeRun(async ()=>
         Math.abs(restarted[0] - 64) < 4 && restarted[1] === before[1] && restarted[2] === before[2] &&
         right[1] === beforeRight[1] && right[2] === beforeRight[2] &&
         !!postProcess.feedbackTexture && glContext.getError() === glContext.NO_ERROR, {restarted, right, beforeRight});
+
+    // turned off for a while and on again it starts from black, not from the frame it held when it went off
+    engineStep(3);
+    postProcess.feedback = false;
+    engineStep(2);
+    const off = smokePixel(.25, .5)[0];
+    postProcess.feedback = true;
+    engineStep();
+    const onAgain = smokePixel(.25, .5)[0];
+    check('feedback off reads nothing, and on again starts from black', Math.abs(off - 64) < 4 &&
+        Math.abs(onAgain - 64) < 4 && glContext.getError() === glContext.NO_ERROR, {off, onAgain});
     checkGLError();
 });
 </script>

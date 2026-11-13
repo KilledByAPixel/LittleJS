@@ -315,7 +315,9 @@ class WavedashPlugin
         const answer = await wavedashWait('cloudLoad', track(this.call('readLocalFile', path)));
         const bytes = answer instanceof Uint8Array || answer instanceof ArrayBuffer || typeof answer == 'string' ?
             answer : answer?.['data'];
-        const text = !bytes ? '' : typeof bytes == 'string' ? bytes : new TextDecoder().decode(bytes);
+        // bytes of another kind than a string or a buffer, if the SDK ever answers so, are a read that failed
+        const text = typeof bytes == 'string' ? bytes : ArrayBuffer.isView(bytes) || bytes instanceof ArrayBuffer ?
+            new TextDecoder().decode(bytes) : '';
         if (!text) return failed('could not read slot ' + slot);
         try { return {value: JSON.parse(text), failure: undefined}; }
         catch (error)

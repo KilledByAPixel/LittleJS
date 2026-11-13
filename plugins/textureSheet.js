@@ -426,7 +426,8 @@ function loadAtlas(imageSrc, jsonSrc, padding=textureSheetPadding)
                             x, y, f.size.x, f.size.y);
                 });
                 sheet.glDirty = true;
-                atlas[group.name] = tile;
+                // as its own, a frame named __proto__ too, which assigned would set the atlas's prototype
+                objectPropertySet(atlas, group.name, tile);
             }
         }
         else

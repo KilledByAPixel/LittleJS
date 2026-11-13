@@ -531,6 +531,14 @@ function tweenProperty(target, propertyPath, start, end, duration = 1, options =
 
     const parts = propertyPath.split('.');
     const lastKey = parts.pop();
+    if (debug)
+    {
+        // a path that ends on a property nothing has, a typo like 'pos.z' on a vec2, would add one nothing reads
+        let obj = target;
+        for (const k of parts) obj = obj?.[k];
+        ASSERT(obj != null && typeof obj === 'object' && lastKey in obj,
+            'tweenProperty: ' + propertyPath + ' is not a property of the target, set it first to tween a new one');
+    }
     let tween;
     const callback = (value) =>
     {

@@ -1002,6 +1002,10 @@ tweenStopAll()                 // Stop every active tween (e.g. on level reset)
 ## LittleJS Scene System
 - A game's states, like a title, the game and game over, as scene objects
 - `setScene` leaves the current scene, destroys every object that is not persistent, and enters the next
+- UI objects and tweens are not objects of the scene and stay: end them in its `leave` with
+  `uiSystem.destroyObjects()` and `tweenStopAll()`, or a title's buttons stay on screen and clickable in the game
+- From a Box2D contact callback `setScene` waits for the physics step to end, so it is the safe way to restart from
+  one; destroying and making bodies there yourself is not
 - Pause is the engine's `paused`: a scene's update stops with gameUpdate, its render hooks keep drawing
 - See the Scenes short and the Box2D example
 

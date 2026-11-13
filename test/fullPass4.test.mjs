@@ -121,7 +121,7 @@ test('an editor autosave of the wrong shape is read as broken, a good one as goo
 {
     const { run } = loadEngine();
     const valid = run(`[
-        editorSaveValid({hash: 1, width: 2, height: 1, layers: [[0, 3]], objects: [[{id: 1}]], nextobjectid: 2}),
+        editorSaveValid({hash: 1, width: 2, height: 1, layers: [[0, 3]], objects: [[{id: 1, x: 0, y: 16}]], nextobjectid: 2}),
         editorSaveValid({layers: [[0, 1]]}),
         editorSaveValid({layers: [[0, 1]], objects: [[null]]}),
         editorSaveValid({layers: [[0, 1]], objects: {}}),

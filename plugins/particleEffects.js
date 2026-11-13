@@ -672,6 +672,9 @@ function particleEffectFromEmitter(emitter, name='Effect')
             settings[setting.name] = emitter[setting.name]; // a Color is taken as its channels by the sanitizer
     if (emitter.emitTime < 0) // destroyed, its last particles going: as long as it emitted, not 0, for ever
         settings.emitTime = emitter.emitElapsed;
+    // a child emitter's angle is the world's, so its effect's is taken from its parent's, as particleEffectSet adds it
+    if (emitter.parent)
+        settings.angle = emitter.parent.getMirrorSign() * (emitter.angle - emitter.parent.angle);
     settings.emitRect = !emitter.emitCircle;
     settings.emitSize = emitter.emitSize.x;
     settings.emitHeight = emitter.emitSize.y;

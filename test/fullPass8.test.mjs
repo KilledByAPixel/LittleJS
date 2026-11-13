@@ -90,3 +90,159 @@ test('a tween asserts on an ease that is not a curve and on an option it does no
     assert.throws(()=> run(`new Tween(()=> {}, 0, 1, 1, {loop: true})`), /loop\(\) is a method/);
     run(`new Tween(()=> {}, 0, 1, 1, {ease: Ease.OUT(Ease.SINE), useRealTime: true}).setEase(Ease.POWER(3))`);
 });
+
+// the lows of the same pass
+
+const editorGame = async (with3D)=>
+{
+    const { run } = loadEngine({ localStorage: { getItem: ()=> null, setItem() {} }, location: { pathname: '/game/' } });
+    run('setHeadlessMode(true)');
+    await run(`setEngineManualStep(true);
+        engineInit(()=> { ${with3D ? 'new Render3DPlugin' : ''} }, ()=> {}, ()=> {}, ()=> {}, ()=> {})`);
+    return run;
+};
+
+test('a held tool of the game\'s is released when the 3D editor closes, and a release that throws leaves the ' +
+    'game its pause back in both editors', async ()=>
+{
+    const run = await editorGame(true);
+    run(`level3DLoad({objects: []}); levelEditor.open(); var log = [];
+        levelEditor.addTool('Dots', { onPress() { log.push('press'); }, onRelease() { log.push('release'); } });
+        levelEditor.tool = 'Dots'; editor3DToolHeld = true; levelEditor.close();`);
+    assert.deepEqual(JSON.parse(run('JSON.stringify([log, editor3DToolHeld, editor3DIsOpen])')), [['release'], false, false]);
+    for (const is3D of [false, true])
+    {
+        const run = await editorGame(is3D);
+        is3D ? run('level3DLoad({objects: []})') : run(`tileLayersLoad({width: 2, height: 2, tilewidth: 16, tileheight: 16,
+            tilesets: [{firstgid: 1, source: 't.tsx'}], layers: [{type: 'tilelayer', name: 'a', width: 2, height: 2,
+            data: [0, 0, 0, 0]}]}, undefined, 0, 2)`);
+        run(`levelEditor.open(); levelEditor.addTool('Bad', { onRelease() { throw new Error('bad release'); } });
+            levelEditor.tool = 'Bad'; ${is3D ? 'editor3DToolHeld' : 'editorToolHeld'} = true;`);
+        assert.throws(()=> run('levelEditor.close()'), /bad release/);
+        assert.equal(run('paused'), false, (is3D ? '3D' : '2D') + ': the game is not left paused');
+    }
+});
+
+test('addKey with a key code in lowercase is refused once, with a warning, not every frame', ()=>
+{
+    const warnings = [];
+    const { run } = loadEngine({ console: { ...console, warn: (...a)=> warnings.push(a.join(' ')) } });
+    run(`levelEditor.addKey('shift', ()=> {}); levelEditor.addKey('numpad1', ()=> {}); levelEditor.addKey('F1', ()=> {})`);
+    assert.deepEqual(JSON.parse(run('JSON.stringify(Object.keys(levelEditor.keys))')), ['F1']);
+    assert.equal(warnings.filter((w)=> w.includes('with a capital')).length, 2);
+});
+
+test('a video made while the window is already blurred is muted, and soundPauseWhenBlurred turned on mutes too', ()=>
+{
+    const document = { hidden: false, addEventListener() {}, hasFocus: ()=> false, body: { appendChild() {} },
+        createElement: ()=> ({style: {}, paused: true, muted: false, currentTime: 0, duration: 10,
+            pause() { this.paused = true; }, play() { this.paused = false; return Promise.resolve(); },
+            remove() {}, removeAttribute() {}, load() {}}) };
+    const { run } = loadEngine({ document });
+    run('setHeadlessMode(true); setSoundPauseWhenBlurred(true)');
+    const muted = run(`new UISystemPlugin; var a = new UIVideo(vec2(), vec2(100), 'a.mp4', false); a.play(); a.update();
+        const first = a.video.muted;
+        setSoundPauseWhenBlurred(false); a.update(); const off = a.video.muted;
+        setSoundPauseWhenBlurred(true); a.update();
+        JSON.stringify([first, off, a.video.muted])`);
+    assert.deepEqual(JSON.parse(muted), [true, false, true]);
+});
+
+test('small files that would take huge memory are refused or capped: glTF zeros over all parts, LDtk cells over ' +
+    'all layers, prefab parts over a whole level, a 3D trail', async ()=>
+{
+    const { run } = loadEngine({}, '', 'littlejs.release.js');
+    run('setHeadlessMode(true); new Render3DPlugin');
+    // a glTF of eight parts each reading one accessor of 2^20 zeros
+    const gltf = {asset: {version: '2.0'}, accessors: [{count: (1 << 20) - 1, type: 'VEC3', componentType: 5126}],
+        meshes: [{primitives: Array.from({length: 8}, ()=> ({attributes: {POSITION: 0}}))}],
+        nodes: [{mesh: 0}], scenes: [{nodes: [0]}]};
+    const gltfResult = await run(`parseGLTF(${JSON.stringify(gltf)}).then(()=> 'loaded', (e)=> e.message)`);
+    assert.match(gltfResult, /past what a file may make/);
+    // an LDtk level whose four stacked tiles would make five whole 2048 by 2048 layers
+    const ldtk = run(`(()=> { try { tileLayersFromLDtk({defs: {tilesets: [{uid: 7, relPath: 't.png', pxWid: 32,
+        pxHei: 32, tileGridSize: 16, __cWid: 2, __cHei: 2}]}, levels: [{identifier: 'big', pxWid: 2048 * 16,
+        pxHei: 2048 * 16, layerInstances: [{__type: 'Tiles', __identifier: 'a', __cWid: 2048, __cHei: 2048,
+        __gridSize: 16, __tilesetDefUid: 7, gridTiles: [0, 1, 2, 3].map((t)=> ({px: [0, 0], t, f: 0}))}]}]});
+        return 'made'; } catch (e) { return e.message; } })()`);
+    assert.match(ldtk, /cells over its layers/);
+    // ten instances of a prefab of 100 prefabs of 100 boxes
+    const parts = run(`let made = 0; level3DAddType('Leaf', ()=> { ++made; });
+        level3DAddPrefab('B', {objects: Array.from({length: 100}, (_, i)=> ({id: i + 1, type: 'Leaf'}))});
+        level3DAddPrefab('A', {objects: Array.from({length: 100}, (_, i)=> ({id: i + 1, type: 'B'}))});
+        level3DLoad({objects: Array.from({length: 10}, (_, i)=> ({id: i + 1, type: 'A', pos: [i, 0, 0]}))});
+        made`);
+    assert.ok(parts <= 1e5, 'parts ' + parts);
+    // a trail of a huge trailScale is capped, and the emitter keeps updating
+    const trail = run(`const e = new ParticleEmitter3D(vec3()); e.trailTime = 1e9 / 60; e.update(); e.update();
+        e.trailMax`);
+    assert.equal(trail, 600);
+});
+
+test('loaders: a bad tileset margin, glTF indices past their points, an atlas frame ' +
+    'named __proto__, an autosave object with no position', async ()=>
+{
+    {
+        const { run } = loadEngine();
+        run(`setHeadlessMode(true); try { tileLayersLoad({width: 2, height: 2, tilewidth: 16, tileheight: 16,
+            tilesets: [{firstgid: 1, margin: 1, spacing: 'x'}], layers: [{type: 'tilelayer', name: 'a', width: 2,
+            height: 2, data: [1, 0, 0, 0]}]}, tile(0, 16), 0, 2); } catch (e) {}
+            engineObjectsDestroy(); engineObjectsDestroy();`);
+    }
+    {
+        const { run } = loadEngine({ atob, Response }, '', 'littlejs.release.js');
+        run('setHeadlessMode(true); new Render3DPlugin');
+        const floats = Buffer.from(new Float32Array([0, 0, 0, 1, 0, 0, 0, 1, 0]).buffer).toString('base64');
+        const ints = Buffer.from(new Uint16Array([0, 1, 7]).buffer).toString('base64');
+        const gltf = {asset: {version: '2.0'}, buffers: [{byteLength: 36, uri: 'data:application/octet-stream;base64,' +
+            floats}, {byteLength: 6, uri: 'data:application/octet-stream;base64,' + ints}],
+            bufferViews: [{buffer: 0, byteLength: 36}, {buffer: 1, byteLength: 6}],
+            accessors: [{bufferView: 0, count: 3, type: 'VEC3', componentType: 5126},
+                {bufferView: 1, count: 3, type: 'SCALAR', componentType: 5123}],
+            meshes: [{primitives: [{attributes: {POSITION: 0}, indices: 1}]}], nodes: [{mesh: 0}], scenes: [{nodes: [0]}]};
+        const result = await run(`parseGLTF(${JSON.stringify(gltf)}).then(()=> 'loaded', (e)=> e.message)`);
+        assert.match(result, /indices past its vertices/);
+    }
+    {
+        const { run } = loadEngine();
+        const atlas = run(`const groups = parseAtlas({frames: {'__proto__.png': {frame: {x: 0, y: 0, w: 8, h: 8}}}});
+            const atlas = {}; objectPropertySet(atlas, groups[0].name, 1);
+            JSON.stringify([Object.getPrototypeOf(atlas) === Object.prototype, Object.keys(atlas)])`);
+        assert.deepEqual(JSON.parse(atlas), [true, ['__proto__']]);
+        assert.equal(run(`editorSaveValid({layers: [[0]], objects: [[{id: 1, x: 0}]]})`), false);
+        assert.equal(run(`editorSaveValid({layers: [[0]], objects: [[{id: 1, x: 0, y: 0, properties: []}]]})`), true);
+    }
+});
+
+test('getRotation keeps the turn of a matrix scaled to 0 on one axis, and an attached emitter\'s effect angle is its own', ()=>
+{
+    const { run } = loadEngine();
+    const result = JSON.parse(run(`setHeadlessMode(true); new Render3DPlugin;
+        const turned = [];
+        for (const scale of [vec3(0, 1, 1), vec3(1, 0, 1), vec3(1, 1, 0)])
+        {
+            const r = buildMatrix(vec3(), vec3(.3, .7, -.4), scale).getRotation();
+            turned.push([r.x, r.y, r.z].map((v)=> +v.toFixed(6)));
+        }
+        const parent = new EngineObject(vec2(), vec2(1)); parent.angle = 1;
+        const emitter = particleEffect('fire', vec2(), {angle: .5});
+        parent.addChild(emitter); emitter.angle = parent.angle + .5;
+        JSON.stringify({turned, angle: +particleEffectFromEmitter(emitter).settings.angle.toFixed(6)})`));
+    for (const t of result.turned)
+        assert.deepEqual(t, [.3, .7, -.4]);
+    assert.equal(result.angle, .5);
+});
+
+test('newcomer slips: a tween path to nothing, an unknown level3DSpawn type, a type in Name assert or warn', ()=>
+{
+    const warnings = [];
+    const { run } = loadEngine({ console: { ...console, warn: (...a)=> warnings.push(a.join(' ')) } });
+    run('setHeadlessMode(true); new Render3DPlugin');
+    assert.throws(()=> run(`tweenProperty(new EngineObject, 'pos.z', 0, 1)`), /is not a property of the target/);
+    run(`tweenProperty(new EngineObject, 'pos.x', 0, 1)`);
+    assert.throws(()=> run(`level3DSpawn('hut')`), /no type named hut/);
+    run(`objectLayersAddType('Coin', (pos)=> new EngineObject(pos));
+        objectLayersLoad({width: 4, height: 4, tilewidth: 16, tileheight: 16, layers: [{type: 'objectgroup',
+            objects: [{id: 4, name: 'Coin', x: 0, y: 0}]}]})`);
+    assert.ok(warnings.some((w)=> w.includes('named Coin with no class')), warnings.join('\n'));
+});

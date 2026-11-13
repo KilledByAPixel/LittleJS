@@ -1377,6 +1377,7 @@ function touchGamepadRender()
             touchGamepadPointerRole.clear();
             touchGamepadButtons.length = 0;
             touchGamepadButtonsPressed.length = touchGamepadButtonsLast.length = 0;
+            touchGamepadOwning = false; // turned on again, it takes over from the real pads afresh
             touchGamepadSticks.length = 0;
             touchGamepadStickPointerId.length = 0;
             inputData[1] = undefined;

@@ -1929,7 +1929,9 @@ class UIVideo extends UIObject
         this.video.volume = audioFinite(clamp(this.volume * soundVolume), 0);
         if (this._soundEnabled !== soundEnable)
             this.video.muted = !(this._soundEnabled = soundEnable);
-        // one started while the window is blurred is muted too, as the others are
+        // the window's blur read each frame, not only from its events, so a video made while it is blurred and a
+        // change of soundPauseWhenBlurred take, and one started blurred is muted as the others are
+        uiVideosBlurredNow() === uiVideosBlurred || uiVideosPageChange();
         uiVideosBlurred && !this.video.muted && (this.video.muted = true, uiVideosMuted.add(this));
     }
     
@@ -1971,10 +1973,12 @@ class UIVideo extends UIObject
 // them, so they go on playing and the game sees them play; each comes back when the page does
 const uiVideos = /* @__PURE__ */ new Set, uiVideosPaused = /* @__PURE__ */ new Set, uiVideosMuted = /* @__PURE__ */ new Set;
 let uiVideosListening = false, uiVideosBlurred = false;
+// the window blurred with its sound paused, but not hidden, which pauses the videos instead
+const uiVideosBlurredNow = ()=> !(soundPauseWhenHidden && document.hidden) && audioPagePaused();
 function uiVideosPageChange()
 {
     const hidden = soundPauseWhenHidden && !!document.hidden;
-    uiVideosBlurred = !hidden && audioPagePaused();
+    uiVideosBlurred = uiVideosBlurredNow();
     if (hidden)
     {
         for (const video of uiVideos)

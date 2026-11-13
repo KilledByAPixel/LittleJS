@@ -328,7 +328,9 @@ function tileLayersLoad(tileMapData, tileInfo=tileLayerDefaultTile(), renderOrde
     const tileset = tileMapData.tilesets?.[0];
     if (tileInfo && !tileInfo.tiles && tileset && (tileset.margin > 0 || tileset.spacing > 0))
     {
-        const margin = tileset.margin || 0, spacing = tileset.spacing || 0, size = tileInfo.size;
+        // a margin or spacing that is not a number, written by hand, is none
+        const margin = isNumber(tileset.margin) ? tileset.margin : 0, spacing = isNumber(tileset.spacing) ?
+            tileset.spacing : 0, size = tileInfo.size;
         const width = tileInfo.textureInfo?.size.x || 0;
         const columns = tileset.columns || max(1, floor((width - margin*2 + spacing) / (size.x + spacing)));
         const origin = tileInfo.pos.subtract(vec2(tileInfo.padding)); // where the sheet starts, in an atlas too
@@ -471,8 +473,10 @@ function tileLayersFromLDtk(ldtk, level=0)
     const first = instances.find((l)=> tiled(l) && l.__tilesetDefUid != undefined) || instances.find(tiled) || instances[0];
     const grid = first?.__gridSize || 16;
     const width = first?.__cWid || ceil(data.pxWid / grid), height = first?.__cHei || ceil(data.pxHei / grid);
-    if (!(width > 0 && height > 0 && width * height <= 1 << 22))
+    if (!(Number.isInteger(width) && Number.isInteger(height) && width > 0 && height > 0 && width * height <= 1 << 22))
         throw new Error('tileLayersFromLDtk: level ' + data.identifier + ' is ' + width + ' by ' + height + ' cells');
+    // the cells of every layer made, together, as a small file of many stacked tiles would make many whole layers
+    let cells = 0;
     const map = {width, height, tilewidth: grid, tileheight: grid, orientation: 'orthogonal', renderorder: 'right-down',
         infinite: false, layers: [], nextlayerid: 1, nextobjectid: 1};
 
@@ -512,7 +516,14 @@ function tileLayersFromLDtk(ldtk, level=0)
             continue;
         }
         // an IntGrid layer's values, hidden, under its own name, for collision whatever its tiles do
-        const empty = ()=> new Array(width * height).fill(0), opacity = instance.__opacity ?? 1;
+        const empty = ()=>
+        {
+            if ((cells += width * height) > 1 << 22)
+                throw new Error('tileLayersFromLDtk: level ' + data.identifier + ' makes more than ' + (1 << 22) +
+                    ' cells over its layers');
+            return new Array(width * height).fill(0);
+        };
+        const opacity = instance.__opacity ?? 1;
         const values = instance.__type === 'IntGrid';
         if (values)
         {
@@ -606,7 +617,8 @@ function objectLayersAddType(name, make, defaults={}, tileInfo)
 
 /** Make the objects in a map's object layers, each from the type added for its name with objectLayersAddType
  *  - An object is made at its position, the world y up as tileLayersLoad places the layers; layer offsets are
- *    not read, and a shape or tile object is made at its position too
+ *    not read, and a shape or tile object is made at its position too: Tiled's, the bottom left corner of a tile
+ *    object and the top left of a rectangle; its type is its Class in Tiled, not its Name
  *  - Group layers are flattened in order, as tileLayersLoad does
  *  - The object's properties in Tiled are set over the type's defaults: numbers, booleans, strings, and colors,
  *    and for a Vector2 default the string x,y
@@ -699,6 +711,8 @@ function objectLayersMake(tileMapData, object)
     {
         // an object with no type, a shape or a text someone drew in Tiled, is not one a game makes
         debug && name && console.warn(`objectLayersLoad: no type added for ${name}, skipped`);
+        debug && !name && objectLayersTypes.has(object.name) && console.warn(`objectLayersLoad: object ${object.id} ` +
+            `is named ${object.name} with no class, skipped; put the type in Tiled's Class`);
         debug && !name && object.template && console.warn(`objectLayersLoad: object ${object.id} is placed from ` +
             `the template ${object.template}, which is not read, skipped; export with Detach templates on`);
         return;
@@ -1551,8 +1565,8 @@ class TileCollisionLayer extends TileLayer
         if (this.destroyed) return;
 
         // remove from collision layers array and destroy
+        // one whose constructor failed after it was made an object was never listed, and still goes
         const index = tileCollisionLayers.indexOf(this);
-        ASSERT(index >= 0, 'tile collision layer not found in array');
         index >= 0 && tileCollisionLayers.splice(index, 1);
         super.destroy(immediate);
     }

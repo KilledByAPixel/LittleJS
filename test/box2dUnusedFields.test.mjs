@@ -49,6 +49,7 @@ test('an engine physics field set on a Box2dObject warns once, naming the Box2D 
         o.velocity = vec2(1, 0); // set later, as a game does in its update
         engineStep(3);
         const other = new Box2dObject(vec2(5, 0));
+        other.addBox(vec2(1));
         other.damping = .8; // the same field again, on another object
         engineStep(3);
     });
@@ -83,4 +84,34 @@ test('the check asks the body for its gravity scale only when the field changed,
     o.setGravityScale(3);
     engineStep(5);
     assert.equal(asked, 1);
+});
+
+test('pos and angle set by hand, which the next step puts back, warn, the setters do not; a body with no shape warns',
+    () =>
+{
+    const moved = warnings(()=>
+    {
+        const o = new Box2dObject(vec2(20, 0));
+        o.addBox(vec2(1));
+        o.setPosition(vec2(20, 5));
+        o.setAngle(.5);
+        o.setTransform(vec2(21, 5), .2);
+        engineStep(2);
+    });
+    assert.deepEqual(moved, [], 'the setters say nothing');
+    const said = warnings(()=>
+    {
+        const o = new Box2dObject(vec2(30, 0));
+        o.addBox(vec2(1));
+        engineStep();
+        o.pos = vec2(30, 9);
+        o.angle = 1;
+        engineStep();
+        new Box2dObject(vec2(40, 0), vec2(1)); // a size, but no shape
+        engineStep(2);
+    });
+    assert.equal(said.length, 3, said.join(' | '));
+    assert.match(said[0], /pos.*setPosition/);
+    assert.match(said[1], /angle.*setAngle/);
+    assert.match(said[2], /no shape.*addBox/);
 });

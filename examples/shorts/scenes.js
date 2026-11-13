@@ -197,6 +197,9 @@ returns the current scene, so P only works in the game.
   the title shows, cleared by the first `setScene` in `gameInit`.
 - Change `setScene(overScene);` to `setScene(gameScene);`. Setting the
   current scene again restarts it, with no game over screen.
+- UI made with the UI plugin in a scene's `enter` is not an object of the
+  scene and stays after `setScene`: end it in the scene's `leave` with
+  `uiSystem.destroyObjects()`, and a tween with `tweenStopAll()`.
 
 ## See also
 Pong Game for a paddle and ball made of objects with collision. Timers

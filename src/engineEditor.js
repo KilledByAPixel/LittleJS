@@ -291,10 +291,14 @@ class LevelEditor
     {
         ASSERT(typeof action == 'function', 'a key needs an action');
         const spelled = editorKeySpelling(key), name = spelled.replace('ctrl+', '');
-        if (name === 'Escape' || name === '0' || name.length > 1 && name.includes('+'))
+        const lower = name.length > 1 && !(name[0] >= 'A' && name[0] <= 'Z');
+        if (name === 'Escape' || name === '0' || name.length > 1 && name.includes('+') || lower)
         {
-            console.warn(`levelEditor.addKey: ${key} is not taken, ` + (name.includes('+') ?
-                'Ctrl is the one modifier, Shift is given to the action' : 'Escape and 0 are the editor\'s own'));
+            // said once here, a key code with no capital, as 'shift', would assert every frame in the editors
+            console.warn(`levelEditor.addKey: ${key} is not taken, ` + (lower ?
+                'a key longer than a letter is a code with a capital, as \'ShiftLeft\' or \'Numpad1\'' :
+                name.includes('+') ? 'Ctrl is the one modifier, Shift is given to the action' :
+                'Escape and 0 are the editor\'s own'));
             return;
         }
         this.keys[spelled] = {action, help: helpLine, warned: false};
@@ -538,11 +542,14 @@ function editorSetOpen(open)
     }
     else
     {
-        // a tool of the game's own still held is let go, its release ends the stroke, however the editor closes
+        // a tool of the game's own still held is let go, its release ends the stroke, however the editor closes; an
+        // error in it is thrown once the game has its pause and camera back
+        let released;
         if (editorToolHeld)
         {
             editorToolHeld = false;
             try { editorGameTool()?.onRelease?.(editorToolAt()); }
+            catch (error) { released = {error}; }
             finally { editorStrokeEnd(); }
         }
         editorStrokeEnd();
@@ -556,6 +563,7 @@ function editorSetOpen(open)
         setCameraScale(state.cameraScale);
         setCameraAngle(state.cameraAngle);
         editorCall('onClose');
+        if (released) throw released.error;
     }
 }
 
@@ -744,10 +752,12 @@ function editorLayerRecord(live)
     // its key, for the file Save remembers: its size and the first number no other layer made in code of that size
     // has, the same after a reload as a game makes its layers in the same order, and a layer made again in the place
     // of one gone takes its number, so two layers do not write over one file
-    const taken = new Set(editorMapList.filter((other)=> other.synthetic).map((other)=> other.key));
+    const coded = editorMapList.filter((other)=> other.synthetic), taken = new Set(coded.map((other)=> other.key));
     let n = 0;
     while (taken.has(`code layer ${n} ${width}x${height}`)) ++n;
     record.key = `code layer ${n} ${width}x${height}`;
+    // the key 1.30.1 gave it, counting the layers of every size, for a file it remembered under that one
+    record.oldKey = `code layer ${coded.length} ${width}x${height}`;
     editorMapList.push(record);
     return layer;
 }
@@ -821,7 +831,14 @@ function editorFileStoreRequest(mode, request)
 // the file a map was saved to on an earlier page load, when the browser gives permission to write it again
 async function editorRememberedFile(record)
 {
-    const handle = await editorFileStore.get(editorFileKey(record)), mode = {mode: 'readwrite'};
+    let handle = await editorFileStore.get(editorFileKey(record));
+    if (!handle && record.oldKey && record.oldKey !== record.key)
+    {
+        // remembered under the key 1.30.1 gave a layer made in code, kept under its own from now on
+        handle = await editorFileStore.get(editorFileKey({key: record.oldKey}));
+        handle && editorFileStore.set(editorFileKey(record), handle);
+    }
+    const mode = {mode: 'readwrite'};
     try
     {
         if (handle && (await handle.queryPermission(mode) === 'granted' ||
@@ -1132,7 +1149,8 @@ function editorSaveValid(saved)
     return plain(saved) && Array.isArray(saved.layers) &&
         saved.layers.every((layer)=> Array.isArray(layer) && layer.every((gid)=> Number.isInteger(gid) && gid >= 0)) &&
         (saved.objects === undefined || Array.isArray(saved.objects) &&
-            saved.objects.every((list)=> Array.isArray(list) && list.every(plain))) &&
+            saved.objects.every((list)=> Array.isArray(list) && list.every((o)=> plain(o) &&
+                isNumber(o.x) && isNumber(o.y) && (o.properties === undefined || Array.isArray(o.properties))))) &&
         whole(saved.width) && whole(saved.height) &&
         (saved.nextobjectid === undefined || Number.isInteger(saved.nextobjectid));
 }

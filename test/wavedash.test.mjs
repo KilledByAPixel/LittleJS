@@ -290,6 +290,20 @@ test('a read given as a response loads too, and an upload Wavedash refuses is fa
     assert.equal(await run(`wavedash.cloudSave(1, 8)`), false);
 });
 
+test('a read whose data is neither text nor bytes is a load that failed, not a rejection', async ()=>
+{
+    for (const data of [[123, 125], {}, 12, true])
+    {
+        const log = [], sdk = filesSDK(log);
+        const { run } = game(sdk);
+        run('new WavedashPlugin()');
+        await run(`wavedash.cloudSave(1, 7)`);
+        sdk.readLocalFile = async ()=> ({success: true, data});
+        assert.equal(await run(`wavedash.cloudLoad(1).then((v)=> v, ()=> 'rejected')`), undefined, JSON.stringify(data));
+        assert.ok(run(`wavedash.loadFailure(1)`), 'with why');
+    }
+});
+
 test('stats load the first time one is used, then set and read; presence is set and cleared', async ()=>
 {
     const log = [];

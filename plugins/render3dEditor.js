@@ -1654,16 +1654,26 @@ function editor3DSetOpen(open)
     }
     else
     {
+        // a tool of the game's own still held is let go, its release ends the stroke, however the editor closes; an
+        // error in it is thrown once the game has its pause and input back
+        let released;
+        if (editor3DToolHeld)
+        {
+            editor3DToolHeld = false;
+            try { editor3DWithView(()=> editorGameTool()?.onRelease?.(editor3DToolAt())); }
+            catch (error) { released = {error}; }
+            finally { editor3DStrokeEnd(); }
+        }
         editor3DDrag = editor3DHover = undefined;
         editor3DMouseOnPanel = false; // the panel hides, with no mouseleave
         editor3DStrokeEnd();
         while (editor3DPrefabBack()); // the game plays the level, not a prefab that was open
         editor3DAutosaveFlush(); // the game plays on with what the editor has kept
-        editor3DToolHeld = false;
         editor3DIsOpen = false;
         setPaused(editor3DGamePaused);
         inputCapture(editor3DViewOn()); // the game's input back before its hook, which may throw
         editorCall('onClose');
+        if (released) throw released.error;
     }
 }
 
@@ -2538,6 +2548,11 @@ function editor3DEditorUpdate(seconds)
             editor3DDrag ? editor3DDragCancel() : editor3DPlay(editor3DMousePoint());
         return;
     }
+
+    // a digit pressed while a tool of the game's own is held is taken, so its press ends with its release, and 0
+    // does not close the editor under it
+    for (let i = 0; editor3DToolHeld && i <= 9; ++i)
+        keyWasPressed('Digit' + i) && inputClearKey('Digit' + i);
 
     // 0 exits the editor; cleared, so debugKeysAlways does not open it again in the same step
     if (keyWasPressed('Digit0'))

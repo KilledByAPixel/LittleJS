@@ -377,6 +377,11 @@ function box2dUnusedFieldValues(o)
     return values;
 }
 
+// debug builds: where Box2D or a setter last put each object, so a pos or angle the game set itself, which the next
+// step puts back, is said; and the bodies with no shape, said once each
+const box2dPlaced = /* @__PURE__ */ new WeakMap, box2dShapeWarned = /* @__PURE__ */ new WeakSet;
+const box2dPlace = (o)=> debug && box2dPlaced.set(o, [o.pos.x, o.pos.y, o.angle]);
+
 // warn once a field
 function box2dUnusedWarn(name, use)
 {
@@ -404,6 +409,20 @@ function box2dCheckUnusedFields(o)
         else
             changed = value !== start[i++];
         changed && box2dUnusedWarn(name, box2dUnusedFields[name]);
+    }
+
+    // pos and angle are Box2D's, set by it each step: one the game set is put back, setPosition and setAngle move it
+    const placed = box2dPlaced.get(o);
+    if (placed && (o.pos.x !== placed[0] || o.pos.y !== placed[1]))
+        box2dUnusedWarn('pos', 'setPosition or setTransform, it is set by Box2D each step');
+    if (placed && o.angle !== placed[2])
+        box2dUnusedWarn('angle', 'setAngle or setTransform, it is set by Box2D each step');
+
+    // a dynamic body with no shape has nothing to collide with, its size is not one, and falls through everything
+    if (!box2dShapeWarned.has(o) && o.body.GetType() === box2d.bodyTypeDynamic && !o.hasFixtures())
+    {
+        box2dShapeWarned.add(o);
+        console.warn('a Box2dObject has no shape, give it one with addBox, addCircle or addPoly, its size is not one');
     }
 
     // the body's own scale is a call into Box2D, asked only when the field changed since it was last asked,
@@ -479,6 +498,7 @@ class Box2dObject extends EngineObject
 
         // a debug build notes the engine physics fields Box2D does not read, to warn when one is set
         debug && box2dUnusedStarts.set(this, box2dUnusedFieldValues(this));
+        box2dPlace(this);
     }
 
     /** Destroy this object and its physics body
@@ -966,6 +986,7 @@ class Box2dObject extends EngineObject
     {
         this.pos.set(pos.x, pos.y); // its own pos kept, as an EngineObject's is
         this.angle = angle;
+        box2dPlace(this);
         // box2d uses reverse angle
         const x = pos.x, y = pos.y;
         box2dWhenUnlocked(()=>
@@ -981,6 +1002,7 @@ class Box2dObject extends EngineObject
     setPosition(pos)
     {
         this.pos.set(pos.x, pos.y); // its own pos kept, as an EngineObject's is
+        box2dPlace(this);
         const x = pos.x, y = pos.y;
         box2dWhenUnlocked(()=>
         {
@@ -995,6 +1017,7 @@ class Box2dObject extends EngineObject
     setAngle(angle)
     {
         this.angle = angle;
+        box2dPlace(this);
         box2dWhenUnlocked(()=>
         {
             if (!this.body) return;
@@ -2878,6 +2901,7 @@ async function box2dInit()
                 const p = o.body.GetPosition();
                 o.pos.set(p.get_x(), p.get_y());
                 o.angle = -o.body.GetAngle();
+                box2dPlace(o);
             }
         }
     }

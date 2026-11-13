@@ -119,13 +119,19 @@ function level3DLoad(level)
     map && made.push(map);
     const terrain = level3DTerrainMap = level3DTerrainMake(level.terrain);
     terrain && made.push(terrain);
-    for (const object of isArray(level.objects) ? level.objects : [])
+    // the prefab parts the whole level makes are counted together, see LEVEL3D_LOAD_PARTS
+    level3DLoadParts = 0, ++level3DPrefabLoading;
+    try
     {
-        if (!object || typeof object !== 'object') continue;
-        const result = level3DMake(object);
-        editor3DObjectMade(object, result); // debug builds link it for the 3D editor
-        result && made.push(result);
+        for (const object of isArray(level.objects) ? level.objects : [])
+        {
+            if (!object || typeof object !== 'object') continue;
+            const result = level3DMake(object);
+            editor3DObjectMade(object, result); // debug builds link it for the 3D editor
+            result && made.push(result);
+        }
     }
+    finally { --level3DPrefabLoading; }
     return made;
 }
 
@@ -537,6 +543,9 @@ function level3DMakeAt(object, pos, rotation, scale)
 function level3DSpawn(type, pos3D=vec3(), rotation3D=vec3(), scale3D=vec3(1), properties)
 {
     ASSERT(isVector3(pos3D) && isVector3(rotation3D) && isVector3(scale3D), 'pos3D, rotation3D and scale3D are vec3');
+    // from code a type that is not there is a slip, where a level file may hold one of an older build
+    ASSERT(level3DTypes.has(type), 'level3DSpawn: no type named ' + type + ', add it with level3DAddType, ' +
+        'level3DAddMesh or level3DAddPrefab');
     return level3DMakeAt(properties ? {type, properties} : {type}, pos3D.copy(), rotation3D, scale3D);
 }
 
@@ -554,10 +563,11 @@ const level3DPrefabs = /* @__PURE__ */ new Map;
 let level3DPrefabDepth = 0, level3DPrefabAttached = 0;
 // the prefabs being made, one inside the next, so one that holds itself is caught where it does, however many times
 const level3DPrefabMaking = [];
-// the parts one instance makes, its prefabs inside it counted too, at most LEVEL3D_PREFAB_PARTS, so a small file of
-// prefabs that each hold several of the next can not make millions of objects
-let level3DPrefabParts = 0;
-const LEVEL3D_PREFAB_PARTS = 1e4;
+// the parts one instance makes, its prefabs inside it counted too, at most LEVEL3D_PREFAB_PARTS, and the parts all of
+// a level's instances make, at most LEVEL3D_LOAD_PARTS, so a small file of prefabs that each hold several of the
+// next, placed many times, can not make millions of objects
+let level3DPrefabParts = 0, level3DPrefabLoading = 0, level3DLoadParts = 0;
+const LEVEL3D_PREFAB_PARTS = 1e4, LEVEL3D_LOAD_PARTS = 1e5;
 
 /** Add a prefab: a small level, its objects placed about its own origin, to place many times under one name
  *  - It is a type from then on: a level's object of that type, the level editor's Place list and level3DSpawn make
@@ -732,10 +742,14 @@ class Prefab3D extends EngineObject3D
             const low = vec3(Infinity), high = vec3(-Infinity), children = [];
             for (const object of prefab.objects)
             {
-                if (++level3DPrefabParts > LEVEL3D_PREFAB_PARTS)
+                // at most so many parts for an instance, and for all of a level's together
+                const level = level3DPrefabLoading && ++level3DLoadParts > LEVEL3D_LOAD_PARTS;
+                if (++level3DPrefabParts > LEVEL3D_PREFAB_PARTS || level)
                 {
-                    level3DPrefabParts == LEVEL3D_PREFAB_PARTS + 1 && debug && console.error('level3DLoad: the prefab ' +
-                        this.prefabName + ' makes more than ' + LEVEL3D_PREFAB_PARTS + ' parts, the rest left out');
+                    (level ? level3DLoadParts == LEVEL3D_LOAD_PARTS + 1 :
+                        level3DPrefabParts == LEVEL3D_PREFAB_PARTS + 1) && debug && console.error('level3DLoad: ' +
+                        (level ? 'the level' : 'the prefab ' + this.prefabName) + ' makes more than ' +
+                        (level ? LEVEL3D_LOAD_PARTS : LEVEL3D_PREFAB_PARTS) + ' prefab parts, the rest left out');
                     break;
                 }
                 const local = {pos: level3DVector(object.pos, vec3()), scale: level3DVector(object.scale, vec3(1)),

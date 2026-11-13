@@ -1910,12 +1910,13 @@ class ParticleEmitter3D extends EngineObject3D
             this.destroy();
 
         // the trail storage follows trailTime at the fixed rate, a change starts every trail over, so a varying
-        // timeDelta can not; with engineVariableStep a trail keeps that many updates
-        const trailMax = this.trailTime ? max(1, round(this.trailTime * frameRate)) : 0;
+        // timeDelta can not; with engineVariableStep a trail keeps that many updates, at most ten seconds of them, so
+        // a library file's huge trailScale can not take all the memory; the count is kept once its storage is made
+        const trailMax = this.trailTime ? clamp(round(this.trailTime * frameRate), 1, 600) : 0;
         if (trailMax !== this.trailMax)
         {
-            this.trailMax = trailMax;
             this.trailData = trailMax ? new Float32Array(this.particleData.length / RENDER3D_PARTICLE_FLOATS * trailMax * 3) : undefined;
+            this.trailMax = trailMax;
             for (let k = 20; k < this.particleData.length; k += RENDER3D_PARTICLE_FLOATS)
                 this.particleData[k] = 0;
         }

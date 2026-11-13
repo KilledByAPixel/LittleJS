@@ -742,6 +742,8 @@ function vec2(x=0, y) { return new Vector2(x, y ?? x); }
 
 /**
  * Check if object is a valid Vector2, a type guard in TypeScript
+ *  - One with a component that is not a number is not valid and reads as not one, and TypeScript takes it as not
+ *    one in the else branch too
  * @param {any} v
  * @return {v is Vector2}
  * @memberof Math */
@@ -1036,6 +1038,8 @@ function hsl(h, s, l, a)
 
 /**
  * Check if object is a valid Color, a type guard in TypeScript
+ *  - One with a component that is not a number is not valid and reads as not one, and TypeScript takes it as not
+ *    one in the else branch too
  * @param {any} c
  * @return {c is Color}
  * @memberof Math */

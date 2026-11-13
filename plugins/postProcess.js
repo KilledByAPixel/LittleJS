@@ -187,6 +187,9 @@ class PostProcessPlugin
             // feedback turned on after it was made: its texture is made now, before unit 0 holds the frame, which
             // making it would rebind
             postProcess.feedback && !postProcess.feedbackTexture && postProcessFeedbackMake();
+            // turned off, it lets go of its texture, so turned on again it starts black, not from a frame long gone
+            if (!postProcess.feedback && postProcess.feedbackTexture)
+                glContext.deleteTexture(postProcess.feedbackTexture), postProcess.feedbackTexture = undefined;
 
             // setup texture
             glContext.activeTexture(glContext.TEXTURE0);
@@ -228,13 +231,11 @@ class PostProcessPlugin
                 glContext.copyTexImage2D(glContext.TEXTURE_2D, 0, glContext.RGBA, 0, 0, glCanvas.width, glCanvas.height, 0);
             }
 
-            // the previous frame's output, on the second texture unit
-            if (postProcess.feedback)
-            {
-                glContext.activeTexture(glContext.TEXTURE1);
-                glContext.bindTexture(glContext.TEXTURE_2D, postProcess.feedbackTexture);
-                setFilter();
-            }
+            // the previous frame's output, on the second texture unit, nothing there without feedback, where a
+            // texture something else left would be read
+            glContext.activeTexture(glContext.TEXTURE1);
+            glContext.bindTexture(glContext.TEXTURE_2D, postProcess.feedback ? postProcess.feedbackTexture : null);
+            postProcess.feedback && setFilter();
 
             // the 3D depth, when render3D draws it, on the third texture unit, with what sceneDepth needs to read it
             const depth = typeof render3D != 'undefined' && render3D?.depthTexture ? render3D : undefined;

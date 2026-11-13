@@ -44,6 +44,12 @@ What changed in each release, newest first. Releases before 1.20.0 are on the
 - Sound turned off before `engineInit` and on later pauses on a hidden or blurred page, as it does when on from the start
 - A chain of CSG cuts, `subtract`, `union` and `intersect` one after another, no longer grows the mesh with each cut, where a box drilled by 17 spheres reached 794,000 triangles; a cut that misses the mesh gives it back as it was
 - Tweens assert in debug builds on an ease that is not a curve, as `Ease.OUT` for `Ease.OUT(Ease.SINE)`, which set NaN every frame, and on an option they do not have, with the one meant
+- The 3D editor gives a game's held tool its release when it closes, as the 2D editor does, and a release that throws leaves the game its pause and camera back in both; `levelEditor.addKey` refuses a key code with no capital once, with a warning, where the editors asserted every frame
+- A tile layer made in code keeps the save file 1.30.1 remembered for it; a `UIVideo` made while the window is blurred is muted, and `setSoundPauseWhenBlurred` takes at once; the touch gamepad turned off and on lets go of the real pads' buttons again; `postProcess.feedback` turned off frees its texture and binds none, and on again starts from black
+- Small files can no longer take huge memory: glTF accessors with no buffer are counted over the whole file, LDtk cells over all of a level's layers, and prefab parts over a whole level as well as each instance; a 3D trail keeps at most ten seconds of points
+- Loaders: a Tiled tileset margin or spacing that is not a number is none, and a tile layer whose constructor failed no longer stops every later `engineObjectsDestroy`; a glTF with indices past its vertices throws in every build, where a release build loaded it and failed at every pick; Wavedash `cloudLoad` of data that is neither text nor bytes fails as a load, not a rejection; an atlas frame named `__proto__` is a frame; an editor autosave whose objects have no position is dropped
+- `Matrix4.getRotation` keeps the turn of a matrix scaled to 0 on one axis; a particle effect taken from an attached emitter keeps its own angle, not its parent's added
+- Debug builds say more: a tween path to a property the target does not have, `level3DSpawn` of a type there is not, a Tiled object whose type is in its Name, a `Box2dObject` with no shape, and its `pos` or `angle` set by hand, which the next step puts back
 
 ## 1.30.1 - 2026-11-12
 

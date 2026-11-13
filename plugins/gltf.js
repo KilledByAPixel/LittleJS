@@ -1078,6 +1078,9 @@ function gltfNodeMatrix(node)
 
 // an accessor's values as floats, one row per element, normalized integer types brought to 0 to 1; a sparse one
 // starts from its bufferView, or from zeros without one, and then has the listed elements replaced
+// the elements with no buffer each file made so far, which cost nothing in the file, see gltfAccessor
+const gltfZeroCounts = /* @__PURE__ */ new WeakMap;
+
 function gltfAccessor(json, buffers, index)
 {
     const a = json.accessors[index], view = json.bufferViews?.[a.bufferView];
@@ -1089,10 +1092,13 @@ function gltfAccessor(json, buffers, index)
     const size = Type.BYTES_PER_ELEMENT;
     const scales = /** @type {Array<[Object, number]>} */ ([[Int8Array, 127], [Uint8Array, 255], [Int16Array, 32767], [Uint16Array, 65535]]);
     const scale = a.normalized ? new Map(scales).get(Type) || 1 : 1;
-    // with a buffer under it the count is bounded by the buffer, without one it is all zeros and a sparse few,
-    // which no real model makes millions of
-    if (!view && !(a.count <= 1 << 20))
-        throw new Error('glTF accessor ' + index + ' has no buffer and a count of ' + a.count);
+    // with a buffer under it the count is bounded by the buffer, without one it is all zeros and a sparse few, which
+    // no real model makes millions of; counted over the whole file, as many parts may read the same one
+    const zeros = view ? 0 : (gltfZeroCounts.get(json) ?? 0) + a.count;
+    if (!view && !(zeros <= 1 << 20))
+        throw new Error('glTF accessor ' + index + ' has no buffer and a count of ' + a.count +
+            ', past what a file may make of them');
+    view || gltfZeroCounts.set(json, zeros);
     // its elements must lie in its buffer before so many floats are made for them
     const viewEnd = view && (buffers[view.buffer]?.byteLength ?? 0), stride = view?.byteStride || components * size;
     if (view && !((view.byteOffset || 0) + (a.byteOffset || 0) + (a.count - 1) * stride + components * size <= viewEnd))
@@ -1107,8 +1113,13 @@ function gltfAccessor(json, buffers, index)
         if (stride === components * size)
             out.set(new Type(buffer, offset, a.count * components)); // packed, one view over all of it
         else
-            for (let i = 0; i < a.count; ++i) // interleaved with other attributes, an element at each stride
-                out.set(new Type(buffer, offset + i * stride, components), i * components);
+        {
+            // interleaved with other attributes, an element at each stride, read through one view over them all
+            const step = stride / size, all = new Type(buffer, offset, (a.count - 1) * step + components);
+            for (let i = 0; i < a.count; ++i)
+            for (let c = 0; c < components; ++c)
+                out[i * components + c] = all[i * step + c];
+        }
     }
     const sparse = a.sparse;
     if (sparse)
@@ -1174,6 +1185,11 @@ function gltfPart(json, buffers, textures, copies, primitive, matrix, name)
         indices = indices.flatMap((_, i, s)=> i < 2 ? [] : i & 1 ? [s[i-1], s[i-2], s[i]] : [s[i-2], s[i-1], s[i]]);
     else if (mode === 6) // a fan around the first entry
         indices = indices.flatMap((_, i, s)=> i < 2 ? [] : [s[0], s[i-1], s[i]]);
+    // indices past its points, or a list that is not of whole triangles, are a file problem, so it throws in every
+    // build, as a release build would load it and fail at every pick
+    if (indices.length % 3 || indices.some((i)=> !(Number.isInteger(i) && i >= 0 && i < points.length)))
+        throw new Error('glTF primitive of ' + name +
+            ' has indices past its vertices or not in triangles');
     const mesh = new Mesh().addTriangles(points, indices, normals, uvs, colors);
     // flat when the file gives none, as the format says, which gives each corner a vertex of its own: which of the
     // file's each one is, kept for a skin
