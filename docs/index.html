@@ -18,7 +18,7 @@ if(location.hash.indexOf('#.')==0)location.replace('#'+location.hash.slice(2))</
 <body>
 <header class="top">
 <button class="menu" aria-label="Menu"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
-<a class="brand" href="index.html"><img src="examples/logo.png" alt="" width="36" height="36"> LittleJS <span class="ver">1.30.0</span></a>
+<a class="brand" href="index.html"><img src="examples/logo.png" alt="" width="36" height="36"> LittleJS <span class="ver">1.30.1</span></a>
 <nav class="links"><a href="https://github.com/KilledByAPixel/LittleJS">GitHub</a><a href="https://killedbyapixel.github.io/LittleJS/examples/">Examples</a><a href="https://github.com/KilledByAPixel/LittleJS/blob/main/REFERENCE.md">Reference</a><a href="https://github.com/KilledByAPixel/LittleJS/blob/main/FAQ.md">FAQ</a></nav>
 <div class="search"><input type="search" placeholder="Search" aria-label="Search"><ul class="results" hidden></ul></div>
 <button class="theme" aria-label="Toggle theme"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M12 3a9 9 0 1 0 9 9c0-.5 0-1-.1-1.4A6 6 0 0 1 12 3z" fill="currentColor"/></svg></button>
@@ -29,7 +29,6 @@ if(location.hash.indexOf('#.')==0)location.replace('#'+location.hash.slice(2))</
 <div align='center' markdown='1'>
 <p><img src="examples/logo.png" alt="LittleJS Logo"></p>
 <p><a href="https://www.npmjs.com/package/littlejsengine"><img src="https://img.shields.io/npm/v/littlejsengine" alt="NPM Package"></a>
-<a href="https://bundlephobia.com/result?p=littlejsengine"><img src="https://img.shields.io/bundlephobia/minzip/littlejsengine" alt="Build Size"></a>
 <a href="https://www.npmtrends.com/littlejsengine"><img src="https://img.shields.io/npm/dw/littlejsengine" alt="NPM Downloads"></a>
 <a href="https://deepscan.io/dashboard#view=project&amp;tid=22950&amp;pid=26229&amp;bid=831487"><img src="https://deepscan.io/api/teams/22950/projects/26229/branches/831487/badge/grade.svg" alt="DeepScan"></a>
 <a href="https://github.com/KilledByAPixel/LittleJS/blob/main/LICENSE"><img src="https://img.shields.io/github/license/KilledByAPixel/LittleJS" alt="MIT License"></a>
@@ -39,6 +38,7 @@ if(location.hash.indexOf('#.')==0)location.replace('#'+location.hash.slice(2))</
 <p>LittleJS is a fast, lightweight, and fully open source HTML5 game engine designed for simplicity and performance.
 Its small footprint is packed with a comprehensive feature set including 2D and 3D rendering, physics, particles, sound, and input handling.
 The code is very clean and well documented with many examples to get you started quickly.</p>
+<p><strong>New here?</strong> Open the <a href="https://killedbyapixel.github.io/LittleJS/examples">example browser</a> and change the code of any example while it runs, or jump to <a href="#quick-start">Quick Start</a> and have a game on screen in a minute.</p>
 <div align='center' markdown='1'>
 <h2 id="examples-%7C-arcade-%7C-docs-%7C-reference-%7C-faq-%7C-trailer-%7C-discord-%7C-ai"><a href="https://killedbyapixel.github.io/LittleJS/examples">Examples</a> | <a href="https://killedbyapixel.github.io/LittleJSArcade">Arcade</a> | <a href="https://killedbyapixel.github.io/LittleJS/docs">Docs</a> | <a href="https://github.com/KilledByAPixel/LittleJS/blob/main/REFERENCE.md">Reference</a> | <a href="https://github.com/KilledByAPixel/LittleJS/blob/main/FAQ.md">FAQ</a> | <a href="https://youtu.be/V3ik8SKJF4g">Trailer</a> | <a href="https://discord.gg/zb7hcGkyZe">Discord</a>  | <a href="https://github.com/KilledByAPixel/LittleJS-AI">AI</a></h2>
 </div>
@@ -90,7 +90,14 @@ The code is very clean and well documented with many examples to get you started
 <li>Swept bullet collision, so small fast objects never pass through a wall</li>
 <li>Object collision that stays fast with thousands of objects</li>
 <li>Full Box2D integration for realistic physics using <a href="https://github.com/kripken/box2d.js">Box2D v2.3.1 wasm</a></li>
+</ul>
+<h3 id="%F0%9F%A7%A9-game-systems">🧩 Game Systems</h3>
+<ul>
+<li>UI system with buttons, sliders, text input and nine-slice skins</li>
+<li>Tween system with easing curves, and a scene system for titles, menus and game states</li>
+<li>Timers, seeded random numbers, and save data that persists between visits</li>
 <li>Grid-based A* pathfinding plugin with optional path smoothing</li>
+<li>Medals, leaderboards and cloud saves on <a href="https://www.newgrounds.com/">Newgrounds</a> and <a href="https://wavedash.com/">Wavedash</a></li>
 </ul>
 <h3 id="%F0%9F%9A%80-flexibility">🚀 Flexibility</h3>
 <ul>
@@ -102,15 +109,12 @@ The code is very clean and well documented with many examples to get you started
 </ul>
 <h3 id="%F0%9F%9B%A0%EF%B8%8F-developer-tools">🛠️ Developer Tools</h3>
 <ul>
-<li>Live example browser with code editor</li>
+<li>Live <a href="https://killedbyapixel.github.io/LittleJS/examples">example browser</a> with a code editor and a write-up for every example</li>
 <li>Built-in 2D and 3D level editors that edit your game while it runs, with undo, autosave and prefabs</li>
 <li>Make the editors your own with your game's own object types, keys, buttons and tools, see the <a href="https://github.com/KilledByAPixel/LittleJS/blob/main/EDITOR.md">editor guide</a></li>
 <li>2D levels load and save as <a href="https://github.com/mapeditor/tiled">Tiled</a> JSON, so Tiled can edit them too</li>
-<li>UI system with buttons, sliders, text input and nine-slice skins</li>
-<li>Tween system with easing curves, and a scene system for titles, menus and game states</li>
-<li>Debug overlay and primitive rendering system</li>
-<li>Medals, leaderboards and cloud saves on <a href="https://www.newgrounds.com/">Newgrounds</a> and <a href="https://wavedash.com/">Wavedash</a></li>
-<li>Node.js build system</li>
+<li>Debug overlay, debug drawing, and a tweakables panel to change your game's values while it runs</li>
+<li>Asserts and logging in the debug build, stripped from the release builds</li>
 </ul>
 <h3 id="%F0%9F%A4%96-ai-friendly">🤖 AI Friendly</h3>
 <ul>
@@ -118,49 +122,69 @@ The code is very clean and well documented with many examples to get you started
 <li><a href="https://github.com/KilledByAPixel/LittleJS-AI">LittleJS AI Tools</a> - Templates, examples, and prompts tuned for AI + LittleJS workflows</li>
 <li><a href="https://chatgpt.com/g/g-67c7c080b5bc81919736bc8815836be6-littlejs-game-maker">LittleJS GPT</a> - Build LittleJS games right inside ChatGPT</li>
 </ul>
-<h2 id="how-to-use-littlejs">How To Use LittleJS</h2>
-<p>To get started download the latest release from GitHub, the engine's builds and source as npm has them (the examples are in the repository), or install via npm:</p>
-<pre class="prettyprint source"><code>npm install littlejsengine
+<h2 id="quick-start">Quick Start</h2>
+<h3 id="try-it-in-the-browser">Try it in the browser</h3>
+<p>The <a href="https://killedbyapixel.github.io/LittleJS/examples">example browser</a> runs every example beside its code. Edit the code and the example restarts with your change, and each one comes with a write-up of how it works and a few things to try. There is nothing to install.</p>
+<h3 id="one-html-file">One HTML file</h3>
+<p>Download the latest release from GitHub, or run <code>npm install littlejsengine</code>, then save this as <code>index.html</code> with the script path pointing at the engine file. It loads nothing else, so it runs straight from the file with no server. Click to set off an explosion.</p>
+<pre class="prettyprint source lang-html"><code>&lt;!DOCTYPE html>
+&lt;script src=&quot;node_modules/littlejsengine/dist/littlejs.js&quot;>&lt;/script>
+&lt;script>
+function gameInit() {}       // called once after the engine starts
+function gameUpdate()        // called 60 times a second for game logic
+{
+    if (mouseWasPressed(0))
+        particleEffect('explosion', mousePos);
+}
+function gameUpdatePost() {} // called after physics, even when paused
+function gameRender() {}     // called before objects are drawn
+function gameRenderPost()    // called after objects are drawn
+{
+    drawTextScreen('Hello World!', mainCanvasSize.scale(.5), 80);
+}
+engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost);
+&lt;/script>
 </code></pre>
-<p>or use <code>degit</code> for an empty Vite template</p>
+<p>Those five functions are the whole shape of a LittleJS game. From here, the <a href="https://github.com/KilledByAPixel/LittleJS/tree/main/examples/breakoutTutorial">Breakout tutorial</a> builds a complete game in about 30 minutes.</p>
+<h3 id="start-a-project">Start a project</h3>
+<p>Pick the setup that suits you. All three use the same engine and the same API.</p>
+<p><strong>With Vite</strong>, for a dev server that reloads on save and a build that leaves out the plugins you do not use:</p>
 <pre class="prettyprint source"><code>npx degit KilledByAPixel/LittleJS/examples/vite-starter my-game
 cd my-game
 npm install
 npm run dev
 </code></pre>
-<p>The examples are only in the repository: clone it, or use Download ZIP on its GitHub page; the npm package and the release zip hold the engine alone. A page that loads images or modules needs a local web server, as browsers block them from a file on disk: serve the repository's root, for example with <code>npx http-server</code>, then open <code>http://localhost:8080/examples/starter/</code>, the place to start. The <a href="FAQ.md#do-i-need-a-local-server-to-run-littlejs-games-and-how-do-i-set-one-up">FAQ</a> has more.</p>
-<p>Here is a minimal Hello World example game, with the script path pointing at the engine file from the download or npm package; it loads nothing, so it runs straight from the file.</p>
-<pre class="prettyprint source lang-html"><code>&lt;!DOCTYPE html>
-&lt;script src=&quot;node_modules/littlejsengine/dist/littlejs.js&quot;>&lt;/script>
-&lt;script>
-function gameInit() {}
-function gameUpdate() {}
-function gameUpdatePost() {}
-function gameRender() {}
-function gameRenderPost() { drawTextScreen('Hello World!', mainCanvasSize.scale(.5), 80); }
-engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost);
-&lt;/script>
+<p><strong>With npm</strong>, in a project of your own. TypeScript types are included.</p>
+<pre class="prettyprint source"><code>npm install littlejsengine
 </code></pre>
-<h2 id="tutorials">Tutorials</h2>
+<pre class="prettyprint source lang-javascript"><code>import * as LJS from 'littlejsengine';
+</code></pre>
+<p><strong>With a script tag and no build step</strong>: clone this repository, or use Download ZIP on its GitHub page, and copy <a href="https://github.com/KilledByAPixel/LittleJS/tree/main/examples/starter">examples/starter</a>. Every engine name is a global, as in the example above. The examples are only in the repository; the npm package and the release zip hold the engine alone.</p>
+<p>A page that loads images or modules needs a local web server, since browsers block them from a file on disk. Vite brings its own. For the repository, serve its root, for example with <code>npx http-server</code>, then open <code>http://localhost:8080/examples/starter/</code>. The <a href="https://github.com/KilledByAPixel/LittleJS/blob/main/FAQ.md#do-i-need-a-local-server-to-run-littlejs-games-and-how-do-i-set-one-up">FAQ</a> has more.</p>
+<h2 id="learn">Learn</h2>
 <ul>
-<li><a href="https://youtu.be/_dXKU0WgAj8">Making Awesome Games With LittleJS</a> - A short talk about LittleJS with some tips on how to use it</li>
+<li><a href="https://killedbyapixel.github.io/LittleJS/examples">Example Browser</a> - The best place to learn: 100+ short examples, each with its code, how it works and edits to try</li>
 <li><a href="https://github.com/KilledByAPixel/LittleJS/tree/main/examples/breakoutTutorial">Tutorial: Breakout</a> - Learn how to make a simple game from scratch</li>
 <li><a href="https://eoinmcgrath.com/little-ski/tutorial.html">Tutorial: Make a ski game</a> - A tutorial by eoinmcg that shows how to make a pixel art style game</li>
-<li><a href="https://github.com/KilledByAPixel/LittleJS/blob/main/REFERENCE.md">LittleJS Quick Reference Sheet</a> - The whole API in one file, made to be read by people and by AI coding tools</li>
+<li><a href="https://youtu.be/_dXKU0WgAj8">Making Awesome Games With LittleJS</a> - A short talk about LittleJS with some tips on how to use it</li>
+<li><a href="https://github.com/KilledByAPixel/LittleJS/blob/main/FAQ.md">LittleJS FAQ</a> - Answers to common questions, from setup to publishing</li>
+</ul>
+<h2 id="documentation">Documentation</h2>
+<ul>
+<li><a href="https://killedbyapixel.github.io/LittleJS/docs">API Documentation</a> - Every class, function and setting, searchable</li>
+<li><a href="https://github.com/KilledByAPixel/LittleJS/blob/main/REFERENCE.md">Quick Reference Sheet</a> - The whole API in one file, made to be read by people and by AI coding tools</li>
 <li><a href="https://github.com/KilledByAPixel/LittleJS/blob/main/EDITOR.md">Making Your Own Level Editor</a> - How to turn the built in 2D and 3D level editors into an editor for your own game</li>
-<li><a href="https://github.com/KilledByAPixel/LittleJS/blob/main/FAQ.md">LittleJS FAQ</a> - Answers to common questions about LittleJS</li>
 <li><a href="https://github.com/KilledByAPixel/LittleJS/blob/main/CHANGELOG.md">Changelog</a> - What changed in each release</li>
 <li><a href="https://github.com/KilledByAPixel/LittleJS/tree/js13k">JS13k Branch</a> - A special branch for size coding events that builds to a 7KB zip</li>
 </ul>
 <h2 id="examples">Examples</h2>
-<p>LittleJS comes with several demos both for learning and using as starter projects to create new games.</p>
+<p>LittleJS comes with many examples, both for learning and to use as starter projects for new games.</p>
 <ul>
-<li><a href="https://killedbyapixel.github.io/LittleJS/examples/">Example Browser</a> - Live example browser with all examples and editable source</li>
+<li><a href="https://killedbyapixel.github.io/LittleJS/examples/">Example Browser</a> - 100+ single-file examples of individual engine features and small games, with editable source</li>
 <li><a href="https://killedbyapixel.github.io/LittleJSArcade/">LittleJS Arcade</a> - Over 50 example games you can use as starter projects</li>
-<li><a href="https://killedbyapixel.github.io/LittleJS/examples/">Short Examples</a> - 100+ single-file demos showing off individual engine features</li>
 <li><a href="https://killedbyapixel.github.io/LittleJS/examples/breakout/">Breakout</a> - Block breaking game with post-processing effects</li>
 <li><a href="https://killedbyapixel.github.io/LittleJS/examples/puzzle/">Puzzle Game</a> - Match 3 puzzle game with HD rendering and high score tracking</li>
-<li><a href="https://killedbyapixel.github.io/LittleJS/examples/platformer/">Platformer</a> - Platformer/shooter demo that loads level data</li>
+<li><a href="https://killedbyapixel.github.io/LittleJS/examples/platformer/">Platformer</a> - Platformer/shooter demo that loads level data, with the level editor set up for it</li>
 <li><a href="https://killedbyapixel.github.io/LittleJS/examples/box2d/">Box2D Demo</a> - Box2D plugin demonstration and testbed</li>
 <li><a href="https://killedbyapixel.github.io/LittleJS/examples/3d/">3D Example</a> - The 3D plugin in one scene: terrain, shadows, lights, sprites, particles and bloom</li>
 <li><a href="https://killedbyapixel.github.io/LittleJS/examples/?example=3D%20Racing%20Game">3D Racing Game</a> - Built-in 3D plugin: terrain, shadows and a chase camera in one short file</li>
@@ -210,7 +234,8 @@ engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost);
 </tr>
 </tbody>
 </table>
-<p>Every build includes the plugins. littlejs.min.js is about 165 KB gzipped, and the 3D plugins are a large part of that. A bundler like Vite leaves out the plugins a game does not use, so a small 2D game comes to about 57 KB gzipped, and a lit 3D scene to about 77 KB.</p>
+<p>Develop with a debug build: it has the asserts that catch mistakes, the debug overlay (press Esc) and the level editors. Ship a release build, which leaves all of that out. TypeScript definitions are in <code>littlejs.d.ts</code>, which the npm package sets up on its own.</p>
+<p>Every build includes the plugins. littlejs.min.js is about 165 KB gzipped, and the 3D plugins are a large part of that. A bundler like Vite leaves out the plugins a game does not use, so a small 2D game comes to about 29 KB gzipped, and a lit 3D scene to about 72 KB.</p>
 <h2 id="games-made-with-littlejs">Games Made With LittleJS</h2>
 <p>Here are a few of the many amazing games created with LittleJS...</p>
 <ul>
@@ -235,10 +260,17 @@ engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost);
 </ul>
 <p><img src="examples/games.jpg" alt="A collage of screenshots from games made with LittleJS"></p>
 <p><em>A sample of games built with LittleJS.</em></p>
+<h2 id="community">Community</h2>
+<ul>
+<li><a href="https://discord.gg/zb7hcGkyZe">Discord</a> - Ask questions, show what you are making, and hear about the next LittleJS Game Jam</li>
+<li><a href="https://github.com/KilledByAPixel/LittleJS/issues">Issues</a> - Report a bug or ask for a feature</li>
+<li>Made a game with LittleJS? Share it on the Discord, it may end up in the list above</li>
+</ul>
+<p>LittleJS is <a href="https://github.com/KilledByAPixel/LittleJS/blob/main/LICENSE">MIT licensed</a>, free for any use.</p>
 <p><img src="examples/favicon.png" alt="LittleJS pixel-art favicon"></p></article>
 <footer><a href="https://github.com/KilledByAPixel/LittleJS">LittleJS - MIT License - Copyright 2021 Frank Force</a></footer>
 </main>
-<aside class="outline"><h3>On this page</h3><ul><li class="d0"><a href="#%F0%9F%9A%82-all-aboard!">🚂 All Aboard!</a></li><li class="d0"><a href="#examples-%7C-arcade-%7C-docs-%7C-reference-%7C-faq-%7C-trailer-%7C-discord-%7C-ai">Examples | Arcade | Docs | Reference | FAQ | Trailer | Discord  | AI</a></li><li class="d0"><a href="#littlejs-features">LittleJS Features</a></li><li class="d1"><a href="#%E2%9C%A8-graphics">✨ Graphics</a></li><li class="d1"><a href="#%F0%9F%A7%8A-littlejs-3d">🧊 LittleJS 3D</a></li><li class="d1"><a href="#%F0%9F%94%8A-audio">🔊 Audio</a></li><li class="d1"><a href="#%F0%9F%8E%AE-input">🎮 Input</a></li><li class="d1"><a href="#%F0%9F%92%A5-physics">💥 Physics</a></li><li class="d1"><a href="#%F0%9F%9A%80-flexibility">🚀 Flexibility</a></li><li class="d1"><a href="#%F0%9F%9B%A0%EF%B8%8F-developer-tools">🛠️ Developer Tools</a></li><li class="d1"><a href="#%F0%9F%A4%96-ai-friendly">🤖 AI Friendly</a></li><li class="d0"><a href="#how-to-use-littlejs">How To Use LittleJS</a></li><li class="d0"><a href="#tutorials">Tutorials</a></li><li class="d0"><a href="#examples">Examples</a></li><li class="d0"><a href="#builds">Builds</a></li><li class="d0"><a href="#games-made-with-littlejs">Games Made With LittleJS</a></li></ul></aside>
+<aside class="outline"><h3>On this page</h3><ul><li class="d0"><a href="#%F0%9F%9A%82-all-aboard!">🚂 All Aboard!</a></li><li class="d0"><a href="#examples-%7C-arcade-%7C-docs-%7C-reference-%7C-faq-%7C-trailer-%7C-discord-%7C-ai">Examples | Arcade | Docs | Reference | FAQ | Trailer | Discord  | AI</a></li><li class="d0"><a href="#littlejs-features">LittleJS Features</a></li><li class="d1"><a href="#%E2%9C%A8-graphics">✨ Graphics</a></li><li class="d1"><a href="#%F0%9F%A7%8A-littlejs-3d">🧊 LittleJS 3D</a></li><li class="d1"><a href="#%F0%9F%94%8A-audio">🔊 Audio</a></li><li class="d1"><a href="#%F0%9F%8E%AE-input">🎮 Input</a></li><li class="d1"><a href="#%F0%9F%92%A5-physics">💥 Physics</a></li><li class="d1"><a href="#%F0%9F%A7%A9-game-systems">🧩 Game Systems</a></li><li class="d1"><a href="#%F0%9F%9A%80-flexibility">🚀 Flexibility</a></li><li class="d1"><a href="#%F0%9F%9B%A0%EF%B8%8F-developer-tools">🛠️ Developer Tools</a></li><li class="d1"><a href="#%F0%9F%A4%96-ai-friendly">🤖 AI Friendly</a></li><li class="d0"><a href="#quick-start">Quick Start</a></li><li class="d1"><a href="#try-it-in-the-browser">Try it in the browser</a></li><li class="d1"><a href="#one-html-file">One HTML file</a></li><li class="d1"><a href="#start-a-project">Start a project</a></li><li class="d0"><a href="#learn">Learn</a></li><li class="d0"><a href="#documentation">Documentation</a></li><li class="d0"><a href="#examples">Examples</a></li><li class="d0"><a href="#builds">Builds</a></li><li class="d0"><a href="#games-made-with-littlejs">Games Made With LittleJS</a></li><li class="d0"><a href="#community">Community</a></li></ul></aside>
 <script src="docs.js"></script>
 </body>
 </html>
