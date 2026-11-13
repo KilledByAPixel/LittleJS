@@ -907,6 +907,15 @@ class Mesh
 // Shape builders, all centered on the origin so buildMatrix does placement
 // Sizes are full sizes like buildBox and the 2D drawCircle, sides go around an axis and rings along it
 
+// a count of sides, rings or steps a builder takes as a whole number, rounded down, with a warning in debug builds,
+// since a fraction is most likely a mistake: a sphere of 7.5 rings would come out open at the top
+function render3DWholeCount(count, name)
+{
+    const whole = floor(count);
+    debug && whole !== count && console.warn(`a mesh builder rounded ${name} ${count} down to ${whole}`);
+    return whole;
+}
+
 /**
  * Spin a flat outline around the Y axis to make a round shape, like a vase or a wheel
  * - profile is [[radius, y], ...] from bottom to top
@@ -926,7 +935,7 @@ class Mesh
 function buildLathe(profile, sides=16, smooth=render3D?.smoothShading, capped=true)
 {
     ASSERT(isArray(profile) && profile.length > 1, 'lathe profile needs at least 2 points');
-    sides |= 0;
+    sides = render3DWholeCount(sides, 'sides');
     ASSERT(sides > 2, 'lathe needs at least 3 sides');
     ASSERT(sides * profile.length <= 1e6, 'a lathe of more than a million faces', sides, profile.length);
     const mesh = new Mesh;
@@ -1040,6 +1049,7 @@ function buildLathe(profile, sides=16, smooth=render3D?.smoothShading, capped=tr
  */
 function buildSphere(size=1, sides=16, rings=8, smooth=render3D?.smoothShading)
 {
+    rings = render3DWholeCount(rings, 'rings'); // a fraction would leave the sphere open at the top
     ASSERT(rings > 1, 'sphere needs at least 2 rings');
     ASSERT(sides * rings <= 1e6, 'a sphere of more than a million faces', sides, rings);
     const profile = [];
@@ -1055,7 +1065,7 @@ function buildSphere(size=1, sides=16, rings=8, smooth=render3D?.smoothShading)
 // circle, and an eighth of a sphere at each corner; one segment makes them flat, a chamfer
 function render3DBevelBox(half, t, segments, faces)
 {
-    const mesh = new Mesh, inner = half.subtract(vec3(t)), n = max(1, segments | 0);
+    const mesh = new Mesh, inner = half.subtract(vec3(t)), n = max(1, render3DWholeCount(segments, 'bevel segments'));
 
     // a triangle facing out, since the box is convex around the origin, flat shaded or with the normals of the
     // round, and uvs from the face it faces most, as a plain box maps that face

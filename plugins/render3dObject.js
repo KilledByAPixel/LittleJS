@@ -708,11 +708,10 @@ function render3DFixedSolids()
 function render3DSettleFixed(o, pusher, from)
 {
     if (o.destroyed || !o.collideSolidObjects) return;
-    let shape = render3DSolidShape(o);
-    const reachO = render3DSolidReach(o);
+    let shape = render3DSolidShape(o), reachO = render3DSolidReach(o);
     // with many solids the ones near where it is, through the grid; the movers there are skipped below
     const grid = render3DSolidGrid(), fixed = render3DFixedSolids();
-    for (const b of grid ? render3DGridWalk(grid, reachO, ()=> shape.pos, Infinity) : fixed)
+    for (const b of grid ? render3DGridWalk(grid, ()=> reachO, ()=> shape.pos, Infinity) : fixed)
     {
         if (grid && !render3DFixed.set.has(b)) continue; // the fixed solids of the pass, as the list has them
         // a pair where neither is solid passes through, as in the pair loop; a solid against one that is not still meets
@@ -727,6 +726,7 @@ function render3DSettleFixed(o, pusher, from)
         push = render3DPushFrom(shape, shapeB, o, b, push);
         const resolve = render3DCollideAsk(o, b, push);
         grid && (render3DGridPlace(grid, o), render3DGridPlace(grid, b)); // a callback may have moved either
+        shape = render3DSolidShape(o), reachO = render3DSolidReach(o); // or moved or resized this one
         if (!resolve) continue;
         // standing as in a pair: a push off a face within its groundAngle of up holds it there, turned straight up
         const lengthSquared = push.lengthSquared(), up = push.y / lengthSquared ** .5;
@@ -798,12 +798,11 @@ function render3DOnFace(push, shape)
 // when a collideWithObject destroys some third object, whose own turn then finds the pair already gone
 function render3DCollideSolid(a)
 {
-    let shapeA = render3DSolidShape(a);
-    const reachA = render3DSolidReach(a);
+    let shapeA = render3DSolidShape(a), reachA = render3DSolidReach(a);
     // with many solids the ones before it near where its shape is, through the grid, where its own move put it
     const grid = render3DSolidGrid();
     grid && render3DGridPlace(grid, a);
-    const solids = grid ? render3DGridWalk(grid, reachA, ()=> shapeA.pos, grid.index.get(a) ?? Infinity) :
+    const solids = grid ? render3DGridWalk(grid, ()=> reachA, ()=> shapeA.pos, grid.index.get(a) ?? Infinity) :
         engineObjectsCollide;
     for (const b of solids)
     {
@@ -827,7 +826,8 @@ function render3DCollideSolid(a)
         // both objects hear about it, and either one can take the touch over
         const resolve = render3DCollideAsk(a, b, push, false);
         grid && (render3DGridPlace(grid, a), render3DGridPlace(grid, b)); // a callback may have moved either
-        shapeA = render3DSolidShape(a); // so the next solid is tested where a callback put it, a teleport too
+        // so the next solid is tested where a callback put it and at the size it gave it, a teleport too
+        shapeA = render3DSolidShape(a), reachA = render3DSolidReach(a);
         if (!resolve) continue;
 
         // standing: resting on a box's face within the upper one's groundAngle of level holds it there, the push
@@ -1016,18 +1016,18 @@ function render3DGridAdd(grid, other, after, before, stamp, near)
 }
 
 // the solids before a place in the list a shape meets, as checking every one would reach them: in list order, and
-// found again from where it is whenever the place its center gives has moved, as a push does
+// found again from where it is whenever the place its center gives has moved, as a push does, or its reach changed
 function* render3DGridWalk(grid, reach, center, before)
 {
-    let after = -1, x, y, z, k = 0;
+    let after = -1, x, y, z, r, k = 0;
     const near = [];
     for (;;)
     {
-        const p = center();
-        if (p.x !== x || p.y !== y || p.z !== z)
+        const p = center(), size = reach();
+        if (p.x !== x || p.y !== y || p.z !== z || size !== r)
         {
-            x = p.x, y = p.y, z = p.z;
-            render3DGridNear(grid, p, reach, after, before, near);
+            x = p.x, y = p.y, z = p.z, r = size;
+            render3DGridNear(grid, p, size, after, before, near);
             k = 0;
         }
         if (k >= near.length) return;
@@ -1324,8 +1324,8 @@ class InstancedMesh3D extends EngineObject3D
         /** @type {WebGLBuffer|undefined} */
         this.colorBuffer = undefined; // and of colorData
         this.bufferGeneration = -1;   // the context they were made under
-        this.uvTileInfo = tileInfo;   // the tile the uv rects were written for
         const uv = render3DGetTileUVs(tileInfo), matrices = this.matrixData, colors = this.colorData;
+        this.uvRect = [uv.x, uv.y, uv.w, uv.h]; // the uv rect written for every instance
         for (let i = 0; i < count; ++i)
         {
             matrices.set(RENDER3D_IDENTITY.m, i * RENDER3D_MATRIX_FLOATS);
@@ -1532,13 +1532,15 @@ class InstancedMesh3D extends EngineObject3D
         if (!mesh.bufferCount) return;
         if (r.frustumCulling && !render3DSphereVisible(0, 0, 0, this.radius)) return;
 
-        // the uv rect is the object's tile for every instance, rewritten when the tile changes
-        if (this.uvTileInfo !== this.tileInfo)
+        // the uv rect is the object's tile for every instance, rewritten when it changes: another tile, or the same
+        // one filled in when its sprite loads
+        const uv = render3DGetTileUVs(this.tileInfo), last = this.uvRect;
+        if (uv.x !== last[0] || uv.y !== last[1] || uv.w !== last[2] || uv.h !== last[3])
         {
-            const uv = render3DGetTileUVs(this.tileInfo), data = this.colorData;
+            const data = this.colorData;
             for (let k = 4; k < data.length; k += RENDER3D_COLOR_FLOATS)
                 data[k] = uv.x, data[k+1] = uv.y, data[k+2] = uv.w, data[k+3] = uv.h;
-            this.uvTileInfo = this.tileInfo;
+            last[0] = uv.x, last[1] = uv.y, last[2] = uv.w, last[3] = uv.h;
             this.colorDirtyStart = 0, this.colorDirtyEnd = this.maxCount;
         }
 

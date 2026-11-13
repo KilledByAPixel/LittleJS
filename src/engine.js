@@ -689,6 +689,7 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
                 setShader(); // plugin, input and debug draws start from the engine's state
                 setAdditiveBlendMode(false);
                 pluginList.forEach(plugin=>plugin.render?.());
+                editorRenderPost(); // over the plugins, so the light system does not darken the editor
                 inputRender();
                 debugRender();
                 glFlush();

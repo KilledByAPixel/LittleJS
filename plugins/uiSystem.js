@@ -374,48 +374,51 @@ class UISystemPlugin
         {
             const context = uiSystem.uiContext;
             context.save();
-            if (uiSystem.nativeHeight)
+            try // a widget that throws leaves no transform or clip behind
             {
-                // convert to native height
-                const s = mainCanvasSize.y / uiSystem.nativeHeight;
-                context.translate(-s*mainCanvasSize.x/2,0);
-                context.scale(s,s);
-                context.translate(mainCanvasSize.x/2/s,0);
-            }
-
-            function renderObject(o)
-            {
-                // a destroyed object stays in the list until the next update, but is gone now
-                if (o.destroyed || !o.visible) return;
-
-                // render object and children
-                updateTransforms(o);
-                o.render();
-                for (const c of o.children)
-                    renderObject(c);
-            }
-            // a confirm dialog is drawn over everything, UI made after it opened too
-            const dialog = uiSystem.confirmDialog;
-            uiSystem.uiObjects.forEach(o=> o.parent || o === dialog || renderObject(o));
-            dialog && renderObject(dialog);
-
-            if (uiDebug > 0)
-            {
-                // debug render all objects
-                function renderDebug(o, visible=true)
+                if (uiSystem.nativeHeight)
                 {
-                    visible &&= !!o.visible;
-                    if (o.destroyed || !visible && uiDebug < 2)
-                        return; // only mode 2 shows the invisible ones
-                    updateTransforms(o);
-                    o.renderDebug(visible);
-                    for (const c of o.children)
-                        renderDebug(c, visible);
+                    // convert to native height
+                    const s = mainCanvasSize.y / uiSystem.nativeHeight;
+                    context.translate(-s*mainCanvasSize.x/2,0);
+                    context.scale(s,s);
+                    context.translate(mainCanvasSize.x/2/s,0);
                 }
-                uiSystem.uiObjects.forEach(o=> o.parent || o === dialog || renderDebug(o));
-                dialog && renderDebug(dialog);
+
+                function renderObject(o)
+                {
+                    // a destroyed object stays in the list until the next update, but is gone now
+                    if (o.destroyed || !o.visible) return;
+
+                    // render object and children
+                    updateTransforms(o);
+                    o.render();
+                    for (const c of o.children)
+                        renderObject(c);
+                }
+                // a confirm dialog is drawn over everything, UI made after it opened too
+                const dialog = uiSystem.confirmDialog;
+                uiSystem.uiObjects.forEach(o=> o.parent || o === dialog || renderObject(o));
+                dialog && renderObject(dialog);
+
+                if (uiDebug > 0)
+                {
+                    // debug render all objects
+                    function renderDebug(o, visible=true)
+                    {
+                        visible &&= !!o.visible;
+                        if (o.destroyed || !visible && uiDebug < 2)
+                            return; // only mode 2 shows the invisible ones
+                        updateTransforms(o);
+                        o.renderDebug(visible);
+                        for (const c of o.children)
+                            renderDebug(c, visible);
+                    }
+                    uiSystem.uiObjects.forEach(o=> o.parent || o === dialog || renderDebug(o));
+                    dialog && renderDebug(dialog);
+                }
             }
-            context.restore();
+            finally { context.restore(); }
         }
     }
 

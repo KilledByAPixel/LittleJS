@@ -8,8 +8,8 @@
 
 // the 3D plugin's shaders compile and its draws reach the screen: an object in its own color, a lit object, an
 // instanced set, a ground with the sun's shadow of a box on it, an object with a Shader of its own, one whose
-// Shader bends its normal toward the sun, a block of a
-// voxel map, a height map, an opaque sprite, 3D particles, and a 2D draw over them all
+// Shader bends its normal toward the sun, a block of a voxel map, a height map, an instanced set whose tile is filled
+// in late, an opaque sprite, 3D particles, and a 2D draw over them all
 // the camera is at z 10 looking at the origin, the view 11.5 units across at the origin, so a place (x, y) there is
 // at (.5 + x / 11.5, .5 + y / 11.5) of the canvas
 smokeRun(async ()=>
@@ -20,6 +20,7 @@ smokeRun(async ()=>
     setCanvasFixedSize(vec2(64));
     setCanvasClearColor(rgb(0, 0, 0));
     const at = (x, y)=> [.5 + x / 11.5, .5 + y / 11.5];
+    let filledTile;
     await engineInit(()=>
     {
         setCameraScale(1);
@@ -38,6 +39,18 @@ smokeRun(async ()=>
         set.emissive = 1;
         set.setTransformAt(0, vec3(-3, 3, 0), vec3(), vec3(2));
         set.setTransformAt(1, vec3(-3, 0, 0), vec3(), vec3(2));
+
+        // an instanced box whose tile is filled in after it is made, as loadSprite fills its tile when the image
+        // loads: black at first, then the magenta half of its texture
+        const sheet = new OffscreenCanvas(32, 16), sheetContext = sheet.getContext('2d');
+        sheetContext.fillStyle = '#000';
+        sheetContext.fillRect(0, 0, 16, 16);
+        sheetContext.fillStyle = '#f0f';
+        sheetContext.fillRect(16, 0, 16, 16);
+        filledTile = new TileInfo(vec2(), vec2(16), new TextureInfo(sheet));
+        const filled = new InstancedMesh3D(buildBox(), 1, filledTile);
+        filled.emissive = 1;
+        filled.setTransformAt(0, vec3(-1.6, 1.6, 0), vec3(), vec3(.8));
 
         new EngineObject3D(vec3(0, -3.5, 0), buildGrid(vec2(40), 1)); // the ground, seen from just above
 
@@ -106,12 +119,16 @@ smokeRun(async ()=>
         drawRect(vec2(-24, 24), vec2(8), rgb(1, 1, 0)); // 2D, over the 3D scene
     }, ()=> {});
     check('the 3D shaders compiled', !!render3D.program);
-    engineStep(30); // the particles get going
+    engineStep(1);
+    filledTile.pos.x = 16; // filled in after the first draw
+    engineStep(29); // the particles get going
     const pixel = (name, [x, y], test)=> { const p = smokePixel(x, y); check(name, test(p), p); };
     pixel('an emissive object draws its color', at(0, 0), (p)=> smokeNear(p, [255, 0, 0, 255]));
     pixel('a lit object is lit', at(3, -1), (p)=> p[1] > 40 && p[0] < 40 && p[2] < 40);
     pixel('an instanced set draws its first instance', at(-3, 3), (p)=> smokeNear(p, [0, 0, 255, 255]));
     pixel('and its second', at(-3, 0), (p)=> smokeNear(p, [0, 0, 255, 255]));
+    pixel('an instanced set draws its tile as it is filled in after it was made', at(-1.6, 1.6),
+        (p)=> smokeNear(p, [255, 0, 255, 255], 40));
     // the ground under the middle box, a little away from the camera, is in its shadow from the sun, and lit
     // nearer the camera
     const lit = smokePixel(.5, .12)[0], shadowed = smokePixel(.5, .215)[0];

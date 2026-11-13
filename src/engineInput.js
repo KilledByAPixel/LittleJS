@@ -916,8 +916,9 @@ function inputUpdate()
             // read virtual gamepad buttons
             // a press latched since the last poll counts even when the finger already lifted,
             // then it reads pressed and released at once, like a quick key tap
+            // every button the real gamepad left is read too, so one held as touch took over is let go
             const data = inputData[1] ?? (inputData[1] = []);
-            for (let i=12; i--;)
+            for (let i=max(12, data.length); i--;)
             {
                 const wasDown = gamepadIsDown(i,0), isDown = touchGamepadButtons[i];
                 const pressed = touchGamepadButtonsPressed[i] || isDown && !wasDown;

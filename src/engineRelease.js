@@ -77,6 +77,7 @@ function editorMapRestore(map){ return map; }
 function editorMapLoaded(){}
 function editorJSONFetched(){}
 function editorPreRender(){}
+function editorRenderPost(){}
 function editorObjectMade(){}
 
 // the input capture of the free camera and the 3D editor

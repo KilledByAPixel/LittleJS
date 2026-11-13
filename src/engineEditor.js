@@ -3232,7 +3232,10 @@ function editorGameHelp(element)
     element.replaceChildren(...lines.map((line)=> editorElement('div', undefined, 'margin:2px 0', line)));
 }
 
-debug && engineAddPlugin(editorUpdate, ()=> { editorRender(); editorRenderGame(); });
+// called by the engine after the plugins draw, so the editor is over the light system's darkening and the post process
+function editorRenderPost() { if (debug) { editorRender(); editorRenderGame(); } }
+
+debug && engineAddPlugin(editorUpdate);
 
 // the editor's own listeners for letter shortcuts and the wheel, the engine's input reads keys by position
 if (debug && globalThis.document?.addEventListener)

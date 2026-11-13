@@ -21,6 +21,12 @@ What changed in each release, newest first. Releases before 1.20.0 are on the
 - A page hidden with `soundPauseWhenHidden` pauses speech and `UIVideo` too; `tweakReset()` goes on past a tweak whose object is gone; `getNearestClearNode` with a range of Infinity searches the grid and returns
 - The sky dome shows with an orthographic camera whose near plane is at or behind it; a round lit sprite with a normal map still loading is lit the same instanced or blended; `render3D.emissiveMapColor` is always a Color; a timed 3D debug draw keeps the color it was given
 - `FollowCamera` look ahead does not turn when its target becomes a point, or comes back after none; `ImageFont` draws nothing in headless mode in place of throwing; `debugShowErrors()` runs in Node; `formatTime` does not wrap past 68 years; `loadAtlas` keeps the frames of an Aseprite tag of mixed sizes apart; a glTF file that fails to load gives back its textures however it fails
+- A D-pad button, or any past the touch gamepad's own, held on a real gamepad as the touch gamepad takes over is let go, where it stayed held
+- A 3D object grown in its collision callback meets the solids it grew into in the same frame, where it went on at its old size until the next
+- An `InstancedMesh3D` made with a sprite's tile before the sprite loaded draws the sprite once it has, where it kept the empty tile it was made with
+- A UI widget that throws while drawing leaves no transform or clip on the UI canvas
+- The 2D level editor draws over the light system, so a dark lit level does not hide its grid, brush and selection
+- `buildSphere`, `buildCapsule` and `buildTorus` round a fraction of rings or tube sides down, as the sides already were, where the shape came out open; the builders warn in debug builds when they round a count
 
 ## 1.30.0 - 2026-11-11
 

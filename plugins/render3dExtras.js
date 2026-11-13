@@ -99,7 +99,7 @@ function render3DBevelProfile(corner, d1, d2, t, segments)
 {
     const p1 = [corner[0] + d1[0] * t, corner[1] + d1[1] * t];
     const p2 = [corner[0] + d2[0] * t, corner[1] + d2[1] * t];
-    segments = max(1, segments | 0);
+    segments = max(1, render3DWholeCount(segments, 'bevel segments'));
     if (segments === 1)
         return [p1, p1, p2, p2];
 
@@ -179,6 +179,7 @@ function buildCapsule(size=1, height=1, sides=16, rings=4, smooth=render3D?.smoo
     // the rounded ends alone are already the size tall, so a shorter capsule is only a sphere
     ASSERT(height >= size, 'a capsule is at least as tall as it is wide, the ends take up the size', size, height);
     const profile = [], r = size / 2, straight = max(0, height - size) / 2;
+    rings = render3DWholeCount(rings, 'rings');
     for (let i = 0; i <= rings; ++i)
     {
         const a = i / rings * PI / 2;
@@ -206,6 +207,7 @@ function buildTorus(size=1, tubeSize=.3, sides=16, tubeSides=8, smooth=render3D?
 {
     ASSERT(tubeSize <= size / 2, 'the tube must fit inside the torus, at most half its size, or the ring turns inside out');
     const profile = [], radius = (size - tubeSize) / 2, tubeRadius = tubeSize / 2;
+    tubeSides = render3DWholeCount(tubeSides, 'tube sides');
     for (let i = 0; i <= tubeSides; ++i)
     {
         const a = i / tubeSides * 2 * PI;
