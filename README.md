@@ -18,6 +18,8 @@ LittleJS is a fast, lightweight, and fully open source HTML5 game engine designe
 Its small footprint is packed with a comprehensive feature set including 2D and 3D rendering, physics, particles, sound, and input handling.
 The code is very clean and well documented with many examples to get you started quickly.
 
+**New here?** Open the [example browser](https://killedbyapixel.github.io/LittleJS/examples) and change the code of any example while it runs, or jump to [Quick Start](#quick-start) and have a game on screen in a minute.
+
 <div align='center' markdown='1'>
 
 ## [Examples](https://killedbyapixel.github.io/LittleJS/examples) | [Arcade](https://killedbyapixel.github.io/LittleJSArcade) | [Docs](https://killedbyapixel.github.io/LittleJS/docs) | [Reference](https://github.com/KilledByAPixel/LittleJS/blob/main/REFERENCE.md) | [FAQ](https://github.com/KilledByAPixel/LittleJS/blob/main/FAQ.md) | [Trailer](https://youtu.be/V3ik8SKJF4g) | [Discord](https://discord.gg/zb7hcGkyZe)  | [AI](https://github.com/KilledByAPixel/LittleJS-AI)
@@ -75,7 +77,14 @@ The code is very clean and well documented with many examples to get you started
 - Swept bullet collision, so small fast objects never pass through a wall
 - Object collision that stays fast with thousands of objects
 - Full Box2D integration for realistic physics using [Box2D v2.3.1 wasm](https://github.com/kripken/box2d.js)
+
+### 🧩 Game Systems
+
+- UI system with buttons, sliders, text input and nine-slice skins
+- Tween system with easing curves, and a scene system for titles, menus and game states
+- Timers, seeded random numbers, and save data that persists between visits
 - Grid-based A* pathfinding plugin with optional path smoothing
+- Medals, leaderboards and cloud saves on [Newgrounds](https://www.newgrounds.com/) and [Wavedash](https://wavedash.com/)
 
 ### 🚀 Flexibility
 
@@ -87,15 +96,12 @@ The code is very clean and well documented with many examples to get you started
 
 ### 🛠️ Developer Tools
 
-- Live example browser with code editor
+- Live [example browser](https://killedbyapixel.github.io/LittleJS/examples) with a code editor and a write-up for every example
 - Built-in 2D and 3D level editors that edit your game while it runs, with undo, autosave and prefabs
 - Make the editors your own with your game's own object types, keys, buttons and tools, see the [editor guide](https://github.com/KilledByAPixel/LittleJS/blob/main/EDITOR.md)
 - 2D levels load and save as [Tiled](https://github.com/mapeditor/tiled) JSON, so Tiled can edit them too
-- UI system with buttons, sliders, text input and nine-slice skins
-- Tween system with easing curves, and a scene system for titles, menus and game states
-- Debug overlay and primitive rendering system
-- Medals, leaderboards and cloud saves on [Newgrounds](https://www.newgrounds.com/) and [Wavedash](https://wavedash.com/)
-- Node.js build system
+- Debug overlay, debug drawing, and a tweakables panel to change your game's values while it runs
+- Asserts and logging in the debug build, stripped from the release builds
 
 ### 🤖 AI Friendly
 
@@ -103,15 +109,43 @@ The code is very clean and well documented with many examples to get you started
 - [LittleJS AI Tools](https://github.com/KilledByAPixel/LittleJS-AI) - Templates, examples, and prompts tuned for AI + LittleJS workflows
 - [LittleJS GPT](https://chatgpt.com/g/g-67c7c080b5bc81919736bc8815836be6-littlejs-game-maker) - Build LittleJS games right inside ChatGPT
 
-## How To Use LittleJS
+## Quick Start
 
-To get started download the latest release from GitHub, the engine's builds and source as npm has them (the examples are in the repository), or install via npm: 
+### Try it in the browser
 
+The [example browser](https://killedbyapixel.github.io/LittleJS/examples) runs every example beside its code. Edit the code and the example restarts with your change, and each one comes with a write-up of how it works and a few things to try. There is nothing to install.
+
+### One HTML file
+
+Download the latest release from GitHub, or run `npm install littlejsengine`, then save this as `index.html` with the script path pointing at the engine file. It loads nothing else, so it runs straight from the file with no server. Click to set off an explosion.
+
+```html
+<!DOCTYPE html>
+<script src="node_modules/littlejsengine/dist/littlejs.js"></script>
+<script>
+function gameInit() {}       // called once after the engine starts
+function gameUpdate()        // called 60 times a second for game logic
+{
+    if (mouseWasPressed(0))
+        particleEffect('explosion', mousePos);
+}
+function gameUpdatePost() {} // called after physics, even when paused
+function gameRender() {}     // called before objects are drawn
+function gameRenderPost()    // called after objects are drawn
+{
+    drawTextScreen('Hello World!', mainCanvasSize.scale(.5), 80);
+}
+engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost);
+</script>
 ```
-npm install littlejsengine
-```
 
-or use `degit` for an empty Vite template
+Those five functions are the whole shape of a LittleJS game. From here, the [Breakout tutorial](https://github.com/KilledByAPixel/LittleJS/tree/main/examples/breakoutTutorial) builds a complete game in about 30 minutes.
+
+### Start a project
+
+Pick the setup that suits you. All three use the same engine and the same API.
+
+**With Vite**, for a dev server that reloads on save and a build that leaves out the plugins you do not use:
 
 ```
 npx degit KilledByAPixel/LittleJS/examples/vite-starter my-game
@@ -120,44 +154,45 @@ npm install
 npm run dev
 ```
 
-The examples are only in the repository: clone it, or use Download ZIP on its GitHub page; the npm package and the release zip hold the engine alone. A page that loads images or modules needs a local web server, as browsers block them from a file on disk: serve the repository's root, for example with `npx http-server`, then open `http://localhost:8080/examples/starter/`, the place to start. The [FAQ](https://github.com/KilledByAPixel/LittleJS/blob/main/FAQ.md#do-i-need-a-local-server-to-run-littlejs-games-and-how-do-i-set-one-up) has more.
+**With npm**, in a project of your own. TypeScript types are included.
 
-Here is a minimal Hello World example game, with the script path pointing at the engine file from the download or npm package; it loads nothing, so it runs straight from the file.
-
-```html
-<!DOCTYPE html>
-<script src="node_modules/littlejsengine/dist/littlejs.js"></script>
-<script>
-function gameInit() {}
-function gameUpdate() {}
-function gameUpdatePost() {}
-function gameRender() {}
-function gameRenderPost() { drawTextScreen('Hello World!', mainCanvasSize.scale(.5), 80); }
-engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost);
-</script>
+```
+npm install littlejsengine
 ```
 
-## Tutorials
+```javascript
+import * as LJS from 'littlejsengine';
+```
 
-- [Making Awesome Games With LittleJS](https://youtu.be/_dXKU0WgAj8) - A short talk about LittleJS with some tips on how to use it
+**With a script tag and no build step**: clone this repository, or use Download ZIP on its GitHub page, and copy [examples/starter](https://github.com/KilledByAPixel/LittleJS/tree/main/examples/starter). Every engine name is a global, as in the example above. The examples are only in the repository; the npm package and the release zip hold the engine alone.
+
+A page that loads images or modules needs a local web server, since browsers block them from a file on disk. Vite brings its own. For the repository, serve its root, for example with `npx http-server`, then open `http://localhost:8080/examples/starter/`. The [FAQ](https://github.com/KilledByAPixel/LittleJS/blob/main/FAQ.md#do-i-need-a-local-server-to-run-littlejs-games-and-how-do-i-set-one-up) has more.
+
+## Learn
+
+- [Example Browser](https://killedbyapixel.github.io/LittleJS/examples) - The best place to learn: 100+ short examples, each with its code, how it works and edits to try
 - [Tutorial: Breakout](https://github.com/KilledByAPixel/LittleJS/tree/main/examples/breakoutTutorial) - Learn how to make a simple game from scratch
 - [Tutorial: Make a ski game](https://eoinmcgrath.com/little-ski/tutorial.html) - A tutorial by eoinmcg that shows how to make a pixel art style game
-- [LittleJS Quick Reference Sheet](https://github.com/KilledByAPixel/LittleJS/blob/main/REFERENCE.md) - The whole API in one file, made to be read by people and by AI coding tools
+- [Making Awesome Games With LittleJS](https://youtu.be/_dXKU0WgAj8) - A short talk about LittleJS with some tips on how to use it
+- [LittleJS FAQ](https://github.com/KilledByAPixel/LittleJS/blob/main/FAQ.md) - Answers to common questions, from setup to publishing
+
+## Documentation
+
+- [API Documentation](https://killedbyapixel.github.io/LittleJS/docs) - Every class, function and setting, searchable
+- [Quick Reference Sheet](https://github.com/KilledByAPixel/LittleJS/blob/main/REFERENCE.md) - The whole API in one file, made to be read by people and by AI coding tools
 - [Making Your Own Level Editor](https://github.com/KilledByAPixel/LittleJS/blob/main/EDITOR.md) - How to turn the built in 2D and 3D level editors into an editor for your own game
-- [LittleJS FAQ](https://github.com/KilledByAPixel/LittleJS/blob/main/FAQ.md) - Answers to common questions about LittleJS
 - [Changelog](https://github.com/KilledByAPixel/LittleJS/blob/main/CHANGELOG.md) - What changed in each release
 - [JS13k Branch](https://github.com/KilledByAPixel/LittleJS/tree/js13k) - A special branch for size coding events that builds to a 7KB zip
 
 ## Examples
 
-LittleJS comes with several demos both for learning and using as starter projects to create new games.
+LittleJS comes with many examples, both for learning and to use as starter projects for new games.
 
-- [Example Browser](https://killedbyapixel.github.io/LittleJS/examples/) - Live example browser with all examples and editable source
+- [Example Browser](https://killedbyapixel.github.io/LittleJS/examples/) - 100+ single-file examples of individual engine features and small games, with editable source
 - [LittleJS Arcade](https://killedbyapixel.github.io/LittleJSArcade/) - Over 50 example games you can use as starter projects
-- [Short Examples](https://killedbyapixel.github.io/LittleJS/examples/) - 100+ single-file demos showing off individual engine features
 - [Breakout](https://killedbyapixel.github.io/LittleJS/examples/breakout/) - Block breaking game with post-processing effects
 - [Puzzle Game](https://killedbyapixel.github.io/LittleJS/examples/puzzle/) - Match 3 puzzle game with HD rendering and high score tracking
-- [Platformer](https://killedbyapixel.github.io/LittleJS/examples/platformer/) - Platformer/shooter demo that loads level data
+- [Platformer](https://killedbyapixel.github.io/LittleJS/examples/platformer/) - Platformer/shooter demo that loads level data, with the level editor set up for it
 - [Box2D Demo](https://killedbyapixel.github.io/LittleJS/examples/box2d/) - Box2D plugin demonstration and testbed
 - [3D Example](https://killedbyapixel.github.io/LittleJS/examples/3d/) - The 3D plugin in one scene: terrain, shadows, lights, sprites, particles and bloom
 - [3D Racing Game](https://killedbyapixel.github.io/LittleJS/examples/?example=3D%20Racing%20Game) - Built-in 3D plugin: terrain, shadows and a chase camera in one short file
@@ -173,6 +208,8 @@ LittleJS comes with several demos both for learning and using as starter project
 | [littlejs.min.js](https://github.com/KilledByAPixel/LittleJS/blob/main/dist/littlejs.min.js) | Release | No | Optimized for release and minified |
 | [littlejs.esm.js](https://github.com/KilledByAPixel/LittleJS/blob/main/dist/littlejs.esm.js) | Debug | ESM | Debug mode with asserts |
 | [littlejs.esm.min.js](https://github.com/KilledByAPixel/LittleJS/blob/main/dist/littlejs.esm.min.js) | Release | ESM | Optimized for release and minified |
+
+Develop with a debug build: it has the asserts that catch mistakes, the debug overlay (press Esc) and the level editors. Ship a release build, which leaves all of that out. TypeScript definitions are in `littlejs.d.ts`, which the npm package sets up on its own.
 
 Every build includes the plugins. littlejs.min.js is about 165 KB gzipped, and the 3D plugins are a large part of that. A bundler like Vite leaves out the plugins a game does not use, so a small 2D game comes to about 29 KB gzipped, and a lit 3D scene to about 72 KB.
 
@@ -203,12 +240,18 @@ Here are a few of the many amazing games created with LittleJS...
 
 *A sample of games built with LittleJS.*
 
+## Community
+
+- [Discord](https://discord.gg/zb7hcGkyZe) - Ask questions, show what you are making, and hear about the next LittleJS Game Jam
+- [Issues](https://github.com/KilledByAPixel/LittleJS/issues) - Report a bug or ask for a feature
+- Made a game with LittleJS? Share it on the Discord, it may end up in the list above
+
+LittleJS is [MIT licensed](https://github.com/KilledByAPixel/LittleJS/blob/main/LICENSE), free for any use.
+
 ![LittleJS pixel-art favicon](examples/favicon.png)
 
 [npm]: https://img.shields.io/npm/v/littlejsengine
 [npm-url]: https://www.npmjs.com/package/littlejsengine
-[build-size]: https://img.shields.io/bundlephobia/minzip/littlejsengine
-[build-size-url]: https://bundlephobia.com/result?p=littlejsengine
 [npm-downloads]: https://img.shields.io/npm/dw/littlejsengine
 [npmtrends-url]: https://www.npmtrends.com/littlejsengine
 [deepscan]: https://deepscan.io/api/teams/22950/projects/26229/branches/831487/badge/grade.svg

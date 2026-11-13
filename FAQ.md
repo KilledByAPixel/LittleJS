@@ -29,6 +29,8 @@ If you don't find an answer here, feel free to ask the community or check the do
 - [There are thin lines around my sprites sometimes, how can I fix that?](#there-are-thin-lines-around-my-sprites-sometimes-how-can-i-fix-that)
 - [How do I handle animations in LittleJS?](#how-do-i-handle-animations-in-littlejs)
 - [How do I control the camera in LittleJS?](#how-do-i-control-the-camera-in-littlejs)
+- [How do I add lights and shadows to a 2D game?](#how-do-i-add-lights-and-shadows-to-a-2d-game)
+- [Can I make a 3D game with LittleJS?](#can-i-make-a-3d-game-with-littlejs)
 - [How do I use post-processing shaders?](#how-do-i-use-post-processing-shaders)
 - [How do I play sounds in LittleJS?](#how-do-i-play-sounds-in-littlejs)
 - [How do I play music?](#how-do-i-play-music)
@@ -43,6 +45,7 @@ If you don't find an answer here, feel free to ask the community or check the do
 - [How do I use parent/child objects?](#how-do-i-use-parentchild-objects)
 - [How do collisions work?](#how-do-collisions-work)
 - [How can I load a 2D level map?](#how-can-i-load-a-2d-level-map)
+- [How do I use the level editor?](#how-do-i-use-the-level-editor)
 - [Can I use physics with LittleJS?](#can-i-use-physics-with-littlejs)
 - [How do I add particle effects to my game?](#how-do-i-add-particle-effects-to-my-game)
 - [How do I use timers?](#how-do-i-use-timers)
@@ -64,6 +67,8 @@ Unlike those feature-heavy engines, LittleJS keeps to a comprehensive set of sim
 LittleJS is perfect for developers who want a minimal yet powerful engine to bring their 2D game ideas to life without the complexity of larger frameworks, and it's especially well suited for size-constrained competitions like js13kGames.
 
 ### How do I set up a basic LittleJS project?
+
+The quickest start is one HTML file beside the engine, in the [README's Quick Start](README.md#quick-start), and the [Vite starter](#how-do-i-use-vite-with-littlejs) is a whole project in four commands. To work from the examples, which is what this answer covers, get the repository.
 
 Clone the LittleJS repository, or use Download ZIP on its GitHub page: the examples are only there, the npm package and the release zip hold the engine alone.
 Include one of the LittleJS builds from the dist folder.
@@ -208,13 +213,14 @@ Rename yours, keep your game's state inside an object or class, or use the ES mo
 
 ### Do I need a local server to run LittleJS games, and how do I set one up?
 
-Yes, this is a necessary step because web browsers just have protection from loading local files which includes images.
-So any JavaScript projects that load images like games must be opened from a local web server.
-Don't panic though, it's very easy to fix! 
+For most games, yes. Browsers do not let a page opened from a file on disk load images or ES modules, so a game that loads a tile sheet, or that imports the engine as a module, has to be opened through a local web server. A game in one HTML file that loads no images, like the Hello World in the README, runs straight from the file.
 
-If you are using [Visual Studio Code](https://code.visualstudio.com/) there is a [Live Preview Extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode.live-server) that will handle this for you automatically.
+It is quick to set up. Any one of these does it:
 
-Another option is to setup a simple local web server like [http-server](https://www.npmjs.com/package/http-server) via npm.
+- **Node**: run `npx http-server` in your project's folder and open `http://localhost:8080`. To run the repository's examples, run it in the repository's root and open `http://localhost:8080/examples/`.
+- **Python**: run `python -m http.server` and open `http://localhost:8000`.
+- **[Visual Studio Code](https://code.visualstudio.com/)**: the [Live Preview extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode.live-server) serves the folder you have open.
+- **Vite**: `npm run dev` in a project made from the [Vite starter](#how-do-i-use-vite-with-littlejs) is a server already.
 
 ### Which browsers does LittleJS run in?
 
@@ -507,14 +513,62 @@ this.tileInfo = playerSprite.frame(animationFrame);
 ### How do I control the camera in LittleJS?
 
 LittleJS uses a world space rendering system, so objects can move independently of the camera.
-The camera is easy to control using cameraPos and cameraScale, which indicate the world space position and how many pixels is equivalent to one world unit.
-The default cameraScale is 32 while the default cameraPos is just the origin.
+The camera is `cameraPos`, its position in the world, and `cameraScale`, how many pixels one world unit is.
+The default cameraScale is 32 while the default cameraPos is the origin.
 It is also possible to draw using screen space pixel coordinates by passing in true as the screenSpace parameter to most drawing functions.
 
 ```javascript
 setCameraPos(vec2(22,5)); // move camera to world position (22,5)
 setCameraScale(20);  // zoom camera to 20 pixels per world unit
 ```
+
+To follow the player, make a `FollowCamera` and it sets `cameraPos` for you each frame, after the objects have moved:
+
+```javascript
+const camera = new FollowCamera(player, .2); // catch up over about .2 seconds
+camera.deadZone = vec2(4, 2);    // the player moves this far before the view does
+camera.lookAhead = vec2(3, 0);   // show more of the way the player is going
+camera.boundsMin = vec2(0, 0);   // keep the view over the level
+camera.boundsMax = levelSize;
+```
+
+`cameraShake(amount)` shakes the view for a hit or an explosion and fades by itself, with or without a camera object. The [Camera Shake](https://killedbyapixel.github.io/LittleJS/examples/?example=Camera%20Shake) and [Platform Physics](https://killedbyapixel.github.io/LittleJS/examples/?example=Platform%20Physics) examples show both.
+
+### How do I add lights and shadows to a 2D game?
+
+The light system plugin darkens the scene and lets lights add back into it. Make the plugin in `gameInit`, set how dark it is with no light, and make lights:
+
+```javascript
+new LightSystemPlugin;
+lightSystem.ambientColor = hsl(.6, .5, .2);         // the scene with no light on it
+const lamp = new Light(vec2(5, 5), 12, hsl(.1, 1, .6)); // pos, radius, color
+lightSystem.shadows = true;                         // objects block the light
+```
+
+A `Light` is an engine object, so it can be moved, attached to another object with `addChild`, and destroyed. There is also a `DirectionalLight` for a sun with long shadows, cones and gels for spotlights, and normal maps. See the [Light System](https://killedbyapixel.github.io/LittleJS/examples/?example=Light%20System), [Light Shadows](https://killedbyapixel.github.io/LittleJS/examples/?example=Light%20Shadows) and [Normal Maps](https://killedbyapixel.github.io/LittleJS/examples/?example=Normal%20Maps) examples.
+
+### Can I make a 3D game with LittleJS?
+
+Yes. LittleJS has a 3D renderer of its own, a set of plugins included in every build, that draws into the same canvas as your 2D game. A 3D object is an `EngineObject3D`, with the same update, physics, children and timers as a 2D one. Make the plugin in `gameInit`:
+
+```javascript
+function gameInit()
+{
+    new Render3DPlugin;
+    render3D.setSky(hsl(.6,.5,.4), hsl(.6,.5,.8)); // the sky's colors, top and horizon
+    render3D.shadows = true;
+    new CameraControl3D(vec3(0,1,0), 15, .3);      // an orbit camera: drag to turn, wheel to zoom
+
+    // a floor and a spinning cube
+    new EngineObject3D(vec3(), buildGrid(vec2(30)));
+    const cube = new EngineObject3D(vec3(0,1.5,0), render3D.boxMesh);
+    cube.scale3D = vec3(3);
+    cube.color = hsl(.55,.8,.6);
+    cube.angleVelocity3D = vec3(0, .01, 0);
+}
+```
+
+Y is up, as in 2D. From there it has shape builders, OBJ and glTF models, terrain, voxels, lights, shadows, particles, custom shaders and a 3D level editor. The examples in the 3D section of the [example browser](https://killedbyapixel.github.io/LittleJS/examples/?example=3D%20Basics) each show one of them, starting with 3D Basics, and [REFERENCE.md](REFERENCE.md) has a "Coming from three.js" section. 2D drawing still works over the 3D scene, for a HUD. If you would rather render with [Three.js](https://threejs.org), the `threejs.js` plugin does that with LittleJS running the game.
 
 ### How do I use post-processing shaders?
 
@@ -733,24 +787,65 @@ For raycasting against the tile collision map (line-of-sight checks, hitscan wea
 
 ### How can I load a 2D level map?
 
-There are two parts that work together to make 2D level maps in LittleJS.
-The tileCollision system is an array of values that correspond to each tile in the map.
-The built in physics system can resolve collisions against this tile map very quickly.
-For the visual side of things, there is a class called TileLayer which can be used in conjunction with tileCollision.
-The TileLayer system works by pre-rendering the entire level to a texture so it can be drawn extremely fast each frame.
-It is also possible to have multiple TileLayers for foreground and background layers.
-[The platformer example shows a basic example of how to load data that was exported from an external editor.](https://killedbyapixel.github.io/LittleJS/examples/platformer/)
+A level is made of tile layers. A `TileCollisionLayer` is a grid of tiles drawn once into a texture, so a whole level costs one draw a frame, with a grid of collision values the physics tests objects against. A level can have several layers, for a background and a foreground.
+
+The quickest way to make one is from a file. `tileLayersLoad` reads a map in [Tiled](https://www.mapeditor.org/)'s JSON format and makes its layers:
+
+```javascript
+async function gameInit()
+{
+    const map = await fetchJSON('level.json');
+    // the map, the tile sheet's tiles, render order, and which layer is solid
+    const layers = tileLayersLoad(map, tile(0, 16), 0, 'Collision');
+    objectLayersLoad(map); // make the map's objects, see below
+}
+```
+
+The map can come from Tiled, from the built-in level editor (see the next answer), or from [LDtk](https://ldtk.io/) through `tileLayersFromLDtk(project, level)`, which turns an LDtk level into the same kind of map.
+
+A map's object layers place your game's own objects. Name each type once with `objectLayersAddType`, and `objectLayersLoad` makes one for every object of that name in the map:
+
+```javascript
+objectLayersAddType('Enemy', Enemy, {health: 3}); // made with new Enemy(pos), then its properties are set
+```
+
+You can also build a layer in code with `setData` and `setCollisionData`, as the [Tile Layer](https://killedbyapixel.github.io/LittleJS/examples/?example=Tile%20Layer) example does. The [Level Editor](https://killedbyapixel.github.io/LittleJS/examples/?example=Level%20Editor) example loads a map with objects, and the [platformer](https://killedbyapixel.github.io/LittleJS/examples/platformer/) is a whole game built on one.
+
+### How do I use the level editor?
+
+The debug build has a level editor that edits your game's level while the game is paused. Press `Esc` for the debug overlay, then `0`. Paint tiles with the left button, pick one with a right click, and place and move objects on an object layer; `?` lists every key. Press `Esc` to play what you made and again to go back to editing.
+
+The editor changes the map your game gave `tileLayersLoad`. Every change is autosaved in the browser and comes back after a reload, and Save writes the map as Tiled JSON, the file your game loads, which Tiled can open too. A game with a 3D level gets the 3D level editor on the same key.
+
+A few hooks tell the editor about your game: `levelEditor.onTile` for what a painted tile does, `onRestart` to rebuild the level, and `objectLayersAddType` for the objects it can place. [EDITOR.md](EDITOR.md) is the guide to making it your own game's editor, with your own keys, buttons and tools. None of the editor is in the release builds.
 
 ### Can I use physics with LittleJS?
 
-Yes! LittleJS comes with a robust game physics system included and [also a plugin using Box2D.](https://killedbyapixel.github.io/LittleJS/examples/box2d/)
-The platformer example includes a character object class that can be used as a starting point for advanced platforming physics.
+Yes! LittleJS comes with a fast arcade physics system. Call `setCollision()` on an `EngineObject` and it moves by its `velocity`, falls with `gravity`, and collides with tile layers and other solid objects. A few properties tune each object:
+
+- `mass` — 0 makes it static, like a wall or a moving platform that nothing pushes
+- `restitution` — how much speed it keeps at a bounce, 0 to 1
+- `damping` and `friction` — how fast it slows in the air and along the ground
+- `gravityScale` — how much gravity pulls it, 0 for none
+- `isBullet` — sweeps its move so a small fast object never passes through a wall
+
+Velocity and gravity are in world units per frame, at 60 frames a second, so a velocity of `.1` is 6 units a second. The [Physics](https://killedbyapixel.github.io/LittleJS/examples/?example=Physics) and [Platform Physics](https://killedbyapixel.github.io/LittleJS/examples/?example=Platform%20Physics) examples show these, with one-way platforms and lifts, and the platformer example has a character class to start from.
+
+For realistic physics, with turning bodies, joints and stacks that hold, there is [a plugin using Box2D.](https://killedbyapixel.github.io/LittleJS/examples/box2d/)
 
 ### How do I add particle effects to my game?
 
-[There is a particle system designer that is useful for experimenting with particle designs.](https://killedbyapixel.github.io/LittleJS/examples/particles/)
+The quickest way is the library of ready made effects. One line makes one, sized and colored for the use:
 
-You can create a particle system in code using the ParticleEmitter object.
+```javascript
+particleEffect('explosion', pos);                     // a one-shot that ends itself
+const fire = particleEffect('fire', pos, {scale: 3}); // goes on until fire.destroy()
+particleEffect('sparks', pos, {hue: .5, emitRate: 200}); // any emitter setting by name
+```
+
+The [Particle Effects](https://killedbyapixel.github.io/LittleJS/examples/?example=Particle%20Effects) example shows every effect in the library.
+
+For an effect of your own, [the particle system designer](https://killedbyapixel.github.io/LittleJS/examples/particles/) lets you design one and copy its code. That code makes a `ParticleEmitter`, which you can also write by hand:
 
 ```javascript
 // fire particle system
@@ -765,6 +860,8 @@ new ParticleEmitter(
     .5, 0, 1, 0, 1e9      // randomness, collide, additive, colorLinear, renderOrder
 );
 ```
+
+An emitter is an engine object: attach it to another object with `addChild` and it follows, and an `emitTime` of 0 keeps it going until it is destroyed.
 
 ### How do I use timers?
 
@@ -838,6 +935,11 @@ The plugin also supports [Newgrounds](https://www.newgrounds.com) scoreboards an
 
 In addition to your browser's built-in developer tools, LittleJS has its own debug overlay. Press `Esc` to show it — the overlay lists the available toggles and their number-key bindings, so you don't have to memorize them. `+` and `-` adjust the time scale, which is great for slowing tricky moments down or speeding past a slow section.
 
+Three bigger tools are on the overlay's keys too:
+- `9` shows the **tweakables panel**. Name a value with `tweak` and it gets a slider there, to tune it while the game runs. The [Tweakables](https://killedbyapixel.github.io/LittleJS/examples/?example=Tweakables) example shows how.
+- `0` opens the **level editor**, see [How do I use the level editor?](#how-do-i-use-the-level-editor)
+- `C` is the **free camera** of a 3D game: fly around the scene while the game runs on.
+
 **Debug draw functions** let you visualize state directly in the world without committing to permanent UI. They're drawn for one frame and only render in debug builds:
 
 ```javascript
@@ -856,8 +958,6 @@ These are perfect for "where exactly is this AI heading?" or "is this hitbox whe
 ASSERT(player.health > 0, 'player damaged below zero', player);
 LOG('spawned enemy at', pos);
 ```
-
----
 
 ### How do I record a smooth video of my game, like a trailer?
 
@@ -884,6 +984,8 @@ function recordFrames(seconds)
 ```
 
 The browser asks once to allow many downloads. The game plays slower than real time while it records, so this suits a scripted or replayed scene. Then make the video from the images, with ffmpeg for example: `ffmpeg -framerate 60 -i frame%05d.png -pix_fmt yuv420p trailer.mp4`.
+
+---
 
 ## Contribute to the FAQ
 If you have additional questions or think something should be added to this FAQ, please open an issue or pull request on the [LittleJS GitHub repository](https://github.com/KilledByAPixel/LittleJS).

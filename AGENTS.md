@@ -18,7 +18,8 @@ If anything in this doc conflicts with the actual repo behavior, follow the repo
 
 ## Key resources
 
-- `README.md` - Overview and getting started
+- `README.md` - Overview and getting started, the GitHub front page, the npm page and the docs site's homepage: its links are absolute so they work in all three, its images are listed in `docsImageFiles` in [tools/buildDocs.mjs](tools/buildDocs.mjs), and its Quick Start page loads the engine from a local file, never a CDN, and nothing else, so it runs with no server. A feature a user would pick the engine for gets a line in its feature list
+- `FAQ.md` - How to do the common things, with short code: a new system a game is likely to use gets an answer there, and an answer names the examples that show it as `examples/shorts.js` lists them
 - `CHANGELOG.md` - What changed in each release, newest first, with an Unreleased section on top: a change a user would notice gets a line there when it lands (New Changes, Breaking Changes, Fixes), and a release renames the section to its version and date and starts a new one. The GitHub release notes are that section
 - `index.html` at the root only sends the site's visitors on to `examples/`, the example browser, which is the site's front page
 - `REFERENCE.md` - API quick reference
