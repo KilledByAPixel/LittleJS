@@ -3019,8 +3019,11 @@ function render3DCSGPolygons(mesh, matrix)
 }
 
 // a mesh from CSG polygons: points close together made one, and each edge given the points other polygons have
-// along it, so neighbors meet at every point with no crack between them; each polygon then as a fan of triangles
-function render3DCSGMesh(polygons)
+// along it, so neighbors meet at every point with no crack between them; each polygon then as a fan of triangles;
+// an edge between two points the first mesh had, which met its neighbors already, takes only points this operation
+// made, since putting an earlier cut's sliver points into every edge near them again grew the mesh with each cut,
+// even one that missed it; a new edge takes any point on it, an older one too
+function render3DCSGMesh(polygons, originals=new Set)
 {
     // points within the epsilon made one, the first found standing for the rest; moving one any farther would take
     // it off its plane by more than the epsilon, and the next cut through it would split it again; a point on an
@@ -3065,8 +3068,10 @@ function render3DCSGMesh(polygons)
     }
     const onEdge = (a, b)=>
     {
-        // the places strictly between a and b, within reach of the line, in order from a
-        const found = [], ab = b.subtract(a), length2 = ab.lengthSquared();
+        // the places strictly between a and b, within reach of the line, in order from a; an edge the first mesh had
+        // takes only new ones
+        if (!places.length) return [];
+        const old = originals.has(a) && originals.has(b), found = [], ab = b.subtract(a), length2 = ab.lengthSquared();
         const x0 = floor((min(a.x, b.x) - lo.x - reach) / size), x1 = floor((max(a.x, b.x) - lo.x + reach) / size);
         const y0 = floor((min(a.y, b.y) - lo.y - reach) / size), y1 = floor((max(a.y, b.y) - lo.y + reach) / size);
         const z0 = floor((min(a.z, b.z) - lo.z - reach) / size), z1 = floor((max(a.z, b.z) - lo.z + reach) / size);
@@ -3075,7 +3080,7 @@ function render3DCSGMesh(polygons)
         for (let z = z0; z <= z1; ++z)
             for (const p of grid.get(cellKey(x, y, z)) || [])
             {
-                if (p === a || p === b) continue;
+                if (p === a || p === b || old && originals.has(p)) continue;
                 const t = p.subtract(a).dot(ab) / length2;
                 if (t <= 0 || t >= 1) continue;
                 if (a.add(ab.scale(t)).distanceSquared(p) < reach ** 2)
@@ -3163,7 +3168,14 @@ function render3DCSGMesh(polygons)
 function render3DMeshCSG(a, b, matrix, operation)
 {
     const polygonsA = render3DCSGPolygons(a), polygonsB = render3DCSGPolygons(b, matrix);
+    // the points of the first mesh as given, which met already, see render3DCSGMesh
+    const originals = new Set;
+    for (const polygon of polygonsA)
+        for (const v of polygon.vertices) originals.add(v.pos);
     const [nearA, farA] = render3DCSGNear(polygonsA, polygonsB), [nearB, farB] = render3DCSGNear(polygonsB, polygonsA);
+    if (!nearA.length && !nearB.length) // the boxes do not meet: both whole, a whole, or nothing
+        return render3DCSGMesh(operation === 0 ? [...polygonsA, ...polygonsB] : operation === 1 ? polygonsA : [],
+            originals);
     const treeA = new Render3DCSGNode, treeB = new Render3DCSGNode;
     render3DCSGBuild(treeA, polygonsA);
     render3DCSGBuild(treeB, polygonsB);
@@ -3187,5 +3199,5 @@ function render3DMeshCSG(a, b, matrix, operation)
         render3DCSGInvert(treeB);
         polygons = [...flip(clip(treeB, flip(nearA))), ...flip(clip(treeA, flip(clip(treeA, nearB))))];
     }
-    return render3DCSGMesh(polygons);
+    return render3DCSGMesh(polygons, originals);
 }

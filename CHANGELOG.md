@@ -31,8 +31,8 @@ What changed in each release, newest first. Releases before 1.20.0 are on the
 - `soundPauseWhenBlurred` pauses a `UIVideo` too, and speech pauses on a hidden page with no running audio context
 - `objectLayersLoad` warns of an object placed from a Tiled template, which it can not read; `addChild` in a release build leaves out a destroyed child
 - Docs: `level3DSpawn` copies its properties, `engineInit` says what a release build does with an error in every frame, the FAQ's copy of the empty example, `iTime`, music pausing and its contents order
-- An error thrown from a Box2D contact callback comes out after the physics step, where it left Box2D's world locked and every body made after it failed; `setScene` from a contact callback, as a restart on touching spikes, happens once the step is done
-- A 3D level's scene block no longer carries into the next level: each load starts from the scene the game set, so a level with no block shows no fog, sky or sun of the last one
+- An error thrown from a Box2D contact callback comes out after the physics step, where it left Box2D's world locked and every body made after it failed, and one thrown from an `endContact` as an object is destroyed still takes its body out of the world; `setScene` from a contact callback, as a restart on touching spikes, happens once the step is done
+- A 3D level's scene block no longer carries into the next level: the next load puts back each setting the block changed, unless the game changed it since, so a level with no block shows no fog, sky or sun of the last one, and a sky, sun or fog the game sets in code stays
 - Inside the 3D editor's Edit prefab mode the blocks, terrain and scene are not offered, where edits to them were lost on Back
 - `setScene` and `engineObjectsDestroy` say that UI objects and tweens stay, and how to end them
 - `soundPauseWhenBlurred` mutes a `UIVideo` and leaves it playing, as the window still shows it, where it paused it and a game waiting for the end of a cutscene skipped it; a hidden page still pauses it
@@ -41,6 +41,9 @@ What changed in each release, newest first. Releases before 1.20.0 are on the
 - Closing the level editor with a game's tool held gives the tool its release, and digits pressed while it is held change no layer or debug view
 - A level or Tiled property named like a member every object has, as `constructor`, is kept, and `__proto__` is set as a property, not as the object's prototype
 - A `LightSystemPlugin` made again in a release build keeps the sun and frees the old one's GPU objects; `postProcess.feedback` turned on while it runs shows the right picture in its first frame; a mesh builder given an endless count builds a whole mesh; `formatTime(-Infinity)` shows 0:00
+- Sound turned off before `engineInit` and on later pauses on a hidden or blurred page, as it does when on from the start
+- A chain of CSG cuts, `subtract`, `union` and `intersect` one after another, no longer grows the mesh with each cut, where a box drilled by 17 spheres reached 794,000 triangles; a cut that misses the mesh gives it back as it was
+- Tweens assert in debug builds on an ease that is not a curve, as `Ease.OUT` for `Ease.OUT(Ease.SINE)`, which set NaN every frame, and on an option they do not have, with the one meant
 
 ## 1.30.1 - 2026-11-12
 

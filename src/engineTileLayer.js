@@ -713,7 +713,9 @@ function objectLayersMake(tileMapData, object)
         if (typeof result[key] === 'function' && typeof value !== 'function')
             debug && console.warn(`objectLayersLoad: ${name} property ${key} has a method's name, left out`);
         else
-            objectPropertySet(result, key, value); // as its own, __proto__ too, which assigned sets the prototype
+            // assigned, so a setter of the game's class runs, but __proto__ is made its own, assigned it would set the
+            // object's prototype
+            key === '__proto__' ? objectPropertySet(result, key, value) : result[key] = value;
     }
     return result;
 }

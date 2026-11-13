@@ -277,7 +277,7 @@ let editor3DLevel;
 // what the game made for each object of the level, by the object's id
 const editor3DInstances = new Map;
 
-// what the editor keeps for each level: {fileName, key, original, originalParts, sceneBase, hash, savedHash,
+// what the editor keeps for each level: {fileName, key, original, originalParts, hash, savedHash,
 // pending, fileHandle, saving, undo, redo}, the file it came from, the file's objects and parts and their hash for
 // the autosave, the scene the game set, the hash of the file a Save wrote, an autosave waiting for a file that
 // changed, the file picked, a save being written, and its undo and redo lists
@@ -351,8 +351,6 @@ const editor3DScene = ()=> editor3DLevelPart('scene');
 const editor3DContentHash = (objects, parts)=> editor3DHash(JSON.stringify(objects) +
     editor3DLevelPartNames.map((name)=> parts[name] ? JSON.stringify(parts[name]) : '').join(''));
 
-// the renderer's scene settings as they are now, and put back, see level3DSceneState
-const editor3DSceneState = level3DSceneState, editor3DSceneRestore = level3DSceneRestore;
 
 // the scene on screen as a block, to start a level's scene from: a sky only when the dome's colors are known
 const editor3DHex = (color)=> new Color(clamp(color.r), clamp(color.g), clamp(color.b)).toString(false);
@@ -521,9 +519,8 @@ function editor3DLevelLoaded(level)
     const url = editorFetchedURLs.get(level)?.split(/[?#]/)[0];
     const original = editor3DCopy(editor3DObjects()), originalParts = editor3DLevelParts();
     const hash = editor3DContentHash(original, originalParts);
-    // sceneBase is the scene the game set, taken before the level's own block is applied
     const record = {fileName: editorFileName(url, 'level3D.json'), key: url ?? 'level #' + hash, original,
-        originalParts, sceneBase: render3D ? editor3DSceneState() : undefined, hash, pending: undefined,
+        originalParts, hash, pending: undefined,
         fileHandle: undefined, undo: [], redo: []};
     editor3DRecords.set(level, record);
     editor3DUndoList = record.undo;
@@ -653,10 +650,7 @@ function editor3DSetPart(name, part)
     const level = editor3DLevel;
     part ? level[name] = editor3DCopy(part) : delete level[name];
     if (name === 'scene')
-    {
-        editor3DSceneRestore(editor3DRecords.get(level)?.sceneBase);
-        level3DSceneApply(level.scene);
-    }
+        level3DSceneApply(level.scene); // which first puts back what the last block set, the game's own stays
     else if (name === 'voxels')
         editor3DVoxelShow();
     else if (name === 'terrain')
@@ -1536,7 +1530,6 @@ function editor3DPrefabBack()
         const type = level3DTypes.get(object.type);
         type && (type.make.prototype || frame.made.has(object.id)) && editor3DMakeInstance(object);
     }
-    editor3DSceneRestore(record.sceneBase);
     level3DSceneApply(level.scene);
     editor3DVoxelShow();
     editor3DTerrainShow();

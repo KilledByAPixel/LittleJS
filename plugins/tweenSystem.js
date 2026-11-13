@@ -48,6 +48,33 @@ function tweenIsLerpable(v) { return v && typeof v.lerp === 'function'; }
 
 ///////////////////////////////////////////////////////////////////////////////
 
+// debug builds: an ease is a curve, a function of the time from 0 to 1 giving a number, not a modifier that makes
+// one, like Ease.OUT, which written in its place would set NaN every frame
+function tweenEaseCheck(ease, where)
+{
+    const modifiers = [Ease.IN, Ease.OUT, Ease.IN_OUT, Ease.POWER, Ease.PIECEWISE];
+    ASSERT(typeof ease === 'function', where + ': the ease must be a function, like Ease.SINE', ease);
+    ASSERT(!modifiers.includes(ease) && isNumber(ease(.5)), where + ': the ease must be a curve, like Ease.SINE; ' +
+        'Ease.IN, OUT, IN_OUT, POWER and PIECEWISE make one, as Ease.OUT(Ease.SINE) or Ease.POWER(3)');
+}
+
+// debug builds: an option the tween does not have is a slip, said with the one meant
+function tweenOptionsCheck(options)
+{
+    const names = ['ease', 'useRealTime', 'paused'];
+    for (const key in options)
+    {
+        if (names.includes(key)) continue;
+        const lower = key.toLowerCase();
+        const meant = names.find((name)=> // one with its case off, one inside the other, or one starting the same
+            lower.includes(name.toLowerCase()) || name.toLowerCase().includes(lower) ||
+            name.toLowerCase().slice(0, 3) === lower.slice(0, 3));
+        ASSERT(false, 'Tween: no option named ' + key + (meant ? ', did you mean ' + meant + '?' : '') +
+            (['loop', 'pingPong'].includes(key) ? ', ' + key + '() is a method of the tween' : key === 'onComplete' ? ', set it with then()' : '') +
+            '; the options are ' + names.join(', '));
+    }
+}
+
 /** A tween: drives a callback with a value interpolated between
  *  `start` and `end` over `duration` seconds. Pauses with the game by default.
  *  - In TypeScript it is a `Tween<T>` of the type it tweens, which comes from `start` and `end` or
@@ -89,6 +116,7 @@ class Tween
             ASSERT(isNumber(end),   'Tween end must be a number when start is a number');
         }
         ASSERT(isNumber(duration) && duration > 0, 'Tween duration must be > 0');
+        debug && tweenOptionsCheck(options);
 
         // the callback's type is NonNullable<T>, which is T, so that TypeScript takes the type from start and end
         // first: a typed callback like (v: number)=> with start 10 then makes a Tween<number>, not a Tween<0|10>
@@ -107,6 +135,7 @@ class Tween
         this.life = duration;
         /** @property {function(number):number} - Easing curve mapping [0,1] -> [0,1] */
         this.ease = options.ease || Ease.LINEAR;
+        debug && tweenEaseCheck(this.ease, 'Tween');
         /** @property {boolean} - If true, advance even when the game is paused */
         this.useRealTime = !!options.useRealTime;
         /** @property {boolean} - If true, stop advancing until cleared */
@@ -151,6 +180,7 @@ class Tween
      *  @return {Tween<T>} */
     setEase(easeFn)
     {
+        debug && tweenEaseCheck(easeFn, 'setEase');
         this.ease = easeFn;
         return this;
     }

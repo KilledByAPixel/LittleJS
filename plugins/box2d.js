@@ -300,17 +300,26 @@ let box2dPendingBusy = 0;
 function box2dWhenUnlocked(f)
 {
     box2dPending.push(f);
-    if (!box2d.world.IsLocked() && !box2dPendingBusy)
-        box2dRunPending();
+    if (box2d.world.IsLocked() || box2dPendingBusy) return;
+    box2dRunPending();
 }
 // a game's contact callback, run inside the step: an error there would pass out through Box2D's WebAssembly and leave
 // its world locked for good, so it is kept, the first one, and thrown again once the step is done
-let box2dCallbackError;
+let box2dCallbackError, box2dCallbackHolding = 0, box2dStepping = 0;
 function box2dCallback(f)
 {
-    if (!box2d.world.IsLocked()) return f(); // outside a step, as a body destroyed ends its contacts
+    // outside a step and a body's destroy it is called as it is; in either, Box2D is in the middle of its work
+    if (!box2d.world.IsLocked() && !box2dCallbackHolding) return f();
     try { f(); }
     catch (error) { box2dCallbackError ||= {error}; }
+}
+
+// the error a contact callback threw, kept until Box2D was done, thrown now and forgotten
+function box2dThrowKept()
+{
+    const kept = box2dCallbackError;
+    box2dCallbackError = undefined;
+    if (kept) throw kept.error;
 }
 
 function box2dRunPending()
@@ -488,12 +497,22 @@ class Box2dObject extends EngineObject
         const body = this.body;
         box2dWhenUnlocked(()=>
         {
-            if (this.body !== body) return; // destroyed already
-            box2d.world.DestroyBody(body);
-            body.object = undefined;
-            this.body = undefined;
+            if (!body || this.body !== body) return; // destroyed already
+            // the endContact it calls runs inside Box2D: an error there is kept, and the body lets go of this
+            // whatever happens, or it would stay in the world, a wall nothing can destroy
+            ++box2dCallbackHolding;
+            try { box2d.world.DestroyBody(body); }
+            finally
+            {
+                --box2dCallbackHolding;
+                body.object = undefined;
+                this.body = undefined;
+            }
         });
         super.destroy(immediate);
+        // outside a step, an error the body's endContact threw as it went, kept so Box2D could finish, comes out now
+        // the object is destroyed
+        box2dStepping || box2dThrowKept();
     }
 
     /** Box2d objects updated with Box2d world step */
@@ -2470,21 +2489,31 @@ class Box2dPlugin
                 b.SetAwake(true);
         }
         box2dPreSolveOn = this.objects.some(box2dWantsPreSolve);
-        for (let i=frames; i-- && !box2dCallbackError;)
+        ++box2dStepping;
+        let done = false;
+        try
         {
-            box2d.world.Step(timeDelta, this.velocityIterations, this.positionIterations);
+            for (let i=frames; i-- && !box2dCallbackError;)
+            {
+                box2d.world.Step(timeDelta, this.velocityIterations, this.positionIterations);
 
-            // what a contact callback destroyed or changed, now the world can take it, a scene set from one too
-            box2dRunPending();
+                // what a contact callback destroyed or changed, now the world can take it, a scene set from one too
+                box2dRunPending();
+            }
+            done = true;
+        }
+        finally
+        {
+            --box2dStepping;
+            // a queued change that threw goes out as the error, and a kept one goes with it, not into the next step
+            done || (box2dCallbackError = undefined);
+            // remove destroyed objects, once for all of them
+            this.objects = this.objects.filter(o=>!o.destroyed);
         }
 
-        // remove destroyed objects, once for all of them
-        this.objects = this.objects.filter(o=>!o.destroyed);
-
-        // a contact callback's error, thrown now the world is unlocked, so the physics goes on after it
-        const failed = box2dCallbackError;
-        box2dCallbackError = undefined;
-        if (failed) throw failed.error;
+        // a contact callback's error, thrown now the world is unlocked, so the physics goes on after it; an error
+        // of a queued change thrown above goes first, and a kept one does not wait for the next step
+        box2dThrowKept();
     }
 
     ///////////////////////////////////////////////////////////////////////////////

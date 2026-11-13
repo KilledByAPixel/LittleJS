@@ -63,9 +63,10 @@ function audioIsRunning()
 
 function audioInit()
 {
-    if (!soundEnable || headlessMode) return;
+    if (headlessMode) return;
 
-    audioSetSession();
+    audioSetSession(); // the iPhone session, set with sound off too, as it may be turned on later
+    // the page's pause is listened for with sound off too, a game may turn it on later
     document.addEventListener('visibilitychange', audioPageChange);
     addEventListener('blur', audioPageChange); // the window's, focus moving to another window or the page's frame
     addEventListener('focus', audioPageChange);

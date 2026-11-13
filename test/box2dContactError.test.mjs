@@ -50,6 +50,24 @@ test('an error thrown from a contact callback comes out after the step, and the 
     LJS.box2d.step();
 });
 
+test('an endContact that throws while its object is destroyed still takes the body out of the world', ()=>
+{
+    let touching = false;
+    const ball = drop(()=> touching = true);
+    stepUntil(()=> touching);
+    ball.endContact = ()=> { throw new Error('end'); };
+    const bodies = ()=> { let n = 0; for (let b = LJS.box2d.world.GetBodyList(); !LJS.box2d.isNull(b); b = b.GetNext()) ++n; return n; };
+    const before = bodies();
+    let error;
+    try { ball.destroy(); } catch (e) { error = e; }
+    assert.equal(error?.message, 'end', 'the error comes out');
+    assert.equal(bodies(), before - 1, 'and the body is gone, no wall left behind');
+    assert.equal(ball.body, undefined);
+    LJS.engineObjectsDestroy();
+    LJS.box2d.step();
+    assert.equal(bodies(), 0, 'the rest go too');
+});
+
 test('a scene set from a contact callback starts once the step is done, its bodies made', ()=>
 {
     let made, entered = false;
