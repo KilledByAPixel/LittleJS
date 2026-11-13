@@ -272,13 +272,16 @@ test('a prefab opened from a level made in code is the prefab, not the level\'s 
     assert.deepEqual(json(run, 'level.prefabs.Stack.objects.map((o)=> o.type)'), ['Box', 'Box']);
 });
 
-test('a scene set inside a prefab goes with it, and the level\'s shows again', async ()=>
+test('inside a prefab the level\'s parts, its scene, blocks and terrain, are not edited, Back keeps only objects', async ()=>
 {
     const { run } = await loadGame();
-    run(fileCode + `var fog = render3D.fogEnd; editor3DPrefabEnter(1);
-        editor3DChangeScene(()=> ({fog: [5, 77]})); editor3DStrokeEnd();`);
-    assert.equal(run('render3D.fogEnd'), 77);
-    run('editor3DPrefabBack()');
+    run(fileCode + `var fog = render3D.fogEnd; editor3DPrefabEnter(1);`);
+    const refused = JSON.parse(run(`JSON.stringify([editor3DChangeScene(()=> ({fog: [5, 77]})),
+        editor3DChangePart('voxels', ()=> ({pos: [0, 0, 0], size: [2, 2, 2], blocks: [8, 0]})),
+        editor3DChangePart('terrain', ()=> ({size: [4, 4], heights: [[0, 0], [0, 0]]}))])`));
+    assert.deepEqual(refused, [false, false, false]);
+    assert.equal(run('render3D.fogEnd === fog'), true);
+    run('editor3DStrokeEnd(); editor3DPrefabBack()');
     assert.deepEqual([run('render3D.fogEnd === fog'), run(`'scene' in level`)], [true, false]);
 });
 

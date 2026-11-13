@@ -129,9 +129,10 @@ test('a cube map still on screen is kept past four, not loaded again and left be
     const finish = async ()=> { run('loads.at(-1).finish()'); await settle(); };
     run(`level3DLoad({scene: {skyBox: ${JSON.stringify(sky)}}, objects: []})`);
     await finish();
-    for (let i = 0; i < 4; ++i) // levels with environments of their own, the sky box staying on screen
+    for (let i = 0; i < 4; ++i) // levels with environments of their own, the same sky box staying on screen
     {
-        run(`level3DLoad({scene: {environment: ${JSON.stringify(sky)}.map((url)=> 'e${i}/' + url)}, objects: []})`);
+        run(`level3DLoad({scene: {skyBox: ${JSON.stringify(sky)},
+            environment: ${JSON.stringify(sky)}.map((url)=> 'e${i}/' + url)}, objects: []})`);
         await finish();
     }
     const loads = run('loads.length');

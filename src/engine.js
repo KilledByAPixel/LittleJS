@@ -1107,6 +1107,7 @@ function engineObjectsSort()
  *  - This can be used to clear out all objects when restarting a level
  *  - Objects with the persistent flag set are left alone, for things that outlive a level
  *  - Objects can override their destroy function to do cleanup or stick around
+ *  - UI objects and tweens are not engine objects and stay; uiSystem.destroyObjects() and tweenStopAll() end them
  *  @param {boolean} [immediate] - true removes attached effects like particle emitters at once, false lets them finish first
  *  @memberof Engine */
 function engineObjectsDestroy(immediate=true)

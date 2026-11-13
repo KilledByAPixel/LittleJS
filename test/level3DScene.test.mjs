@@ -104,7 +104,8 @@ test('lensFlare in the scene block gives the sun a lens flare, one, and takes aw
     assert.equal(flares().length, 1, 'loaded twice, still one flare');
     assert.equal(flares()[0].light, undefined, 'the sun\'s');
     level3DLoad({scene: {fog: [1, 2]}, objects: []});
-    assert.equal(flares().length, 1, 'a block that does not say leaves it');
+    assert.equal(flares().length, 0, 'the next level starts from the game\'s scene, which has none');
+    level3DLoad({scene: {lensFlare: true}, objects: []});
     level3DLoad({scene: {lensFlare: false}, objects: []});
     assert.equal(flares().length, 0);
 

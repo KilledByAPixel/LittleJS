@@ -156,19 +156,19 @@ test('the lens flare of a scene comes and goes with the block, and a new block s
     assert.equal(run('editor3DSceneFromView().lensFlare'), false);
 });
 
-test('a sun flare an earlier level gave the scene stays through an edit of this level\'s scene, and its undo', async ()=>
+test('a sun flare an earlier level gave goes with it, and one this level gives comes and goes with its edits', async ()=>
 {
     const { run } = await loadGame();
     run(`level3DLoad({littlejs3D: 1, scene: {lensFlare: true}, objects: []});
         level3DLoad({littlejs3D: 1, objects: []});`);
     const flare = ()=> run('level3DSunHasFlare()');
-    assert.equal(flare(), true, 'the second level leaves the scene as it was');
+    assert.equal(flare(), false, 'the second level starts from the game\'s scene');
     run('editor3DChangeScene((scene={})=> ({...scene, fog: [3, 30]})); editor3DStrokeEnd();');
-    assert.equal(flare(), true, 'after an edit of the fog');
+    assert.equal(flare(), false, 'after an edit of the fog');
+    run('editor3DChangeScene((scene={})=> ({...scene, lensFlare: true})); editor3DStrokeEnd();');
+    assert.equal(flare(), true, 'a level that says a flare has one');
     run('editor3DUndo()');
-    assert.equal(flare(), true, 'and after its undo');
-    run('editor3DChangeScene((scene={})=> ({...scene, lensFlare: false})); editor3DStrokeEnd();');
-    assert.equal(flare(), false, 'a level that says no flare has none');
+    assert.equal(flare(), false, 'and its undo takes it away');
     run('editor3DUndo()');
-    assert.equal(flare(), true, 'and its undo brings back the one it had');
+    assert.equal(flare(), false, 'and after the fog\'s undo');
 });

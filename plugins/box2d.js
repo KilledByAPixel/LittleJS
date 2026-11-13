@@ -303,6 +303,16 @@ function box2dWhenUnlocked(f)
     if (!box2d.world.IsLocked() && !box2dPendingBusy)
         box2dRunPending();
 }
+// a game's contact callback, run inside the step: an error there would pass out through Box2D's WebAssembly and leave
+// its world locked for good, so it is kept, the first one, and thrown again once the step is done
+let box2dCallbackError;
+function box2dCallback(f)
+{
+    if (!box2d.world.IsLocked()) return f(); // outside a step, as a body destroyed ends its contacts
+    try { f(); }
+    catch (error) { box2dCallbackError ||= {error}; }
+}
+
 function box2dRunPending()
 {
     ++box2dPendingBusy;
@@ -2410,8 +2420,8 @@ class Box2dPlugin
 
             const contactA = {point, normal, impulse};
             const contactB = {point: point?.copy(), normal: normal?.scale(-1), impulse};
-            objectA.beginContact(objectB, fixtureA, fixtureB, speed, contactA);
-            objectB.beginContact(objectA, fixtureB, fixtureA, speed, contactB);
+            box2dCallback(()=> objectA.beginContact(objectB, fixtureA, fixtureB, speed, contactA));
+            box2dCallback(()=> objectB.beginContact(objectA, fixtureB, fixtureA, speed, contactB));
         }
         listener.EndContact = function(contactPtr)
         {
@@ -2426,8 +2436,8 @@ class Box2dPlugin
             const objectA  = fixtureA.GetBody().object;
             const objectB  = fixtureB.GetBody().object;
             if (!objectA || !objectB) return;
-            objectA.endContact(objectB, fixtureA, fixtureB);
-            objectB.endContact(objectA, fixtureB, fixtureA);
+            box2dCallback(()=> objectA.endContact(objectB, fixtureA, fixtureB));
+            box2dCallback(()=> objectB.endContact(objectA, fixtureB, fixtureA));
         };
         listener.PreSolve = function(contactPtr)
         {
@@ -2441,7 +2451,7 @@ class Box2dPlugin
             const objectA  = fixtureA.GetBody().object;
             const objectB  = fixtureB.GetBody().object;
             if (!objectA || !objectB) return;
-            box2dPreSolve(contact, contactPtr, objectA, objectB, fixtureA, fixtureB);
+            box2dCallback(()=> box2dPreSolve(contact, contactPtr, objectA, objectB, fixtureA, fixtureB));
         };
         listener.PostSolve = function() {};
         box2d.world.SetContactListener(listener);
@@ -2460,16 +2470,21 @@ class Box2dPlugin
                 b.SetAwake(true);
         }
         box2dPreSolveOn = this.objects.some(box2dWantsPreSolve);
-        for (let i=frames; i--;)
+        for (let i=frames; i-- && !box2dCallbackError;)
         {
             box2d.world.Step(timeDelta, this.velocityIterations, this.positionIterations);
 
-            // what a contact callback destroyed or changed, now the world can take it
+            // what a contact callback destroyed or changed, now the world can take it, a scene set from one too
             box2dRunPending();
         }
 
         // remove destroyed objects, once for all of them
         this.objects = this.objects.filter(o=>!o.destroyed);
+
+        // a contact callback's error, thrown now the world is unlocked, so the physics goes on after it
+        const failed = box2dCallbackError;
+        box2dCallbackError = undefined;
+        if (failed) throw failed.error;
     }
 
     ///////////////////////////////////////////////////////////////////////////////

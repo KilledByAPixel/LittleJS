@@ -24,6 +24,10 @@ What changed in each release, newest first. Releases before 1.20.0 are on the
 - `soundPauseWhenBlurred` pauses a `UIVideo` too, and speech pauses on a hidden page with no running audio context
 - `objectLayersLoad` warns of an object placed from a Tiled template, which it can not read; `addChild` in a release build leaves out a destroyed child
 - Docs: `level3DSpawn` copies its properties, `engineInit` says what a release build does with an error in every frame, the FAQ's copy of the empty example, `iTime`, music pausing and its contents order
+- An error thrown from a Box2D contact callback comes out after the physics step, where it left Box2D's world locked and every body made after it failed; `setScene` from a contact callback, as a restart on touching spikes, happens once the step is done
+- A 3D level's scene block no longer carries into the next level: each load starts from the scene the game set, so a level with no block shows no fog, sky or sun of the last one
+- Inside the 3D editor's Edit prefab mode the blocks, terrain and scene are not offered, where edits to them were lost on Back
+- `setScene` and `engineObjectsDestroy` say that UI objects and tweens stay, and how to end them
 
 ## 1.30.1 - 2026-11-12
 

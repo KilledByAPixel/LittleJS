@@ -99,8 +99,8 @@ function level3DAddMesh(name, mesh, tileInfo, color=WHITE, meshCollision=false)
  *    horizon and straight down, ambient, how much of them lights the scene, .5 when not given, sunDirection and
  *    sunColor, fog, its start and end, fogColor, the horizon color when not given, shadows, lensFlare, the
  *    sun's lens flare, and skyBox and environment, each six image urls as loadCubeMap takes them, which load in
- *    the background and are set when they have; what the block leaves out stays as the game set it, and a level
- *    with no block changes nothing
+ *    the background and are set when they have; what the block leaves out stays as the game set it, and the
+ *    next level, with a block or none, starts from the scene as the game had it before this one's block
  *  @param {Level3D} level - The level, the level editor edits this same object
  *  @return {Array<any>} - What each object's type made, a function that made nothing is left out
  *  @memberof Level3D */
@@ -108,6 +108,8 @@ function level3DLoad(level)
 {
     ASSERT(!!level && typeof level === 'object', 'a level is an object, {} for a new one');
     ASSERT(!(level.littlejs3D > LEVEL3D_VERSION), 'the level was made by a newer LittleJS');
+    // the last level's scene block goes first, so the editor takes the scene the game set as this level's base
+    level3DSceneRestore(level3DSceneBase), level3DSceneBase = undefined;
     editor3DLevelLoaded(level); // debug builds: the 3D editor takes the level, its autosaved edits go in first
     // the last level's own prefabs it does not have are no longer types; a prefab the editor opens as a level of its
     // own keeps them, its instances are of the level's prefabs
@@ -302,6 +304,39 @@ function level3DTerrainMake(terrain)
 // itself is left whole, for the game to put back
 const level3DSkies = /* @__PURE__ */ new WeakSet;
 
+// the renderer's settings a scene block can set, as they are now, and put back as they were: what the game set
+// itself shows again when a level's block changes or goes
+function level3DSceneState()
+{
+    const r = render3D;
+    return {sky: r.sky, ambientColor: r.ambientColor.copy(), ambientGroundColor: r.ambientGroundColor?.copy(),
+        fogStart: r.fogStart, fogEnd: r.fogEnd, fogColor: r.fogColor?.copy(), sunDirection: r.sunDirection.copy(),
+        sunColor: r.sunColor.copy(), shadows: r.shadows, sunFlare: !!level3DSunFlare && !level3DSunFlare.destroyed,
+        skyBox: r.skyBox, environment: r.environment};
+}
+function level3DSceneRestore(state)
+{
+    const r = render3D;
+    if (!r || !state) return;
+    r.sky !== state.sky && level3DSkies.has(r.sky) && r.sky.dispose(); // a dome a level made, not the game's
+    r.sky = state.sky;
+    r.ambientColor = state.ambientColor.copy();
+    r.ambientGroundColor = state.ambientGroundColor?.copy();
+    r.fogStart = state.fogStart, r.fogEnd = state.fogEnd;
+    r.fogColor = state.fogColor?.copy();
+    r.sunDirection = state.sunDirection.copy();
+    r.sunColor = state.sunColor.copy();
+    r.shadows = state.shadows;
+    level3DSceneFlare(state.sunFlare); // a flare an earlier level's scene gave the sun, never the game's own
+    // the cube maps, and a scene's load still running for them lands no more
+    r.skyBox = state.skyBox, r.environment = state.environment;
+    ++level3DSceneCubeLoads.skyBox, ++level3DSceneCubeLoads.environment;
+}
+
+// the scene the game set, taken when a level's scene block is applied, and put back before the next level's, so one
+// level's fog or sun does not carry into the next, which may have no block
+let level3DSceneBase;
+
 // set the scene a level's scene block gives: sky as its top, horizon and bottom colors, with ambient how much of
 // them lights the scene, sunDirection and sunColor, fog as its start and end with fogColor, the horizon without one,
 // and shadows; a setting the block does not have, or has wrong, stays as it is
@@ -310,7 +345,9 @@ function level3DSceneApply(scene)
     // a sky box or environment an earlier scene is still loading does not land on this one's
     ++level3DSceneCubeLoads.skyBox, ++level3DSceneCubeLoads.environment;
     const r = render3D;
+    level3DSceneRestore(level3DSceneBase), level3DSceneBase = undefined; // the last level's block goes
     if (!r || !scene || typeof scene !== 'object') return;
+    level3DSceneBase = level3DSceneState();
     const color = level3DHexColor;
     const sky = isArray(scene.sky) && scene.sky.length === 3 ? scene.sky.map(color) : [];
     if (sky.length && sky.every((c)=> c))

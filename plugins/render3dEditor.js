@@ -351,34 +351,8 @@ const editor3DScene = ()=> editor3DLevelPart('scene');
 const editor3DContentHash = (objects, parts)=> editor3DHash(JSON.stringify(objects) +
     editor3DLevelPartNames.map((name)=> parts[name] ? JSON.stringify(parts[name]) : '').join(''));
 
-// the renderer's settings a scene block can set, as they are now, and put back as they were: what the game set
-// itself shows again when a level's block changes or goes
-function editor3DSceneState()
-{
-    const r = render3D;
-    return {sky: r.sky, ambientColor: r.ambientColor.copy(), ambientGroundColor: r.ambientGroundColor?.copy(),
-        fogStart: r.fogStart, fogEnd: r.fogEnd, fogColor: r.fogColor?.copy(), sunDirection: r.sunDirection.copy(),
-        sunColor: r.sunColor.copy(), shadows: r.shadows, sunFlare: !!level3DSunFlare && !level3DSunFlare.destroyed,
-        skyBox: r.skyBox, environment: r.environment};
-}
-function editor3DSceneRestore(state)
-{
-    const r = render3D;
-    if (!r || !state) return;
-    r.sky !== state.sky && level3DSkies.has(r.sky) && r.sky.dispose(); // a dome a level made, not the game's
-    r.sky = state.sky;
-    r.ambientColor = state.ambientColor.copy();
-    r.ambientGroundColor = state.ambientGroundColor?.copy();
-    r.fogStart = state.fogStart, r.fogEnd = state.fogEnd;
-    r.fogColor = state.fogColor?.copy();
-    r.sunDirection = state.sunDirection.copy();
-    r.sunColor = state.sunColor.copy();
-    r.shadows = state.shadows;
-    level3DSceneFlare(state.sunFlare); // a flare an earlier level's scene gave the sun, never the game's own
-    // the cube maps, and a scene's load still running for them lands no more
-    r.skyBox = state.skyBox, r.environment = state.environment;
-    ++level3DSceneCubeLoads.skyBox, ++level3DSceneCubeLoads.environment;
-}
+// the renderer's scene settings as they are now, and put back, see level3DSceneState
+const editor3DSceneState = level3DSceneState, editor3DSceneRestore = level3DSceneRestore;
 
 // the scene on screen as a block, to start a level's scene from: a sky only when the dome's colors are known
 const editor3DHex = (color)=> new Color(clamp(color.r), clamp(color.g), clamp(color.b)).toString(false);
@@ -732,6 +706,8 @@ function editor3DStrokeBegin()
 function editor3DChangePart(name, change)
 {
     if (!editor3DLevel || editor3DRecords.get(editor3DLevel)?.pending) return false; // its autosave waits first
+    // a prefab is objects alone, Back keeps only those: blocks, terrain and the scene are the level's
+    if (editor3DPrefabStack.length && name !== 'prefabs') return false;
     const parts = editor3DLevelParts(), after = change(parts[name] && editor3DCopy(parts[name]));
     if (editor3DSame(parts[name], after)) return false;
     editor3DStrokeBegin();
@@ -3059,7 +3035,7 @@ function editor3DPanelInit()
     button(help, 'Close', ()=> editor3DHelp = false, '?');
 
     editor3DPanelParts = {game, gameHelp, restart, pending, toolButtons, grid, moveStep, rotateStep, scaleStep, ground, ownAxes, types, prefabBox, prefabOpen, prefabName, prefabUnsaved, prefabNote,
-        properties, blocks, terrainBox, sceneOn, sceneRows, playFrom, storage, hint, help, typeNames: ''};
+        properties, blocks, terrainBox, scene, sceneOn, sceneRows, playFrom, storage, hint, help, typeNames: ''};
 }
 
 // show the panel as the editor is now
@@ -3124,6 +3100,7 @@ function editor3DPanelUpdate()
         '. Open it with Enter and Save';
     editor3DBlocksUpdate(p.blocks);
     editor3DTerrainBoxUpdate(p.terrainBox);
+    p.scene.style.display = editor3DPrefabStack.length ? 'none' : ''; // the level's, not a prefab's
     p.sceneOn.checked = !!editor3DScene();
     editor3DSceneUpdate(p.sceneRows);
 }
@@ -3191,7 +3168,7 @@ function editor3DInputColor(hex) { return /^#[0-9a-f]{6}/i.test(hex) ? hex.slice
 // take it away
 function editor3DTerrainBoxUpdate(box)
 {
-    const map = editor3DTerrainMap(), shown = editor3DTool === 'terrain';
+    const map = editor3DTerrainMap(), shown = editor3DTool === 'terrain' && !editor3DPrefabStack.length;
     box.style.display = shown ? '' : 'none';
     if (!shown) return;
     const terrain = editor3DLevelPart('terrain'), brush = editor3DTerrainBrush;
@@ -3275,7 +3252,7 @@ function editor3DTerrainBoxUpdate(box)
 // for each block type to paint with, and a button to take the map away; made again when what it shows changes
 function editor3DBlocksUpdate(box)
 {
-    const map = editor3DVoxelMap(), shown = editor3DTool === 'blocks';
+    const map = editor3DVoxelMap(), shown = editor3DTool === 'blocks' && !editor3DPrefabStack.length;
     box.style.display = shown ? '' : 'none';
     if (!shown) return;
     const first = map?.tileInfo, texture = first?.textureInfo;
