@@ -79,6 +79,13 @@ smokeRun(async ()=>
     fresh.dispose();
     check('disposed before its first batch is drawn, it leaves the list too', !fresh.program &&
         !glShaderObjects.includes(fresh));
+    // feedback with no texture, as when it is turned on after the plugin was made: the texture is made then, black
+    glContext.deleteTexture(postProcess.feedbackTexture);
+    postProcess.feedbackTexture = undefined;
+    engineStep();
+    const restarted = smokePixel(.25, .5)[0];
+    check('feedback turned on later makes its texture and starts from black', Math.abs(restarted - 64) < 4 &&
+        !!postProcess.feedbackTexture && glContext.getError() === glContext.NO_ERROR, restarted);
     checkGLError();
 });
 </script>

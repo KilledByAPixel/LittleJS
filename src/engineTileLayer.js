@@ -611,6 +611,8 @@ function objectLayersAddType(name, make, defaults={}, tileInfo)
  *  - The object's properties in Tiled are set over the type's defaults: numbers, booleans, strings, and colors,
  *    and for a Vector2 default the string x,y
  *  - An object whose type was not added is skipped, with a warning in debug builds
+ *  - Tiled templates are not read: an object placed from one has its type only in the template's file, so export
+ *    the map with Tiled's Detach templates option
  *  @param {TiledMap} tileMapData - The same Tiled map given to tileLayersLoad
  *  @return {Array<any>} - What each object's type made, a function that made nothing is left out
  *  @memberof TileLayers */
@@ -639,16 +641,20 @@ function objectLayersLoad(tileMapData)
     return made;
 }
 
-// a property's value for one object of its own: a Color or Vector2 copied, and an array or plain object copied with
-// what is in it, so an object that changes its list does not change every other object's, or the map's
+// a property's value for one object of its own: a Color or vector copied, and an array or plain object copied with
+// what is in it, so an object that changes its list does not change every other object's, or the map's; a Color or
+// vector is an instance of its class with a copy method, never a plain object, as a file's object may have a member
+// named copy, and every member of a plain object is copied as one, __proto__ too
 function objectPropertyCopy(value)
 {
-    if (value?.copy) return value.copy();
     if (isArray(value)) return value.map(objectPropertyCopy);
-    if (!value || typeof value != 'object' || Object.getPrototypeOf(value) !== Object.prototype) return value;
+    if (!value || typeof value != 'object') return value;
+    if (Object.getPrototypeOf(value) !== Object.prototype)
+        return typeof value.copy == 'function' ? value.copy() : value;
     const copy = {};
-    for (const key in value)
-        copy[key] = objectPropertyCopy(value[key]);
+    for (const key of Object.keys(value))
+        Object.defineProperty(copy, key,
+            {value: objectPropertyCopy(value[key]), enumerable: true, writable: true, configurable: true});
     return copy;
 }
 
@@ -684,6 +690,8 @@ function objectLayersMake(tileMapData, object)
     {
         // an object with no type, a shape or a text someone drew in Tiled, is not one a game makes
         debug && name && console.warn(`objectLayersLoad: no type added for ${name}, skipped`);
+        debug && !name && object.template && console.warn(`objectLayersLoad: object ${object.id} is placed from ` +
+            `the template ${object.template}, which is not read, skipped; export with Detach templates on`);
         return;
     }
     const {height=0, tilewidth=1, tileheight=1} = tileMapData;

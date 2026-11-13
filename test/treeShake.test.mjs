@@ -87,6 +87,9 @@ test('a constant a plugin makes on load by new or a call is marked pure, so it g
             if (!/^(?:const|let|var) /.test(line)) return;
             for (const m of line.matchAll(/(?:^(?:const|let|var) |, )([\w$]+) = (\/\* @__PURE__ \*\/ )?(new [\w$]|[\w$.]+\s*\()/g))
                 m[2] || found.push(`${file}:${i + 1} ${m[1]}`);
+            // an object or array literal made on load with a new or a call inside, kept as a statement is
+            const literal = line.match(/^(?:const|let|var) ([\w$]+) = [{[](.*)$/);
+            literal && /\bnew [\w$]|[\w$]\(/.test(literal[2]) && found.push(`${file}:${i + 1} ${literal[1]}`);
         });
     assert.deepEqual(found, []);
 });

@@ -14,6 +14,16 @@ What changed in each release, newest first. Releases before 1.20.0 are on the
 - A `UIVideo` stopped or paused while the page is hidden stays so when it shows, where it played again
 - `parseAtlas` keeps an Aseprite tag's direction on its group (forward, reverse, pingpong), its frames still in the file's order
 - The FAQ plays music from the sound's load callback, where it played before the file loaded and played nothing, and checks an object is on screen with `isOnScreen`, which a turned camera does not fool; `lookAt` says a `localMatrix` overrides it
+- A level or Tiled property object with a member named `copy` loads, where it stopped the whole 3D level, and a member named `__proto__` is copied as one
+- A tile layer made in code again in the place of one gone keeps a save file of its own in the level editor, where two layers could share one
+- The touch gamepad: a button `inputClearKey` let go stays up until the finger lifts, where it was pressed again the next frame; a button held as a real gamepad takes over is released, and lifting the finger leaves the real gamepad in charge
+- `formatTime` of no number shows 0:00 again; a mesh builder given a count that is not a number, or too few rings or tube sides, builds a whole mesh, with an assert in debug builds
+- `box2dInit` tries again after a load that failed; `getNearestClearNode` from far outside its grid starts at the first ring that reaches it
+- The engine's font draws nothing in headless mode, with no error; `PostProcessPlugin.feedback` can be turned on while it runs; a `Render3DPlugin` made again frees the sky box and capture objects and keeps pending captures
+- In the level editor a digit or 0 waits while a game's tool is held, so the tool gets its release
+- `soundPauseWhenBlurred` pauses a `UIVideo` too, and speech pauses on a hidden page with no running audio context
+- `objectLayersLoad` warns of an object placed from a Tiled template, which it can not read; `addChild` in a release build leaves out a destroyed child
+- Docs: `level3DSpawn` copies its properties, `engineInit` says what a release build does with an error in every frame, the FAQ's copy of the empty example, `iTime`, music pausing and its contents order
 
 ## 1.30.1 - 2026-11-12
 

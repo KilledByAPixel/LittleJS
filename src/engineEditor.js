@@ -735,9 +735,13 @@ function editorLayerRecord(live)
     record.layers.push(layer);
     // the records of layers made in code that are gone, as a game that makes them again on a restart leaves them
     editorRetire((other)=> other.synthetic && other.layers.every((l)=> l.live.destroyed));
-    // its key, for the file Save remembers: the order it was made in among them and its size, the same after a
-    // reload as a game makes its layers in the same order, so two layers do not write over one file
-    record.key = `code layer ${editorMapList.filter((other)=> other.synthetic).length} ${width}x${height}`;
+    // its key, for the file Save remembers: its size and the first number no other layer made in code of that size
+    // has, the same after a reload as a game makes its layers in the same order, and a layer made again in the place
+    // of one gone takes its number, so two layers do not write over one file
+    const taken = new Set(editorMapList.filter((other)=> other.synthetic).map((other)=> other.key));
+    let n = 0;
+    while (taken.has(`code layer ${n} ${width}x${height}`)) ++n;
+    record.key = `code layer ${n} ${width}x${height}`;
     editorMapList.push(record);
     return layer;
 }
@@ -2945,8 +2949,9 @@ function editorUpdate()
     editorApplyCamera();
 
     // 0 exits the editor, the overlay's 0 does it while the overlay is open; cleared so debugKeysAlways
-    // does not toggle it back in the same step
-    if (!debugOverlay && keyWasPressed('Digit0'))
+    // does not toggle it back in the same step; it and the layer digits wait, as the letters do, while a tool of the
+    // game's own is held, so its press ends with its release
+    if (!debugOverlay && !editorToolHeld && keyWasPressed('Digit0'))
     {
         inputClearKey('Digit0');
         levelEditor.close();
@@ -2955,7 +2960,7 @@ function editorUpdate()
 
     // 1 to 9 pick a layer from the back; taken, so debugKeysAlways does not also flip the debug views, the overlay
     // keeps them while it is open
-    for (let i = 1; !debugOverlay && i <= 9; ++i)
+    for (let i = 1; !debugOverlay && !editorToolHeld && i <= 9; ++i)
     {
         if (!keyWasPressed('Digit' + i) || levelEditor.keys[i]) continue; // a digit of the game's own is its
         inputClearKey('Digit' + i);

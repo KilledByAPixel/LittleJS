@@ -191,8 +191,8 @@ class EngineObject3D extends EngineObject
         const ground = this.groundObject;
         this.sync2D || (this.groundObject = undefined);
         // each axis within objectMaxSpeed, as in 2D, after gravity so no move is past it; with the push back to the
-        // side it came from, a move that overlaps a solid at all is stopped on its side, so a fast object goes through
-        // only one thinner than its move less its own size, as in 2D, while neither is turned; only for what collides,
+        // side it came from, a move that overlaps a solid at all is stopped on its side, turned or not, so a fast
+        // object goes through only one thinner than its move less its own size, as in 2D; only for what collides,
         // anything else moves as fast as it is told
         // nothing of collision while setEnablePhysicsSolver is off, as in 2D, the game moves them its own way
         const solve = enablePhysicsSolver && !this.sync2D;
@@ -641,7 +641,7 @@ function render3DCollideAsk(a, b, push, useKept=true)
 }
 
 // the pairs a settle asked this pass, each object to the others; asked with mark set, it marks the pair
-const render3DSettleAskedPairs = {pass: -1, pairs: new Map};
+const render3DSettleAskedPairs = /* @__PURE__ */ (()=> ({pass: -1, pairs: new Map}))();
 function render3DSettleAsked(a, b, mark=false)
 {
     const kept = render3DSettleAskedPairs;
@@ -690,7 +690,7 @@ function render3DPushFrom(shapeA, shapeB, a, b, push)
 
 // the solids that do not move, mass 0, in the order of the engine's list, gathered once a pass for the settles, which
 // would otherwise walk every collider for each push between two movers
-const render3DFixed = {pass: -1, list: [], set: new Set};
+const render3DFixed = /* @__PURE__ */ (()=> ({pass: -1, list: [], set: new Set}))();
 function render3DFixedSolids()
 {
     if (render3DFixed.pass !== engineObjectsUpdateCount)

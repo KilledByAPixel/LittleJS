@@ -83,25 +83,32 @@ function audioSetSession()
 // a hidden page stops the game, so its sound stops too, and with soundPauseWhenBlurred a window without focus, and
 // the audio clock with it so every sound picks up exactly where it was; only a suspend made here is undone, not one
 // the browser holds until the first input
-let audioSuspendedByPage = false;
+let audioSuspendedByPage = false, audioSpeechPausedByPage = false;
 function audioPageChange()
 {
-    if (!audioContext || headlessMode) return; // a browser with no audio has none to pause
-    const pause = soundPauseWhenHidden && document.hidden || soundPauseWhenBlurred && document.hasFocus?.() === false;
+    if (headlessMode) return;
+    const pause = audioPagePaused();
+    // speech is not in the audio context, so it pauses on its own, with no running context too
+    if (typeof speechSynthesis != 'undefined' && pause !== audioSpeechPausedByPage)
+        (audioSpeechPausedByPage = pause) ? speechSynthesis.pause() : speechSynthesis.resume();
+    if (!audioContext) return; // a browser with no audio has none to pause
     if (pause)
     {
         if (audioSuspendedByPage || audioContext.state != 'running') return;
         audioSuspendedByPage = true;
         audioContext.suspend();
-        typeof speechSynthesis != 'undefined' && speechSynthesis.pause(); // speech is not in the audio context
     }
     else if (audioSuspendedByPage)
     {
         audioSuspendedByPage = false;
         audioResume();
-        typeof speechSynthesis != 'undefined' && speechSynthesis.resume();
     }
 }
+
+// whether the page's sound should be paused now, hidden or blurred as soundPauseWhenHidden and soundPauseWhenBlurred
+// say, for the engine's audio, speech and a plugin's own, like a UIVideo's
+function audioPagePaused()
+{ return soundPauseWhenHidden && !!document.hidden || soundPauseWhenBlurred && document.hasFocus?.() === false; }
 
 // sound instances whose start failed only because the context was not running, like music started in gameInit
 // before the first input, each with the time it tried; they start once the context runs unless paused or stopped

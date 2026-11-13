@@ -474,6 +474,9 @@ const touchGamepadTimer = new Timer(undefined, true), touchGamepadButtons = [], 
 let touchGamepadHandedOver = false;
 // buttons pressed since the last poll, so a tap that lifts before the poll still counts
 const touchGamepadButtonsPressed = [];
+// whether each button was held at the last poll, as the finger has it, not the input data an inputClear may have
+// emptied, so a cleared button stays up until it is let go, as a key does
+const touchGamepadButtonsLast = [];
 // floating stick anchors (stage-local CSS pixels) and owning pointer ids, indexed by stick (0=left, 1=right)
 const touchGamepadStickAnchors = [], touchGamepadStickPointerId = [];
 // pointerId -> control role ('stick0', 'stick1', 'face<n>', or 'start')
@@ -886,7 +889,16 @@ function inputUpdate()
             !touchGamepadTimer.isSet())
             touchGamepadTimer.set();
         if (touchGamepadEnable && isTouchDevice && touchGamepadTimer.isSet() && gamepadsEnable && inputRealGamepadUsed())
+        {
+            // the real gamepad takes over: the fingers on the touch gamepad let go of it, and a button they held
+            // is released by the real gamepad's poll below, as one it saw held
             touchGamepadTimer.unset(), touchGamepadHandedOver = true;
+            touchGamepadPointerRole.clear();
+            touchGamepadButtons.length = touchGamepadButtonsPressed.length = touchGamepadSticks.length = 0;
+            touchGamepadStickPointerId.length = 0;
+            gamepadButtonsLast[0] = touchGamepadButtonsLast.slice();
+            touchGamepadButtonsLast.length = 0;
+        }
         if (touchGamepadEnable && isTouchDevice && touchGamepadTimer.isSet())
         {
             // read virtual analog stick
@@ -920,9 +932,13 @@ function inputUpdate()
             const data = inputData[1] ?? (inputData[1] = []);
             for (let i=max(12, data.length); i--;)
             {
-                const wasDown = gamepadIsDown(i,0), isDown = touchGamepadButtons[i];
-                const pressed = touchGamepadButtonsPressed[i] || isDown && !wasDown;
-                data[i] = isDown ? pressed ? 3 : 1 : pressed ? 6 : wasDown ? 4 : 0;
+                // the first poll after taking over goes by what the data holds, the real gamepad's buttons
+                const wasHeld = touchGamepadButtonsLast[i] ?? !!(data[i] & 1);
+                const isDown = !!touchGamepadButtons[i], tapped = !!touchGamepadButtonsPressed[i];
+                touchGamepadButtonsLast[i] = isDown;
+                // one held that inputClearKey or inputClear let go stays up until it is let go, and only one
+                // that read down is released
+                data[i] = isDown ? tapped || !wasHeld ? 3 : data[i] & 1 : tapped ? 6 : wasHeld && data[i] & 1 ? 4 : 0;
 
                 // haptic tap when a face button or start button is first pressed
                 // skip stick touches (10, 11) so movement doesn't buzz
@@ -1338,7 +1354,7 @@ function touchGamepadRender()
             touchGamepadOverlay.style.display = 'none';
             touchGamepadPointerRole.clear();
             touchGamepadButtons.length = 0;
-            touchGamepadButtonsPressed.length = 0;
+            touchGamepadButtonsPressed.length = touchGamepadButtonsLast.length = 0;
             touchGamepadSticks.length = 0;
             touchGamepadStickPointerId.length = 0;
             inputData[1] = undefined;
@@ -1589,5 +1605,5 @@ function touchGamepadPointerUp(e)
         delete touchGamepadButtons[9];
     else // 'face<n>'
         delete touchGamepadButtons[+role.slice(4)];
-    touchGamepadTimer.set();
+    touchGamepadHandedOver || touchGamepadTimer.set(); // a real gamepad that took over keeps it until a new touch
 }

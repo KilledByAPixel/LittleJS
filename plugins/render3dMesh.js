@@ -911,7 +911,7 @@ class Mesh
 // since a fraction is most likely a mistake: a sphere of 7.5 rings would come out open at the top
 function render3DWholeCount(count, name)
 {
-    const whole = floor(count);
+    const whole = floor(count) || 0; // not a number is none
     debug && whole !== count && console.warn(`a mesh builder rounded ${name} ${count} down to ${whole}`);
     return whole;
 }
@@ -937,6 +937,7 @@ function buildLathe(profile, sides=16, smooth=render3D?.smoothShading, capped=tr
     ASSERT(isArray(profile) && profile.length > 1, 'lathe profile needs at least 2 points');
     sides = render3DWholeCount(sides, 'sides');
     ASSERT(sides > 2, 'lathe needs at least 3 sides');
+    sides = max(3, sides);
     ASSERT(sides * profile.length <= 1e6, 'a lathe of more than a million faces', sides, profile.length);
     const mesh = new Mesh;
     const rings = profile.length;
@@ -1051,6 +1052,7 @@ function buildSphere(size=1, sides=16, rings=8, smooth=render3D?.smoothShading)
 {
     rings = render3DWholeCount(rings, 'rings'); // a fraction would leave the sphere open at the top
     ASSERT(rings > 1, 'sphere needs at least 2 rings');
+    rings = max(2, rings); // fewer would divide by nothing, in a release build too
     ASSERT(sides * rings <= 1e6, 'a sphere of more than a million faces', sides, rings);
     const profile = [];
     for (let i = 0; i <= rings; ++i)

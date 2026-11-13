@@ -2808,7 +2808,7 @@ async function box2dInit()
         setupDebugDraw();
         engineAddPlugin(box2dUpdate, box2dRender);
         return box2d;
-    })();
+    })().catch((e)=> { box2dInitLoad = undefined; throw e; }); // a load that failed is tried again by the next call
 
     // add the box2d plugin to the engine
     function box2dUpdate()

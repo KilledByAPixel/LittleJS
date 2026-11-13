@@ -180,6 +180,8 @@ function buildCapsule(size=1, height=1, sides=16, rings=4, smooth=render3D?.smoo
     ASSERT(height >= size, 'a capsule is at least as tall as it is wide, the ends take up the size', size, height);
     const profile = [], r = size / 2, straight = max(0, height - size) / 2;
     rings = render3DWholeCount(rings, 'rings');
+    ASSERT(rings > 0, 'a capsule needs at least 1 ring on each end');
+    rings = max(1, rings); // none would divide by nothing, in a release build too
     for (let i = 0; i <= rings; ++i)
     {
         const a = i / rings * PI / 2;
@@ -208,6 +210,8 @@ function buildTorus(size=1, tubeSize=.3, sides=16, tubeSides=8, smooth=render3D?
     ASSERT(tubeSize <= size / 2, 'the tube must fit inside the torus, at most half its size, or the ring turns inside out');
     const profile = [], radius = (size - tubeSize) / 2, tubeRadius = tubeSize / 2;
     tubeSides = render3DWholeCount(tubeSides, 'tube sides');
+    ASSERT(tubeSides > 2, 'a torus needs at least 3 tube sides');
+    tubeSides = max(3, tubeSides); // fewer would divide by nothing or flatten it, in a release build too
     for (let i = 0; i <= tubeSides; ++i)
     {
         const a = i / tubeSides * 2 * PI;

@@ -855,6 +855,7 @@ class EngineObject
         ASSERT(!child.parent && !this.children.includes(child), 'child already has a parent, removeChild it first or use attach');
         ASSERT(child instanceof EngineObject, 'child must be an EngineObject');
         ASSERT(!child.destroyed, 'cannot add a destroyed child');
+        if (child.destroyed) return child; // a release build leaves it out, it goes at the end of the frame
         for (let p = /** @type {EngineObject} */ (this); p; p = p.parent)
         {
             ASSERT(p !== child, 'cannot add an object as a child of itself or of its own child');

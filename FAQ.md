@@ -13,8 +13,8 @@ If you don't find an answer here, feel free to ask the community or check the do
 - [Why does my game say a name "has already been declared"?](#why-does-my-game-say-a-name-has-already-been-declared)
 - [Do I need a local server to run LittleJS games, and how do I set one up?](#do-i-need-a-local-server-to-run-littlejs-games-and-how-do-i-set-one-up)
 - [Which browsers does LittleJS run in?](#which-browsers-does-littlejs-run-in)
-- [How far can my world go, and how long can my game run?](#how-far-can-my-world-go-and-how-long-can-my-game-run)
 - [How does the camera and world coordinate systems work?](#how-does-the-camera-and-world-coordinate-systems-work)
+- [How far can my world go, and how long can my game run?](#how-far-can-my-world-go-and-how-long-can-my-game-run)
 - [How do I configure engine settings?](#how-do-i-configure-engine-settings)
 - [What plugins ship with LittleJS?](#what-plugins-ship-with-littlejs)
 - [How do I use Vite with LittleJS?](#how-do-i-use-vite-with-littlejs)
@@ -80,6 +80,9 @@ The most basic example is just an empty project. Its `import '../../dist/littlej
 <!DOCTYPE html><head>
 <title>LittleJS Hello World Demo</title>
 <meta charset=utf-8>
+<meta name=viewport content=width=device-width,height=device-height,initial-scale=1,maximum-scale=1>
+<meta name=apple-mobile-web-app-capable content=yes>
+<meta name=mobile-web-app-capable content=yes>
 </head><body>
 <script src=game.js type=module></script>
 ```
@@ -96,7 +99,7 @@ The most basic example is just an empty project. Its `import '../../dist/littlej
 
 // import LittleJS module
 import * as LJS from '../../dist/littlejs.esm.js';
-const {vec2, hsl} = LJS;
+const {vec2, hsl} = LJS; // the Breakout Tutorial builds on these two
 
 ///////////////////////////////////////////////////////////////////////////////
 function gameInit()
@@ -595,7 +598,7 @@ The shader gets these uniforms automatically:
 - `iChannel0` (`sampler2D`) — the rendered game frame
 - `iChannel1` (`sampler2D`) — the shader's own output from the previous frame, when `feedbackTexture` is on
 - `iResolution` (`vec3`) — canvas width, height, and `1`
-- `iTime` (`float`) — seconds since engine start
+- `iTime` (`float`) — the game's `time` in seconds, which stops while the game is paused
 
 The constructor has two optional positional arguments after the shader source:
 
@@ -634,7 +637,7 @@ const track = new Sound('music.mp3', undefined, undefined, undefined, (sound)=>
 });
 ```
 
-Music pauses automatically when the tab loses focus (audio context suspends) and resumes when it comes back. `playMusic` returns a `SoundInstance`; keep it and call `trackInstance?.stop()` to halt playback, the `?.` for when it has not started.
+Music pauses automatically while the page is hidden, another tab shown or the window minimized, and resumes when it comes back; `setSoundPauseWhenBlurred(true)` pauses it when the window loses focus too. `playMusic` returns a `SoundInstance`; keep it and call `trackInstance?.stop()` to halt playback, the `?.` for when it has not started.
 
 ### Why doesn't my audio play until the user clicks something?
 

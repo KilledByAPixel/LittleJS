@@ -818,8 +818,10 @@ function pathFinderNearestNode(finder, worldPos, searchRange, test)
     // no ring past the one that reaches the grid's farthest cell holds any, so a range of Infinity is the whole grid
     searchRange = min(searchRange, max(centerX, finder.size.x - 1 - centerX, centerY, finder.size.y - 1 - centerY));
 
+    // from outside the grid the rings before the first that reaches it hold nothing, so the search starts there
+    const first = max(0, -centerX, centerX - (finder.size.x - 1), -centerY, centerY - (finder.size.y - 1));
     let nearest = null, nearestDistSq = 0;
-    for (let offset = 0; offset <= searchRange; ++offset)
+    for (let offset = first; offset <= searchRange; ++offset)
     {
         // every cell of this ring is more than offset - .5 away along one axis
         const bound = max(0, offset - .5);

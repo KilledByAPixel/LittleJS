@@ -53,7 +53,10 @@ class PostProcessPlugin
         postProcess = this;
 
         // the options it was made with, read by the hooks from the one in place, as they are added once
+        /** @property {boolean} - Combine mainCanvas onto glCanvas, may be changed while it runs */
         this.includeMainCanvas = includeMainCanvas;
+        /** @property {boolean} - Pass the shader's own output from the previous frame as iChannel1, may be turned on
+         *  while it runs, the feedback texture made then */
         this.feedback = feedbackTexture;
 
         /** @property {string} - The shadertoy style mainImage code it shades with, see setShaderCode */
@@ -105,15 +108,8 @@ class PostProcessPlugin
         {
             if (headlessMode || !glEnable) return;
 
-            // create resources, the feedback starting black, as if the frame before the first were empty
-            if (postProcess.feedback)
-            {
-                postProcess.feedbackTexture = glCreateTexture();
-                glContext.bindTexture(glContext.TEXTURE_2D, postProcess.feedbackTexture);
-                glContext.texImage2D(glContext.TEXTURE_2D, 0, glContext.RGBA, 1, 1, 0, glContext.RGBA,
-                    glContext.UNSIGNED_BYTE, new Uint8Array([0, 0, 0, 255]));
-                glContext.bindTexture(glContext.TEXTURE_2D, glActiveTexture);
-            }
+            // create resources
+            postProcess.feedback && postProcessFeedbackMake();
             postProcess.texture = glCreateTexture();
             postProcess.shader = glCreateProgram(
                 '#version 300 es\n' +            // specify GLSL ES version
@@ -229,6 +225,7 @@ class PostProcessPlugin
             // the previous frame's output, on the second texture unit
             if (postProcess.feedback)
             {
+                postProcess.feedbackTexture || postProcessFeedbackMake(); // feedback turned on after it was made
                 glContext.activeTexture(glContext.TEXTURE1);
                 glContext.bindTexture(glContext.TEXTURE_2D, postProcess.feedbackTexture);
                 setFilter();
@@ -318,6 +315,16 @@ function postProcessShaderCode(/** @type {string|undefined} */ shaderCode)
     ASSERT(!shaderCode || typeof shaderCode === 'string', 'shader code must be a string');
     return !shaderCode ? postProcessEffects() :
         shaderCode.includes('mainImage') ? shaderCode : postProcessEffects(shaderCode);
+}
+
+// the feedback texture of the post process in place, starting black, as if the frame before the first were empty
+function postProcessFeedbackMake()
+{
+    postProcess.feedbackTexture = glCreateTexture();
+    glContext.bindTexture(glContext.TEXTURE_2D, postProcess.feedbackTexture);
+    glContext.texImage2D(glContext.TEXTURE_2D, 0, glContext.RGBA, 1, 1, 0, glContext.RGBA,
+        glContext.UNSIGNED_BYTE, new Uint8Array([0, 0, 0, 255]));
+    glContext.bindTexture(glContext.TEXTURE_2D, glActiveTexture);
 }
 
 // the fragment shader of the post process pass around its mainImage snippet: the frame on iChannel0, the last output

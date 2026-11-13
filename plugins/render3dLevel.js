@@ -486,7 +486,9 @@ function level3DMakeAt(object, pos, rotation, scale)
  *  @param {Vector3} [rotation3D] - In radians, as an object has it
  *  @param {Vector3} [scale3D] - Times the scale the type makes it with
  *  @param {ObjectProperties} [properties] - Over the type's defaults; a color or a vector may be a Color or a vector,
- *    or written as a level file has it, a hex string or an array; a value not of its default's type keeps the default
+ *    or written as a level file has it, a hex string or an array; a value not of its default's type keeps the default;
+ *    each is copied for the object, a list or a plain object with what is in it, as a level file's are, so the object
+ *    has its own and not the one passed
  *  @return {any} - What the type made, a Prefab3D for a prefab, undefined when there is no such type
  *  @memberof Level3D
  *  @example

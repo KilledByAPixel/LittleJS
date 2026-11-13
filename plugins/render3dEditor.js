@@ -520,9 +520,9 @@ function editor3DLevelLoaded(level)
     editor3DInstances.clear();
     if (isArray(level.objects))
     {
-        // an entry that is not an object is dropped, in place, a game may keep the list
+        // an entry that is not an object, or is a list, is dropped, in place, a game may keep the list
         for (let i = level.objects.length; i--;)
-            level.objects[i] && typeof level.objects[i] === 'object' || level.objects.splice(i, 1);
+            editor3DIsObject(level.objects[i]) || level.objects.splice(i, 1);
         editor3DFixIds(level.objects);
     }
     // its blocks as the editor writes them, so the same map always reads the same, however the file wrote its runs

@@ -754,7 +754,7 @@ class Render3DPlugin
         /** @type {WebGLVertexArrayObject|undefined} */
         this.vao = undefined;
         /** @type {Set<CubeMap>} */
-        this.cubeCaptures = new Set;  // the cube maps capture asked to draw in the next pass
+        this.cubeCaptures = old ? old.cubeCaptures : new Set;  // the cube maps capture asked to draw in the next pass, the old one's kept
         /** @type {CubeMap|undefined} */
         this.capturingCube = undefined; // the cube map being drawn, which nothing may read meanwhile
         /** @type {WebGLFramebuffer|undefined} */
@@ -2180,6 +2180,10 @@ function render3DFreeGL(r)
     r.shadowFramebuffer && gl.deleteFramebuffer(r.shadowFramebuffer);
     r.cameraDepthTexture && gl.deleteTexture(r.cameraDepthTexture);
     r.cameraDepthFramebuffer && gl.deleteFramebuffer(r.cameraDepthFramebuffer);
+    r.skyBoxProgram && gl.deleteProgram(r.skyBoxProgram);
+    r.skyBoxVao && gl.deleteVertexArray(r.skyBoxVao);
+    r.captureFramebuffer && gl.deleteFramebuffer(r.captureFramebuffer);
+    r.captureDepth && gl.deleteRenderbuffer(r.captureDepth);
 }
 
 function render3DInitGL()

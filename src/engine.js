@@ -360,7 +360,8 @@ class EnginePlugin
  */
 
 /** Add a new update function for a plugin
- *  - update runs on every fixed tick, paused and timeScale 0 included; a plugin that simulates should skip those
+ *  - update runs on every fixed tick, or once a display frame with setEngineVariableStep, paused and timeScale 0
+ *    included; a plugin that simulates should skip those
  *  @param {PluginCallback} [update]
  *  @param {PluginCallback} [render]
  *  @param {PluginCallback} [glContextLost]
@@ -456,6 +457,9 @@ function engineLoadingScreenDraw(elapsed)
  */
 
 /** Startup LittleJS engine with your callback functions
+ *  - In a release build an error in a frame is logged, once until another comes, and the next frame goes on, so an
+ *    error now and then is passed over; a frame that fails every time draws nothing new, and the screen keeps what
+ *    it last showed, or stays blank
  *  @param {GameInitCallback} [gameInit] - Called once after the engine starts up, can be async for loading
  *  @param {GameCallback} [gameUpdate] - Called every frame before objects are updated (60fps), use for game logic
  *  @param {GameCallback} [gameUpdatePost] - Called after physics and objects are updated, even when paused, use for UI updates
@@ -701,7 +705,12 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
     }
 
     // skip setup if headless
-    if (headlessMode) return engineInitDone = startEngine([]);
+    if (headlessMode)
+    {
+        // the engine's font with no texture, so text drawn with it does nothing, as the other draws do
+        engineImageFont ||= new ImageFont(new TileInfo(vec2(), vec2(8)));
+        return engineInitDone = startEngine([]);
+    }
 
     // ensure body exists for minimal HTML where the script runs before <body> is parsed
     if (!document.body)
@@ -903,7 +912,8 @@ function engineUpdateCanvas()
 }
 
 // a release build goes on past an error in a frame, a frozen game is the worst a player can get; an error is logged
-// when it is not the last one again, one every frame would flood the console
+// when it is not the last one again, one every frame would flood the console; one every frame still leaves the
+// screen as it was, the frame that failed not drawn, which engineInit's doc says
 function engineFrameFailed(error)
 {
     const text = String(error);

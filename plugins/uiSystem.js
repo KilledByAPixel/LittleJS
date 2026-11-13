@@ -1842,7 +1842,13 @@ class UIVideo extends UIObject
         this.video.src = src;
         document.body.appendChild(this.video);
         uiVideos.add(this);
-        uiVideosListening || document.addEventListener?.('visibilitychange', uiVideosPageChange);
+        if (!uiVideosListening)
+        {
+            // as the engine's sound does: a hidden page, and a blurred one with soundPauseWhenBlurred
+            document.addEventListener?.('visibilitychange', uiVideosPageChange);
+            globalThis.addEventListener?.('blur', uiVideosPageChange);
+            globalThis.addEventListener?.('focus', uiVideosPageChange);
+        }
         uiVideosListening = true;
         autoplay && this.play();
     }
@@ -1957,13 +1963,13 @@ class UIVideo extends UIObject
     }
 }
 
-// the videos there are, and those paused while the page is hidden, which soundPauseWhenHidden pauses as it does the
-// game's sound, and plays again when the page shows
+// the videos there are, and those paused while the page is hidden, or blurred, which soundPauseWhenHidden and
+// soundPauseWhenBlurred pause as they do the game's sound, and play again when the page shows
 const uiVideos = /* @__PURE__ */ new Set, uiVideosPaused = /* @__PURE__ */ new Set;
 let uiVideosListening = false;
 function uiVideosPageChange()
 {
-    if (soundPauseWhenHidden && document.hidden)
+    if (audioPagePaused())
     {
         for (const video of uiVideos)
             video.isPaused() || (video.pause(), uiVideosPaused.add(video)); // added after, so it plays again
