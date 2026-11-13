@@ -5,7 +5,8 @@ What changed in each release, newest first. Releases before 1.20.0 are on the
 
 ## Unreleased
 
-Nothing yet.
+### Fixes
+- `ThirdPersonCamera3D` no longer shakes from side to side when the player walks back toward it: its swing behind the way the target moves fades out as the move turns toward the camera, where the short way round flipped sides each frame, and keys that move the way the camera faces turned the move with it
 
 ## 1.30.1 - 2026-11-12
 

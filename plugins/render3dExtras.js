@@ -1453,8 +1453,12 @@ class ThirdPersonCamera3D extends EngineObject3D
                     hypot(move.x, move.z) > this.swingSpeed * timeDelta ? move : undefined;
                 if (way && (way.x || way.z))
                 {
-                    const turn = atan2(-way.x, -way.z) - this.yaw;
-                    this.yaw += (mod(turn + PI, 2*PI) - PI) * cameraSmoothFactor(this.swingSmoothing);
+                    const turn = mod(atan2(-way.x, -way.z) - this.yaw + PI, 2*PI) - PI;
+                    // moving back toward the camera swings it less, and straight back not at all: there the short
+                    // way round flips side with each wobble, and with keys that move the way the camera faces, each
+                    // swing turns the move, so it shook from side to side; a facing holds still, so it swings fully
+                    const back = this.useFacing ? 1 : clamp((PI * .9 - abs(turn)) / (PI * .3), 0, 1);
+                    this.yaw += turn * back * cameraSmoothFactor(this.swingSmoothing);
                 }
             }
             this.pivot = this.pivot.lerp(pos.add(this.pivotOffset), cameraSmoothFactor(this.smoothing));

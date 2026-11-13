@@ -48,6 +48,25 @@ test('a target standing still or only jumping does not swing it', () =>
     assert.equal(run(`camera.yaw`), .7);
 });
 
+test('walking back toward the camera, the way it faces, does not shake it from side to side', () =>
+{
+    // as the 3D Mesh Collider short moves its player: back from the camera's yaw, with a little wobble each step
+    const run = engine();
+    const yaws = json(run, `(()=>
+    {
+        const yaws = [];
+        for (let i = 0; i < 180; ++i)
+        {
+            const wobble = (i % 2 ? 1 : -1) * .02;
+            step(1, vec3(0, 0, .15).rotateY(camera.yaw + wobble));
+            yaws.push(camera.yaw);
+        }
+        return yaws;
+    })()`);
+    const most = Math.max(...yaws.map(Math.abs));
+    assert.ok(most < .05, 'the camera holds its yaw: ' + most);
+});
+
 test('useFacing swings behind the target\'s own facing', () =>
 {
     const run = engine();
