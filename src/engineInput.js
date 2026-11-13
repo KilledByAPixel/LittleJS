@@ -201,8 +201,8 @@ function inputClearDevices(keepGamepads=false)
 function keyIsDown(key, device=0)
 {
     ASSERT(isStringLike(key), 'keyIsDown: key must be a code like \'KeyA\' or a number', key);
-    ASSERT(typeof key !== 'string' || key.length > 1,
-        "keyIsDown: keys are codes like 'KeyW' or 'Space', not characters", key);
+    ASSERT(typeof key !== 'string' || key.length > 1 && key[0] >= 'A' && key[0] <= 'Z',
+        "keyIsDown: keys are codes like 'KeyW' or 'Space', with a capital, not characters", key);
     ASSERT(device > 0 || typeof key !== 'number' || key < 5,
         "keyIsDown: keyboard keys are codes like 'KeyA' or 'Space', the numbers 0 to 4 are mouse buttons", key);
     return !!(inputData[device]?.[key] & 1) && !inputCaptureHides(device);
@@ -216,8 +216,8 @@ function keyIsDown(key, device=0)
 function keyWasPressed(key, device=0)
 {
     ASSERT(isStringLike(key), 'keyWasPressed: key must be a code like \'KeyA\' or a number', key);
-    ASSERT(typeof key !== 'string' || key.length > 1,
-        "keyWasPressed: keys are codes like 'KeyW' or 'Space', not characters", key);
+    ASSERT(typeof key !== 'string' || key.length > 1 && key[0] >= 'A' && key[0] <= 'Z',
+        "keyWasPressed: keys are codes like 'KeyW' or 'Space', with a capital, not characters", key);
     ASSERT(device > 0 || typeof key !== 'number' || key < 5,
         "keyWasPressed: keyboard keys are codes like 'KeyA' or 'Space', the numbers 0 to 4 are mouse buttons", key);
     return !!(inputData[device]?.[key] & 2) && !inputCaptureHides(device);
@@ -231,8 +231,8 @@ function keyWasPressed(key, device=0)
 function keyWasReleased(key, device=0)
 {
     ASSERT(isStringLike(key), 'keyWasReleased: key must be a code like \'KeyA\' or a number', key);
-    ASSERT(typeof key !== 'string' || key.length > 1,
-        "keyWasReleased: keys are codes like 'KeyW' or 'Space', not characters", key);
+    ASSERT(typeof key !== 'string' || key.length > 1 && key[0] >= 'A' && key[0] <= 'Z',
+        "keyWasReleased: keys are codes like 'KeyW' or 'Space', with a capital, not characters", key);
     ASSERT(device > 0 || typeof key !== 'number' || key < 5,
         "keyWasReleased: keyboard keys are codes like 'KeyA' or 'Space', the numbers 0 to 4 are mouse buttons", key);
     return !!(inputData[device]?.[key] & 4) && !inputCaptureHides(device);

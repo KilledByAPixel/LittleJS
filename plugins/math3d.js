@@ -25,9 +25,9 @@ function vec3(x=0, y, z)
 }
 
 /**
- * Check if the object is a valid Vector3
+ * Check if the object is a valid Vector3, a type guard in TypeScript
  * @param {any} v
- * @return {boolean}
+ * @return {v is Vector3}
  * @memberof Math3D
  */
 function isVector3(v) { return v instanceof Vector3 && v.isValid(); }

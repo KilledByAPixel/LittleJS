@@ -148,3 +148,145 @@ test('a light system made again in a release build keeps the sun', ()=>
     assert.equal(run(`setHeadlessMode(true); new LightSystemPlugin; const sun = new DirectionalLight();
         new LightSystemPlugin; lightSystem.directionalLight === sun`), true);
 });
+
+// the improvements of the same pass
+
+test('restarting a game many times leaves every engine list the size it was after the first', async ()=>
+{
+    const { run } = loadEngine();
+    run('setHeadlessMode(true)');
+    await run('setEngineManualStep(true); engineInit(()=> {}, ()=> {}, ()=> {}, ()=> {}, ()=> {})');
+    run(`new Render3DPlugin;
+        var restart = ()=>
+        {
+            engineObjectsDestroy();
+            const layer = new TileCollisionLayer(vec2(), vec2(8), tile(), 0, false);
+            layer.setCollisionData(vec2(1, 0));
+            for (let i = 0; i < 5; ++i)
+            {
+                const o = new EngineObject(vec2(i, 3), vec2(1)); o.setCollision();
+                const child = new EngineObject(); o.addChild(child);
+            }
+            new ParticleEmitter(vec2(2, 2));
+            const solid = new EngineObject3D(vec3(), render3D.boxMesh); solid.setCollision(); solid.mass = 0;
+            new HeightMap([[0, 0], [0, 0]], vec2(4), 1, undefined, vec3(0, 0, 40));
+            engineStep(3);
+        };
+        var sizes = ()=> JSON.stringify([engineObjects.length, engineObjectsCollide.length, tileCollisionLayers.length,
+            render3DLevel.length, pluginList.length, glShaderObjects.length]);
+        restart(); var first = sizes();
+        for (let i = 0; i < 40; ++i) restart();`);
+    assert.equal(run('sizes()'), run('first'));
+});
+
+test('a key name that does not start with a capital, and a color where drawLine takes a width, assert', ()=>
+{
+    const { run } = loadEngine();
+    run('setHeadlessMode(true)');
+    for (const code of [`keyIsDown('space')`, `keyWasPressed('keyA')`, `keyWasReleased('arrowUp')`])
+        assert.throws(()=> run(code), /with a capital/, code);
+    assert.equal(run(`keyIsDown('Space') || keyIsDown('Digit1') || keyIsDown('F1')`), false, 'real codes pass');
+    assert.throws(()=> run('drawLine(vec2(), vec2(1), RED)'), /width must be a number/);
+});
+
+test('isIntersecting, in plain numbers now, gives what it gave before on lines and boxes of every kind', ()=>
+{
+    const { run } = loadEngine();
+    const result = JSON.parse(run(`
+        // the Liang-Barsky test as it was, with vectors
+        const before = (start, end, pos, size)=>
+        {
+            const boxMin = pos.subtract(size.scale(.5)), boxMax = boxMin.add(size), delta = end.subtract(start);
+            const a = start.subtract(boxMin), b = start.subtract(boxMax);
+            const p = [-delta.x, delta.x, -delta.y, delta.y], q = [a.x, -b.x, a.y, -b.y];
+            let tMin = 0, tMax = 1;
+            for (let i = 4; i--;)
+            {
+                if (p[i])
+                {
+                    const t = q[i] / p[i];
+                    if (p[i] < 0) { if (t > tMax) return false; tMin = max(t, tMin); }
+                    else { if (t < tMin) return false; tMax = min(t, tMax); }
+                }
+                else if (q[i] < 0) return false;
+            }
+            return true;
+        };
+        const random = new RandomGenerator(7), pick = ()=> random.int(4) ? random.float(-3, 3) : random.int(-2, 3);
+        let differ = 0, hits = 0;
+        for (let i = 0; i < 20000; ++i)
+        {
+            const args = [vec2(pick(), pick()), vec2(pick(), pick()), vec2(pick(), pick()), vec2(abs(pick()), abs(pick()))];
+            const now = isIntersecting(...args);
+            now !== before(...args) && ++differ;
+            hits += now;
+        }
+        JSON.stringify({differ, hits})`));
+    assert.equal(result.differ, 0);
+    assert.ok(result.hits > 1000 && result.hits < 19000, 'both answers come up: ' + result.hits);
+});
+
+test('the gradient circle draws its rim where it did, from points it keeps', ()=>
+{
+    const { run } = loadEngine();
+    const result = JSON.parse(run(`setHeadlessMode(false); glEnable = true; glContext = {};
+        let drawn = []; glDrawColoredPoints = (points, colors)=> drawn.push([points.map((p)=> [p.x, p.y]), [...colors]]);
+        drawEllipseGradient(vec2(1, 2), vec2(4, 2), RED, BLUE, .3, true, false);
+        drawEllipseGradient(vec2(1, 2), vec2(4, 2), RED, BLUE, .3, true, false);
+        const offset = drawEllipseGradientOffset - 2, sides = glCircleSides, c = cos(-.3), s = sin(-.3);
+        const rim = (a)=> { const lx = sin(a) * 2, ly = cos(a); return [1 + lx*c - ly*s, 2 + lx*s + ly*c]; };
+        const expected = (offset)=>
+        {
+            const points = [rim((offset%sides)/sides*PI*2)];
+            for (let i = sides; i-- > 0;)
+                points.push([1, 2], rim(((i+offset)%sides)/sides*PI*2));
+            return points;
+        };
+        JSON.stringify({ok: [0, 1].map((k)=> JSON.stringify(drawn[k][0]) === JSON.stringify(expected(offset + k))),
+            colors: drawn[0][1].length === sides*2 + 1 && drawn[0][1][1] === RED.rgbaInt() &&
+                drawn[0][1][0] === BLUE.rgbaInt()})`));
+    assert.deepEqual(result, {ok: [true, true], colors: true});
+});
+
+test('Back from a prefab makes each of its instances once, speech is not queued while the page is paused, and the ' +
+    'first person camera looks with its dragButton', async ()=>
+{
+    {
+        const { run } = loadEngine({ localStorage: { getItem: ()=> null, setItem() {} }, location: { pathname: '/game/' } });
+        run('setHeadlessMode(true)');
+        await run('setEngineManualStep(true); engineInit(()=> { new Render3DPlugin }, ()=> {}, ()=> {}, ()=> {}, ()=> {})');
+        const made = run(`var level = {littlejs3D: 1, prefabs: {Hut: {objects: [{id: 1, type: 'Box', pos: [0, .5, 0]}]}},
+                objects: [1, 2, 3, 4, 5].map((id)=> ({id, type: 'Hut', pos: [id * 3, 0, 0]}))};
+            level3DLoad(level); levelEditor.open();
+            editor3DPrefabEnter(1);
+            editor3DChange((list)=> { list[0].pos = [0, 1, 0]; }); editor3DStrokeEnd();
+            let made = 0; const makeParts = Prefab3D.prototype.makeParts;
+            Prefab3D.prototype.makeParts = function() { ++made; return makeParts.call(this); };
+            editor3DPrefabBack();
+            Prefab3D.prototype.makeParts = makeParts;
+            made`);
+        assert.equal(made, 5, 'one for each instance');
+    }
+    {
+        let spoken = 0;
+        class SpeechSynthesisUtterance {}
+        const speechSynthesis = { speak: ()=> ++spoken, cancel() {}, pause() {}, resume() {} };
+        const document = { hidden: true, addEventListener() {}, hasFocus: ()=> true };
+        const { run } = loadEngine({ speechSynthesis, SpeechSynthesisUtterance, document });
+        run(`speak('hello')`);
+        assert.equal(spoken, 0, 'hidden, it says nothing');
+        run(`document.hidden = false; speak('hello')`);
+        assert.equal(spoken, 1);
+    }
+    {
+        const { run } = loadEngine();
+        run('setHeadlessMode(true); new Render3DPlugin');
+        const turned = run(`const camera = new FirstPersonCamera3D(vec3()); camera.lockPointer = false;
+            camera.dragButton = 2; const yaw = camera.yaw;
+            mouseDeltaScreen = vec2(50, 0); inputData[0][0] = 1; camera.updateCamera?.() ?? camera.update();
+            const left = camera.yaw === yaw;
+            inputData[0][0] = 0; inputData[0][2] = 1; camera.updateCamera?.() ?? camera.update();
+            JSON.stringify([left, camera.yaw !== yaw])`);
+        assert.deepEqual(JSON.parse(turned), [true, true], 'the left button does nothing, the right looks');
+    }
+});

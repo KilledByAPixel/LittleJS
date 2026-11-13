@@ -1103,6 +1103,8 @@ function drawLineList(points, width=.1, color=WHITE, wrap=false, pos=vec2(), ang
  *  @memberof Draw */
 function drawLine(posA, posB, width=.1, color=WHITE, pos=vec2(), angle=0, useWebGL=glEnable, screenSpace=drawScreenSpace, context)
 {
+    // the width comes before the color, a color there is a mistake the debug lines' order invites
+    ASSERT(isNumber(width), 'drawLine: width must be a number, it comes before the color', width);
     const halfDelta = vec2((posB.x - posA.x)/2, (posB.y - posA.y)/2);
     const size = vec2(width, halfDelta.length()*2);
     const middle = posA.add(halfDelta);
@@ -1302,6 +1304,9 @@ function drawCircle(pos, size=1, color=WHITE, lineWidth=0, lineColor=BLACK, useW
 }
 
 let drawEllipseGradientOffset = 0;
+// the points and colors of drawEllipseGradient, and the rim's points, kept from call to call
+const drawEllipseGradientPoints = [], drawEllipseGradientColors = [], drawEllipseGradientRim = [];
+
 /** Draw an ellipse filled with a radial gradient from the center to the rim
  *  - Best when batched with other untextured polys
  *  - If drawing mostly textured sprites, bake the gradient into a texture and use drawTile instead
@@ -1343,21 +1348,23 @@ function drawEllipseGradient(pos, size=vec2(1), colorInner=WHITE, colorOuter=CLE
         const outerInt = colorOuter.rgbaInt();
         const offset = drawEllipseGradientOffset++;
         const c = cos(-angle), s = sin(-angle);
-        const rim = (a) =>
+        // the rim's first point, then the center and the rim by turns, going round; in arrays kept from call to call,
+        // since the batch copies them at once
+        const n = sides*2 + 1, points = drawEllipseGradientPoints, colors = drawEllipseGradientColors;
+        points.length = colors.length = n;
+        for (let k = 0; k < n; ++k)
         {
+            if (k & 1)
+            {
+                points[k] = pos;
+                colors[k] = innerInt;
+                continue;
+            }
+            const i = k ? sides - k/2 : 0, a = ((i+offset)%sides)/sides*PI*2;
             const lx = sin(a)*radiusX, ly = cos(a)*radiusY;
-            return vec2(pos.x + lx*c - ly*s, pos.y + lx*s + ly*c);
-        };
-        const startA = (offset%sides)/sides*PI*2;
-        const points = [rim(startA)];
-        const colors = [outerInt];
-        for (let i=sides; i-- > 0;)
-        {
-            const a = ((i+offset)%sides)/sides*PI*2;
-            points.push(pos);
-            colors.push(innerInt);
-            points.push(rim(a));
-            colors.push(outerInt);
+            const p = points[k] = drawEllipseGradientRim[k] ||= vec2();
+            p.x = pos.x + lx*c - ly*s, p.y = pos.y + lx*s + ly*c;
+            colors[k] = outerInt;
         }
         glDrawColoredPoints(points, colors);
     }

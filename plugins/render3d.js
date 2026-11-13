@@ -137,8 +137,34 @@ const RENDER3D_STATE_FIELDS = ['blend', 'additive', 'depthTest', 'depthWrite', '
     'emissive', 'receiveShadow', 'specular', 'pixelated', 'shader', 'normalMap', 'normalScale', 'shininess',
     'reflectivity', 'emissiveMap', 'emissiveMapColor', 'environmentMap', 'roundLighting'];
 
+/** The draw state a batch was drawn under, as render3DCaptureBatchState takes it: the fields of RENDER3D_STATE_FIELDS
+ *  and the version it was taken at
+ *  @typedef {Object} Render3DBatchState
+ *  @property {boolean} blend
+ *  @property {boolean} additive
+ *  @property {boolean} depthTest
+ *  @property {boolean} depthWrite
+ *  @property {boolean} cullBackFaces
+ *  @property {boolean} mirrored
+ *  @property {boolean} lighting
+ *  @property {number} emissive
+ *  @property {boolean} receiveShadow
+ *  @property {number} specular
+ *  @property {boolean} pixelated
+ *  @property {Shader|undefined} shader
+ *  @property {TextureInfo|undefined} normalMap
+ *  @property {number} normalScale
+ *  @property {number} shininess
+ *  @property {number} reflectivity
+ *  @property {TextureInfo|undefined} emissiveMap
+ *  @property {Color} emissiveMapColor
+ *  @property {CubeMap|undefined} environmentMap
+ *  @property {boolean} roundLighting
+ *  @property {number} version */
+
 // a copy of the draw state in one fixed shape, the fields of RENDER3D_STATE_FIELDS written out, and the version
 // it was taken at
+/** @return {Render3DBatchState} */
 function render3DCaptureBatchState()
 {
     const r = render3D, d = r.drawState;
@@ -784,6 +810,7 @@ class Render3DPlugin
         this.cameraDepthWidth = 0;
         this.cameraDepthHeight = 0;
         this.depthPass = false; // drawing the camera's depth, a shadow pass seen from the camera
+        /** @type {number} */
         this.contextGeneration = old?.contextGeneration ?? 0; // counts context losses, a mesh uploaded under an
                                                               // older one uploads again
         /** @type {WeakMap<WebGLProgram, Object<string, WebGLUniformLocation|null>>} */
@@ -814,12 +841,12 @@ class Render3DPlugin
         this.streamCount = 0;
         /** @type {TextureInfo|undefined} */
         this.streamTileInfo = undefined;
-        /** @type {Object|undefined} */
+        /** @type {Render3DBatchState|undefined} */
         this.streamState = undefined; // captured state the pending batch was drawn under, render3DCaptureBatchState's
         this.streamBillboard = false; // the pending batch is of billboards, lit without a direction
         /** @type {Mesh|undefined} */
         this.capture = undefined;     // the mesh a bake is filling
-        /** @type {Array<{distance: number, state: Object, draw: function(): void}>|undefined} */
+        /** @type {Array<{distance: number, state: Render3DBatchState, draw: function(): void}>|undefined} */
         this.transparentQueue = undefined; // draws queued during the transparent stage, replayed far to near
 
         render3DInitGL();
@@ -1580,6 +1607,7 @@ class Render3DPlugin
      *  @param {Color} [color] */
     drawLine(posA, posB, width=.1, color=WHITE)
     {
+        ASSERT(isNumber(width), 'drawLine: width must be a number, it comes before the color', width);
         this.drawRibbon([posA, posB], width, undefined, color);
     }
 
@@ -2681,6 +2709,9 @@ function render3DSampler(wrap, pixelated, texturePixelated=tilesPixelated)
 // bind the texture of a tile or texture, white when there is none or it is not loaded, with the 3D sampler that
 // matches its wrap mode; the first time a texture is used in 3D it gets its mipmaps; on unit 0, the color texture,
 // or another unit, the material maps, after which unit 0 is active again
+/** @param {TileInfo|TextureInfo|undefined} tileInfo
+ *  @param {Render3DPlugin|Render3DBatchState} [state]
+ *  @param {number} [unit] */
 function render3DBindTexture(tileInfo, state=render3D, unit=0)
 {
     const gl = glContext, r = render3D;
@@ -2851,6 +2882,11 @@ function render3DGetTileUVs(tileInfo)
 // and the depth shader's cut
 // tileInfo may be a TileInfo, a TextureInfo, or undefined for the white texture
 // state is the plugin's current fields, or the captured state of a stream batch
+/** @param {Matrix4} matrix
+ *  @param {TileInfo|TextureInfo|undefined} tileInfo
+ *  @param {Color} tint
+ *  @param {{x: number, y: number, w: number, h: number}} [uvRect]
+ *  @param {Render3DPlugin|Render3DBatchState} [state] */
 function render3DSetDrawUniforms(matrix, tileInfo, tint, uvRect, state=render3D)
 {
     const gl = glContext, r = render3D;

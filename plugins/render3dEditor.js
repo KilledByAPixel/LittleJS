@@ -1527,9 +1527,12 @@ function editor3DPrefabBack()
         Object.keys(edits).length && editor3DChangePart('prefabs', (prefabs={})=> ({...prefabs, ...edits}));
         editor3DStrokeEnd();
     }
-    // what the level had in the world is made again: what a class makes, and what else had something made
+    // what the level had in the world is made again: what a class makes, and what else had something made; an
+    // instance its prefabs going into it made already is made once
     for (const object of editor3DObjects())
     {
+        const made = editor3DInstances.get(object.id);
+        if (made && !made.destroyed) continue;
         const type = level3DTypes.get(object.type);
         type && (type.make.prototype || frame.made.has(object.id)) && editor3DMakeInstance(object);
     }

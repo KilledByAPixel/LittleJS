@@ -1571,6 +1571,9 @@ class FirstPersonCamera3D extends EngineObject3D
         this.fly = false;
         /** @property {boolean} - Capture the mouse on a click, so looking needs no button held */
         this.lockPointer = true;
+        /** @property {number} - Mouse button that looks while held, and captures the mouse with lockPointer, 0 is
+         *  left and 2 is right */
+        this.dragButton = 0;
         /** @property {number} - Which gamepad stick looks around, 1 is usually the right one, -1 for none */
         this.stick = 1;
         /** @property {number} - Which gamepad stick moves it, like the keys, 0 is usually the left one, -1 for none */
@@ -1624,9 +1627,9 @@ class FirstPersonCamera3D extends EngineObject3D
         ASSERT(!this.fly || !this.parent, 'a flying FirstPersonCamera3D moves on its own, it cannot be a child');
 
         // a click captures the mouse, then it looks around while captured or while a button is held
-        if (this.lockPointer && mouseWasPressed(0))
+        if (this.lockPointer && mouseWasPressed(this.dragButton))
             pointerLockRequest();
-        if (pointerLockIsActive() || mouseIsDown(0))
+        if (pointerLockIsActive() || mouseIsDown(this.dragButton))
         {
             this.yaw -= mouseDeltaScreen.x * this.lookSpeed;
             this.pitch -= mouseDeltaScreen.y * this.lookSpeed;

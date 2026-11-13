@@ -773,6 +773,8 @@ class SoundInstance
 ///////////////////////////////////////////////////////////////////////////////
 
 /** Speak text with passed in settings
+ *  - While the page's sound is paused, hidden or blurred as soundPauseWhenHidden and soundPauseWhenBlurred say, it
+ *    says nothing, as a sound played then is not heard, where the browser would say it all at once on return
  *  @param {string} text - The text to speak
  *  @param {number} [volume] - How much to scale volume by
  *  @param {number} [rate] - How quickly to speak
@@ -784,7 +786,7 @@ function speak(text, volume=1, rate=1, pitch=1, language='')
 {
     ASSERT(typeof volume !== 'string', 'speak() signature changed: language is now the last parameter, after pitch');
     if (!soundEnable || headlessMode) return;
-    if (typeof speechSynthesis === 'undefined') return;
+    if (typeof speechSynthesis === 'undefined' || audioPagePaused()) return;
 
     // common languages (not supported by all browsers)
     // en - english,  it - italian, fr - french,  de - german, es - spanish

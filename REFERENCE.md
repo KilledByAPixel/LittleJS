@@ -756,7 +756,7 @@ engineObjectsCollect(pos, size, objects=engineObjects, testCenters=false) // siz
 engineObjectsCallback(pos, size, callbackFunction, objects=engineObjects, testCenters=false) // destroyed objects are
                                                            // left out
 engineObjectsRaycast(start, end, objects=engineObjects)    // only objects with collideRaycast set, which
-                                                           // setCollision turns on
+                                                           // setCollision turns on; in list order, not by distance
 engineObjectsDestroy(immediate=true) // destroy every object except the persistent ones
 ```
 

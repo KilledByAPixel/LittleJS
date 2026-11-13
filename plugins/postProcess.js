@@ -153,6 +153,8 @@ class PostProcessPlugin
         function postProcessRender()
         {
             if (headlessMode || !glEnable || !postProcess.enabled) return;
+            ASSERT(!(postProcess.includeMainCanvas && postProcess.feedback),
+                'Post process cannot both include main canvas and use feedback texture'); // as made, or changed after
 
             // clear out the buffer, before anything here binds its own
             glFlush();

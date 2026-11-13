@@ -1186,6 +1186,8 @@ function engineObjectsCallback(pos, size, callbackFunction, objects=engineObject
 
 /** Return a list of objects intersecting a ray, objects destroyed this frame left out
  *  - Only objects with collideRaycast set are hit, which setCollision turns on
+ *  - The hits are in the order of the list given, not by distance; sort them by distance from start for the
+ *    nearest, where engineObjectsRaycast3D gives them nearest first
  *  @param {Vector2} start
  *  @param {Vector2} end
  *  @param {Array<EngineObject>} [objects=engineObjects] - List of objects to check

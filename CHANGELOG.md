@@ -5,6 +5,13 @@ What changed in each release, newest first. Releases before 1.20.0 are on the
 
 ## Unreleased
 
+### New Changes
+- `isColor`, `isVector2` and `isVector3` are type guards in TypeScript, so `if (isColor(x)) x.r` checks strict
+- `FirstPersonCamera3D.dragButton`, the mouse button that looks, as the other cameras have
+- A debug build asserts on a key name that does not start with a capital, as `'space'` for `'Space'`, which was always up, and on a color where `drawLine` takes its width
+- `engineObjectsRaycast` and `isIntersecting` make no vectors, and `drawEllipseGradient` and `drawCircleGradient` none past the first call; Back from a prefab in the 3D editor builds each instance once
+- `speak()` says nothing while the page's sound is paused, where the browser said it all at once on return; `engineObjectsRaycast` says its hits are in list order
+
 ### Fixes
 - `ThirdPersonCamera3D` no longer shakes from side to side when the player walks back toward it: its swing behind the way the target moves fades out as the move turns toward the camera, where the short way round flipped sides each frame, and keys that move the way the camera faces turned the move with it
 - An attached prefab whose parts have mesh collision, from `level3DAddMesh`, blocks nothing of its own: its parts' `MeshCollider` children left the level's collision on, though the parts' collision was off

@@ -237,21 +237,21 @@ function isOverlapping(posA, sizeA, posB, sizeB=vec2())
  *  @memberof Math */
 function isIntersecting(start, end, pos, size)
 {
-    // Liang-Barsky algorithm
-    const boxMin = pos.subtract(size.scale(.5));
-    const boxMax = boxMin.add(size);
-    const delta = end.subtract(start);
-    const a = start.subtract(boxMin);
-    const b = start.subtract(boxMax);
-    const p = [-delta.x, delta.x, -delta.y, delta.y];
-    const q = [a.x, -b.x, a.y, -b.y];
+    // Liang-Barsky algorithm, in plain numbers, as a raycast asks it of every object
+    const minX = pos.x - size.x * .5, minY = pos.y - size.y * .5;
+    const maxX = minX + size.x, maxY = minY + size.y;
+    const dx = end.x - start.x, dy = end.y - start.y;
+    const ax = start.x - minX, ay = start.y - minY, bx = start.x - maxX, by = start.y - maxY;
     let tMin = 0, tMax = 1;
+    // each side in turn, the last first as before, narrowing the part of the line inside
     for (let i = 4; i--;)
     {
-        if (p[i])
+        const p = i === 3 ? dy : i === 2 ? -dy : i === 1 ? dx : -dx;
+        const q = i === 3 ? -by : i === 2 ? ay : i === 1 ? -bx : ax;
+        if (p)
         {
-            const t = q[i] / p[i];
-            if (p[i] < 0)
+            const t = q / p;
+            if (p < 0)
             {
                 if (t > tMax) return false;
                 tMin = max(t, tMin);
@@ -262,7 +262,7 @@ function isIntersecting(start, end, pos, size)
                 tMax = min(t, tMax);
             }
         }
-        else if (q[i] < 0)
+        else if (q < 0)
             return false;
     }
 
@@ -741,9 +741,9 @@ class RandomGenerator
 function vec2(x=0, y) { return new Vector2(x, y ?? x); }
 
 /**
- * Check if object is a valid Vector2
+ * Check if object is a valid Vector2, a type guard in TypeScript
  * @param {any} v
- * @return {boolean}
+ * @return {v is Vector2}
  * @memberof Math */
 function isVector2(v) { return v instanceof Vector2 && v.isValid(); }
 
@@ -1035,9 +1035,9 @@ function hsl(h, s, l, a)
 }
 
 /**
- * Check if object is a valid Color
+ * Check if object is a valid Color, a type guard in TypeScript
  * @param {any} c
- * @return {boolean}
+ * @return {c is Color}
  * @memberof Math */
 function isColor(c) { return c instanceof Color && c.isValid(); }
 
