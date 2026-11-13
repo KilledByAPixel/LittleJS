@@ -1467,7 +1467,7 @@ camera.smoothing = .05         // seconds the pivot trails the target; pitchRang
 new FirstPersonCamera3D(pos3D, yaw, pitch) // mouse look and WASD or arrows to move, the camera at its pos3D;
                                // click captures the mouse, Esc lets it go; each defaults to where the camera is now,
                                // so it takes over without a jump; fields for moveSpeed, lookSpeed, pitchRange,
-                               // lockPointer, and fly to move the way it looks instead of walking level; give it a
+                               // lockPointer, dragButton = 0, and fly to move the way it looks instead of walking level; give it a
                                // size3D and setCollision() to walk into solids, destroy it to hand the camera back
 camera.stick = 1               // the gamepad stick that looks, stickSpeed = 3 radians a second; moveStick = 0 moves;
                                // -1 for either leaves that stick to the game
