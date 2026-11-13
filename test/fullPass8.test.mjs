@@ -233,6 +233,23 @@ test('getRotation keeps the turn of a matrix scaled to 0 on one axis, and an att
     assert.equal(result.angle, .5);
 });
 
+test('the touch gamepad taking over from a real pad in slot 0 lets go of what that pad held', ()=>
+{
+    const pad = { mapping: 'standard', axes: [0, 0, 0, 0],
+        buttons: Array.from({length: 17}, ()=> ({ pressed: false, value: 0 })) };
+    const { run } = loadEngine({ window: { ontouchstart: null }, navigator: { getGamepads: ()=> [pad] } });
+    run('touchGamepadInit = ()=> {}; setTouchGamepadEnable(true); setTouchGamepadDisplayTime(3)');
+    pad.buttons[1] = { pressed: true, value: 1 };
+    pad.buttons[13] = { pressed: true, value: 1 };
+    run('inputUpdate(); inputUpdatePost()');
+    assert.deepEqual([run('gamepadIsDown(1)'), run('gamepadIsDown(13)')], [true, true], 'held on the real pad');
+    pad.buttons[1] = pad.buttons[13] = { pressed: false, value: 0 };
+    run(`touchGamepadTimer.set(); touchGamepadButtons[2] = touchGamepadButtonsPressed[2] = 1;
+        touchGamepadPointerRole.set(8, 'face2'); inputUpdate()`);
+    assert.deepEqual([run('gamepadWasReleased(1)'), run('gamepadWasReleased(13)'), run('gamepadIsDown(2)')],
+        [true, true, true], 'B and the D-pad let go as touch takes over, the touch button down');
+});
+
 test('newcomer slips: a tween path to nothing, an unknown level3DSpawn type, a type in Name assert or warn', ()=>
 {
     const warnings = [];

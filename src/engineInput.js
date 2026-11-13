@@ -1628,5 +1628,5 @@ function touchGamepadPointerUp(e)
         delete touchGamepadButtons[9];
     else // 'face<n>'
         delete touchGamepadButtons[+role.slice(4)];
-    touchGamepadHandedOver || touchGamepadTimer.set(); // a real gamepad that took over keeps it until a new touch
+    touchGamepadTimer.set(); // a finger lifted after a real gamepad took over has no role, and returned above
 }
