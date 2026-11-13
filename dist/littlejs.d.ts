@@ -128,6 +128,210 @@ declare module "littlejsengine" {
         groupIndex?: number;
     };
     /**
+     * An effect: what particleEffect plays, the designer edits and a library file holds; plain data, so it saves as JSON
+     */
+    export type ParticleEffect = {
+        /**
+         * - Its name, any case, 'Effect' when not given
+         */
+        name?: string;
+        /**
+         * - What it sets on an emitter, each one left out taking its default
+         */
+        settings: ParticleEffectSettings;
+        /**
+         * - Pushes on every particle every update
+         */
+        behaviors?: ParticleEffectBehavior[];
+    };
+    /**
+     * An effect as particleEffectsAdd takes it, its settings left out for every default
+     */
+    export type ParticleEffectInput = Omit<ParticleEffect, 'settings'> & {
+        settings?: ParticleEffectSettings;
+    };
+    /**
+     * A behavior an effect uses, by name, with how strong it is
+     */
+    export type ParticleEffectBehavior = {
+        /**
+         * - One of particleEffectBehaviors, or one added with particleEffectsAddBehavior
+         */
+        name: string;
+        /**
+         * - How strong, the behavior's own value when not given
+         */
+        strength?: number;
+    };
+    /**
+     * The settings of an effect, each optional, the default when left out; colors are a Color or [r, g, b, a], and an
+     * effect that comes back sanitized has them as channels; a test checks this list against particleEffectSettings
+     */
+    export type ParticleEffectSettings = {
+        /**
+         * - Particles per second, 0 emits none
+         */
+        emitRate?: number;
+        /**
+         * - Seconds to emit for, 0 is forever
+         */
+        emitTime?: number;
+        /**
+         * - Diameter, or width when rectangular
+         */
+        emitSize?: number;
+        /**
+         * - Rectangle emitter, off is a circle
+         */
+        emitRect?: boolean;
+        /**
+         * - Rectangle height
+         */
+        emitHeight?: number;
+        /**
+         * - Half angle particles move in, PI is all ways
+         */
+        emitConeAngle?: number;
+        /**
+         * - Emitter angle, 0 points up
+         */
+        angle?: number;
+        /**
+         * - Seconds each particle lives
+         */
+        particleTime?: number;
+        /**
+         * - Size at the start of life
+         */
+        sizeStart?: number;
+        /**
+         * - Size at the end of life
+         */
+        sizeEnd?: number;
+        /**
+         * - Share of life spent fading in and out
+         */
+        fadeRate?: number;
+        /**
+         * - How much each particle varies
+         */
+        randomness?: number;
+        /**
+         * - Half angle of start rotation, PI is any
+         */
+        particleConeAngle?: number;
+        /**
+         * - Stretch along the motion, 0 is off
+         */
+        trailScale?: number;
+        /**
+         * - Glow with additive blending
+         */
+        additive?: boolean;
+        /**
+         * - Start color, each particle picks between A and B
+         */
+        colorStartA?: number[] | Color;
+        /**
+         * - Second start color
+         */
+        colorStartB?: number[] | Color;
+        /**
+         * - End color, each particle picks between A and B
+         */
+        colorEndA?: number[] | Color;
+        /**
+         * - Second end color
+         */
+        colorEndB?: number[] | Color;
+        /**
+         * - Pick along A to B, off picks each channel
+         */
+        randomColorLinear?: boolean;
+        /**
+         * - Start speed, world units per frame
+         */
+        speed?: number;
+        /**
+         * - Spin speed, radians per frame
+         */
+        angleSpeed?: number;
+        /**
+         * - Speed kept each frame, 1 keeps it all
+         */
+        damping?: number;
+        /**
+         * - Spin kept each frame
+         */
+        angleDamping?: number;
+        /**
+         * - How much gravity pulls
+         */
+        gravityScale?: number;
+        /**
+         * - Its own fall each frame, the same in any game
+         */
+        gravity?: number;
+        /**
+         * - Share of emitter motion passed on
+         */
+        velocityInheritance?: number;
+        /**
+         * - Particles move with the emitter
+         */
+        localSpace?: boolean;
+        /**
+         * - Hit tiles
+         */
+        collideLevel?: boolean;
+        /**
+         * - Bounce when hitting tiles
+         */
+        restitution?: number;
+        /**
+         * - Speed kept sliding along tiles
+         */
+        friction?: number;
+        /**
+         * - Built-in shape: dot, soft, glow, smoke, spark, square, triangle, ring, star or
+         * plus, '' uses the tile; any string, so a library read from JSON passes, a name it does not know drawing the
+         * default
+         */
+        shape?: string;
+        /**
+         * - Tile in texture 0 when no shape, -1 is untextured
+         */
+        tileIndex?: number;
+        /**
+         * - Tile size in texture pixels
+         */
+        tileSize?: number;
+        /**
+         * - Pixels of padding around each tile
+         */
+        tilePadding?: number;
+    };
+    /**
+     * What a play of an effect can change: any setting, replacing the effect's own for this play, and scale, which grows
+     * the whole effect, the built-ins fitting a one unit object at 1; hue, which turns its colors around the color wheel,
+     * 1 all the way; saturation, which multiplies it, 0 gray; angle, its direction, 0 up; tileInfo, the game's own art in
+     * place of the shape, tinted by its colors, a TextureInfo drawn whole; and in 3D flatten, a flat spawn area across
+     * the way it emits, and roundLighting, each particle lit as a ball, bright on the side toward each light; emitSize
+     * may be a vec2, a rectangle; shape is one of the built-in names, so a misspelled one is caught, where an effect's
+     * settings, read from JSON, take any string
+     */
+    export type ParticleEffectOptions = Omit<ParticleEffectSettings, 'emitSize' | 'shape'> & {
+        scale?: number;
+        hue?: number;
+        saturation?: number;
+        angle?: number;
+        tileInfo?: TileInfo | TextureInfo;
+        flatten?: boolean;
+        roundLighting?: boolean;
+        emitSize?: number | Vector2;
+        shape?: '' | 'dot' | 'soft' | 'glow' | 'smoke' | 'spark' | 'square' | 'triangle' | 'ring' | 'star' | 'plus';
+    };
+    /**
      * Options for a tweak
      */
     export type TweakOptions = {
@@ -574,210 +778,6 @@ declare module "littlejsengine" {
         type: number;
     };
     /**
-     * An effect: what particleEffect plays, the designer edits and a library file holds; plain data, so it saves as JSON
-     */
-    export type ParticleEffect = {
-        /**
-         * - Its name, any case, 'Effect' when not given
-         */
-        name?: string;
-        /**
-         * - What it sets on an emitter, each one left out taking its default
-         */
-        settings: ParticleEffectSettings;
-        /**
-         * - Pushes on every particle every update
-         */
-        behaviors?: ParticleEffectBehavior[];
-    };
-    /**
-     * An effect as particleEffectsAdd takes it, its settings left out for every default
-     */
-    export type ParticleEffectInput = Omit<ParticleEffect, 'settings'> & {
-        settings?: ParticleEffectSettings;
-    };
-    /**
-     * A behavior an effect uses, by name, with how strong it is
-     */
-    export type ParticleEffectBehavior = {
-        /**
-         * - One of particleEffectBehaviors, or one added with particleEffectsAddBehavior
-         */
-        name: string;
-        /**
-         * - How strong, the behavior's own value when not given
-         */
-        strength?: number;
-    };
-    /**
-     * The settings of an effect, each optional, the default when left out; colors are a Color or [r, g, b, a], and an
-     * effect that comes back sanitized has them as channels; a test checks this list against particleEffectSettings
-     */
-    export type ParticleEffectSettings = {
-        /**
-         * - Particles per second, 0 emits none
-         */
-        emitRate?: number;
-        /**
-         * - Seconds to emit for, 0 is forever
-         */
-        emitTime?: number;
-        /**
-         * - Diameter, or width when rectangular
-         */
-        emitSize?: number;
-        /**
-         * - Rectangle emitter, off is a circle
-         */
-        emitRect?: boolean;
-        /**
-         * - Rectangle height
-         */
-        emitHeight?: number;
-        /**
-         * - Half angle particles move in, PI is all ways
-         */
-        emitConeAngle?: number;
-        /**
-         * - Emitter angle, 0 points up
-         */
-        angle?: number;
-        /**
-         * - Seconds each particle lives
-         */
-        particleTime?: number;
-        /**
-         * - Size at the start of life
-         */
-        sizeStart?: number;
-        /**
-         * - Size at the end of life
-         */
-        sizeEnd?: number;
-        /**
-         * - Share of life spent fading in and out
-         */
-        fadeRate?: number;
-        /**
-         * - How much each particle varies
-         */
-        randomness?: number;
-        /**
-         * - Half angle of start rotation, PI is any
-         */
-        particleConeAngle?: number;
-        /**
-         * - Stretch along the motion, 0 is off
-         */
-        trailScale?: number;
-        /**
-         * - Glow with additive blending
-         */
-        additive?: boolean;
-        /**
-         * - Start color, each particle picks between A and B
-         */
-        colorStartA?: number[] | Color;
-        /**
-         * - Second start color
-         */
-        colorStartB?: number[] | Color;
-        /**
-         * - End color, each particle picks between A and B
-         */
-        colorEndA?: number[] | Color;
-        /**
-         * - Second end color
-         */
-        colorEndB?: number[] | Color;
-        /**
-         * - Pick along A to B, off picks each channel
-         */
-        randomColorLinear?: boolean;
-        /**
-         * - Start speed, world units per frame
-         */
-        speed?: number;
-        /**
-         * - Spin speed, radians per frame
-         */
-        angleSpeed?: number;
-        /**
-         * - Speed kept each frame, 1 keeps it all
-         */
-        damping?: number;
-        /**
-         * - Spin kept each frame
-         */
-        angleDamping?: number;
-        /**
-         * - How much gravity pulls
-         */
-        gravityScale?: number;
-        /**
-         * - Its own fall each frame, the same in any game
-         */
-        gravity?: number;
-        /**
-         * - Share of emitter motion passed on
-         */
-        velocityInheritance?: number;
-        /**
-         * - Particles move with the emitter
-         */
-        localSpace?: boolean;
-        /**
-         * - Hit tiles
-         */
-        collideLevel?: boolean;
-        /**
-         * - Bounce when hitting tiles
-         */
-        restitution?: number;
-        /**
-         * - Speed kept sliding along tiles
-         */
-        friction?: number;
-        /**
-         * - Built-in shape: dot, soft, glow, smoke, spark, square, triangle, ring, star or
-         * plus, '' uses the tile; any string, so a library read from JSON passes, a name it does not know drawing the
-         * default
-         */
-        shape?: string;
-        /**
-         * - Tile in texture 0 when no shape, -1 is untextured
-         */
-        tileIndex?: number;
-        /**
-         * - Tile size in texture pixels
-         */
-        tileSize?: number;
-        /**
-         * - Pixels of padding around each tile
-         */
-        tilePadding?: number;
-    };
-    /**
-     * What a play of an effect can change: any setting, replacing the effect's own for this play, and scale, which grows
-     * the whole effect, the built-ins fitting a one unit object at 1; hue, which turns its colors around the color wheel,
-     * 1 all the way; saturation, which multiplies it, 0 gray; angle, its direction, 0 up; tileInfo, the game's own art in
-     * place of the shape, tinted by its colors, a TextureInfo drawn whole; and in 3D flatten, a flat spawn area across
-     * the way it emits, and roundLighting, each particle lit as a ball, bright on the side toward each light; emitSize
-     * may be a vec2, a rectangle; shape is one of the built-in names, so a misspelled one is caught, where an effect's
-     * settings, read from JSON, take any string
-     */
-    export type ParticleEffectOptions = Omit<ParticleEffectSettings, 'emitSize' | 'shape'> & {
-        scale?: number;
-        hue?: number;
-        saturation?: number;
-        angle?: number;
-        tileInfo?: TileInfo | TextureInfo;
-        flatten?: boolean;
-        roundLighting?: boolean;
-        emitSize?: number | Vector2;
-        shape?: '' | 'dot' | 'soft' | 'glow' | 'smoke' | 'spark' | 'square' | 'triangle' | 'ring' | 'star' | 'plus';
-    };
-    /**
      * What bends a skinned part: its joints, the nodes that move it, their inverse bind matrices, and for each vertex
      * of its mesh four joints and four weights, with the place and normal each pose bends from
      */
@@ -806,6 +806,41 @@ declare module "littlejsengine" {
          * - Each vertex's normal as stored, x y z
          */
         bindNormals: Float32Array;
+    };
+    /**
+     * A node's place as an animation sets it: its translation, rotation as a quaternion x y z w, and scale
+     */
+    export type GLTFNodeTRS = {
+        translation: Array<number>;
+        rotation: Array<number>;
+        scale: Array<number>;
+    };
+    /**
+     * A model's nodes as an animation needs them: each as the file has it, its parent, and where it rests
+     */
+    export type GLTFNodeTree = {
+        /**
+         * - The file's nodes
+         */
+        nodes: Array<{
+            name?: string;
+            translation?: Array<number>;
+            rotation?: Array<number>;
+            scale?: Array<number>;
+            matrix?: Array<number>;
+        }>;
+        /**
+         * - Each node's parent, undefined for a root
+         */
+        parents: Array<number | undefined>;
+        /**
+         * - The inverse of where each node is baked in the model
+         */
+        restInverse: Array<Matrix4>;
+        /**
+         * - From where a node is baked to where it rests, when they differ
+         */
+        restPose: Array<Matrix4 | undefined>;
     };
     /**
      * What one channel of an animation moves, as the loader reads it
@@ -1437,12 +1472,13 @@ declare module "littlejsengine" {
     /** Add something the game loads to what startup waits for: while engineInit and gameInit run, the game loop starts
      *  once it is done, and the loading screen counts it; images from loadTexture and sounds from files are added on
      *  their own, and a load that fails counts as done; after startup it does nothing
-     *  @param {Promise<any>} promise
-     *  @return {Promise<any>} - The same promise
+     *  @template T
+     *  @param {Promise<T>} promise
+     *  @return {Promise<T>} - The same promise
      *  @example
      *  async function gameInit() { level = await engineAddLoad(fetchJSON('level.json')); }
      *  @memberof Engine */
-    export function engineAddLoad(promise: Promise<any>): Promise<any>;
+    export function engineAddLoad<T>(promise: Promise<T>): Promise<T>;
     /**
      * LittleJS Debug System
      * - Press Esc to toggle debug overlay with object picking
@@ -2228,7 +2264,8 @@ declare module "littlejsengine" {
      *  @default
      *  @memberof Settings */
     export let touchGamepadAlpha: number;
-    /** How long to display the touch gamepad on screen in seconds, set to 0 to always display
+    /** How long to display the touch gamepad on screen in seconds, set to 0 to always display,
+     *  from the start on a touch device; using a real gamepad still hides it until the screen is touched
      *  @type {number}
      *  @default
      *  @memberof Settings */
@@ -2509,6 +2546,7 @@ declare module "littlejsengine" {
      *  @memberof Settings */
     export function setTouchGamepadButtonCount(count: number): void;
     /** Set if the touch gamepad should have a left analog stick (or dpad)
+     *  - Turning it on sets the left button count to 0, and turning it off does not set it back
      *  @param {boolean} enable
      *  @memberof Settings */
     export function setTouchGamepadLeftStick(enable: boolean): void;
@@ -2518,6 +2556,7 @@ declare module "littlejsengine" {
      *  @memberof Settings */
     export function setTouchGamepadLeftButtonCount(count: number): void;
     /** Set if the touch gamepad right side is an analog stick (or dpad) instead of face buttons
+     *  - Turning it on sets the button count to 0, and turning it off does not set it back
      *  @param {boolean} rightStick
      *  @memberof Settings */
     export function setTouchGamepadRightStick(rightStick: boolean): void;
@@ -2537,7 +2576,8 @@ declare module "littlejsengine" {
      *  @param {number} alpha
      *  @memberof Settings */
     export function setTouchGamepadAlpha(alpha: number): void;
-    /** Set how long to display the touch gamepad on screen in seconds, set to 0 to always display
+    /** Set how long to display the touch gamepad on screen in seconds, set to 0 to always display,
+     *  from the start on a touch device; using a real gamepad still hides it until the screen is touched
      *  @param {number} time
      *  @memberof Settings */
     export function setTouchGamepadDisplayTime(time: number): void;
@@ -3771,7 +3811,7 @@ declare module "littlejsengine" {
      *   premultiplied too. premultipliedTexture is true there, so a snippet that changes the alpha, or makes a see
      *   through color of its own, scales the rgb with it: `if (premultipliedTexture) c.rgb *= k;`
      * - Compiled once per renderer by the first draw that needs it; a bad snippet throws with the GLSL log in debug
-     * - Make each Shader once, at init, and share it; every one made lives for the session with its programs
+     * - Make each Shader once, at init, and share it; every one made keeps its programs until dispose()
      * - Names in both renderers: iChannel0 the texture, iTime, iResolution, premultipliedTexture, and localUV, 0 to 1
      *   across the sprite or the mesh's own uv
      * - Names in 3D only: worldPos, worldNormal, cameraPos, sunDirection, sunColor, ambientColor, ambientGroundColor,
@@ -4390,8 +4430,8 @@ declare module "littlejsengine" {
      *    RGBA bytes, width * height * 4 of them, or an image put in at its own size
      *  @param {number} [x]
      *  @param {number} [y]
-     *  @param {number} [width] - Width of a byte array's rectangle, an image's own is used
-     *  @param {number} [height] - Height of a byte array's rectangle, an image's own is used
+     *  @param {number} [width] - Width of a byte array's rectangle, which it needs, an image's own is used
+     *  @param {number} [height] - Height of a byte array's rectangle, which it needs, an image's own is used
      *  @memberof WebGL */
     export function glSetTextureSubData(texture: WebGLTexture, pixels: Uint8Array | Uint8ClampedArray | ImageData | HTMLImageElement | HTMLCanvasElement | OffscreenCanvas | ImageBitmap, x?: number, y?: number, width?: number, height?: number): void;
     /** Draw all sprites and clear out the buffer, called automatically by the system whenever necessary
@@ -5823,7 +5863,8 @@ declare module "littlejsengine" {
          *  @param {Vector2}       layerPos - Local position in array
          *  @param {TileLayerData} data - Data to set
          *  @param {boolean}       [redraw] - True draws the cell now, false leaves it as drawn, left out draws it
-         *                                     on the next render, or now inside the layer's own redraw */
+         *                                     on the next render, or now inside the layer's own redraw; when more than
+         *                                     half the cells wait the whole layer is drawn again, clearing paint too */
         setData(layerPos: Vector2, data: TileLayerData, redraw?: boolean): void;
         /** Clear data at a given position in the array
          *  @param {Vector2} layerPos - Local position in array
@@ -6277,7 +6318,8 @@ declare module "littlejsengine" {
     export class NewgroundsPlugin {
         /** Create the global newgrounds object
          *  - Logs a view right away, for a guest and a logged in player alike, so a game does not have to
-         *  - Create the medals first: they take their name and icon from the server once it answers, and when logged in they are locked here until it does
+         *  - Create the medals first: they take their name and icon from the server once it answers, and when logged in they are locked here until it does,
+         *    so unlock one after await newgrounds.ready, or a medal the player already has pops up again
          *  - Call medalsInit too, before or after: an unlock asserts without it, and it keeps the medals while not logged in
          *  @param {string} app_id   - The Newgrounds App ID
          *  @param {string} [cipher] - The encryption key from the app's settings, AES-128 as Base64; medal unlocks and posted
@@ -6647,6 +6689,8 @@ declare module "littlejsengine" {
         *  new PostProcessPlugin(shaderCode);
         */
         constructor(shaderCode?: string, includeMainCanvas?: boolean, feedbackTexture?: boolean);
+        includeMainCanvas: boolean;
+        feedback: boolean;
         /** @property {string} - The shadertoy style mainImage code it shades with, see setShaderCode */
         shaderCode: string;
         /** @property {boolean} - Is the pass on? Off, the frame shows as the engine drew it, the shader is kept,
@@ -9576,8 +9620,8 @@ declare module "littlejsengine" {
         lookTravel: Vector2;
         /** @type {Vector2|undefined} */
         lookFrom: Vector2 | undefined;
-        /** @type {EngineObject|undefined} */
-        lookTarget: EngineObject | undefined;
+        /** @type {EngineObject|Vector2|undefined} */
+        lookTarget: EngineObject | Vector2 | undefined;
         /** Make this the camera that drives the view, it starts from where the view is */
         activate(): void;
         /** Start from where the view is, called when it takes over from another camera */
@@ -9589,7 +9633,7 @@ declare module "littlejsengine" {
         updateCamera(): void;
         getTargetPos(): Vector2 | undefined;
         getFocus(): Vector2 | undefined;
-        updateLook(snap?: boolean): void;
+        updateLook(snap?: boolean): undefined;
         inBounds(pos: Vector2): Vector2;
     }
     /** Grid pathfinder using A* with two optional smoothing passes
@@ -10506,7 +10550,7 @@ declare module "littlejsengine" {
         cameraDepthWidth: number;
         cameraDepthHeight: number;
         depthPass: boolean;
-        contextGeneration: number;
+        contextGeneration: any;
         /** @type {WeakMap<WebGLProgram, Object<string, WebGLUniformLocation|null>>} */
         uniforms: WeakMap<WebGLProgram, {
             [x: string]: WebGLUniformLocation | null;
@@ -10550,7 +10594,7 @@ declare module "littlejsengine" {
         }> | undefined;
         set lighting(arg: boolean);
         /** Apply lighting, when false draws plain vertex color times texture and casts no shadow;
-         *  off for billboards, lines, ribbons and soft discs, an object sets emissive instead
+         *  off for lines, ribbons, soft discs and additive billboards, an object sets emissive instead
          *  @return {boolean} */
         get lighting(): boolean;
         set emissive(arg: number);
@@ -10618,7 +10662,7 @@ declare module "littlejsengine" {
         get roundLighting(): boolean;
         set emissiveMapColor(arg: Color);
         /** Multiplies the emissive map, set from each object's emissiveMapColor; compared by its rgb, so a Color
-         *  changed in place is seen when it is set again, and undefined is white
+         *  changed in place is seen when it is set again, and set to undefined it is white, so it is always a Color
          *  @return {Color} */
         get emissiveMapColor(): Color;
         set shader(arg: Shader | undefined);
@@ -11503,7 +11547,7 @@ declare module "littlejsengine" {
         /** @type {WebGLBuffer|undefined} */
         colorBuffer: WebGLBuffer | undefined;
         bufferGeneration: number;
-        uvTileInfo: TileInfo | TextureInfo | undefined;
+        uvRect: number[];
         /** Place an instance by its position, rotation and scale, what buildMatrix takes, written straight in with no
          *  matrix made; in world space
          *  @param {number} i
@@ -11719,7 +11763,8 @@ declare module "littlejsengine" {
     /** Make a normal map from a height at each pixel, for bumps and grooves with no image file: the slope at each pixel
      *  from its neighbors' heights, taken around the edges so the map tiles; set it as an object's normalMap
      *  @param {Vector2} size - In pixels
-     *  @param {function(number, number): number} heightFunction - The height 0 to 1 at a pixel, x across and y down
+     *  @param {function(number, number): number} heightFunction - The height at a pixel, x across and y down, 0 to 1
+     *    by custom, though only how it changes counts
      *  @param {number} [strength] - How steep the slopes are: a height change of 1 over one pixel leans the normal
      *  by strength
      *  @return {TextureInfo} - Wraps; headless it has no image
@@ -11862,7 +11907,8 @@ declare module "littlejsengine" {
      *   taken again when it moves; call rebuild() after changing the mesh
      * - Any mesh works, a strip, an indexed one, a loaded model or one given its vertex data; both sides of a triangle
      *   collide
-     * - A fast object is moved in steps no longer than half its radius, so it does not go through a thin wall
+     * - A fast object is moved in steps no longer than half its radius, so it does not go through a thin wall, up to 64
+     *   steps a frame, so one moving more than 32 radii a frame may
      * - Particles with collideLevel hit it, render3D.pick and the camera's wall test hit its triangles, both sides
      * @extends EngineObject3D
      * @memberof Render3D
@@ -12774,21 +12820,15 @@ declare module "littlejsengine" {
      */
     export class GLTFModel {
         /** Make a model from its parts, as the loader does
-         *  @param {Array<GLTFPart>} parts @param {Array<GLTFAnimation>} [animations] @param {Object} [nodeTree] */
-        constructor(parts: Array<GLTFPart>, animations?: GLTFAnimation[], nodeTree?: any);
+         *  @param {Array<GLTFPart>} parts @param {Array<GLTFAnimation>} [animations] @param {GLTFNodeTree} [nodeTree] */
+        constructor(parts: Array<GLTFPart>, animations?: GLTFAnimation[], nodeTree?: GLTFNodeTree);
         /** @property {Array<GLTFPart>} - One per primitive of every node that has a mesh */
         parts: GLTFPart[];
         /** @property {Array<GLTFAnimation>} - The animations, play one through createObject's GLTFObject
          *  @type {Array<GLTFAnimation>} */
         animations: Array<GLTFAnimation>;
-        /** @type {{nodes: Array<Object>, parents: Array<number|undefined>, restInverse: Array<Matrix4>,
-         *  restPose: Array<Matrix4|undefined>}|undefined} */
-        nodeTree: {
-            nodes: Array<any>;
-            parents: Array<number | undefined>;
-            restInverse: Array<Matrix4>;
-            restPose: Array<Matrix4 | undefined>;
-        } | undefined;
+        /** @type {GLTFNodeTree|undefined} */
+        nodeTree: GLTFNodeTree | undefined;
         modelMatrix: Matrix4;
         /** @property {Mesh} - Every part combined, each tinted with its material color; the texture is textureInfo,
          *  and blending and unlit stay with the parts, which createObject draws */
@@ -12828,7 +12868,7 @@ declare module "littlejsengine" {
          *  @param {number} time - Seconds into it
          *  @return {Array<Matrix4>} */
         getPose(animation: GLTFAnimation, time: number): Array<Matrix4>;
-        partPoses(worldOf: any): Matrix4[];
+        partPoses(worldOf: (arg0: number) => Matrix4): Matrix4[];
         /** Free the GPU buffers of every part's mesh and of the combined mesh, and the textures, for a model that is
          *  done with, like a level's models when the next level loads
          *  - Destroy the objects createObject made from it first; a mesh drawn again only uploads again, but a freed
@@ -12950,18 +12990,19 @@ declare module "littlejsengine" {
         animationLoop: boolean;
         /** @property {boolean} - Whether it is moving through the animation now */
         animationPlaying: boolean;
-        /** @type {{animation?: GLTFAnimation, time?: number, speed?: number, loop?: boolean, nodes?: Map<number, Object>}|undefined} */
+        /** @type {{animation?: GLTFAnimation, time?: number, speed?: number, loop?: boolean,
+         *  nodes?: Map<number, GLTFNodeTRS>}|undefined} */
         blendFrom: {
             animation?: GLTFAnimation;
             time?: number;
             speed?: number;
             loop?: boolean;
-            nodes?: Map<number, any>;
+            nodes?: Map<number, GLTFNodeTRS>;
         } | undefined;
         blendTime: number;
         blendElapsed: number;
-        /** @type {Map<number, Object>|undefined} */
-        poseNodes: Map<number, any> | undefined;
+        /** @type {Map<number, GLTFNodeTRS>|undefined} */
+        poseNodes: Map<number, GLTFNodeTRS> | undefined;
         poseMixed: boolean;
         /** @type {(function(number): Matrix4)|undefined} */
         poseWorldOf: ((arg0: number) => Matrix4) | undefined;
@@ -13001,6 +13042,20 @@ declare module "littlejsengine" {
      * @property {Float32Array} bindNormals - Each vertex's normal as stored, x y z
      * @memberof GLTF
      */
+    /** A node's place as an animation sets it: its translation, rotation as a quaternion x y z w, and scale
+     *  @typedef {Object} GLTFNodeTRS
+     *  @property {Array<number>} translation
+     *  @property {Array<number>} rotation
+     *  @property {Array<number>} scale
+     *  @memberof GLTF */
+    /** A model's nodes as an animation needs them: each as the file has it, its parent, and where it rests
+     *  @typedef {Object} GLTFNodeTree
+     *  @property {Array<{name?: string, translation?: Array<number>, rotation?: Array<number>,
+     *    scale?: Array<number>, matrix?: Array<number>}>} nodes - The file's nodes
+     *  @property {Array<number|undefined>} parents - Each node's parent, undefined for a root
+     *  @property {Array<Matrix4>} restInverse - The inverse of where each node is baked in the model
+     *  @property {Array<Matrix4|undefined>} restPose - From where a node is baked to where it rests, when they differ
+     *  @memberof GLTF */
     /** What one channel of an animation moves, as the loader reads it
      *  @typedef {Object} GLTFChannel
      *  @property {number} node - The index of the node it moves
@@ -13610,7 +13665,7 @@ declare module "littlejsengine" {
      *  - A continuous effect (fire, a torch) goes until destroyed or given an emitTime, a one-shot ends itself
      *  - Any setting in the options replaces the effect's own for this play: {emitTime: .5} for a burst of a continuous
      *    effect, {emitTime: 0, emitRate: 30} to keep a one-shot going, or speed, particleTime and the rest
-     *  - Attach it to an object with addChild to follow it
+     *  - Attach it to an object with attach(emitter) to follow it, which keeps its angle, where addChild sets the angle
      *  @param {string|ParticleEffect} nameOrEffect - A built-in or added effect's name, or an effect
      *  @param {Vector2} [pos]
      *  @param {ParticleEffectOptions} [options] - What to change for this play, each left out when not wanted:
@@ -13664,7 +13719,8 @@ declare module "littlejsengine" {
     /** Add a behavior effects can use by name, or replace one
      *  @param {string} name
      *  @param {function(Particle, number): void} update - Pushes a 2D particle, given the strength
-     *  @param {function(Particle3D, number): void} [update3D] - The same for a 3D particle, none leaves 3D alone
+     *  @param {function(Particle3D, number): void} [update3D] - The same for a 3D particle, none does nothing in 3D;
+     *    it replaces a behavior of the same name whole, its 3D push and range too
      *  @param {number} [min] - Strength range the designer offers, and the range a strength is clamped to
      *  @param {number} [max]
      *  @param {number} [value] - Strength when first added
