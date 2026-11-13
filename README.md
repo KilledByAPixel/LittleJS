@@ -5,7 +5,6 @@
 ![LittleJS Logo](examples/logo.png)
 
 [![NPM Package][npm]][npm-url]
-[![Build Size][build-size]][build-size-url]
 [![NPM Downloads][npm-downloads]][npmtrends-url]
 [![DeepScan][deepscan]][deepscan-url]
 [![MIT License][license]][license-url]
