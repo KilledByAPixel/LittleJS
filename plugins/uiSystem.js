@@ -1856,11 +1856,11 @@ class UIVideo extends UIObject
         catch(e) { return false; }
     }
     
-    /** Pause the video */
-    pause() { this.video.pause(); }
-    
-    /** Stop and reset the video */
-    stop() { this.video.pause(); this.video.currentTime = 0; }
+    /** Pause the video, it stays paused when a hidden page shows again */
+    pause() { this.video.pause(); uiVideosPaused.delete(this); }
+
+    /** Stop and reset the video, it stays stopped when a hidden page shows again */
+    stop() { this.pause(); this.video.currentTime = 0; }
     
     /** Check if video is currently loading
      *  @return {boolean} */
@@ -1966,7 +1966,7 @@ function uiVideosPageChange()
     if (soundPauseWhenHidden && document.hidden)
     {
         for (const video of uiVideos)
-            video.isPaused() || (video.pause(), uiVideosPaused.add(video));
+            video.isPaused() || (video.pause(), uiVideosPaused.add(video)); // added after, so it plays again
     }
     else
     {

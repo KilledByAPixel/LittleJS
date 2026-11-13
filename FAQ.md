@@ -622,15 +622,19 @@ sound_click.play(pos, volume, pitch); // play a sound
 
 ### How do I play music?
 
-Load an mp3 or ogg file with the regular `Sound` class and play it with `playMusic`, which loops by default.
+Load an mp3 or ogg file with the regular `Sound` class and play it with `playMusic`, which loops by default. A file loads in the background, and a sound that has not loaded yet plays nothing, so play it from the callback the `Sound` calls once it has loaded, or failed to, which `isLoaded()` tells apart.
 
 ```javascript
-// load an mp3/ogg and loop it
-const track = new Sound('music.mp3');
-const trackInstance = track.playMusic(1, true); // volume, loop
+// load an mp3/ogg and loop it once it has loaded
+let trackInstance;
+const track = new Sound('music.mp3', undefined, undefined, undefined, (sound)=>
+{
+    if (sound.isLoaded())
+        trackInstance = sound.playMusic(1, true); // volume, loop
+});
 ```
 
-Music pauses automatically when the tab loses focus (audio context suspends) and resumes when it comes back. `playMusic` returns a `SoundInstance`; keep it and call `trackInstance.stop()` to halt playback.
+Music pauses automatically when the tab loses focus (audio context suspends) and resumes when it comes back. `playMusic` returns a `SoundInstance`; keep it and call `trackInstance?.stop()` to halt playback, the `?.` for when it has not started.
 
 ### Why doesn't my audio play until the user clicks something?
 
@@ -655,14 +659,14 @@ The `texture` argument defaults to `0`, so single-image projects can ignore it. 
 
 ### How can I check if an object is on screen?
 
-You can use the `isOverlapping` function to check the object against the camera's viewable window. For culling you might want to enlarge the object size slightly to account for attached objects or rotation — I usually do `this.size.scale(2)`.
+Use `isOnScreen(pos, size)`, which checks a circle around the object against the screen, the camera's turn included. For culling you might want to enlarge the object size slightly to account for attached objects — I usually do `this.size.scale(2)`.
 
 ```javascript
-if (!isOverlapping(this.pos, this.size, cameraPos, getCameraSize()))
+if (!isOnScreen(this.pos, this.size))
     return;
 ```
 
-`getCameraSize()` returns the viewable window in world units (canvas pixel size divided by `cameraScale`).
+Comparing the object's box with `cameraPos` and `getCameraSize()` through `isOverlapping` works only while the camera is not turned: `getCameraSize()` is the view's width and height, not turned with `cameraAngle`.
 
 ---
 

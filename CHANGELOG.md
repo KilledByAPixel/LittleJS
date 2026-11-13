@@ -7,6 +7,13 @@ What changed in each release, newest first. Releases before 1.20.0 are on the
 
 ### Fixes
 - `ThirdPersonCamera3D` no longer shakes from side to side when the player walks back toward it: its swing behind the way the target moves fades out as the move turns toward the camera, where the short way round flipped sides each frame, and keys that move the way the camera faces turned the move with it
+- An attached prefab whose parts have mesh collision, from `level3DAddMesh`, blocks nothing of its own: its parts' `MeshCollider` children left the level's collision on, though the parts' collision was off
+- A type added with `level3DAddType` over the name of a level's prefab stays when another level loads, where the load took it away or put the prefab back
+- A level property whose default is a list keeps the default when the file gives an object, and the other way round, where it reached the type, and a release build stopped loading the level
+- `level3DSpawn` takes a `Color` and vectors for properties as code has them, copied, where only a level file's hex string and arrays were read and the rest kept the default
+- A `UIVideo` stopped or paused while the page is hidden stays so when it shows, where it played again
+- `parseAtlas` keeps an Aseprite tag's direction on its group (forward, reverse, pingpong), its frames still in the file's order
+- The FAQ plays music from the sound's load callback, where it played before the file loaded and played nothing, and checks an object is on screen with `isOnScreen`, which a turned camera does not fool; `lookAt` says a `localMatrix` overrides it
 
 ## 1.30.1 - 2026-11-12
 

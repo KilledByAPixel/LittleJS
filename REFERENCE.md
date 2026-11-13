@@ -2572,7 +2572,7 @@ tileInfo.tiles                        // a tile set's tiles, each where it was p
                                       // from tiles[n], and the level editor's palette offers each
 loadSprite(src, frameSize, padding=1, sourcePadding=0) // Load an image and pack it, returns a TileInfo
 loadAtlas(imageSrc, jsonSrc, padding=1) // Load a TexturePacker or Aseprite atlas, returns name->TileInfo object
-parseAtlas(data)                      // Parse atlas json into named frame groups, used by loadAtlas
+parseAtlas(data)                      // Parse atlas json into named frame groups, used by loadAtlas; a tag's has its direction
 spritesReady()                        // Promise resolved when all sprites are packed
 textureSheets                         // Array of TextureSheet created by loadSprite, loadAtlas and loadTiles
 new TextureSheet(size=2048)           // A texture that images are packed into

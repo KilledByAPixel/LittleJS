@@ -340,6 +340,8 @@ class EngineObject3D extends EngineObject
     }
 
     /** Turn the object so its -Z axis points at a world space target, sets pitch and yaw and clears roll
+     *  - It sets rotation3D, which a localMatrix overrides, so an object placed by its localMatrix, as a loaded
+     *    model's parts are, does not turn; aim one of those by its matrix, or by a parent it rides on
      *  @param {Vector3} target */
     lookAt(target)
     {

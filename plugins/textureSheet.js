@@ -338,7 +338,8 @@ function loadTiles(sources, tileSize=tileDefaultSize, padding=textureSheetPaddin
  *  - Supports TexturePacker json (hash and array) and Aseprite json
  *  - Returns an empty object which is filled with TileInfos when loaded
  *  - Frames are named by the json, animations are grouped automatically
- *  - Aseprite frame tags become animations, so do names like run_0, run_1
+ *  - Aseprite frame tags become animations, so do names like run_0, run_1, their frames in the file's order
+ *    whichever way the tag plays, which parseAtlas gives as the group's direction
  *  - Trimmed frames are restored to their full source size when packed
  *  - Rotated frames are rotated back upright when packed
  *  - The same atlas loaded again by its paths, with the same padding, gives back what the first load did, packed
@@ -475,8 +476,11 @@ function textureSheetQueueJob(name, job, failed)
 /** Parse atlas json into a list of named frame groups, used by loadAtlas
  *  - Accepts TexturePacker json (hash and array) and Aseprite json
  *  - Frames tagged in Aseprite or named like run_0, run_1 group into animations
+ *  - A tag's frames are in the file's order, and its group keeps how Aseprite plays them, its direction: forward,
+ *    reverse, pingpong or pingpong_reverse, for the game to play them that way
  *  @param {Object} data - Parsed atlas json data
- *  @return {Array<{name: string, frames: Array<AtlasFrame>}>} List of {name, frames} groups in atlas order
+ *  @return {Array<{name: string, frames: Array<AtlasFrame>, direction?: string}>} List of {name, frames} groups in
+ *    atlas order, a tag's with its direction
  *  @memberof TextureSheets */
 function parseAtlas(data)
 {
@@ -511,7 +515,9 @@ function parseAtlas(data)
                 console.warn('loadAtlas: the frames of tag ' + tag.name + ' differ in size, so they stay apart');
                 continue;
             }
-            groups.push({name: tag.name, frames: list});
+            const group = {name: tag.name, frames: list};
+            typeof tag.direction === 'string' && (group.direction = tag.direction);
+            groups.push(group);
             for (let i = from; i <= to; ++i)
                 tagged.add(i);
         }

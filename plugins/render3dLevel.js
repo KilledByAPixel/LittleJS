@@ -49,6 +49,7 @@ function level3DAddType(name, make, defaults={}, tileInfo)
     ASSERT(typeof make === 'function', 'make must be a class or function');
     ASSERT(!!defaults && typeof defaults === 'object', 'defaults must be an object');
     level3DTypes.set(String(name), {make, defaults, tileInfo});
+    level3DPrefabs.delete(String(name)); // no longer a prefab, so a level's load does not take it away or replace it
 }
 
 /** Add a type that is a mesh and nothing more, a static prop with no class to write, for a built mesh or a model
@@ -410,17 +411,22 @@ function level3DProperties(type, object)
     for (const [key, value] of Object.entries(own && typeof own === 'object' ? own : {}))
     {
         const d = type.defaults[key];
+        // a color or a vector as a level file writes it, or as code has it, given to level3DSpawn, copied
         if (isColor(d))
-            level3DHexColor(value) && (properties[key] = level3DHexColor(value));
+            isColor(value) ? properties[key] = value.copy() :
+                level3DHexColor(value) && (properties[key] = level3DHexColor(value));
         else if (isVector3(d))
-            properties[key] = level3DVector(value, properties[key]);
+            properties[key] = isVector3(value) ? value.copy() : level3DVector(value, properties[key]);
         else if (isVector2(d))
-            isArray(value) && value.length === 2 && value.every(level3DFinite) &&
-                (properties[key] = vec2(value[0], value[1]));
+            isVector2(value) ? properties[key] = value.copy() :
+                isArray(value) && value.length === 2 && value.every(level3DFinite) &&
+                    (properties[key] = vec2(value[0], value[1]));
         else if (typeof d === 'number')
             level3DFinite(value) && (properties[key] = value);
-        else if (d === undefined || typeof value === typeof d && (d === null || value !== null))
-            properties[key] = objectPropertyCopy(value); // null is an object to typeof, but not a default's object
+        else if (d === undefined ||
+            typeof value === typeof d && (d === null || value !== null && isArray(value) === isArray(d)))
+            properties[key] = objectPropertyCopy(value); // null and a list are objects to typeof, but neither is
+                                                         // a default's object, nor an object a default's list
     }
     return properties;
 }
@@ -479,12 +485,14 @@ function level3DMakeAt(object, pos, rotation, scale)
  *  @param {Vector3} [pos3D]
  *  @param {Vector3} [rotation3D] - In radians, as an object has it
  *  @param {Vector3} [scale3D] - Times the scale the type makes it with
- *  @param {ObjectProperties} [properties] - Over the type's defaults
+ *  @param {ObjectProperties} [properties] - Over the type's defaults; a color or a vector may be a Color or a vector,
+ *    or written as a level file has it, a hex string or an array; a value not of its default's type keeps the default
  *  @return {any} - What the type made, a Prefab3D for a prefab, undefined when there is no such type
  *  @memberof Level3D
  *  @example
  *  level3DAddPrefab('House', await fetchJSON('house.json'));
- *  level3DSpawn('House', vec3(10, 0, 0), vec3(0, PI/2, 0)); */
+ *  level3DSpawn('House', vec3(10, 0, 0), vec3(0, PI/2, 0));
+ *  level3DSpawn('Crate', vec3(0, 1, 0), undefined, undefined, {color: RED}); */
 function level3DSpawn(type, pos3D=vec3(), rotation3D=vec3(), scale3D=vec3(1), properties)
 {
     ASSERT(isVector3(pos3D) && isVector3(rotation3D) && isVector3(scale3D), 'pos3D, rotation3D and scale3D are vec3');
@@ -697,8 +705,13 @@ class Prefab3D extends EngineObject3D
                 this.parts.push(part);
                 this.partObjects.push(object);
                 if (!this.attached || !(part instanceof EngineObject3D)) continue;
-                // a child rides with its parent and has no collision of its own
+                // a child rides with its parent and has no collision of its own, nor do the level shapes under it, a
+                // mesh collision type's MeshCollider, which collide as the level whatever their parents' flags
                 part.setCollision(false, false, false);
+                /** @type {Array<EngineObject>} */
+                const shapes = [part];
+                for (const o of shapes)
+                    shapes.push(...o.children), o instanceof EngineObject3D && render3DLevelLeave(o);
                 children.push(part);
                 // the corners of its box as it is turned; its place is its middle, a prefab inside this one too
                 const box = buildMatrix(part.pos3D, part.rotation3D, part.size3D.multiply(part.scale3D));
