@@ -172,7 +172,7 @@ test('a digit or 0 while a game\'s tool is held waits for its release', async ()
     assert.deepEqual(result, {log: ['press', 'release'], open: true, tool: 'Dots', back: [0, 0, 0, 0, 0, 0]});
 });
 
-test('speech pauses on a hidden page with no audio context, and a video on a blurred one with soundPauseWhenBlurred', ()=>
+test('speech pauses on a hidden page with no audio context, and a video is muted on a blurred one', ()=>
 {
     const calls = [];
     const speechSynthesis = { pause: ()=> calls.push('pause'), resume: ()=> calls.push('resume') };
@@ -186,10 +186,11 @@ test('speech pauses on a hidden page with no audio context, and a video on a blu
     run('setHeadlessMode(true)'); // the UI plugin is made after the engine starts, which headless mode stands in for
     const paused = JSON.parse(run(`new UISystemPlugin; var video = new UIVideo(vec2(), vec2(100), 'clip.mp4', false);
         video.play(); setSoundPauseWhenBlurred(true);
-        document.hasFocus = ()=> false; uiVideosPageChange(); const blurred = video.video.paused;
+        document.hasFocus = ()=> false; uiVideosPageChange(); const blurred = [video.video.paused, video.video.muted];
         document.hasFocus = ()=> true; uiVideosPageChange();
-        JSON.stringify([blurred, video.video.paused])`));
-    assert.deepEqual(paused, [true, false], 'the video, paused while blurred and playing again after');
+        JSON.stringify([blurred, video.video.muted])`));
+    // a blurred window still shows it, so it plays on muted, see full pass 7
+    assert.deepEqual(paused, [[false, true], false], 'the video, muted while blurred and heard again after');
 });
 
 test('an object placed from a Tiled template is skipped with a warning saying so', ()=>

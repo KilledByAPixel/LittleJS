@@ -28,6 +28,12 @@ What changed in each release, newest first. Releases before 1.20.0 are on the
 - A 3D level's scene block no longer carries into the next level: each load starts from the scene the game set, so a level with no block shows no fog, sky or sun of the last one
 - Inside the 3D editor's Edit prefab mode the blocks, terrain and scene are not offered, where edits to them were lost on Back
 - `setScene` and `engineObjectsDestroy` say that UI objects and tweens stay, and how to end them
+- `soundPauseWhenBlurred` mutes a `UIVideo` and leaves it playing, as the window still shows it, where it paused it and a game waiting for the end of a cutscene skipped it; a hidden page still pauses it
+- A bullet whose move ends exactly on a tile's face is stopped in that frame, where it went into the tile and hit it a frame late
+- The touch gamepad hands over to and from a real gamepad in any slot: a touch button held is released on the pad the game reads, and the real pads' held buttons are let go when touch takes over
+- Closing the level editor with a game's tool held gives the tool its release, and digits pressed while it is held change no layer or debug view
+- A level or Tiled property named like a member every object has, as `constructor`, is kept, and `__proto__` is set as a property, not as the object's prototype
+- A `LightSystemPlugin` made again in a release build keeps the sun and frees the old one's GPU objects; `postProcess.feedback` turned on while it runs shows the right picture in its first frame; a mesh builder given an endless count builds a whole mesh; `formatTime(-Infinity)` shows 0:00
 
 ## 1.30.1 - 2026-11-12
 

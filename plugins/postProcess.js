@@ -182,6 +182,10 @@ class PostProcessPlugin
             glContext.pixelStorei(glContext.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true);
             glContext.disable(glContext.BLEND);
 
+            // feedback turned on after it was made: its texture is made now, before unit 0 holds the frame, which
+            // making it would rebind
+            postProcess.feedback && !postProcess.feedbackTexture && postProcessFeedbackMake();
+
             // setup texture
             glContext.activeTexture(glContext.TEXTURE0);
             glContext.bindTexture(glContext.TEXTURE_2D, postProcess.texture);
@@ -225,7 +229,6 @@ class PostProcessPlugin
             // the previous frame's output, on the second texture unit
             if (postProcess.feedback)
             {
-                postProcess.feedbackTexture || postProcessFeedbackMake(); // feedback turned on after it was made
                 glContext.activeTexture(glContext.TEXTURE1);
                 glContext.bindTexture(glContext.TEXTURE_2D, postProcess.feedbackTexture);
                 setFilter();

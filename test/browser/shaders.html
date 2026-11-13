@@ -79,13 +79,18 @@ smokeRun(async ()=>
     fresh.dispose();
     check('disposed before its first batch is drawn, it leaves the list too', !fresh.program &&
         !glShaderObjects.includes(fresh));
-    // feedback with no texture, as when it is turned on after the plugin was made: the texture is made then, black
+    // feedback with no texture, as when it is turned on after the plugin was made: the texture is made then, black,
+    // and the frame is still the frame, its green and blue from iChannel0 alone
+    engineStep();
+    const before = smokePixel(.25, .5), beforeRight = smokePixel(.75, .5);
     glContext.deleteTexture(postProcess.feedbackTexture);
     postProcess.feedbackTexture = undefined;
     engineStep();
-    const restarted = smokePixel(.25, .5)[0];
-    check('feedback turned on later makes its texture and starts from black', Math.abs(restarted - 64) < 4 &&
-        !!postProcess.feedbackTexture && glContext.getError() === glContext.NO_ERROR, restarted);
+    const restarted = smokePixel(.25, .5), right = smokePixel(.75, .5);
+    check('feedback turned on later makes its texture and starts from black, the frame as it was',
+        Math.abs(restarted[0] - 64) < 4 && restarted[1] === before[1] && restarted[2] === before[2] &&
+        right[1] === beforeRight[1] && right[2] === beforeRight[2] &&
+        !!postProcess.feedbackTexture && glContext.getError() === glContext.NO_ERROR, {restarted, right, beforeRight});
     checkGLError();
 });
 </script>

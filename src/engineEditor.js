@@ -538,9 +538,15 @@ function editorSetOpen(open)
     }
     else
     {
+        // a tool of the game's own still held is let go, its release ends the stroke, however the editor closes
+        if (editorToolHeld)
+        {
+            editorToolHeld = false;
+            try { editorGameTool()?.onRelease?.(editorToolAt()); }
+            finally { editorStrokeEnd(); }
+        }
         editorStrokeEnd();
         editorAutosaveFlush(); // the game plays on with what the editor has kept, the stroke just ended too
-        editorToolHeld = false;
         editorSelection = editorSelectionDrag = editorRightPress = editorObjectDrag = editorObjectBox = undefined;
         editorObjectSelection.clear();
         editorMouseOnPanel = false; // the panel hides, with no mouseleave
@@ -2948,10 +2954,14 @@ function editorUpdate()
     if (!editorIsOpen) return;
     editorApplyCamera();
 
+    // a digit pressed while a tool of the game's own is held is taken, as the letters wait, so the tool's press ends
+    // with its release, neither the layers nor the debug views change under it
+    for (let i = 0; editorToolHeld && i <= 9; ++i)
+        keyWasPressed('Digit' + i) && inputClearKey('Digit' + i);
+
     // 0 exits the editor, the overlay's 0 does it while the overlay is open; cleared so debugKeysAlways
-    // does not toggle it back in the same step; it and the layer digits wait, as the letters do, while a tool of the
-    // game's own is held, so its press ends with its release
-    if (!debugOverlay && !editorToolHeld && keyWasPressed('Digit0'))
+    // does not toggle it back in the same step
+    if (!debugOverlay && keyWasPressed('Digit0'))
     {
         inputClearKey('Digit0');
         levelEditor.close();
@@ -2960,7 +2970,7 @@ function editorUpdate()
 
     // 1 to 9 pick a layer from the back; taken, so debugKeysAlways does not also flip the debug views, the overlay
     // keeps them while it is open
-    for (let i = 1; !debugOverlay && !editorToolHeld && i <= 9; ++i)
+    for (let i = 1; !debugOverlay && i <= 9; ++i)
     {
         if (!keyWasPressed('Digit' + i) || levelEditor.keys[i]) continue; // a digit of the game's own is its
         inputClearKey('Digit' + i);

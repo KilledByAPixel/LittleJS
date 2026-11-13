@@ -658,26 +658,35 @@ function objectPropertyCopy(value)
     return copy;
 }
 
+// a property of an object's properties, set as one of its own whatever its name, __proto__ too, which assigned
+// would set the prototype
+function objectPropertySet(properties, key, value)
+{ Object.defineProperty(properties, key, {value, enumerable: true, writable: true, configurable: true}); }
+
+// a type's default for a property, its own, not one every object has, like constructor or toString
+const objectPropertyDefault = (defaults, key)=>
+    Object.prototype.hasOwnProperty.call(defaults, key) ? defaults[key] : undefined;
+
 // the defaults of an object's type, each copied for it, then its properties in Tiled over them
 function objectLayersProperties(type, object)
 {
-    const properties = {};
+    const properties = {}, set = (key, value)=> objectPropertySet(properties, key, value);
     for (const [key, value] of Object.entries(type.defaults))
-        properties[key] = objectPropertyCopy(value);
+        set(key, objectPropertyCopy(value));
     for (const property of object.properties || [])
     {
         const {name, value} = property;
         if (property.type === 'color')
-            value && (properties[name] = tileLayersColor(value)); // an empty color is unset
-        else if (isVector2(type.defaults[name]))
+            value && set(name, tileLayersColor(value)); // an empty color is unset
+        else if (isVector2(objectPropertyDefault(type.defaults, name)))
         {
             // Tiled has no Vector2, one is the string x,y, and one it can not read keeps the default
             const parts = String(value).split(','), [x, y] = parts.map(Number);
             parts.length === 2 && parts.every((part)=> part.trim()) && isNumber(x) && isNumber(y) &&
-                (properties[name] = vec2(x, y));
+                set(name, vec2(x, y));
         }
         else
-            properties[name] = objectPropertyCopy(value); // a class property is the map's own object
+            set(name, objectPropertyCopy(value)); // a class property is the map's own object
     }
     return properties;
 }
@@ -704,7 +713,7 @@ function objectLayersMake(tileMapData, object)
         if (typeof result[key] === 'function' && typeof value !== 'function')
             debug && console.warn(`objectLayersLoad: ${name} property ${key} has a method's name, left out`);
         else
-            result[key] = value;
+            objectPropertySet(result, key, value); // as its own, __proto__ too, which assigned sets the prototype
     }
     return result;
 }

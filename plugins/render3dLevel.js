@@ -442,28 +442,26 @@ function level3DVector(value, fallback)
 // one the type has no default for is kept as it is
 function level3DProperties(type, object)
 {
-    const properties = {}, own = object.properties;
+    const properties = {}, own = object.properties, set = (key, value)=> objectPropertySet(properties, key, value);
     for (const [key, value] of Object.entries(type.defaults))
-        properties[key] = objectPropertyCopy(value);
+        set(key, objectPropertyCopy(value));
     for (const [key, value] of Object.entries(own && typeof own === 'object' ? own : {}))
     {
-        const d = type.defaults[key];
+        const d = objectPropertyDefault(type.defaults, key); // the type's own, not one every object has
         // a color or a vector as a level file writes it, or as code has it, given to level3DSpawn, copied
         if (isColor(d))
-            isColor(value) ? properties[key] = value.copy() :
-                level3DHexColor(value) && (properties[key] = level3DHexColor(value));
+            isColor(value) ? set(key, value.copy()) : level3DHexColor(value) && set(key, level3DHexColor(value));
         else if (isVector3(d))
-            properties[key] = isVector3(value) ? value.copy() : level3DVector(value, properties[key]);
+            set(key, isVector3(value) ? value.copy() : level3DVector(value, properties[key]));
         else if (isVector2(d))
-            isVector2(value) ? properties[key] = value.copy() :
-                isArray(value) && value.length === 2 && value.every(level3DFinite) &&
-                    (properties[key] = vec2(value[0], value[1]));
+            isVector2(value) ? set(key, value.copy()) :
+                isArray(value) && value.length === 2 && value.every(level3DFinite) && set(key, vec2(value[0], value[1]));
         else if (typeof d === 'number')
-            level3DFinite(value) && (properties[key] = value);
+            level3DFinite(value) && set(key, value);
         else if (d === undefined ||
             typeof value === typeof d && (d === null || value !== null && isArray(value) === isArray(d)))
-            properties[key] = objectPropertyCopy(value); // null and a list are objects to typeof, but neither is
-                                                         // a default's object, nor an object a default's list
+            set(key, objectPropertyCopy(value)); // null and a list are objects to typeof, but neither is a
+                                                 // default's object, nor an object a default's list
     }
     return properties;
 }

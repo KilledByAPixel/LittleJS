@@ -112,8 +112,9 @@ class Timer
  *  @memberof Utilities */
 function formatTime(t)
 {
+    t = isFinite(t) ? t : 0; // no time shows 0:00
     const signStr = t <= -1 ? '-' : ''; // no sign when it shows 0:00
-    t = isFinite(t) ? Math.trunc(abs(t)) : 0; // not |0, which wraps past 2^31 seconds; no time shows 0:00
+    t = Math.trunc(abs(t)); // not |0, which wraps past 2^31 seconds
     return signStr + Math.trunc(t/60) + ':' + (t%60<10?'0':'') + t%60;
 }
 

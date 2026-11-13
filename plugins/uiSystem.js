@@ -1929,6 +1929,8 @@ class UIVideo extends UIObject
         this.video.volume = audioFinite(clamp(this.volume * soundVolume), 0);
         if (this._soundEnabled !== soundEnable)
             this.video.muted = !(this._soundEnabled = soundEnable);
+        // one started while the window is blurred is muted too, as the others are
+        uiVideosBlurred && !this.video.muted && (this.video.muted = true, uiVideosMuted.add(this));
     }
     
     /** Render video to UI canvas */
@@ -1959,17 +1961,21 @@ class UIVideo extends UIObject
         this.video.remove();
         uiVideos.delete(this);
         uiVideosPaused.delete(this);
+        uiVideosMuted.delete(this);
         super.destroy();
     }
 }
 
-// the videos there are, and those paused while the page is hidden, or blurred, which soundPauseWhenHidden and
-// soundPauseWhenBlurred pause as they do the game's sound, and play again when the page shows
-const uiVideos = /* @__PURE__ */ new Set, uiVideosPaused = /* @__PURE__ */ new Set;
-let uiVideosListening = false;
+// the videos there are, those paused while the page is hidden, as soundPauseWhenHidden pauses the game's sound, and
+// those muted while the window is blurred, as soundPauseWhenBlurred stops its sound: a blurred window still shows
+// them, so they go on playing and the game sees them play; each comes back when the page does
+const uiVideos = /* @__PURE__ */ new Set, uiVideosPaused = /* @__PURE__ */ new Set, uiVideosMuted = /* @__PURE__ */ new Set;
+let uiVideosListening = false, uiVideosBlurred = false;
 function uiVideosPageChange()
 {
-    if (audioPagePaused())
+    const hidden = soundPauseWhenHidden && !!document.hidden;
+    uiVideosBlurred = !hidden && audioPagePaused();
+    if (hidden)
     {
         for (const video of uiVideos)
             video.isPaused() || (video.pause(), uiVideosPaused.add(video)); // added after, so it plays again
@@ -1979,6 +1985,15 @@ function uiVideosPageChange()
         for (const video of uiVideosPaused)
             video.play();
         uiVideosPaused.clear();
+    }
+    if (uiVideosBlurred)
+        for (const video of uiVideos)
+            video.video.muted || (video.video.muted = true, uiVideosMuted.add(video));
+    else
+    {
+        for (const video of uiVideosMuted)
+            video.video.muted = !soundEnable;
+        uiVideosMuted.clear();
     }
 }
 

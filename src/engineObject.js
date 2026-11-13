@@ -106,7 +106,9 @@ function engineObjectBulletSweep(object, from, to)
         let t1 = stretches[i][1];
         while (++i < stretches.length && stretches[i][0] <= t1)
             t1 = max(t1, stretches[i][1]);
-        lineTest(at(t0), at(t1), testCell);
+        // a hair past the move's end, so a move that ends exactly on a tile's face is stopped in that frame, the cell
+        // entered at the end tested too; where it stops is clamped to the move
+        lineTest(at(t0), t1 >= 1 ? to.add(move.normalize(1e-6)) : at(t1), testCell);
     }
     return hit;
 }

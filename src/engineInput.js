@@ -477,6 +477,10 @@ const touchGamepadButtonsPressed = [];
 // whether each button was held at the last poll, as the finger has it, not the input data an inputClear may have
 // emptied, so a cleared button stays up until it is let go, as a key does
 const touchGamepadButtonsLast = [];
+// whether the touch gamepad had gamepad 0 at the last poll, so taking it over lets go of the real pads' buttons once
+let touchGamepadOwning = false;
+// the touch buttons held when a real gamepad took over, released on the pad the game reads once the poll is done
+let touchGamepadHeldAtHandover = [];
 // floating stick anchors (stage-local CSS pixels) and owning pointer ids, indexed by stick (0=left, 1=right)
 const touchGamepadStickAnchors = [], touchGamepadStickPointerId = [];
 // pointerId -> control role ('stick0', 'stick1', 'face<n>', or 'start')
@@ -892,15 +896,26 @@ function inputUpdate()
         {
             // the real gamepad takes over: the fingers on the touch gamepad let go of it, and a button they held
             // is released by the real gamepad's poll below, as one it saw held
-            touchGamepadTimer.unset(), touchGamepadHandedOver = true;
+            touchGamepadTimer.unset(), touchGamepadHandedOver = true, touchGamepadOwning = false;
             touchGamepadPointerRole.clear();
             touchGamepadButtons.length = touchGamepadButtonsPressed.length = touchGamepadSticks.length = 0;
             touchGamepadStickPointerId.length = 0;
-            gamepadButtonsLast[0] = touchGamepadButtonsLast.slice();
+            touchGamepadHeldAtHandover = touchGamepadButtonsLast.flatMap((held, i)=> held ? [i] : []);
             touchGamepadButtonsLast.length = 0;
         }
         if (touchGamepadEnable && isTouchDevice && touchGamepadTimer.isSet())
         {
+            // taking over from the real gamepads, whichever slots they are in: their held buttons are let go, as
+            // they are not read while the touch gamepad has it; gamepad 0's are its own, read below
+            if (!touchGamepadOwning)
+            {
+                touchGamepadOwning = true;
+                for (let k = 2; k < inputData.length; ++k)
+                for (const j in inputData[k] ?? [])
+                    inputData[k][j] = inputData[k][j] & 1 ? 4 : 0;
+                gamepadButtonsLast.length = 0;
+            }
+
             // read virtual analog stick
             gamepadPrimary = 0; // touch gamepad uses index 0
             const sticks = gamepadStickData[0] ?? (gamepadStickData[0] = []);
@@ -1054,6 +1069,13 @@ function inputUpdate()
             else if (gamepadDirectionEmulateStick && !sticks.length)
                 sticks[0] = vec2();
         }
+
+        // the touch buttons held when a real gamepad took over are released on the pad the game reads now, which
+        // may be in another slot or have fewer buttons, unless that pad holds the button itself
+        const primary = inputData[gamepadPrimary + 1];
+        for (const i of primary ? touchGamepadHeldAtHandover : [])
+            primary[i] & 1 || (primary[i] = 4);
+        touchGamepadHeldAtHandover = [];
 
         // disable touch gamepad if using real gamepad
         touchGamepadEnable && isUsingGamepad && touchGamepadTimer.unset();

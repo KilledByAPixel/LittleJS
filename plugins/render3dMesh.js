@@ -911,7 +911,7 @@ class Mesh
 // since a fraction is most likely a mistake: a sphere of 7.5 rings would come out open at the top
 function render3DWholeCount(count, name)
 {
-    const whole = floor(count) || 0; // not a number is none
+    const whole = isFinite(count) ? floor(count) : 0; // not a number, or one with no end, is none
     debug && whole !== count && console.warn(`a mesh builder rounded ${name} ${count} down to ${whole}`);
     return whole;
 }
