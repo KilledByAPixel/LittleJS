@@ -262,3 +262,64 @@ test('a bullet its collideWithTile destroys and lets through is asked about no o
         bullet.velocity = vec2(10, 0);`));
     assert.equal(run(`frames(1); asked`), 1);
 });
+
+test('a bouncing bullet at 45 degrees through a grid corner on a wall\'s face bounces off it, not stuck on it', () =>
+{
+    // the two entry times an ulp apart read as a corner; a stop an ulp inside the wall held it there for good
+    const { run } = loadEngine();
+    const stuck = run(`
+        setHeadlessMode(true);
+        setGravity(vec2());
+        var wall = new TileCollisionLayer(vec2(), vec2(30, 30), tile(), 0, false);
+        for (let y = 0; y < 30; ++y) wall.setCollisionData(vec2(0, y), 1);
+        var stuck = [];
+        for (const speed of [.1, .25, .7, 1.3])
+        for (let a = 1; a < 40; ++a)
+        {
+            const b = new EngineObject(vec2(1 + a/10, 10 + a/10), vec2(.1));
+            b.setCollision(false, false);
+            b.isBullet = true; b.clampSpeed = false; b.restitution = 1; b.damping = 1;
+            b.velocity = vec2(-speed, -speed);
+            for (let f = 0; f < 60; ++f) engineObjectsUpdate();
+            b.pos.x < 3 && stuck.push(speed + ' ' + a + ' ' + b.pos);
+            b.destroy();
+        }
+        stuck.join('; ')`);
+    assert.equal(stuck, '');
+});
+
+test('a bullet that starts in a one way tile\'s margin, or on its edge, bounces off the next wall and goes on', () =>
+{
+    const { run } = loadEngine();
+    for (const y of [5.0005, 5])
+    {
+        const path = JSON.parse(run(`
+            setHeadlessMode(true);
+            setGravity(vec2());
+            engineObjectsDestroy();
+            var layer = new TileCollisionLayer(vec2(), vec2(12, 12), tile(), 0, false);
+            layer.setData(vec2(5, 5), new TileLayerData(5));
+            layer.setCollisionData(vec2(5, 5), 1);
+            layer.setData(vec2(6, 5), new TileLayerData(1));
+            layer.setCollisionData(vec2(6, 5), 1);
+            layer.setOneWay(5, vec2(0, -1));
+            var b = new EngineObject(vec2(5.5, ${y}), vec2(.1));
+            b.setCollision(false, false);
+            b.isBullet = true; b.restitution = 1; b.damping = 1;
+            b.velocity = vec2(.3, 0);
+            var xs = [];
+            for (let f = 0; f < 8; ++f) engineObjectsUpdate(), xs.push(b.pos.x);
+            JSON.stringify(xs)`));
+        assert.ok(path.at(-1) < 4.2, 'it went back the way it came, from y ' + y + ': ' + path);
+    }
+});
+
+test('a negative tile value in front of a wall, a ladder, is not solid to a bullet stopping at the wall', () =>
+{
+    const { run } = loadEngine();
+    run(level(`layer.setCollisionData(vec2(9, 5), -1);`));
+    const stop = run(`
+        bullet.pos = vec2(9.3, 5.5); bullet.velocity = vec2(.7, 0);
+        frames(1); bullet.pos.x`);
+    assert.ok(abs(stop - (10 - 2e-3)) < 1e-9, 'a hair off the face, not on it, ' + stop);
+});
