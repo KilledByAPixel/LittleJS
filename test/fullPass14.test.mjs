@@ -51,7 +51,7 @@ test('parseAtlas leaves out entries with no frame rect or name and keeps the res
         {filename: 'b'}, null, {frame: {x: 0, y: 0, w: 8, h: 8}},
         {filename: 7, frame: {x: 8, y: 0, w: 8, h: 8}}]}).map((g)=> [g.name, g.frames[0].sourceSize.x]))`));
     assert.deepEqual(groups, [['a', 7], ['7', 8]]);
-    assert.ok(warnings.some((w)=> w.includes('no frame rect or name')));
+    assert.ok(warnings.some((w)=> w.includes('no frame rect, no name')));
     // a trimmed part past its untrimmed size is left out of loadAtlas
     run(`var b = loadAtlas('b.png', {frames: {over: {frame: {x: 0, y: 0, w: 8, h: 8}, spriteSourceSize: {x: 4, y: 0},
         sourceSize: {w: 8, h: 8}}, fine: {frame: {x: 8, y: 0, w: 8, h: 8}}}})`);

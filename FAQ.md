@@ -416,16 +416,27 @@ npm init -y
 npm install --save-dev electron @electron/packager
 ```
 
-Add a file, `electron.js`, that opens the game in a window:
+Add a file, `electron.js`, that opens the game in a window. It serves the game's folder to the window as `app://`, the way a web server would: a page opened straight from a file can not load everything, Box2D's `box2d.wasm.wasm` for one.
 
 ```javascript
-const { app, BrowserWindow } = require('electron');
+const { app, BrowserWindow, protocol, net } = require('electron');
+const path = require('node:path');
+const { pathToFileURL } = require('node:url');
+
+// the game's files, served to the window as app://game/...
+protocol.registerSchemesAsPrivileged([{scheme: 'app',
+    privileges: {standard: true, secure: true, supportFetchAPI: true}}]);
 
 app.whenReady().then(()=>
 {
+    protocol.handle('app', (request)=>
+    {
+        const file = path.join(__dirname, decodeURIComponent(new URL(request.url).pathname));
+        return net.fetch(pathToFileURL(file).toString());
+    });
     const mainWindow = new BrowserWindow({width: 1280, height: 720});
-    mainWindow.setMenu(null);          // no menu bar
-    mainWindow.loadFile('index.html'); // the game's page
+    mainWindow.setMenu(null);                     // no menu bar
+    mainWindow.loadURL('app://game/index.html');  // the game's page
     //mainWindow.setFullScreen(true);
 });
 
@@ -440,7 +451,7 @@ And point `package.json` at it:
 
 `npx electron .` runs the game in its window, and `npx @electron/packager . --overwrite` builds a folder with the program in it, an exe on Windows, for the system it is run on. That folder is what you zip for itch.io or upload to Steam.
 
-The game needs no changes: use the release build of the engine as for the web, and keep file paths relative. The program is large, 100 MB or more, since Electron carries a whole browser with it; the engine is a small part of that, and in the game itself the music and images take most of the space. [Tauri](https://tauri.app) is a wrapper that uses the browser already on the player's machine, for a far smaller program, at the cost of the game running in whichever browser that is.
+The game needs no changes: use the release build of the engine as for the web, and keep file paths relative. In a Vite project, whose `package.json` has `"type": "module"`, name the file `electron.cjs` (and point `"main"` at it), run `npm run build`, and serve the built `dist` folder: `path.join(__dirname, 'dist', ...)`. The program is large, 100 MB or more, since Electron carries a whole browser with it; the engine is a small part of that, and in the game itself the music and images take most of the space. [Tauri](https://tauri.app) is a wrapper that uses the browser already on the player's machine, for a far smaller program, at the cost of the game running in whichever browser that is.
 
 ### How do I shrink my game for js13kGames?
 

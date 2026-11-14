@@ -177,7 +177,7 @@ the player keeps sliding after the keys are let go. A layer's
   last 1 to 3, three quarter turns.
 - Make the ice a trampoline: add `ice.restitution = 1;`.
 - Make the crate light: `crate.mass = 3;` to `crate.mass = .3;`.
-- Make the lift faster: `.06` to `.12`.
+- Make the lift faster: `cos(time) * .06` to `cos(time) * .12`.
 - Let the view leave the level: remove the two lines that set
   `boundsMin` and `boundsMax`.
 

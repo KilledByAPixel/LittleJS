@@ -72,14 +72,15 @@ class PostProcessPlugin
          *  pass-through or a vignette does, looks the same either way */
         this.pixelated = false;
 
-        /** @property {Object<string, number|Array<number>>} - The game's own values for the shader, a uniform each
-         *  by its name, a number a float and a list of 2 to 4 numbers a vector, set every frame as they are; an
-         *  effect setting can be one of these names, so it changes every frame without making the shader again, all
-         *  but glow's size, which sets how many samples it takes; adding or removing a name makes the shader again,
-         *  and the shader is first made at the first render, so values set right after the plugin are in it; a name
-         *  is a GLSL name not starting with an underscore, which the effects keep for their own, nor i and a capital
-         *  or gl_, and not c, uv or p, the names mainImage works on
-         *  @type {Object<string, number|Array<number>>} */
+        /** @property {Object<string, PostProcessValue>} - The game's own values for the shader, a uniform each
+         *  by its name, a number a float and a list of 2 to 4 numbers a vector, as a Color is its four channels, a
+         *  vector its axes and a typed array its numbers, the forms Shader.setUniform takes, set every frame as they
+         *  are; an effect setting can be one of these names, so it changes every frame without making the shader
+         *  again, all but glow's size, which sets how many samples it takes; adding or removing a name makes the
+         *  shader again, and the shader is first made at the first render, so values set right after the plugin are
+         *  in it; a name is a GLSL name not starting with an underscore, which the effects keep for their own, nor i
+         *  and a capital or gl_, and not c, uv or p, the names mainImage works on
+         *  @type {Object<string, PostProcessValue>} */
         this.values = {};
         // the names of the values the shader was made with
         this.valueNames = '';
@@ -256,7 +257,7 @@ class PostProcessPlugin
             glContext.uniform3f(uniformLocation('iResolution'), mainCanvas.width, mainCanvas.height, 1);
             for (const name in postProcess.values)
             {
-                const value = postProcess.values[name], location = uniformLocation(name);
+                const value = postProcessValueList(postProcess.values[name]), location = uniformLocation(name);
                 if (isArray(value))
                     [, , glContext.uniform2fv, glContext.uniform3fv, glContext.uniform4fv][value.length]?.call(glContext, location, value);
                 else
@@ -310,9 +311,29 @@ class PostProcessPlugin
 
 ///////////////////////////////////////////////////////////////////////////////
 
+/** A value of postProcess.values: a number, a list of 2 to 4 numbers, a Color, a vector or a typed array
+ *  @typedef {number|Array<number>|Color|Vector2|Vector3|Float32Array} PostProcessValue
+ *  @memberof PostProcess */
+
+// a value as the shader takes it, a number or a list: a Color its four channels, a vector its axes, a typed array its
+// numbers
+function postProcessValueList(value)
+{
+    if (value instanceof Color) return [value.r, value.g, value.b, value.a];
+    if (value instanceof Vector2) return [value.x, value.y];
+    if (ArrayBuffer.isView(value)) return [.../** @type {Float32Array} */ (value)];
+    const v = /** @type {Vector3} */ (value);
+    if (v && typeof v === 'object' && isNumber(v.x) && isNumber(v.y) && isNumber(v.z)) return [v.x, v.y, v.z];
+    return value;
+}
+
 // what the shader declares of the game's values, each name and its length, so a value that changes either makes the
 // shader again
-const postProcessValueKey = (values)=> Object.entries(values).map(([name, v])=> name + ':' + (isArray(v) ? v.length : 1)).join();
+const postProcessValueKey = (values)=> Object.entries(values).map(([name, v])=>
+{
+    const value = postProcessValueList(v);
+    return name + ':' + (isArray(value) ? value.length : 1);
+}).join();
 
 // the code the pass shades with: none passes the frame through, and code with no mainImage of its own, an effect like
 // postProcessVignette() given alone, is a piece that postProcessEffects joins into one
@@ -342,9 +363,10 @@ function postProcessFragmentSource(shaderCode, values={})
     let declared = '';
     for (const name in values)
     {
-        const value = values[name], length = isArray(value) ? value.length : 1;
+        const value = postProcessValueList(values[name]), length = isArray(value) ? value.length : 1;
         ASSERT(postProcessNameCheck(name), 'a postProcess value needs a name GLSL takes that the shader does not use', name);
-        ASSERT(!isArray(value) || length >= 2 && length <= 4, 'a postProcess value is a number or 2 to 4 of them', name);
+        ASSERT(isArray(value) ? length >= 2 && length <= 4 : isNumber(value) || typeof value === 'boolean',
+            'a postProcess value is a number, 2 to 4 of them, a Color or a vector', name);
         declared += `uniform ${length > 1 ? 'vec' + length : 'float'} ${name};`;
     }
     return '#version 300 es\n' +        // specify GLSL ES version

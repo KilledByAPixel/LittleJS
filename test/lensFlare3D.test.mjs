@@ -284,8 +284,8 @@ test('a flare destroyed on its own is no longer the flare of its light, and addF
 test('a flare that is off the screen sends no ray, and is not visible until it comes back', ()=>
 {
     const run = load();
-    run(`var flare = new LensFlare3D; var rays = 0, pick = render3D.pick;
-        render3D.pick = function(...args) { ++rays; return pick.apply(this, args); };
+    run(`var flare = new LensFlare3D; var rays = 0, pick = render3DPickPart;
+        render3DPickPart = function(...args) { ++rays; return pick.apply(this, args); };
         sun(0, 0, -1); steps(flare, 5);`);
     assert.deepEqual([run('rays'), run('flare.visible')], [5, 1]);
     run('rays = 0; sun(3, 0, -1); steps(flare, 20);'); // in front of the camera, far off to the side
@@ -299,8 +299,8 @@ test('a flare that is off the screen sends no ray, and is not visible until it c
 test('a light that is off or out of reach of its cone sends no ray either', ()=>
 {
     const run = load();
-    run(lampCode + `var rays = 0, pick = render3D.pick;
-        render3D.pick = function(...args) { ++rays; return pick.apply(this, args); };
+    run(lampCode + `var rays = 0, pick = render3DPickPart;
+        render3DPickPart = function(...args) { ++rays; return pick.apply(this, args); };
         lamp.intensity = 0; steps(flare, 5);`);
     assert.deepEqual([run('rays'), run('flare.getScreenElements().length')], [0, 0]);
     run('lamp.intensity = 1; lamp.radius = 0; steps(flare, 5);');

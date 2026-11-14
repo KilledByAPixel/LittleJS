@@ -1070,6 +1070,7 @@ class Render3DPlugin
     /** Find the nearest object under a screen position or along a ray, for clicking on things
      *  - A mesh is hit on its triangles, the ones that face the ray as they are drawn, both sides of a doubleSided
      *    mesh; a sprite is hit as the quad it draws, and a height map, voxel map or mesh collider on its surface
+     *  - A glTF model or an attached prefab is hit through its parts and is what is returned, not the part
      *  - engineObjectsRaycast3D is the other half of this, every object along a ray instead of the nearest
      *  @param {Vector2|Ray3D} from - A screen position like mousePosScreen, or a ray to look along
      *  @param {Array<EngineObject>} [objects] - Defaults to every object; only those with a mesh or a sprite count,
@@ -1081,9 +1082,9 @@ class Render3DPlugin
         let nearest;
         for (const o of objects)
         {
-            const distance = render3DRaycastObject(ray, o);
-            if (distance !== undefined && (!nearest || distance < nearest.distance))
-                nearest = {object: /** @type {EngineObject3D} */ (o), distance}; // only a 3D object has a distance
+            const distance = render3DRaycastOwned(ray, o);
+            if (distance !== undefined && (!nearest || distance < nearest.distance)) // only a 3D object has a distance
+                nearest = {object: render3DHitOwner(/** @type {EngineObject3D} */ (o)), distance};
         }
         return nearest;
     }

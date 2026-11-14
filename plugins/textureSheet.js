@@ -558,7 +558,8 @@ function parseAtlas(data)
             rotated:    !!f.rotated,
         };
     });
-    bad && console.warn(`loadAtlas: ${bad} frame entries have no frame rect or name, left out`);
+    bad && console.warn(`loadAtlas: ${bad} frame entries have no frame rect, no name or a field that is not a ` +
+        'number, left out');
 
     const groups = [];
     const tags = data.meta?.frameTags;
@@ -587,11 +588,22 @@ function parseAtlas(data)
         // a tag numbers frames, and Aseprite exported with split layers has an entry for each layer of each frame,
         // so its tags would take the wrong entries; those entries are named with their layer in brackets, as
         // "hero (body) 0.aseprite", two layers or more among them, while a merged export names no entry by a layer,
-        // or by one only, a title with a bracket; the layers listed, or with none listed the entries' brackets
+        // or by one only, a title with a bracket; the layers listed, or with none listed one name under two brackets,
+        // as "hero (body) 0" and "hero (arm) 0", which a merged sheet of several files, each a title with a bracket
+        // of its own, never has
         const listed = isArray(data.meta?.layers) && data.meta.layers.length;
-        const layers = listed ? data.meta.layers.map((layer)=> '(' + layer?.name + ')') : [...new Set(frames.map((f)=>
-            f?.name.match(/\([^()]+\)/)?.[0]).filter(Boolean))];
-        layers.filter((layer)=> frames.some((f)=> f?.name.includes(layer))).length > 1 &&
+        const bracketsOf = new Map;
+        for (const f of frames)
+        {
+            const bracket = f?.name.match(/\([^()]+\)/)?.[0];
+            if (!bracket) continue;
+            const rest = f.name.replace(bracket, ''), set = bracketsOf.get(rest) ?? new Set;
+            bracketsOf.set(rest, set.add(bracket));
+        }
+        const split = listed ? data.meta.layers.map((layer)=> '(' + layer?.name + ')')
+            .filter((layer)=> frames.some((f)=> f?.name.includes(layer))).length > 1 :
+            [...bracketsOf.values()].some((set)=> set.size > 1);
+        split &&
             console.warn('loadAtlas: the atlas looks exported with split layers, which its frame tags do not ' +
             'number; export it with the layers merged');
         return parseAtlasNamesCheck(groups);

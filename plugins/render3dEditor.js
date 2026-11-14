@@ -76,16 +76,23 @@ function editor3DFlyKeys()
     return vec3(key('KeyD') - key('KeyA'), key('KeyE') - key('KeyQ'), key('KeyW') - key('KeyS'));
 }
 
-// run a function with render3D looking through the editor's camera, for the editor's picking and projecting
+// the game's camera while editor3DWithView looks through the editor's, handed back for a close inside it
+let editor3DViewCamera;
+
+// run a function with render3D looking through the editor's camera, for the editor's picking and projecting; a close
+// inside it, a game's key, onUpdate or tool calling close(), gives the game its camera back at once, and the camera
+// its onClose left is the one put back after
 function editor3DWithView(fn)
 {
-    const r = render3D, camera = r.camera;
+    const r = render3D, camera = r.camera, outer = editor3DViewCamera, mine = camera !== editor3DCamera;
+    mine && (editor3DViewCamera = camera);
     r.camera = editor3DCamera;
     r.updateMatrices();
     try { return fn(); }
     finally
     {
-        r.camera = camera;
+        r.camera = mine || !editor3DIsOpen ? editor3DViewCamera ?? camera : camera;
+        mine && (editor3DViewCamera = outer);
         r.updateMatrices();
     }
 }
@@ -288,7 +295,11 @@ const editor3DInstances = new Map;
 const editor3DRecords = new WeakMap;
 
 // if the editor is open, and if it was opened and not exited, while Escape switches between playing and editing
-let editor3DIsOpen = false, editor3DSession = false;
+let editor3DIsOpen = false, editor3DSession = false, editor3DClosing = false;
+
+// where the mouse last was on the level, off the panel, which Escape plays from over the panel
+let editor3DMouseScreen;
+
 let editor3DGamePaused = false;   // the game's pause from before the editor opened
 let editor3DPlayFromMouse = false; // Escape and Play hand the game a position to play from
 
@@ -1733,7 +1744,7 @@ function editor3DRestore()
 function editor3DSetOpen(open)
 {
     open = !!open;
-    if (!debug || editor3DIsOpen === open) return;
+    if (!debug || editor3DIsOpen === open || editor3DClosing) return; // a close made while closing is this one
     if (open)
     {
         editor3DSetFreeCamera(false);
@@ -1757,9 +1768,10 @@ function editor3DSetOpen(open)
         if (editor3DToolHeld)
         {
             editor3DToolHeld = false;
+            editor3DClosing = true; // its release closing the editor is this close, not one more
             try { editor3DWithView(()=> editorGameTool()?.onRelease?.(editor3DToolAt())); }
             catch (error) { released = {error}; }
-            finally { editor3DStrokeEnd(); }
+            finally { editor3DClosing = false, editor3DStrokeEnd(); }
         }
         editor3DDrag = editor3DHover = undefined;
         editor3DMouseOnPanel = false; // the panel hides, with no mouseleave
@@ -1769,7 +1781,14 @@ function editor3DSetOpen(open)
         editor3DIsOpen = false;
         setPaused(editor3DGamePaused);
         inputCapture(editor3DViewOn()); // the game's input back before its hook, which may throw
-        editorCall('onClose');
+        // closed from inside the editor's view, by a key, onUpdate or a tool of the game's: its hook sees its camera
+        if (editor3DViewCamera && render3D.camera === editor3DCamera)
+        {
+            render3D.camera = editor3DViewCamera;
+            render3D.updateMatrices();
+        }
+        try { editorCall('onClose'); }
+        finally { editor3DViewCamera && (editor3DViewCamera = render3D.camera); }
         if (released) throw released.error;
     }
 }
@@ -1858,6 +1877,10 @@ function editor3DPickTool(tool)
 // a tool of the game's own: if its press is held, and the editor's tool and type to place when it was turned on,
 // since picking one of those puts the game's tool down
 let editor3DToolHeld = false, editor3DToolName, editor3DToolPicked = [];
+
+// a type placed by the press still held: the undo count after it and the brush and tool before it, see the pinch in
+// editor3DEditorUpdate
+let editor3DPlacedHeld;
 
 // what a tool's callbacks are given: where the mouse is on the level or the ground, its ray, and the keys held
 function editor3DToolAt(ray=render3D.screenToRay(mousePosScreen), shift=false, ctrl=false)
@@ -2352,8 +2375,11 @@ function editor3DPress(mouse, ray, shift)
     }
     if (editor3DBrush)
     {
-        // the brush stays when nothing was placed, on nothing or on a level whose autosave waits
+        // the brush stays when nothing was placed, on nothing or on a level whose autosave waits; what was placed is
+        // kept while the press is held, so a pinch can take it back
+        const brush = editor3DBrush, tool = editor3DTool;
         if (!editor3DPlaceAt(editor3DBrush, ray)) return;
+        editor3DPlacedHeld = {undo: editor3DUndoList.length, brush, tool};
         shift || (editor3DBrush = undefined);
         editor3DTool = 'move';
         return;
@@ -2668,7 +2694,8 @@ function editor3DEditorUpdate(seconds)
             if (editor3DDrag) editor3DDragCancel();
             else
             {
-                const pos = editor3DMousePoint();
+                // over the panel, from where the mouse last was on the level, as the 2D editor plays
+                const pos = editor3DScreenPoint(editor3DMouseOnPanel && editor3DMouseScreen || mousePosScreen);
                 editor3DAfterView = ()=> editor3DPlay(pos); // once the view is handed back, see editor3DUpdate
             }
         }
@@ -2692,6 +2719,7 @@ function editor3DEditorUpdate(seconds)
 
     editor3DCameraUpdate(seconds, shift, alt);
     const looking = mouseIsDown(2), cameraDrag = looking || mouseIsDown(1) || keyIsDown('Space') || alt;
+    editor3DMouseOnPanel || (editor3DMouseScreen = mousePosScreen.copy());
 
     // the keys, which wait for a drag to end, and fly while the right button is held
     if (!editor3DDrag && !looking && !editor3DToolHeld)
@@ -2704,10 +2732,28 @@ function editor3DEditorUpdate(seconds)
             if (withCtrl !== ctrl) continue;
             taken.add(code);
             keyWasPressed(code) && key.action.call(levelEditor, shift);
+            if (!editor3DIsOpen) return; // the game's key closed it, the rest of the update is not for a closed editor
         }
         for (const [code, action] of Object.entries(ctrl ? editor3DCtrlKeys : editor3DKeys))
             taken.has(code) || keyWasPressed(code) && action(shift);
     }
+
+    // the second finger of a pinch took the press over, as in the 2D editor: what its first finger began is taken
+    // back, a drag, a block or a terrain stroke, a held tool's press with no release, a type it placed, and the press
+    // is spent, so two fingers landing in one frame are no quick click
+    if (inputPinchReleased)
+    {
+        editor3DDrag ? editor3DDragCancel() : editor3DStrokeCancel();
+        editor3DToolHeld = false;
+        const placed = editor3DPlacedHeld;
+        if (placed && editor3DUndoList.length === placed.undo && editor3DUndo())
+        {
+            editor3DRedoList.pop();
+            editor3DBrush = placed.brush, editor3DTool = placed.tool;
+        }
+        inputClearKey(0);
+    }
+    mouseIsDown(0) || (editor3DPlacedHeld = undefined);
 
     // a right press during a drag puts it back
     if (editor3DDrag && mouseWasPressed(2))
@@ -2717,7 +2763,8 @@ function editor3DEditorUpdate(seconds)
     idle && mouseWasPressed(0) && editor3DRecords.get(editor3DLevel)?.pending && editorPendingNudge();
     editor3DHover = idle ? editor3DHandleAt(mouse) : undefined;
     editorCall('onUpdate');
-    if (editor3DToolUpdate(ray, idle, shift, ctrl)) return; // a tool of the game's own has the mouse
+    if (!editor3DIsOpen) return; // closed by the game's onUpdate
+    if (editor3DToolUpdate(ray, idle, shift, ctrl) || !editor3DIsOpen) return; // a tool of the game's own has the mouse
 
     // the Blocks tool takes the mouse while the level has a map: Shift removes, Ctrl repaints
     // a type picked to place is placed, whichever tool is on

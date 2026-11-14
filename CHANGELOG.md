@@ -34,8 +34,12 @@ What changed in each release, newest first. Releases before 1.20.0 are on the
 - A `GLTFObject`'s `color` multiplies every part's and its `transparent` makes them blend, so a hit flash or a fade is set on the model; an attached `Prefab3D`'s color tints its built-in parts the same way
 - The 2D level editor zooms with a two finger pinch on a touch screen
 - `engineIsFrozen()` says the game is held still this update, paused, at a time scale of 0 or under an open level editor, for a game's own plugin to skip its simulation by
+- `postProcess.values` takes a Color, a vector or a typed array as `Shader.setUniform` does, where they became a float of NaN
+- `box2dInit` fails with a message naming `box2d.wasm.wasm` when it can not load, as from a page opened from a file, where it waited for ever
+- The FAQ's Electron recipe serves the game's folder to its window, so a Box2D game runs, and says what to change in a Vite project
 
 ### Breaking Changes
+- 3D: `render3D.pick` and `engineObjectsRaycast3D` hit a glTF model or an attached prefab through its parts and give back the model or the prefab, not the part, and find it in a list of models
 - 3D: MeshCollider and HeightMap follow one slope rule. A face or ground steeper than both the object's `groundAngle` and 45 degrees stops a move into it, when it rises past the body's step, so a curb lower than the step is still walked over; ground steeper than `groundAngle` is not ground, so it is not stood or jumped on, and the body slides down it. Before, a HeightMap let a body walk up any slope and MeshCollider faces up to about 80 degrees were climbed. A game whose levels have steep ramps meant to be walked raises the walker's `groundAngle`, up to just under PI/2
 
 ### Fixes
@@ -143,6 +147,14 @@ What changed in each release, newest first. Releases before 1.20.0 are on the
 - 3D editor: a game's own `levelEditor.close()` closes at once again; Play from mouse inside Edit prefab plays from where the player is
 - `loadAtlas` leaves out an entry whose numbers are not numbers, where in debug builds it stopped the whole atlas, and warns of split layers when the layers are not listed
 - Platformer: a character breaks a block over its head only on a real hit
+- HeightMap: a body walking along a cliff at a shallow angle no longer climbs it, its side stops at the foot of a face as a MeshCollider's does, at any speed, and stairs whose risers are each under its step climb however close together they are
+- Editors on touch: two fingers landing in one frame paint no tile in the 2D editor, a selection dragged by the first finger goes back, and in the 3D editor a pinch takes back what its first finger placed, painted or dragged; a mouse wheel notch with Ctrl zooms the 2D editor as much as a trackpad's pinch would, where it zoomed 2.7 times
+- A body standing on one way tiles that the game moves, to a door or a checkpoint, lands where it is put, where it fell through a platform or found a one way block solid
+- 2D editor: with an async `onRestart` that destroys the level before it waits, an undo across a resize writes the right cell, Reset puts the tiles back, and an object placed meanwhile waits, where it was made twice
+- 3D editor: a game's own `close()` from a key, `onUpdate` or a tool gives `onClose` the game's camera, runs it once, and ends the editor's update, where a click in the same frame placed an object; Escape over the panel plays from where the mouse last was on the level
+- A model's draw setting set to `null`, or a color equal to the default, leaves its parts their own, where it took a glTF's shaders or maps away
+- `loadAtlas` warns of split layers only when one name is under two brackets, not on a merged sheet of files with brackets in their titles, and names a field that is not a number
+- `SpriteAnimator.set` says what it does on the update a play ends, and how to start the clip again then
 
 ## 1.30.1 - 2026-11-12
 

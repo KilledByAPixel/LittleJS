@@ -558,6 +558,9 @@ class SpriteAnimator
     }
 
     /** Show a clip, starting it over in its own mode unless it is showing and has not ended
+     *  - On the update a play ends, before anything read it, set calls that play's onEnd and leaves what it did, so
+     *    a game setting the clip every update follows its onEnd; to start the same clip again then, on a press,
+     *    read isDone first, which calls the onEnd, after which set starts it over, or call clip.play(onEnd)
      *  @param {string} name - The clip's name
      *  @param {function():void} [onEnd] - Called once when a play clip ends, as with SpriteAnimation.play
      *  @return {SpriteAnimator} */

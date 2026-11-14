@@ -386,7 +386,8 @@ animation.play(onEnd)   // onEnd is called once when the play ends, on the first
 // Sprite Animator - a character's animations by name and the one showing now
 const hero = new SpriteAnimator({idle, walk, attack}) // clips are SpriteAnimations in their own modes, first shows
 hero.set('walk')        // show a clip, starting over only when it changes or a play of it has ended
-hero.set('attack', ()=> hero.set('idle')) // with a callback for when a play clip ends
+hero.set('attack', ()=> hero.set('idle')) // with a callback for when a play clip ends; on the update it ends,
+                        // set runs that callback and keeps what it did: read hero.isDone first to start it again
 hero.tileInfo           // the frame to draw now; also hero.frame, hero.isDone, hero.name, hero.clip
 
 // Texture Info Object
@@ -1347,7 +1348,8 @@ postProcessTiltShift(focus=.5, size=.25, blur=8) // a sharp band across the scre
                                              // size its height, blurred above and below, 2D or 3D
 postProcessDepthOfField(focus=10, range=4, blur=8) // sharp at focus world units from the camera, range deep,
                                              // blurred nearer and farther; needs render3D.depthTexture
-postProcess.values = {focus: .5}             // the game's own values for the shader, a uniform each, set every
+postProcess.values = {focus: .5}             // the game's own values for the shader, a uniform each (a number,
+                                             // 2 to 4 of them, a Color, a vector or a typed array), set every
                                              // frame; any effect setting but glow's size, which sets its sample
                                              // count, may be such a name, to change it live; set them after the
                                              // plugin is made, as the shader is made at the first render;
@@ -1512,7 +1514,9 @@ render3D.screenToGround(screenPos, groundHeight=0, canvasSize) // where that ray
                                                    // undefined; terrain has HeightMap.raycast
 render3D.pick(screenPos or ray, objects)           // {object, distance} of the nearest object hit, on its mesh's
                                                    // triangles, the faces that show, both sides when doubleSided,
-                                                   // or a sprite's quad; a screen position goes through screenToRay
+                                                   // or a sprite's quad; a screen position goes through screenToRay;
+                                                   // a glTF model or attached prefab is hit through its parts and
+                                                   // is the object given back, the part's owner
 render3D.soundDefaultRange = 100      // how far a sound with no range of its own is heard in 3D, the 2D
                                       // soundDefaultRange is 40; a Sound made with a range keeps it
 render3D.playSound(sound, pos3D, volume, pitch, randomnessScale, loop, paused) // like sound.play(pos): quieter with

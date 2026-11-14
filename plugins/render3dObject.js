@@ -459,14 +459,17 @@ const RENDER3D_PART_SETTINGS = {emissive: 0, additive: false, specular: 0, shini
 function render3DShareSettings(part, owner) { part.drawOwner = owner; }
 
 // the value of a draw setting an object draws with: for a part, its owner's where that is set, through every owner
-// up, and its own otherwise
+// up, and its own otherwise; null is none, as undefined is, and a color the default's, as the default, so a model
+// whose shader was cleared, or whose emissiveMapColor is a white of its own, leaves its parts theirs
 function render3DSetting(o, name)
 {
     const owner = o.drawOwner;
     if (owner)
     {
-        const value = render3DSetting(owner, name);
-        if (value !== RENDER3D_PART_SETTINGS[name])
+        const value = render3DSetting(owner, name), base = RENDER3D_PART_SETTINGS[name];
+        if (value !== base && !(value === null && base === undefined) && !(base instanceof Color &&
+            value instanceof Color && value.r === base.r && value.g === base.g && value.b === base.b &&
+            value.a === base.a))
             return value;
     }
     return o[name];
@@ -1155,6 +1158,40 @@ function render3DRaycastObject(ray, o)
     return render3DRaycastMesh(local, mesh);
 }
 
+// how far along a ray an object is hit, through the parts it draws with when it has nothing of its own to hit, a glTF
+// model's or an attached prefab's: the nearest of them
+function render3DRaycastOwned(ray, o)
+{
+    let distance = render3DRaycastObject(ray, o);
+    if (distance === undefined && o instanceof EngineObject3D && !o.destroyed && !(o.mesh || o.tileInfo))
+        for (const child of o.children)
+        {
+            const d = /** @type {EngineObject3D} */ (child).drawOwner === o ? render3DRaycastOwned(ray, child) : undefined;
+            d !== undefined && (distance === undefined || d < distance) && (distance = d);
+        }
+    return distance;
+}
+
+// the nearest of a list of objects a ray hits, the part itself, which pick hands on as its owner
+function render3DPickPart(ray, objects)
+{
+    let nearest;
+    for (const o of objects)
+    {
+        const distance = render3DRaycastObject(ray, o);
+        if (distance !== undefined && (!nearest || distance < nearest.distance)) // only a 3D object has a distance
+            nearest = {object: /** @type {EngineObject3D} */ (o), distance};
+    }
+    return nearest;
+}
+
+// the object a hit is for: a part's owner, the model or prefab handle it is part of, up to the top
+function render3DHitOwner(o)
+{
+    while (o.drawOwner) o = o.drawOwner;
+    return o;
+}
+
 // how far along a ray, in the mesh's own space, its nearest triangle is hit, or undefined: the triangles that face
 // the ray as the pass draws them, clockwise from the front, and the back faces too of a doubleSided mesh; a strip's
 // triangle i is (i-2, i-1, i), the odd ones read the other way, and a join between its pieces has no area and is
@@ -1242,6 +1279,7 @@ function render3DRaycastDisc(ray, center, radius)
  * - The ray has no end, so everything along it counts however far away it is
  * - Use render3D.pick for the nearest one on its own, with the distance to it
  * @param {Ray3D} ray - From render3D.screenToRay, or any ray
+ * - A glTF model or an attached prefab is hit through its parts and is in the list once, not its parts
  * @param {Array<EngineObject>} [objects] - Defaults to every object; only those with a mesh or a sprite count, and
  *   the height maps, voxel maps and mesh colliders, on their surfaces
  * @return {Array<EngineObject3D>}
@@ -1249,14 +1287,16 @@ function render3DRaycastDisc(ray, center, radius)
  */
 function engineObjectsRaycast3D(ray, objects=engineObjects)
 {
-    const hits = [];
+    // a model or attached prefab once, at its nearest part, whether the list has it, its parts or both
+    const nearest = new Map;
     for (const o of objects)
     {
-        const distance = render3DRaycastObject(ray, o);
-        if (distance !== undefined) // only a 3D object has a distance
-            hits.push({o: /** @type {EngineObject3D} */ (o), distance});
+        const distance = render3DRaycastOwned(ray, o);
+        if (distance === undefined) continue;
+        const owner = render3DHitOwner(/** @type {EngineObject3D} */ (o)); // only a 3D object has a distance
+        nearest.has(owner) && nearest.get(owner) <= distance || nearest.set(owner, distance);
     }
-    return hits.sort((a, b)=> a.distance - b.distance).map(hit=> hit.o);
+    return [...nearest].sort((a, b)=> a[1] - b[1]).map(([o])=> o);
 }
 
 /**

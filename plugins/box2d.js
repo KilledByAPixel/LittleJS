@@ -2877,8 +2877,17 @@ async function box2dInit()
     if (box2d) return box2d;
     return box2dInitLoad ||= (async ()=>
     {
-        // @ts-ignore - Box2D is the global that box2d.wasm.js defines
-        new Box2dPlugin(await Box2D());
+        // a wasm that can not load aborts and Box2D's own promise never settles, so its abort rejects the load with
+        // the file named, as loadFetch names a file, and the usual cause when the page was opened from a file on disk
+        const module = await new Promise((resolve, reject)=>
+        {
+            const onAbort = (what)=> reject(new Error('box2dInit: could not load box2d.wasm.wasm, ' + what +
+                (globalThis.location?.protocol === 'file:' ?
+                ', the page was opened from a file, serve it from a local web server' : '')));
+            // @ts-ignore - Box2D is the global that box2d.wasm.js defines
+            Box2D({onAbort}).then(resolve, reject);
+        });
+        new Box2dPlugin(module);
         setupDebugDraw();
         engineAddPlugin(box2dUpdate, box2dRender);
         return box2d;

@@ -318,7 +318,7 @@ class LevelEditor
      *    Vector2 in 2D and a Vector3 on the level or the ground in 3D; cell is the tile under it in 2D, and lastCell
      *    the one at the callback before in a drag, to fill the cells a quick drag skipped; ray is the mouse's in 3D
      *  - What the callbacks change through edit2D or edit3D is one undo: the editor ends the stroke at the release,
-     *    and takes it back when the right button or Escape ends the press
+     *    and takes it back when the right button, Escape or a two finger pinch ends the press, with no onRelease
      *  @template [P=Vector2]
      *  @param {string} name
      *  @param {EditorTool<P>} tool - {key, hint, onPress, onDrag, onRelease, onDraw}, each optional; onPress returning
@@ -1120,7 +1120,7 @@ function editorPaintData(record, data, objects, width=record.map.width, height=r
     {
         for (const layer of record.layers)
         {
-            const gids = data[all.indexOf(layer.source.data)], {x: width, y: height} = layer.live.size;
+            const gids = data[all.indexOf(layer.source.data)], {x: width, y: height} = editorMapSize(layer);
             if (gids?.length === width * height)
                 gids.forEach((gid, i)=> editorPaint(layer, vec2(i % width, height - 1 - (i / width | 0)), gid));
         }
@@ -1194,7 +1194,7 @@ function editorRevert(record)
     // and the waiting edits stay, only Drop takes them away; the panel's note flashes to say so
     if (record.pending) return editorPendingNudge();
     // and while an async onRestart makes a resized map's layers, which take no edits till then
-    if (record.layers.some(editorLayerResizing)) return editorBusyNudge();
+    if (editorRecordResizing(record)) return editorBusyNudge();
     record.pendingUnfit = undefined;
     const {width, height} = record.originalSize ?? record.map;
     editorPaintData(record, record.original, record.originalObjects, width, height);
@@ -1326,7 +1326,8 @@ function editorSetCell(layer, pos, gid)
 {
     const {source, live, color} = layer;
     const index = editorCellIndex(layer, pos);
-    const before = source.data[index];
+    const before = source.data[index], size = editorMapSize(layer);
+    if (pos.x < 0 || pos.y < 0 || pos.x >= size.x || pos.y >= size.y) return before; // off the map
     if (editorLayerResizing(layer)) return before; // its cells are not the map's until the game makes it again
     // the same, unless the layer lost the tile in play, a ghost painted with its own tile, or the game put a tile on
     // a cell the map has empty, which erasing takes away
@@ -1355,20 +1356,36 @@ function editorSetCell(layer, pos, gid)
 }
 
 // paint a cell as part of the stroke being made
-// a cell's index in the map's layer data, which is the live layer's size
+// a cell's index in the map's layer data, by the map's size, which is the live layer's but while an async onRestart
+// makes the layers of a resized map; a resize keeps each cell's place from the bottom left
 function editorCellIndex(layer, pos)
 {
-    const {live} = layer;
-    return pos.x + (live.size.y - 1 - pos.y) * live.size.x;
+    const {x: width, y: height} = editorMapSize(layer);
+    return pos.x + (height - 1 - pos.y) * width;
+}
+
+// the size of a layer's map in cells
+function editorMapSize(layer)
+{
+    const map = layer.record?.map;
+    return map ? vec2(map.width, map.height) : layer.live.size;
+}
+
+// a live layer of another size than its map, alive or destroyed: an async onRestart has not made it again yet
+function editorLayerSizeDiffers(layer)
+{
+    const {live, record} = layer, map = record?.map;
+    return !!map && (live.size.x !== map.width || live.size.y !== map.height);
 }
 
 // a live layer of another size than its map, the old one while an async onRestart makes the layers of a resized
-// map: its cells are not the map's, so it takes no edits until the game hands over the new one
-function editorLayerResizing(layer)
-{
-    const {live, record} = layer, map = record?.map;
-    return !!map && !live.destroyed && (live.size.x !== map.width || live.size.y !== map.height);
-}
+// map: its cells are not the map's, so it takes no edits until the game hands over the new one; a destroyed one
+// takes them, they go to the map alone
+const editorLayerResizing = (layer)=> !layer.live.destroyed && editorLayerSizeDiffers(layer);
+
+// a map an async onRestart has not made again since it was resized, its old layers alive or destroyed: its objects
+// wait, or one made now would be made again when the game loads the map
+const editorRecordResizing = (record)=> !!record?.layers.some(editorLayerSizeDiffers);
 
 function editorPaint(layer, pos, gid)
 {
@@ -1431,7 +1448,8 @@ function editorUndo(redo=false)
     const list = redo ? editorRedoList : editorUndoList, last = list[list.length - 1];
     // a stroke on a layer an async onRestart is making again waits on its list, as its cells are not the map's
     // yet; undoing the resize itself goes on, which is how a Restart that never lands is ended
-    if (last?.some((entry)=> entry.layer && editorLayerResizing(entry.layer))) return editorBusyNudge();
+    if (last?.some((entry)=> entry.layer && editorLayerResizing(entry.layer) ||
+        entry.objectLayer && editorRecordResizing(entry.objectLayer.record))) return editorBusyNudge();
     const stroke = list.pop();
     if (!stroke) return;
     (redo ? editorUndoList : editorRedoList).push(stroke);
@@ -1595,6 +1613,7 @@ function editorSetObjects(layer, list)
 function editorChangeObjects(layer, change)
 {
     if (!layer || layer.record.pending) return false; // its autosaved edits wait to be applied or dropped first
+    if (editorRecordResizing(layer.record)) return editorBusyNudge(), false; // its map is being made again
     const before = editorObjectList(layer), after = editorObjectsCopy(before);
     change(after);
     if (editorSameData(before, after)) return false;
@@ -2832,12 +2851,13 @@ function editorOnKeyDown(e)
 }
 
 // the wheel zooms toward the mouse by how far it moved; a trackpad pinch is a wheel with ctrlKey, the game's pinch
-// while touchPinchWheel is on and the browser's zoom while it is off, as the engine takes it
+// while touchPinchWheel is on and the browser's zoom while it is off, as the engine takes it; a trackpad sends a few
+// pixels an event, a mouse wheel held with Ctrl a whole notch, kept to 50 so it is not a jump
 function editorOnWheel(e)
 {
     if (!editorIsOpen || editorIsTextField(e.target) || e.ctrlKey && !touchPinchWheel) return;
     const pixels = e.deltaY * (e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? 400 : 1);
-    editorZoom(Math.exp(-pixels * (e.ctrlKey ? .01 : .002)));
+    editorZoom(Math.exp(e.ctrlKey ? -clamp(pixels, -50, 50) * .01 : -pixels * .002));
 }
 
 // zoom by a factor, keeping the point under the mouse where it is
@@ -3081,13 +3101,16 @@ function editorUpdate()
     // pinch; a trackpad's, a wheel with Ctrl, editorOnWheel took
     const pinch = touchPinchWheel ? touchPinch - inputWheelPinch : 0;
     pinch && editorZoom(Math.exp(-pinch * .15));
-    // the second finger took the press over: what its first finger began is taken back, no stray tile or move
+    // the second finger took the press over: what its first finger began is taken back, no stray tile or move, a
+    // selection it dragged goes back where it was, and the press is spent, so two fingers landing in one frame are
+    // no quick click
     if (inputPinchReleased)
     {
-        editorStrokeCancel();
+        editorSelectionDrag ? editorSelectionDragCancel() : editorStrokeCancel();
         editorToolHeld = false;
-        editorObjectDrag = editorSelectionDrag = editorObjectBox = undefined;
+        editorObjectDrag = editorObjectBox = undefined;
         editorLeftSpent = false;
+        inputClearKey(0);
     }
     editorApplyCamera();
 

@@ -202,7 +202,8 @@ give one. While it is on, the left mouse button in the level is your tool's. Eac
 - `ray`: 3D, the mouse's ray.
 
 **Do not call `strokeEnd` in a tool.** What its callbacks change is one undo: the editor ends the stroke at the
-release, and takes it back when the right button or Escape ends the press.
+release, and takes it back, with no `onRelease`, when the right button, Escape or a two finger pinch ends the
+press.
 
 3D, a tool that lays a row of posts along a drag, tested:
 

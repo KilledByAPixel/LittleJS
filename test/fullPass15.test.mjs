@@ -358,6 +358,7 @@ test('a body walking at an angle into a HeightMap cliff is stopped at its foot, 
     })()`));
     assert.equal(result.onTop, 0);
     assert.ok(result.maxRise < .55, 'a rise past the step of .5: ' + result.maxRise);
-    // the face is at x 0 and the body half a unit wide: its side comes up to it, as a MeshCollider's does
-    assert.ok(result.nearest > -.75 && result.nearest < .05, 'stopped at ' + result.nearest);
+    // the face is the steep cell from x -.25 to 0 and the body half a unit wide: its side comes up to the face's
+    // foot, as a MeshCollider's does (pass 17: before, it went on into the face to its top)
+    assert.ok(result.nearest > -.85 && result.nearest < -.65, 'stopped at ' + result.nearest);
 });

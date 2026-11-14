@@ -59,8 +59,9 @@ test('a body coasting toward a HeightMap cliff keeps its speed till its side is 
 {
     const run = (code)=> loadEngine().run(code);
     const {x} = JSON.parse(run(walkCode('(x)=> x < 0 ? 0 : 2', .05, 200, true)));
-    // the face is at x 0, the body half a unit wide: before, it stopped about .4 short in mid air
-    assert.ok(x > -.6 && x < 0, 'side at the face: ' + x);
+    // the face is the steep cell from x -.125 to 0, the body half a unit wide: its side stops at the face's foot;
+    // before pass 16 it stopped about .4 short in mid air, before pass 17 its side went into the face
+    assert.ok(x > -.7 && x < -.55, 'side at the face: ' + x);
 });
 
 // a finger at a screen place, and a touch event of the touches down and those it changes

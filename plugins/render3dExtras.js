@@ -668,17 +668,30 @@ class HeightMap extends EngineObject3D
         return {distance, normal: this.getNormal(from.x + (to.x - from.x) * distance, from.z + (to.z - from.z) * distance)};
     }
 
-    /** Where a move across the map first meets a riser taller than its step, when the ground there is steeper than a
-     *  slope: a quarter of a cell at a time, each place's height against the ground the look ahead back along the
-     *  move, as a MeshCollider's step ray at its foot sees a riser, so stairs whose steps are each under the step
-     *  climb though they add up past it; the slope's way across, toward higher ground, and how far along the move
+    /** The normal of the triangle at a place, not smoothed across the cells as getNormal's, so a cliff one cell wide
+     *  is as steep at its edges as in its middle, for the wall rule
+     *  @param {number} x
+     *  @param {number} z
+     *  @return {Vector3}
+     *  @ignore */
+    faceNormal(x, z)
+    {
+        const e = min(this.mapSize.x / (this.columns - 1), this.mapSize.y / (this.rows - 1)) * 1e-3;
+        const h = this.getHeight(x, z), gx = (this.getHeight(x + e, z) - h) / e, gz = (this.getHeight(x, z + e) - h) / e;
+        return vec3(-gx, 1, -gz).normalize();
+    }
+
+    /** Where a move across the map first meets a face that rises past its step: ground steeper than a slope, each
+     *  face measured from where its run of steep ground began, or from the foot, a quarter of a cell at a time, so
+     *  each riser of a stair is measured alone and climbs though they add up past the step, while a cliff is met
+     *  whole however slowly it is walked into and at whatever angle; the face's way across, toward higher ground,
+     *  and how far along the move
      *  @param {Vector3} from
      *  @param {Vector3} to
      *  @param {number} foot - The height of its foot at the start, or of the ground under it when that is higher
-     *  @param {number} step - How much it may rise over the look ahead
+     *  @param {number} step - How much a face may rise
      *  @param {number} steep - The least normal y that is not a wall
-     *  @param {number} ahead - How far back a riser is measured from, and past the end it looks at least, so a slow
-     *  walk up a cliff, in rises below the step each frame, is a walk into it
+     *  @param {number} ahead - How far past the end it looks at least, so a slow walk up a cliff is a walk into it
      *  @param {number} [side] - Half its width, how far past the end it looks when that is more
      *  @return {{nx: number, nz: number, distance: number}|undefined}
      *  @ignore */
@@ -688,16 +701,19 @@ class HeightMap extends EngineObject3D
         if (!length) return;
         const cell = min(this.mapSize.x / (this.columns - 1), this.mapSize.y / (this.rows - 1));
         const reach = length + max(ahead, side), count = min(ceil(reach / cell * 4), 1e3);
+        // a face's top, the ground the run of steep ground ends on, counts with it, as a sample may step over the
+        // last of the face; its way across is the face's
+        let base = foot, face;
         for (let i = 1; i <= count; ++i)
         {
             const distance = reach * i / count, x = from.x + dx * distance / length, z = from.z + dz * distance / length;
-            const back = distance - ahead, behind = back <= 0 ? foot :
-                max(foot, this.getHeight(from.x + dx * back / length, from.z + dz * back / length));
-            if (this.getHeight(x, z) > behind + step)
-            {
-                const n = this.getNormal(x, z), l = hypot(n.x, n.z);
-                return n.y < steep && l ? {nx: n.x / l, nz: n.z / l, distance} : undefined;
-            }
+            const height = this.getHeight(x, z), n = this.faceNormal(x, z), l = hypot(n.x, n.z);
+            const isSteep = n.y < steep && l;
+            isSteep && (face = {nx: n.x / l, nz: n.z / l, distance});
+            if (face && height > base + step)
+                return {...face, distance};
+            if (!isSteep)
+                base = max(foot, height), face = undefined; // ground it can stand on, where the next face starts
         }
     }
 
@@ -723,6 +739,7 @@ class HeightMap extends EngineObject3D
         if (oldPos)
         {
             const foot = max(oldPos.y - half, this.getHeight(oldPos.x, oldPos.z)), step = half / 2;
+            const cell = min(size.x / (this.columns - 1), size.y / (this.rows - 1));
             const side = min(o.size3D.x * abs(o.scale3D.x), o.size3D.z * abs(o.scale3D.z)) / 2;
             const steep = min(cos(o.groundAngle), .7), wall = this.wallAhead(oldPos, p, foot, step, steep, half / 2, side);
             // the part of the move from oldPos to p before its side meets a wall found along it, none when that is up
@@ -751,6 +768,54 @@ class HeightMap extends EngineObject3D
                 if (cut && vInto < 0)
                     v.x -= nx * vInto, v.z -= nz * vInto;
             }
+            // and along the push, as a MeshCollider's step ray looks: with ground too steep to stand on under it or
+            // under its side, rising away from it, a face that rises past its step out that way, looked for through
+            // that place from its other side, so the treads under it set where a face starts, takes back the part of
+            // the move and the speed up it, so a move along a cliff at a shallow angle, which meets the face only as
+            // a gentle rise along the move, does not climb it, and its side stops at the face; looked at along the
+            // move in steps of half a cell, as a MeshCollider cuts its move, so a fast one does not step over a face
+            // one cell wide; at the first place a face stops it the rest of the move goes on across the face, looked
+            // at the same way from there, three times at most, then it stays where the last face stopped it
+            let startX = oldPos.x, startZ = oldPos.z;
+            for (let pass = 0; pass < 4; ++pass)
+            {
+                const moveX = p.x - startX, moveZ = p.z - startZ;
+                const steps = min(ceil(hypot(moveX, moveZ) / cell * 2), 64);
+                let hit;
+                for (let k = 1; k <= steps && !hit; ++k)
+                {
+                    const t = k / steps, qx = startX + moveX * t, qz = startZ + moveZ * t;
+                    for (let i = 0; i < 9 && !hit; ++i)
+                    {
+                        const a = i * PI / 4, r = i < 8 ? side : 0, sx = qx + cos(a) * r, sz = qz + sin(a) * r;
+                        const n = this.faceNormal(sx, sz), l = hypot(n.x, n.z);
+                        if (n.y >= steep || !l) continue;
+                        const ux = -n.x / l, uz = -n.z / l, into = (moveX * ux + moveZ * uz) * t;
+                        const along = (sx - qx) * ux + (sz - qz) * uz;
+                        const bx = sx - ux * (along + side), bz = sz - uz * (along + side);
+                        if (into > 0 && along >= 0 && this.wallAhead(vec3(bx, 0, bz),
+                            vec3(bx + ux * 1e-3, 0, bz + uz * 1e-3), foot, step, steep, along + side + half / 2))
+                        {
+                            // back only as far as it takes to leave the face, as a MeshCollider's push, at most the
+                            // move into it
+                            let back = 0;
+                            while (back < into && this.faceNormal(sx - ux * back, sz - uz * back).y < steep)
+                                back += cell / 4;
+                            hit = {ux, uz, x: qx - ux * min(back, into), z: qz - uz * min(back, into)};
+                        }
+                    }
+                }
+                if (!hit) break;
+                // the rest of the move from there, but the part of it into the face, and the speed into it
+                const {ux, uz} = hit, restX = p.x - hit.x, restZ = p.z - hit.z;
+                const restInto = pass < 3 ? max(0, restX * ux + restZ * uz) : 0;
+                p.x = pass < 3 ? hit.x + restX - ux * restInto : hit.x;
+                p.z = pass < 3 ? hit.z + restZ - uz * restInto : hit.z;
+                const v = o.velocity3D, vInto = v.x * ux + v.z * uz;
+                vInto > 0 && (v.x -= ux * vInto, v.z -= uz * vInto);
+                startX = hit.x, startZ = hit.z;
+            }
+            ground = this.getHeight(p.x, p.z);
         }
         // only the ends of a move are kept above the ground, so a ridge it goes over is met by a sweep, as a
         // particle's move is, a quarter of its height up from its foot, from where it was to where it would stand: a
@@ -2809,7 +2874,7 @@ class LensFlare3D extends EngineObject3D
         let candidates = blockers.filter((o)=> !maps.some((map)=> map === o));
         for (let tries = 5; tries--;)
         {
-            const hit = render3D.pick(ray, candidates);
+            const hit = render3DPickPart(ray, candidates); // the part, a lamp may be a model's
             if (!hit || hit.distance >= reach) return false;
             if (!(reach - hit.distance <= near && inside(hit.object))) return true;
             candidates = candidates.filter((o)=> o !== hit.object); // its lamp, look past it
