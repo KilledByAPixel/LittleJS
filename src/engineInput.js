@@ -201,7 +201,7 @@ function inputClearDevices(keepGamepads=false)
 function keyIsDown(key, device=0)
 {
     ASSERT(isStringLike(key), 'keyIsDown: key must be a code like \'KeyA\' or a number', key);
-    ASSERT(typeof key !== 'string' || key.length > 1 && key[0] >= 'A' && key[0] <= 'Z',
+    ASSERT(typeof key !== 'string' || !key || key.length > 1 && key[0] >= 'A' && key[0] <= 'Z',
         "keyIsDown: keys are codes like 'KeyW' or 'Space', with a capital, not characters", key);
     ASSERT(device > 0 || typeof key !== 'number' || key < 5,
         "keyIsDown: keyboard keys are codes like 'KeyA' or 'Space', the numbers 0 to 4 are mouse buttons", key);
@@ -216,7 +216,7 @@ function keyIsDown(key, device=0)
 function keyWasPressed(key, device=0)
 {
     ASSERT(isStringLike(key), 'keyWasPressed: key must be a code like \'KeyA\' or a number', key);
-    ASSERT(typeof key !== 'string' || key.length > 1 && key[0] >= 'A' && key[0] <= 'Z',
+    ASSERT(typeof key !== 'string' || !key || key.length > 1 && key[0] >= 'A' && key[0] <= 'Z',
         "keyWasPressed: keys are codes like 'KeyW' or 'Space', with a capital, not characters", key);
     ASSERT(device > 0 || typeof key !== 'number' || key < 5,
         "keyWasPressed: keyboard keys are codes like 'KeyA' or 'Space', the numbers 0 to 4 are mouse buttons", key);
@@ -231,7 +231,7 @@ function keyWasPressed(key, device=0)
 function keyWasReleased(key, device=0)
 {
     ASSERT(isStringLike(key), 'keyWasReleased: key must be a code like \'KeyA\' or a number', key);
-    ASSERT(typeof key !== 'string' || key.length > 1 && key[0] >= 'A' && key[0] <= 'Z',
+    ASSERT(typeof key !== 'string' || !key || key.length > 1 && key[0] >= 'A' && key[0] <= 'Z',
         "keyWasReleased: keys are codes like 'KeyW' or 'Space', with a capital, not characters", key);
     ASSERT(device > 0 || typeof key !== 'number' || key < 5,
         "keyWasReleased: keyboard keys are codes like 'KeyA' or 'Space', the numbers 0 to 4 are mouse buttons", key);
@@ -1377,11 +1377,14 @@ function touchGamepadRender()
             touchGamepadPointerRole.clear();
             touchGamepadButtons.length = 0;
             touchGamepadButtonsPressed.length = touchGamepadButtonsLast.length = 0;
-            touchGamepadOwning = false; // turned on again, it takes over from the real pads afresh
             touchGamepadSticks.length = 0;
             touchGamepadStickPointerId.length = 0;
-            inputData[1] = undefined;
-            gamepadStickData[0] = gamepadDpadData[0] = undefined;
+            if (touchGamepadOwning) // a real pad that took slot 0 over keeps what it holds
+            {
+                inputData[1] = undefined;
+                gamepadStickData[0] = gamepadDpadData[0] = undefined;
+            }
+            touchGamepadOwning = false; // turned on again, it takes over from the real pads afresh
         }
         return;
     }

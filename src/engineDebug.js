@@ -39,7 +39,7 @@ let debugLineWidth = 2;
  *  @memberof Debug */
 let debugWatermark = true;
 
-/** Key code used to toggle debug mode, Esc by default
+/** Key code used to toggle debug mode, Esc by default, '' for none
  *  @type {string}
  *  @default
  *  @memberof Debug */
@@ -331,7 +331,7 @@ function debugUpdate()
 {
     if (!debug) return;
 
-    if (keyWasPressed(debugKey)) // Esc
+    if (debugKey && keyWasPressed(debugKey)) // Esc, or none when the game set ''
         debugOverlay = !debugOverlay;
     const debugKeys = debugOverlay || debugKeysAlways; // the keys work while the overlay is open, or always if set
     if (debugKeys)

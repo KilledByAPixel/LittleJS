@@ -50,9 +50,13 @@ function setScene(scene)
         try { sceneCurrent.leave?.(); }
         finally { sceneLeaving = false; }
     }
-    engineObjectsDestroy();
-    sceneCurrent = scene;
-    scene?.enter?.();
+    // an object's destroy that throws still lets the next scene in, its error thrown after
+    try { engineObjectsDestroy(); }
+    finally
+    {
+        sceneCurrent = scene;
+        scene?.enter?.();
+    }
 }
 
 /** Get the current scene

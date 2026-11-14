@@ -146,7 +146,7 @@ function lerp(valueA, valueB, percent)
 function percentLerp(value, percentA, percentB, lerpA, lerpB)
 { return lerp(lerpA, lerpB, percent(value, percentA, percentB)); }
 
-/** Returns signed wrapped distance between the two values passed in
+/** Returns signed wrapped distance between the two values passed in, A minus B, the shortest way round
  *  @param {number} valueA
  *  @param {number} valueB
  *  @param {number} [wrapSize]
@@ -169,7 +169,7 @@ function distanceWrap(valueA, valueB, wrapSize=1)
 function lerpWrap(valueA, valueB, percent, wrapSize=1)
 { return valueA + clamp(percent) * distanceWrap(valueB, valueA, wrapSize); }
 
-/** Returns signed wrapped distance between the two angles passed in
+/** Returns signed wrapped distance between the two angles passed in, A minus B, the shortest way round
  *  @param {number} angleA
  *  @param {number} angleB
  *  @return {number}

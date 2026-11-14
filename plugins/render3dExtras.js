@@ -826,13 +826,34 @@ class MeshCollider extends EngineObject3D
             const a = (g.min[axis] - o[axis]) / d[axis], b = (g.max[axis] - o[axis]) / d[axis];
             enter = max(enter, min(a, b)), exit = min(exit, max(a, b));
         }
-        if (enter > exit) return;
+        if (enter > exit || exit === Infinity) return; // a ray of no direction hits nothing
+        // then the grid's cells along the ray, nearest first, each triangle tested once, until a hit is nearer than the
+        // next cell, so a pick costs the triangles it passes, not all of them
+        const s = g.size, stamp = ++g.stamp, seen = g.seen, tris = this.triangles;
         let best;
-        for (let i = 0; i < this.triangleCount; ++i)
+        const test = (i)=>
         {
-            const t = meshColliderRayTriangle(this.triangles, i * 9, o.x, o.y, o.z, d.x, d.y, d.z);
+            if (seen[i] === stamp) return;
+            seen[i] = stamp;
+            const t = meshColliderRayTriangle(tris, i * 9, o.x, o.y, o.z, d.x, d.y, d.z);
             if (t !== undefined && !(t >= best))
                 best = t;
+        };
+        g.big.forEach(test);
+        const cell = [0, 0, 0], step = [0, 0, 0], next = [0, 0, 0], delta = [0, 0, 0];
+        ['x', 'y', 'z'].forEach((axis, j)=>
+        {
+            cell[j] = floor((o[axis] + d[axis] * enter) / s);
+            step[j] = sign(d[axis]);
+            next[j] = d[axis] ? ((cell[j] + (d[axis] > 0 ? 1 : 0)) * s - o[axis]) / d[axis] : Infinity;
+            delta[j] = d[axis] ? s / abs(d[axis]) : Infinity;
+        });
+        for (;;)
+        {
+            g.cells.get(render3DGridKey(cell[0], cell[1], cell[2]))?.forEach(test);
+            const j = next[0] <= next[1] && next[0] <= next[2] ? 0 : next[1] <= next[2] ? 1 : 2, leave = next[j];
+            if ((best ?? Infinity) <= leave || !(leave <= exit)) break;
+            cell[j] += step[j], next[j] += delta[j];
         }
         return best;
     }
@@ -1717,6 +1738,9 @@ function render3DParticleView(emitter)
  * @memberof Render3D
  */
 
+// the emitters told their trailTime is past the 10 seconds a trail keeps, once each
+const render3DTrailWarned = /* @__PURE__ */ new WeakSet;
+
 /**
  * ParticleEmitter3D - Spawns camera facing particles, the 3D twin of ParticleEmitter
  * - Each particle is a flat square facing the camera, with a soft round dot when no tile is given
@@ -1740,6 +1764,7 @@ function render3DParticleView(emitter)
  * // fire: a stream upward, yellow fading to transparent red, additive
  * new ParticleEmitter3D(vec3(), .5, 0, 100, .3, undefined, hsl(.12, 1, .6), hsl(.08, 1, .5), hsl(0, 1, .5, 0), hsl(0, 1, .25, 0), 1, .5, 1.5, .05, .95, 0, .3, .2, true);
  */
+
 class ParticleEmitter3D extends EngineObject3D
 {
     /** Create a particle emitter
@@ -1814,7 +1839,7 @@ class ParticleEmitter3D extends EngineObject3D
         /** @property {boolean} - Additive blending */
         this.additive = additive;
         /** @property {number} - Seconds of each particle's path to draw as a ribbon behind it, 0 draws billboards;
-         *  with engineVariableStep it keeps trailTime * frameRate updates of path */
+         *  with engineVariableStep it keeps trailTime * frameRate updates of path; at most 10 seconds of it */
         this.trailTime = 0;
         /** @property {number} - Radians per frame each particle turns in the camera plane, either way; 0 is no spin */
         this.angleSpeed = 0;
@@ -1913,6 +1938,11 @@ class ParticleEmitter3D extends EngineObject3D
         // timeDelta can not; with engineVariableStep a trail keeps that many updates, at most ten seconds of them, so
         // a library file's huge trailScale can not take all the memory; the count is kept once its storage is made
         const trailMax = this.trailTime ? clamp(round(this.trailTime * frameRate), 1, 600) : 0;
+        if (debug && this.trailTime * frameRate > 600 && !render3DTrailWarned.has(this))
+        {
+            render3DTrailWarned.add(this);
+            console.warn('ParticleEmitter3D: trailTime is at most 10 seconds, the trail is cut there');
+        }
         if (trailMax !== this.trailMax)
         {
             this.trailData = trailMax ? new Float32Array(this.particleData.length / RENDER3D_PARTICLE_FLOATS * trailMax * 3) : undefined;
@@ -3019,22 +3049,33 @@ function render3DCSGPolygons(mesh, matrix)
     return polygons;
 }
 
+// the meshes CSG made, whose edges meet their neighbors at every point, see render3DCSGMesh
+const render3DCSGResults = /* @__PURE__ */ new WeakSet;
+
 // a mesh from CSG polygons: points close together made one, and each edge given the points other polygons have
 // along it, so neighbors meet at every point with no crack between them; each polygon then as a fan of triangles;
-// an edge between two points the first mesh had, which met its neighbors already, takes only points this operation
-// made, since putting an earlier cut's sliver points into every edge near them again grew the mesh with each cut,
-// even one that missed it; a new edge takes any point on it, an older one too
-function render3DCSGMesh(polygons, originals=new Set)
+// an edge the first mesh had, when that mesh came from CSG and so met its neighbors already, takes only points this
+// operation made, since putting an earlier cut's sliver points into every edge near them again grew the mesh with
+// each cut, even one that missed it; any other edge takes every point on it, one joining two of the first mesh's
+// points too, as the second mesh's edge along a row of them does
+// - originals: the first mesh's points, oldEdges: each of them to the points it has an edge to
+function render3DCSGMesh(polygons, originals=new Set, oldEdges=new Map)
 {
     // points within the epsilon made one, the first found standing for the rest; moving one any farther would take
     // it off its plane by more than the epsilon, and the next cut through it would split it again; a point on an
     // edge, whose ends may each have moved that far, is looked for a few times that far from its line
     const reach = RENDER3D_CSG_EPSILON * 4, placer = render3DCSGPlacer(RENDER3D_CSG_EPSILON), placed = new Set;
     const cellKey = (x, y, z)=> x + ',' + y + ',' + z;
+    // polygons share points, so one is placed once and the same place given it after, with no grid search
+    const placedAt = new Map;
     const place = (p)=>
     {
-        const q = placer(p);
-        placed.add(q); // polygons share points, so one can be placed more than once
+        let q = placedAt.get(p);
+        if (!q)
+        {
+            placedAt.set(p, q = placer(p));
+            placed.add(q);
+        }
         return q;
     };
     const loops = polygons.map(polygon=>
@@ -3049,6 +3090,24 @@ function render3DCSGMesh(polygons, originals=new Set)
         loop.length > 1 && loop[0].pos === loop[loop.length - 1].pos && loop.pop();
         return loop;
     });
+
+    // the first mesh's points and edges by where they were placed, as a corner it has once for each face's normal
+    // is one place; one no polygon kept is no place
+    const oldPlaces = new Set, oldPlaceEdges = new Map;
+    for (const p of originals)
+        placedAt.has(p) && oldPlaces.add(placedAt.get(p));
+    for (const [p, others] of oldEdges)
+    {
+        const a = placedAt.get(p);
+        if (a)
+        for (const q of others)
+        {
+            const b = placedAt.get(q);
+            if (!b || b === a) continue;
+            oldPlaceEdges.has(a) || oldPlaceEdges.set(a, new Set);
+            oldPlaceEdges.get(a).add(b);
+        }
+    }
 
     // the places in a coarser grid, sized so a cell holds a few, to find the ones lying along each edge
     const places = [...placed];
@@ -3072,7 +3131,7 @@ function render3DCSGMesh(polygons, originals=new Set)
         // the places strictly between a and b, within reach of the line, in order from a; an edge the first mesh had
         // takes only new ones
         if (!places.length) return [];
-        const old = originals.has(a) && originals.has(b), found = [], ab = b.subtract(a), length2 = ab.lengthSquared();
+        const old = !!oldPlaceEdges.get(a)?.has(b), found = [], ab = b.subtract(a), length2 = ab.lengthSquared();
         const x0 = floor((min(a.x, b.x) - lo.x - reach) / size), x1 = floor((max(a.x, b.x) - lo.x + reach) / size);
         const y0 = floor((min(a.y, b.y) - lo.y - reach) / size), y1 = floor((max(a.y, b.y) - lo.y + reach) / size);
         const z0 = floor((min(a.z, b.z) - lo.z - reach) / size), z1 = floor((max(a.z, b.z) - lo.z + reach) / size);
@@ -3081,7 +3140,7 @@ function render3DCSGMesh(polygons, originals=new Set)
         for (let z = z0; z <= z1; ++z)
             for (const p of grid.get(cellKey(x, y, z)) || [])
             {
-                if (p === a || p === b || old && originals.has(p)) continue;
+                if (p === a || p === b || old && oldPlaces.has(p)) continue;
                 const t = p.subtract(a).dot(ab) / length2;
                 if (t <= 0 || t >= 1) continue;
                 if (a.add(ab.scale(t)).distanceSquared(p) < reach ** 2)
@@ -3169,14 +3228,31 @@ function render3DCSGMesh(polygons, originals=new Set)
 function render3DMeshCSG(a, b, matrix, operation)
 {
     const polygonsA = render3DCSGPolygons(a), polygonsB = render3DCSGPolygons(b, matrix);
-    // the points of the first mesh as given, which met already, see render3DCSGMesh
-    const originals = new Set;
+    // the points and edges of the first mesh as given, when CSG made it and they met already, see render3DCSGMesh
+    const originals = new Set, oldEdges = new Map;
+    if (render3DCSGResults.has(a))
     for (const polygon of polygonsA)
-        for (const v of polygon.vertices) originals.add(v.pos);
+    {
+        const vertices = polygon.vertices;
+        for (let i = 0; i < vertices.length; ++i)
+        {
+            const p = vertices[i].pos, q = vertices[(i + 1) % vertices.length].pos;
+            originals.add(p);
+            oldEdges.has(p) || oldEdges.set(p, new Set);
+            oldEdges.has(q) || oldEdges.set(q, new Set);
+            oldEdges.get(p).add(q);
+            oldEdges.get(q).add(p);
+        }
+    }
+    const result = (polygons)=>
+    {
+        const mesh = render3DCSGMesh(polygons, originals, oldEdges);
+        render3DCSGResults.add(mesh);
+        return mesh;
+    };
     const [nearA, farA] = render3DCSGNear(polygonsA, polygonsB), [nearB, farB] = render3DCSGNear(polygonsB, polygonsA);
     if (!nearA.length && !nearB.length) // the boxes do not meet: both whole, a whole, or nothing
-        return render3DCSGMesh(operation === 0 ? [...polygonsA, ...polygonsB] : operation === 1 ? polygonsA : [],
-            originals);
+        return result(operation === 0 ? [...polygonsA, ...polygonsB] : operation === 1 ? polygonsA : []);
     const treeA = new Render3DCSGNode, treeB = new Render3DCSGNode;
     render3DCSGBuild(treeA, polygonsA);
     render3DCSGBuild(treeB, polygonsB);
@@ -3200,5 +3276,5 @@ function render3DMeshCSG(a, b, matrix, operation)
         render3DCSGInvert(treeB);
         polygons = [...flip(clip(treeB, flip(nearA))), ...flip(clip(treeA, flip(clip(treeA, nearB))))];
     }
-    return render3DCSGMesh(polygons, originals);
+    return result(polygons);
 }

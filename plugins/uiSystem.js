@@ -1681,7 +1681,7 @@ class UISlider extends UIObject
     {
         super(pos, size);
 
-        ASSERT(isNumber(value), 'ui slider value must be a number');
+        ASSERT(isNumber(value) && value >= 0 && value <= 1, 'ui slider value is a number from 0 to 1, scale it to yours', value);
         ASSERT(isStringLike(text), 'ui slider must be a string');
         ASSERT(isColor(color), 'ui slider color must be a color');
         ASSERT(isColor(handleColor), 'ui slider handleColor must be a color');

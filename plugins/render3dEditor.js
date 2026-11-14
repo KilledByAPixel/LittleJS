@@ -279,7 +279,7 @@ const editor3DInstances = new Map;
 
 // what the editor keeps for each level: {fileName, key, original, originalParts, hash, savedHash,
 // pending, fileHandle, saving, undo, redo}, the file it came from, the file's objects and parts and their hash for
-// the autosave, the scene the game set, the hash of the file a Save wrote, an autosave waiting for a file that
+// the autosave, the hash of the file a Save wrote, an autosave waiting for a file that
 // changed, the file picked, a save being written, and its undo and redo lists
 const editor3DRecords = new WeakMap;
 

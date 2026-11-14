@@ -954,10 +954,10 @@ A tween moves a value from one end to another over a time, along an easing curve
 ```javascript
 tweenProperty(player, 'pos.y', 0, 3, .5).setEase(Ease.OUT(Ease.SINE)); // rise and slow down
 tweenProperty(sprite, 'color', WHITE, CLEAR_WHITE, 1).then(()=> sprite.destroy()); // fade out, then go
-tweenProperty(button, 'size', vec2(1), vec2(1.2), .3).pingPong(); // pulse for ever
+tweenProperty(coin, 'size', vec2(1), vec2(1.2), .3).pingPong(); // pulse for ever, a UI object's size is in pixels
 ```
 
-An ease is a curve, as `Ease.SINE`; `Ease.OUT`, `Ease.IN_OUT` and `Ease.POWER(n)` make one from another. A tween on an object stops when the object is destroyed, and `tweenStopAll()` stops every tween, as a restart should. The [Tween](https://killedbyapixel.github.io/LittleJS/examples/?example=Tween) and [Tween Advanced](https://killedbyapixel.github.io/LittleJS/examples/?example=Tween%20Advanced) examples show more.
+An ease is a curve, as `Ease.SINE`; `Ease.OUT` and `Ease.IN_OUT` make one from another, and `Ease.POWER(n)` is the curve x to the power n. A tween on an object stops when the object is destroyed, and `tweenStopAll()` stops every tween, as a restart should. The [Tween](https://killedbyapixel.github.io/LittleJS/examples/?example=Tween) and [Tween Advanced](https://killedbyapixel.github.io/LittleJS/examples/?example=Tween%20Advanced) examples show more.
 
 ### How do I save and load game state?
 

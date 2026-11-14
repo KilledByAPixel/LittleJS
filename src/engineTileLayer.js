@@ -479,7 +479,8 @@ function tileLayersFromLDtk(ldtk, level=0)
     const width = first?.__cWid || ceil(data.pxWid / grid), height = first?.__cHei || ceil(data.pxHei / grid);
     if (!(Number.isInteger(width) && Number.isInteger(height) && width > 0 && height > 0 && width * height <= 1 << 22))
         throw new Error('tileLayersFromLDtk: level ' + data.identifier + ' is ' + width + ' by ' + height + ' cells');
-    // the cells of every layer made, together, as a small file of many stacked tiles would make many whole layers
+    // the cells of every layer made, together, as a small file of many stacked tiles would make many whole layers;
+    // 1024 by 1024 cells in four layers, past which each layer's canvas is too big to draw anyway
     let cells = 0;
     const map = {width, height, tilewidth: grid, tileheight: grid, orientation: 'orthogonal', renderorder: 'right-down',
         infinite: false, layers: [], nextlayerid: 1, nextobjectid: 1};
@@ -679,6 +680,23 @@ function objectPropertyCopy(value)
 function objectPropertySet(properties, key, value)
 { Object.defineProperty(properties, key, {value, enumerable: true, writable: true, configurable: true}); }
 
+// a property given to an object a type made: assigned, so a setter of the game's class runs; __proto__ made its own,
+// assigned it would set the object's prototype; one named as a method of the object, like update, would take the
+// method's place, and one that can only be read, a getter with no setter, would throw, so both are left out
+function objectPropertyAssign(target, key, value, name)
+{
+    if (key === '__proto__') return objectPropertySet(target, key, value);
+    let found;
+    for (let o = target; o && !found; o = Object.getPrototypeOf(o))
+        found = Object.getOwnPropertyDescriptor(o, key);
+    if (typeof target[key] === 'function' && typeof value !== 'function')
+        debug && console.warn(`objectLayersLoad: ${name} property ${key} has a method's name, left out`);
+    else if (found && (found.get || found.set ? !found.set : !found.writable))
+        debug && console.warn(`objectLayersLoad: ${name} property ${key} can only be read, left out`);
+    else
+        target[key] = value;
+}
+
 // a type's default for a property, its own, not one every object has, like constructor or toString
 const objectPropertyDefault = (defaults, key)=>
     Object.prototype.hasOwnProperty.call(defaults, key) ? defaults[key] : undefined;
@@ -726,15 +744,7 @@ function objectLayersMake(tileMapData, object)
     const {make} = type, result = make.prototype ? new make(pos) : make(pos);
     if (!result || typeof result !== 'object') return;
     for (const [key, value] of Object.entries(objectLayersProperties(type, object)))
-    {
-        // a property named as a method of the object, like update, would take the method's place, so it is left out
-        if (typeof result[key] === 'function' && typeof value !== 'function')
-            debug && console.warn(`objectLayersLoad: ${name} property ${key} has a method's name, left out`);
-        else
-            // assigned, so a setter of the game's class runs, but __proto__ is made its own, assigned it would set the
-            // object's prototype
-            key === '__proto__' ? objectPropertySet(result, key, value) : result[key] = value;
-    }
+        objectPropertyAssign(result, key, value, name);
     return result;
 }
 

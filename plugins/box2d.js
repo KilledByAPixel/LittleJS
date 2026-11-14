@@ -2516,6 +2516,8 @@ class Box2dPlugin
         let done = false;
         try
         {
+            // what waited behind a queued change that threw goes first, or a body destroyed then collides once more
+            box2dRunPending();
             for (let i=frames; i-- && !box2dCallbackError;)
             {
                 box2d.world.Step(timeDelta, this.velocityIterations, this.positionIterations);

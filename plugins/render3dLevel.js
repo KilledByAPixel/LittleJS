@@ -309,21 +309,28 @@ function level3DTerrainMake(terrain)
 // itself is left whole, for the game to put back
 const level3DSkies = /* @__PURE__ */ new WeakSet;
 
-// what the last level's scene block set: each renderer field it changed, the value before and the value it set,
-// and the flare; the next level puts back only a field that still holds the block's value, so what the game set
-// itself, before or since, stays as it set it
+// what the last level's scene block set: each renderer field it changed, the value before, the value it set, a copy
+// of that when it is a color or vector, and the flare; the next level puts back only a field that still holds the
+// block's value, so what the game set itself, before or since, stays as it set it
 const level3DSceneSet = /* @__PURE__ */ new Map;
 let level3DSceneFlareBefore;
 
-// a field's value is the block's still: the same dome or cube map, an equal color or vector, or the same number
-const level3DSceneSame = (a, b)=> a === b || isColor(a) && isColor(b) && a.r === b.r && a.g === b.g && a.b === b.b &&
-    a.a === b.a || isVector3(a) && isVector3(b) && a.x === b.x && a.y === b.y && a.z === b.z;
+// a field still holds the block's value: the very dome, cube map, color or vector the block set, a color or vector
+// unchanged since, as a game's day cycle changes the sun's in place; a number or flag the game set back to the
+// block's value counts as the block's, there is no telling them apart
+function level3DSceneSame(value, kept)
+{
+    const was = kept.copy;
+    return value === kept.after && (!was || (isColor(was) ? value.r === was.r && value.g === was.g &&
+        value.b === was.b && value.a === was.a : value.x === was.x && value.y === was.y && value.z === was.z));
+}
 
 // set a renderer field for a scene block, kept so the next level can put it back
 function level3DSceneSetField(field, value)
 {
-    const r = render3D, kept = level3DSceneSet.get(field);
-    kept ? kept.after = value : level3DSceneSet.set(field, {before: r[field], after: value});
+    const r = render3D, copy = isColor(value) || isVector3(value) ? value.copy() : undefined;
+    const kept = level3DSceneSet.get(field);
+    kept ? (kept.after = value, kept.copy = copy) : level3DSceneSet.set(field, {before: r[field], after: value, copy});
     r[field] = value;
 }
 
@@ -334,9 +341,10 @@ function level3DSceneUndo()
     const r = render3D;
     ++level3DSceneCubeLoads.skyBox, ++level3DSceneCubeLoads.environment;
     if (r)
-        for (const [field, {before, after}] of level3DSceneSet)
+        for (const [field, kept] of level3DSceneSet)
         {
-            if (!level3DSceneSame(r[field], after)) continue; // the game set it since
+            const {before, after} = kept;
+            if (!level3DSceneSame(r[field], kept)) continue; // the game set it since
             field === 'sky' && level3DSkies.has(after) && after !== before && after.dispose(); // a dome a level made
             r[field] = before;
         }

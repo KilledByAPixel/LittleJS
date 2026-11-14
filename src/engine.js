@@ -1112,12 +1112,16 @@ function engineObjectsSort()
  *  @memberof Engine */
 function engineObjectsDestroy(immediate=true)
 {
+    // a destroy that throws, a Box2D object whose endContact did, leaves the rest to go, its error thrown after
+    let error;
     for (const o of engineObjects)
-        o.parent || o.persistent || o.destroy(immediate);
+        try { o.parent || o.persistent || o.destroy(immediate); }
+        catch (e) { error ||= {e}; }
     engineObjects = engineObjects.filter(o=>!o.destroyed);
     // and the solid lists, so a pause menu that clears the world does not hold what it cleared until play goes on
     engineObjectsCollide = engineObjectsCollide.filter(o=>!o.destroyed);
     engineObjectsCollideStaticLast = engineObjectsCollideStaticLast.filter(o=>!o.destroyed);
+    if (error) throw error.e;
 }
 
 /** Collects all object within a given area

@@ -1013,7 +1013,7 @@ function setDebugWatermark(show) { debugWatermark = show; }
  *  @memberof Debug */
 function setDebugLineWidth(width) { debugLineWidth = width; }
 
-/** Set key code used to toggle debug mode, Esc by default
+/** Set key code used to toggle debug mode, Esc by default, '' for none
  *  @param {string} key
  *  @memberof Debug */
 function setDebugKey(key) { debugKey = key; }

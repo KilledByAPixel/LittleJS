@@ -24,14 +24,29 @@ function engineObjectOneWayPass(solid, solidPos, from, fromSize)
 
 // where a move from start to end goes into the cell at its corner, the first point of it inside the cell's box, and
 // whether it goes in through a side, x, or the top or bottom, the axis whose slab it enters last; one starting on a
-// face is on that face, as its entry there is 0 and the other's is before it
+// face is on that face, as its entry there is 0 and the other's is before it; corner when it enters both at once
 function engineObjectRayEntry(start, end, cell)
 {
     const dx = end.x - start.x, dy = end.y - start.y;
     const tx = dx ? min((cell.x - start.x) / dx, (cell.x + 1 - start.x) / dx) : -Infinity;
     const ty = dy ? min((cell.y - start.y) / dy, (cell.y + 1 - start.y) / dy) : -Infinity;
     const t = clamp(max(tx, ty));
-    return {pos: vec2(start.x + dx*t, start.y + dy*t), side: tx >= ty};
+    return {pos: vec2(start.x + dx*t, start.y + dy*t), side: tx >= ty, corner: tx === ty};
+}
+
+// whether a cell of the world grid is solid in a solid collision layer for a bullet that was at from, a one way tile
+// it may pass not
+function engineObjectBulletSolid(x, y, from)
+{
+    for (const layer of tileCollisionLayers)
+    {
+        if (!layer.isSolid) continue;
+        const lx = x - layer.pos.x, ly = y - layer.pos.y;
+        if (lx < 0 || ly < 0 || lx >= layer.size.x || ly >= layer.size.y) continue;
+        if (layer.collisionData[ly*layer.size.x + lx] && !tileCollisionOneWayPass(layer, lx, ly, from.x, from.y))
+            return true;
+    }
+    return false;
 }
 
 // a bullet's move from one point to another through the tiles: the first tile its collideWithTile takes, nearest
@@ -72,7 +87,10 @@ function engineObjectBulletSweep(object, from, to)
                 if (object.destroyed) return false; // nor the other layers' tiles in this cell
                 continue;
             }
-            const normal = entry.side ? vec2(-sign(move.x), 0) : vec2(0, -sign(move.y));
+            // a move into a cell exactly at its corner goes in through the face with nothing solid outside it, the
+            // side of a wall's tile under a floor is no face
+            const side = entry.corner ? !engineObjectBulletSolid(cell.x - sign(move.x), cell.y, from) : entry.side;
+            const normal = side ? vec2(-sign(move.x), 0) : vec2(0, -sign(move.y));
             hit = {pos: entry.pos, normal, layer};
             return true;
         }
@@ -607,7 +625,9 @@ class EngineObject
             // stop at the surface, a hair off it, more than a one way tile's margin, so going on along a ceiling a
             // one way tile it rose through lets it on; bounce off it by the more bouncy of it and the layer
             const {normal, layer} = hit, restitution = max(this.restitution, layer.restitution);
-            const stop = hit.pos.add(normal.scale(2e-3));
+            // one that started on the face it hit stays on it when a hair off it is inside a tile behind
+            let stop = hit.pos.add(normal.scale(2e-3));
+            engineObjectBulletSolid(floor(stop.x), floor(stop.y), from) && (stop = hit.pos);
             const into = this.velocity.dot(normal);
             if (into < 0)
                 this.velocity = this.velocity.subtract(normal.scale(into * (1 + restitution)));

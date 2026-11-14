@@ -245,8 +245,9 @@ function shareURL(title, url, callback)
 
 /** Read save data from local storage
  *  - The result has the type of defaultSaveData, or any when there is none
- *  - A value whose default is a vec2, a Color or another value with a copy method comes back as one, where JSON
- *    keeps only its numbers
+ *  - A top level value whose default is a vec2, a vec3 or a Color, a value with a copy method and only numbers,
+ *    comes back as a new one, where JSON keeps only its numbers, a number not saved or not finite the default's;
+ *    with nothing saved any value with a copy method is a copy of the default, so changing it leaves the default
  *  @template {Object<string, any>} [T=any]
  *  @param {string} saveName - unique name for the game/save
  *  @param {T} [defaultSaveData] - default values, result is {...default, ...loaded} so this must be an object
@@ -277,13 +278,23 @@ function readSaveData(saveName, defaultSaveData)
     }
     catch { LOG('readSaveData: localStorage unavailable — using defaults'); }
     const result = { .../** @type {object} */ (defaultSaveData), ...loadedData };
-    // a vec2 or a Color written as JSON is only its numbers, made one again from its default
+    // a vec2 or a Color written as JSON is only its numbers, made one again from a copy of its default, taking only
+    // the numbers the copy has, so a saved key of another name, a null JSON wrote for Infinity, or a __proto__ key,
+    // changes nothing; a value with more than numbers, a Matrix4, stays as JSON gave it
     for (const key in defaultSaveData ?? {})
     {
-        const value = defaultSaveData[key], saved = loadedData[key];
-        if (value && typeof value === 'object' && typeof value.copy === 'function' && saved && typeof saved === 'object'
-            && Object.prototype.toString.call(saved) === '[object Object]')
-            result[key] = Object.assign(value.copy(), saved);
+        const value = defaultSaveData[key];
+        if (!value || typeof value !== 'object' || typeof value.copy !== 'function') continue;
+        const copy = value.copy(), fields = Object.keys(copy), saved = loadedData[key];
+        if (!Object.prototype.hasOwnProperty.call(loadedData, key))
+            result[key] = copy; // the default's own object is the game's, or frozen like WHITE
+        else if (fields.every((field)=> typeof copy[field] === 'number') && saved && typeof saved === 'object' &&
+            Object.prototype.toString.call(saved) === '[object Object]')
+        {
+            for (const field of fields)
+                Number.isFinite(saved[field]) && (copy[field] = saved[field]);
+            result[key] = copy;
+        }
     }
     return result;
 }

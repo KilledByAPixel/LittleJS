@@ -483,7 +483,12 @@ class SpriteAnimation
 
     /** How many frames have gone by since the start, fractional
      *  @return {number} */
-    get elapsedFrames() { return (time - this.startTime) * this.speed / this.frameTime; }
+    get elapsedFrames()
+    {
+        // time steps by 1/60, so a whole number of frames can come out a hair under it, snapped so each lasts the same
+        const f = (time - this.startTime) * this.speed / this.frameTime, r = round(f);
+        return abs(f - r) < 1e-6 ? r : f;
+    }
 
     /** The frame showing now, 0 to frameCount-1
      *  @return {number} */
@@ -698,6 +703,12 @@ class Shader
         {
             ASSERT(/^[A-Za-z_][A-Za-z0-9_]*$/.test(name) && !name.startsWith('gl_'),
                 'a Shader uniform is named as a GLSL variable is', name);
+            // the wrappers' own names, i and a capital as iTime, and those the docs promise the snippets, would be
+            // declared twice
+            ASSERT(!/^i[A-Z]/.test(name) && !['main', 'mainImage', 'mainVertex',
+                'mainNormal', 'localUV', 'premultipliedTexture', 'cameraPos', 'modelMatrix', 'vertexColor',
+                'viewProjection', 'instanceData', 'sceneDepth'].includes(name),
+                'a Shader uniform has a name of its own, not one of the engine\'s', name);
             const type = this.uniformTypes[name] = glUniformType(uniforms[name]);
             ASSERT(!!type, 'a Shader uniform is a number, boolean, vector, Color, matrix or list of 2, 3, 4, 9 or 16 numbers',
                 name, uniforms[name]);

@@ -11,10 +11,13 @@ What changed in each release, newest first. Releases before 1.20.0 are on the
 - A debug build asserts on a key name that does not start with a capital, as `'space'` for `'Space'`, which was always up, and on a color where `drawLine` takes its width
 - `engineObjectsRaycast` and `isIntersecting` make no vectors, and `drawEllipseGradient` and `drawCircleGradient` none past the first call; Back from a prefab in the 3D editor builds each instance once
 - `speak()` says nothing while the page's sound is paused, where the browser said it all at once on return; `engineObjectsRaycast` says its hits are in list order
-- `readSaveData` gives back a `vec2`, a Color or another value with a `copy` method where its default is one, where it gave a plain object of numbers
+- `readSaveData` gives back a `vec2`, `vec3` or Color where its default is one, made from the saved numbers alone, where it gave a plain object of numbers, and a copy of a default with a `copy` method when nothing was saved, so a frozen `WHITE` or a shared default is never handed out
 - `particleEffect` asserts in debug builds on a `scale`, `hue` or `saturation` that would make empty, mirrored or NaN particles
 - `tileLayersLoad` warns of a map that is not orthogonal, read as square cells, and names the CSV or array layer format when a layer's data can not be read; glTF data uris are read in any case
 - The FAQ answers how to make a title screen, a menu and game over, how to pause, and how to animate a value with tweens, and says Escape is the debug key, with `setDebugKey`
+- A debug build asserts on a `Shader` uniform named like one of the engine's own, as `iTime`, which failed only when the shader compiled, and on a `UISlider` value outside 0 to 1; a 3D particle trail longer than its 10 seconds is said once
+- A `MeshCollider` raycast, as picking, the third person camera's wall test and a lens flare's check send, walks the collider's grid and tests only the triangles along the ray; a CSG cut places each point once, about twice as fast
+- `distanceAngle` and `distanceWrap` say they give A minus B, and REFERENCE that an `InstancedMesh3D` is never hit by pick, raycasts or collect
 
 ### Fixes
 - `ThirdPersonCamera3D` no longer shakes from side to side when the player walks back toward it: its swing behind the way the target moves fades out as the move turns toward the camera, where the short way round flipped sides each frame, and keys that move the way the camera faces turned the move with it
@@ -38,6 +41,16 @@ What changed in each release, newest first. Releases before 1.20.0 are on the
 - An error thrown from a Box2D contact callback comes out after the physics step, where it left Box2D's world locked and every body made after it failed, and one thrown from an `endContact` as an object is destroyed still takes its body out of the world; `setScene` from a contact callback, as a restart on touching spikes, happens once the step is done
 - A 3D level's scene block no longer carries into the next level: the next load puts back each setting the block changed, unless the game changed it since, so a level with no block shows no fog, sky or sun of the last one, and a sky, sun or fog the game sets in code stays
 - Inside the 3D editor's Edit prefab mode the blocks, terrain and scene are not offered, where edits to them were lost on Back
+- `setDebugKey('')` leaves a debug build with no debug key, as the FAQ says, where it asserted every frame; a key function given `''` reads it as no key
+- A `SpriteAnimation` shows each frame for the same number of updates, where some lasted one more or one less
+- CSG gives a closed mesh when the first mesh has T junctions, as `buildExtrude` and `buildText3D` make, and when the second shares its corners, where both left cracks
+- A day cycle that changes the sun's color or direction in place keeps it when the next 3D level loads, where the load put the old one back
+- `engineObjectsDestroy` and `setScene` go on when an object's destroy throws, as a Box2D object's `endContact` can, the error thrown after, where the rest of the objects stayed and the next scene never entered
+- A Tiled property named like a getter with no setter is left out with a warning, where it stopped `objectLayersLoad` and the objects after it; a property changed in the 2D editor goes through the game's setter, and one named `__proto__` is the object's own
+- A game key added to the level editor by its code, as `'ShiftLeft'` or `'Numpad1'`, works in the 2D editor, as in the 3D one
+- A bullet that starts exactly on a tile's face or in an inner corner stays out of the tiles, where it could end inside one and pass through
+- Turning the touch gamepad off while a real gamepad has slot 0 keeps what that pad holds
+- A glTF object parsed again counts its zeros afresh, where a few parses of the same object were refused
 - `setScene` and `engineObjectsDestroy` say that UI objects and tweens stay, and how to end them
 - `soundPauseWhenBlurred` mutes a `UIVideo` and leaves it playing, as the window still shows it, where it paused it and a game waiting for the end of a cutscene skipped it; a hidden page still pauses it
 - A bullet whose move ends exactly on a tile's face is stopped in that frame, where it went into the tile and hit it a frame late

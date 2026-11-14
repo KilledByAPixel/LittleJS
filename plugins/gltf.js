@@ -549,6 +549,7 @@ async function parseGLTF(data, baseUrl='', files)
     }
     if (typeof json == 'string')
         json = JSON.parse(json);
+    gltfZeroCounts.delete(json); // counted for this parse, the same object parsed again starts from none
     if (!json.asset || !String(json.asset.version).startsWith('2'))
         throw new Error('only glTF 2.0 is read'); // a file problem, not a code one, so it throws in every build
     // compressed geometry has no plain accessors to read; the other extensions add to what is here, and can be left out
@@ -1078,7 +1079,7 @@ function gltfNodeMatrix(node)
 
 // an accessor's values as floats, one row per element, normalized integer types brought to 0 to 1; a sparse one
 // starts from its bufferView, or from zeros without one, and then has the listed elements replaced
-// the elements with no buffer each file made so far, which cost nothing in the file, see gltfAccessor
+// the elements with no buffer each parse of a file made so far, which cost nothing in the file, see gltfAccessor
 const gltfZeroCounts = /* @__PURE__ */ new WeakMap;
 
 function gltfAccessor(json, buffers, index)

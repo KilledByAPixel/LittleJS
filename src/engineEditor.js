@@ -754,8 +754,9 @@ function editorLayerRecord(live)
     // of one gone takes its number, so two layers do not write over one file
     const coded = editorMapList.filter((other)=> other.synthetic), taken = new Set(coded.map((other)=> other.key));
     let n = 0;
-    while (taken.has(`code layer ${n} ${width}x${height}`)) ++n;
-    record.key = `code layer ${n} ${width}x${height}`;
+    // spelled unlike the key 1.30.1 gave, or a layer's new key could be another's old one and find its file
+    while (taken.has(`code layer ${width}x${height} #${n}`)) ++n;
+    record.key = `code layer ${width}x${height} #${n}`;
     // the key 1.30.1 gave it, counting the layers of every size, for a file it remembered under that one
     record.oldKey = `code layer ${coded.length} ${width}x${height}`;
     editorMapList.push(record);
@@ -1150,7 +1151,8 @@ function editorSaveValid(saved)
         saved.layers.every((layer)=> Array.isArray(layer) && layer.every((gid)=> Number.isInteger(gid) && gid >= 0)) &&
         (saved.objects === undefined || Array.isArray(saved.objects) &&
             saved.objects.every((list)=> Array.isArray(list) && list.every((o)=> plain(o) &&
-                isNumber(o.x) && isNumber(o.y) && (o.properties === undefined || Array.isArray(o.properties))))) &&
+                isNumber(o.x) && isNumber(o.y) &&
+                (o.properties === undefined || Array.isArray(o.properties) && o.properties.every(plain))))) &&
         whole(saved.width) && whole(saved.height) &&
         (saved.nextobjectid === undefined || Number.isInteger(saved.nextobjectid));
 }
@@ -1536,8 +1538,8 @@ function editorSetObjects(layer, list)
                 typeof made.setPosition == 'function' ? made.setPosition(editorObjectPos(record, object)) :
                     made.pos = editorObjectPos(record, object);
             const was = objectLayersProperties(type, old), now = objectLayersProperties(type, object);
-            for (const name in now) // a method's name is left out, as objectLayersMake leaves it
-                editorSameData(was[name], now[name]) || typeof made[name] === 'function' || (made[name] = now[name]);
+            for (const key in now) // given as objectLayersMake gives them
+                editorSameData(was[key], now[key]) || objectPropertyAssign(made, key, now[key], name);
         }
     }
 }
@@ -2748,7 +2750,9 @@ function editorOnKeyDown(e)
             key = (match[1] ?? match[2]).toLowerCase();
     }
     // a key of the game's own first, it takes the place of one of the editor's
-    const ctrl = e.ctrlKey || e.metaKey, own = levelEditor.keys[(ctrl ? 'ctrl+' : '') + key];
+    // by its code too, so a game's 'ShiftLeft' or 'Numpad1' works here as in the 3D editor, which reads codes
+    const ctrl = e.ctrlKey || e.metaKey, prefix = ctrl ? 'ctrl+' : '';
+    const own = levelEditor.keys[prefix + key] ?? (e.code && levelEditor.keys[prefix + e.code]);
     const action = own ? (shift)=> own.action.call(levelEditor, shift) : (ctrl ? editorCtrlKeys : editorKeys)[key];
     if (action && editorObjectDrag)
         e.preventDefault(); // the keys wait for a drag of objects to let go, an undo would be moved again

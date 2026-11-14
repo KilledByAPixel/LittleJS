@@ -144,9 +144,10 @@ clamp(value, min=0, max=1)                    // Clamps between values
 percent(value, valueA, valueB)                // Get percentage between values
 lerp(valueA, valueB, percent)                 // Linearly interpolates between values
 percentLerp(value, percentA, percentB, lerpA, lerpB) // Lerp that remaps the percent
-distanceWrap(valueA, valueB, wrapSize=1)      // Signed wrapped distance between values
+distanceWrap(valueA, valueB, wrapSize=1)      // Signed wrapped distance between values, A minus B
 lerpWrap(valueA, valueB, percent, wrapSize=1) // Linearly interpolates with wrapping
-distanceAngle(angleA, angleB)                 // Signed wrapped distance between angles
+distanceAngle(angleA, angleB)                 // Signed wrapped distance between angles, A minus B, so
+                                              // angle += distanceAngle(target, angle) * .1 turns toward target
 lerpAngle(angleA, angleB, percent)            // Linearly interpolates with wrapping
 smoothStep(percent)                           // Applies smoothstep function, percent clamped to 0-1
 isPowerOfTwo(value)                           // Checks if the value is a power of two
@@ -1636,7 +1637,8 @@ render3D.instancing = true     // every use of a mesh in the opaque stage is one
                                // mesh.instanced = false keeps one mesh drawing in object order instead
 new InstancedMesh3D(mesh, count, tileInfo, color) // many copies of a mesh as one draw with their transforms kept on the
                                   // GPU: an instance costs nothing per frame until it changes, for big sets that
-                                  // mostly stay put; an EngineObject3D whose flags cover the whole set
+                                  // mostly stay put; an EngineObject3D whose flags cover the whole set;
+                                  // pick, raycasts and collect never hit it
 set.setTransformAt(i, pos, rotation, scale) // place an instance, in world space, the object's own transform does not
                                   // move them; buildMatrix's arguments written straight in, the fastest way
 set.setTransforms(start, count, x, y, z, rx, ry, rz, sx, sy, sz) // place a run from arrays indexed by instance,
