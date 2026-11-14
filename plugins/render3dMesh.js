@@ -551,6 +551,10 @@ class Mesh
      *    hundred milliseconds, so build shapes this way at load time, not every frame; joining several cutters
      *    with union and cutting once is quicker than cutting with each in turn
      *  - Details closer than about 1e-4 are made one, so build a very small part larger and scale it after
+     *  - A known limit: a long chain of cuts, a few dozen on one mesh, can now and then leave a small hole in a face,
+     *    where an earlier cut's thin triangles mislead the next; the next CSG on it then asserts that it is not
+     *    closed. Joining the cutters with union and cutting once, or building the shape again from its parts,
+     *    keeps chains short
      *  @param {Mesh} mesh - Closed, as the builders make them apart from the open ones like buildGrid
      *  @param {Matrix4|Vector3} [matrix] - Places the other mesh, or just a position to move it to
      *  @return {Mesh}

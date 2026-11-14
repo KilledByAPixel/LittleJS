@@ -102,8 +102,9 @@ function level3DAddMesh(name, mesh, tileInfo, color=WHITE, meshCollision=false)
  *    the background and are set when they have; what the block leaves out stays as the game set it, and the
  *    next level, with a block or none, puts back what this block set, each setting the game has not changed since
  *  - The 3D editor keeps the HeightMap and VoxelMap made here through its edits, so a game may hold them, but a voxel
- *    resize or a terrain of another shape is a new map: a game that holds one takes it again in onRestart, or looks
- *    it up when the one it holds is destroyed
+ *    resize or a terrain of another shape is a new map, and a map whose block is taken out is out of the world
+ *    until an undo: a game that holds one takes it again in onRestart, or looks it up when the one it holds is
+ *    destroyed or not in engineObjects, as examples/3d does
  *  @param {Level3D} level - The level, the level editor edits this same object
  *  @return {Array<any>} - What each object's type made, a function that made nothing is left out
  *  @memberof Level3D */

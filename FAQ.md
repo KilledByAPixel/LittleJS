@@ -931,7 +931,7 @@ function gameInit()
 }
 ```
 
-Setting the current scene again restarts it. From a Box2D contact callback `setScene` waits for the physics step to end, so it is the safe way to restart when the player touches spikes. The [Scenes](https://killedbyapixel.github.io/LittleJS/examples/?example=Scenes) example is a title, the game and game over, and [UI System](https://killedbyapixel.github.io/LittleJS/examples/?example=UI%20System) shows the buttons, sliders and checkboxes.
+Setting the current scene again restarts it. From a Box2D contact callback `setScene` waits for the physics step to end, so it is the safe way to restart when the player touches spikes, and two contacts in one step, as a body and its foot sensor make, restart once. The [Scenes](https://killedbyapixel.github.io/LittleJS/examples/?example=Scenes) example is a title, the game and game over, and [UI System](https://killedbyapixel.github.io/LittleJS/examples/?example=UI%20System) shows the buttons, sliders and checkboxes.
 
 ### How do I pause the game?
 

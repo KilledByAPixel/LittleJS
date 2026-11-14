@@ -23,6 +23,9 @@ What changed in each release, newest first. Releases before 1.20.0 are on the
 - `loadSprite` packs the whole frames of an image its frame size does not divide in every build, where a debug build asserted, says so in debug builds, and warns when the image is smaller than one frame
 - `loadAtlas` says which file failed and why when its json can not be loaded
 - With no debug key (`setDebugKey('')`) the editors have no Play button and their help leaves out what needs the key; another key is named in place of Esc
+- A 2D editor tool's callbacks get `lastCell`, the cell at the callback before in a drag, so a quick drag can fill the cells between, as EDITOR.md's Water tool now does
+- `Box2dObject.setTransform(pos)` keeps the angle when it is left out
+- `Mesh.union`, `subtract` and `intersect` say a known limit: a chain of a few dozen cuts can now and then leave a small hole, which the next CSG asserts on
 
 ### Fixes
 - `ThirdPersonCamera3D` no longer shakes from side to side when the player walks back toward it: its swing behind the way the target moves fades out as the move turns toward the camera, where the short way round flipped sides each frame, and keys that move the way the camera faces turned the move with it
@@ -82,6 +85,14 @@ What changed in each release, newest first. Releases before 1.20.0 are on the
 - Editors: a game key added by its code, `'Digit1'`, no longer also picks a layer; a game tool whose release throws is let go once; a code layer's file that can no longer be written is forgotten
 - Tiled object properties written as an object, by Tiled before 1.2, are said and left out, where `objectLayersLoad` threw part way; particle behaviors not known yet are kept once each, 64 at most, and clamped to their range once the game adds them
 - A looping or ping-pong `SpriteAnimation` played backward shows its first frame as long as the others
+- A Tiled map whose object properties are an object, as Tiled before 1.2 wrote them, is read as the list form, so the 2D editor edits it and keeps its autosave; a null property entry or a color that is not a hex string is left out with a warning, before the object is made
+- Two `setScene` calls in one Box2D step, as a body and its foot sensor touching spikes make, enter the scene once
+- A bullet destroyed by its own hit is no longer asked about tiles it never touched, which broke a second tile in the platformer
+- The Shader uniform check refuses a wrapper's short names only in a stage whose snippet uses them, and `tint`, `uvRect` and `cut` in vertex code, where pass 10 refused every one letter name
+- With no debug key the editors' Restart stays in the editor, Play shows or hides as the key changes, and the free camera and console notes name the key or `levelEditor.open()`
+- The touch gamepad taking over no longer zeroes a stick vector the game kept; `engineObjectsCollect3D()` with no position leaves out lights, emitters and instanced meshes; Ctrl or Cmd with a digit no longer closes the 2D editor or picks a layer
+- glTF node positions, turns, scales and matrices that are not numbers are a file error in every build; `readSaveData` gives the default where a vec2 or Color was saved as another kind; a particle effect name of megabytes is cut first; `loadAtlas` leaves out frames outside its image and makes 8 new sheets at most
+- The 3D editor brings back the map a game holds when a block map resize or a terrain change is undone; examples/3d looks its terrain up again after the editor takes it out; a shallow MeshCollider pick stops near where it leaves the collider
 
 ## 1.30.1 - 2026-11-12
 

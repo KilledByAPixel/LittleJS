@@ -557,6 +557,17 @@ async function parseGLTF(data, baseUrl='', files)
             throw new Error(`glTF with ${name} is not read, export it uncompressed`);
         else if (name === 'KHR_texture_basisu')
             throw new Error('glTF with KHR_texture_basisu textures is not read, export them as png or jpeg');
+    // each node's place, turn, scale and matrix numbers, the count each takes, or a release build bakes NaN into the
+    // pose or throws at every step; a file problem, so it throws in every build
+    (isArray(json.nodes) ? json.nodes : []).forEach((node, i)=>
+    {
+        for (const [key, count] of [['translation', 3], ['rotation', 4], ['scale', 3], ['matrix', 16]])
+        {
+            const value = node?.[key];
+            if (value !== undefined && !(isArray(value) && value.length === count && value.every(isNumber)))
+                throw new Error(`glTF node ${i} has a ${key} that is not ${count} numbers`);
+        }
+    });
     // one that only may use them has other images to fall back on, or none: said, since it loads with them left out
     if (json.extensionsUsed?.includes('KHR_texture_basisu') && !json.extensionsRequired?.includes('KHR_texture_basisu'))
         console.warn('glTF: KHR_texture_basisu textures are not read and are left out, export them as png or jpeg');

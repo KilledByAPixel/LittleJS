@@ -37,7 +37,8 @@ function engineObjectRayEntry(start, end, cell)
 
 // whether a cell of the world grid is solid in a solid collision layer for a bullet that was at from, a one way tile
 // it may pass not, and a tile its collideWithTile does not take not, asked as a place only tried, so a marker like a
-// ladder's negative value is not solid
+// ladder's negative value is not solid; a bullet its own hit destroyed is not asked, as the sweep asks it nothing
+// more, and its tiles are solid by their value
 function engineObjectBulletSolid(object, x, y, from)
 {
     for (const layer of tileCollisionLayers)
@@ -47,7 +48,7 @@ function engineObjectBulletSolid(object, x, y, from)
         if (lx < 0 || ly < 0 || lx >= layer.size.x || ly >= layer.size.y) continue;
         const data = layer.collisionData[ly*layer.size.x + lx];
         if (data && !tileCollisionOneWayPass(layer, lx, ly, from.x, from.y) &&
-            object.collideWithTile(data, vec2(x, y), false))
+            (object.destroyed ? data > 0 : object.collideWithTile(data, vec2(x, y), false)))
             return true;
     }
     return false;

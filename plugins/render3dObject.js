@@ -1053,8 +1053,11 @@ function* render3DGridWalk(grid, reach, center, before)
  */
 function engineObjectsCollect3D(pos, size=0, objects=engineObjects, testCenters=false)
 {
+    // every one with a body, as the tests below take them: no light, emitter or trail, with no size, and no
+    // InstancedMesh3D, whose copies are not it
     if (!pos)
-        return /** @type {Array<EngineObject3D>} */ (objects.filter((o)=> o instanceof EngineObject3D && !o.destroyed));
+        return /** @type {Array<EngineObject3D>} */ (objects.filter((o)=> o instanceof EngineObject3D && !o.destroyed &&
+            !(o instanceof InstancedMesh3D) && !!(o.size3D.x || o.size3D.y || o.size3D.z)));
     // a size of 0 is a point, tested against each box, since a sphere of no size could never hit
     const radiusSquared = typeof size === 'number' && size > 0 ? (size/2)**2 : undefined;
     const box = radiusSquared ? undefined : typeof size === 'number' ? vec3() : render3DSize3(size);
@@ -1240,8 +1243,9 @@ function engineObjectsRaycast3D(ray, objects=engineObjects)
 /**
  * Call a function for each EngineObject3D whose box overlaps a sphere or a box
  * - An object destroyed by an earlier callback is skipped
- * @param {Vector3} pos - Center of the area
- * @param {Vector3|number} size - Diameter of a sphere if a number, 0 for a point, full size of a box if a Vector3
+ * @param {Vector3|undefined} pos - Center of the area, or undefined for every 3D object, see engineObjectsCollect3D
+ * @param {Vector3|number|undefined} size - Diameter of a sphere if a number, 0 or undefined for a point, full size
+ *   of a box if a Vector3
  * @param {function(EngineObject3D): void} callback
  * @param {Array<EngineObject>} [objects] - Defaults to every object
  * @param {boolean} [testCenters] - Test only each object's center, see engineObjectsCollect3D

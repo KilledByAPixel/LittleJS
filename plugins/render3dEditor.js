@@ -727,8 +727,9 @@ function editor3DVoxelMap()
     return map && !map.destroyed && editor3DLevelPart('voxels') ? map : undefined;
 }
 
-// bring the game's map in line with the level's voxels block: made, made again when its place or size changed, as
-// a resize does, its cells set, or put away with the block gone, and the same one back when an undo brings it back
+// bring the game's map in line with the level's voxels block: its cells set, or put away when its place or size
+// changed, as a resize does, or with the block gone, and one put away back when it fits again, as after an undo, or
+// else a new one made
 function editor3DVoxelShow()
 {
     const voxels = editor3DLevelPart('voxels'), shape = level3DVoxelsShape(voxels);
@@ -737,8 +738,7 @@ function editor3DVoxelShow()
     const fits = (map)=> shape && sameVector(map.pos3D, shape.pos) && sameVector(map.mapSize, shape.size);
     if (map && !fits(map))
     {
-        if (shape) map.destroy();
-        else editor3DMapAway(map), editor3DMapsRemoved.get('voxels')?.destroy(), editor3DMapsRemoved.set('voxels', map);
+        editor3DMapKeep('voxels', map);
         map = level3DVoxelMap = undefined;
     }
     if (!shape) return;
@@ -909,8 +909,7 @@ function editor3DTerrainShow()
         map.height === shape.height && map.rows === shape.heights.length && map.columns === shape.heights[0].length;
     if (map && !fits(map))
     {
-        if (shape) map.destroy();
-        else editor3DMapAway(map), editor3DMapsRemoved.get('terrain')?.destroy(), editor3DMapsRemoved.set('terrain', map);
+        editor3DMapKeep('terrain', map);
         map = level3DTerrainMap = undefined;
     }
     if (!shape) return;
@@ -1477,28 +1476,37 @@ function editor3DMapBack(map)
     add(map);
 }
 
-// a map whose block an edit took out of the level, put away for an undo that puts the block back, by part name
+// the maps an edit took out of the level or made again in another shape, put away for an undo that brings that
+// block back, by part name, the last few of each, so the map a game holds comes back rather than a third one
 const editor3DMapsRemoved = new Map;
 
-// the map put away when its block was taken out, back in the world when it still fits the block, or destroyed
+// put a map away for an undo, the oldest of its kind destroyed past four
+function editor3DMapKeep(name, map)
+{
+    editor3DMapAway(map);
+    const list = editor3DMapsRemoved.get(name) ?? [];
+    editor3DMapsRemoved.set(name, list);
+    list.push(map);
+    list.length > 4 && list.shift().destroy();
+}
+
+// a map put away that fits the block again, back in the world, undefined when none does
 function editor3DMapRestore(name, fits)
 {
-    const map = editor3DMapsRemoved.get(name);
-    editor3DMapsRemoved.delete(name);
-    if (!map || map.destroyed) return;
-    if (fits(map))
-    {
-        editor3DMapBack(map);
-        return map;
-    }
-    map.destroy();
+    const list = editor3DMapsRemoved.get(name) ?? [];
+    const i = list.findIndex((map)=> !map.destroyed && fits(map));
+    if (i < 0) return;
+    const [map] = list.splice(i, 1);
+    editor3DMapBack(map);
+    return map;
 }
 
 // destroy the maps put away for an undo, as another level loads
 function editor3DMapsRemovedClear()
 {
-    for (const map of editor3DMapsRemoved.values())
-        map.destroyed || map.destroy();
+    for (const list of editor3DMapsRemoved.values())
+        for (const map of list)
+            map.destroyed || map.destroy();
     editor3DMapsRemoved.clear();
 }
 
@@ -1776,6 +1784,7 @@ function editor3DRestart()
     if (!editorHas('onRestart')) return;
     editor3DSetOpen(false);
     levelEditor.onRestart();
+    debugKey || editor3DSetOpen(true); // with no debug key nothing would come back, so it stays in the editor
 }
 
 // a key as addKey spells it, as the 3D editor's tables have it, by its position: a letter, a digit, a mark by the
@@ -3025,11 +3034,11 @@ function editor3DPanelInit()
 
     editorElement('div', panel, 'font-weight:bold', '3D Level Editor');
     const top = row();
-    // with no debug key nothing comes back from playing, so there is no Play
+    // with no debug key nothing comes back from playing, so there is no Play, shown or not as the panel updates
     const play = button(top, 'Play', ()=> editor3DPlay(editor3DViewPoint()),
         editorKeyText('Esc, and Esc again comes back to the editor'));
-    debugKey || (play.style.display = 'none');
-    const restart = button(top, 'Restart', editor3DRestart, 'Rebuild the level and play it');
+    const restart = button(top, 'Restart', editor3DRestart, 'Rebuild the level and play it, or with no debug key ' +
+        'rebuild it and stay');
     button(top, 'Exit', ()=> levelEditor.close(), editorKeyText('0, then Esc opens the debug overlay again') || '0');
     const undo = row();
     button(undo, 'Undo', ()=> editor3DUndo(), 'Ctrl+Z');
@@ -3120,7 +3129,7 @@ function editor3DPanelInit()
     const gameHelp = editorElement('div', help);
     button(help, 'Close', ()=> editor3DHelp = false, '?');
 
-    editor3DPanelParts = {game, gameHelp, restart, pending, toolButtons, grid, moveStep, rotateStep, scaleStep, ground, ownAxes, types, prefabBox, prefabOpen, prefabName, prefabUnsaved, prefabNote,
+    editor3DPanelParts = {play, game, gameHelp, restart, pending, toolButtons, grid, moveStep, rotateStep, scaleStep, ground, ownAxes, types, prefabBox, prefabOpen, prefabName, prefabUnsaved, prefabNote,
         properties, blocks, terrainBox, scene, sceneOn, sceneRows, playFrom, storage, hint, help, typeNames: ''};
 }
 
@@ -3138,6 +3147,7 @@ function editor3DPanelUpdate()
     editorGamePanel(p.game);
     editorGameHelp(p.gameHelp);
     p.restart.style.display = editorHas('onRestart') ? '' : 'none';
+    p.play.style.display = debugKey ? '' : 'none';
     const pending = editor3DRecords.get(editor3DLevel)?.pending;
     p.pending.style.display = pending ? '' : 'none';
     pending && editorPendingFlash(p.pending);
@@ -3724,7 +3734,7 @@ function editor3DRender()
     if (headlessMode) return;
     editor3DPanelUpdate();
     if (editor3DFreeCamera)
-        drawTextScreen('Free camera · C or Esc to leave', vec2(mainCanvasSize.x / 2, mainCanvasSize.y - 30), 20, WHITE,
+        drawTextScreen(editorKeyText('Free camera · C or Esc to leave'), vec2(mainCanvasSize.x / 2, mainCanvasSize.y - 30), 20, WHITE,
             4, BLACK);
     editor3DIsOpen && editor3DDrawLabels();
     editor3DIsOpen && editor3DRecords.get(editor3DLevel)?.pending && editorPendingNote();

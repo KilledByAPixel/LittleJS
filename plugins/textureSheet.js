@@ -398,10 +398,25 @@ function loadAtlas(imageSrc, jsonSrc, padding=textureSheetPadding)
         await imagePromise;
         if (image.width && data)
         {
+            // a frame is in the image and no bigger than it, and one load makes a few new sheets at most, so a small
+            // json can not ask for a thousand sheets of empty cells
+            const sheetsBefore = textureSheets.length, w = image.width, h = image.height;
+            const inImage = (f)=> f.pos.x >= 0 && f.pos.y >= 0 && f.sourceSize.x <= w && f.sourceSize.y <= h &&
+                f.pos.x + (f.rotated ? f.size.y : f.size.x) <= w && f.pos.y + (f.rotated ? f.size.x : f.size.y) <= h;
             for (const group of parseAtlas(data))
             {
                 // reserve a block of full size cells, one per frame
                 if (!group.frames.length) continue; // a tag with no frames, the groups after it still load
+                if (!group.frames.every(inImage))
+                {
+                    console.warn('loadAtlas frames lie outside the image, left out:', group.name);
+                    continue;
+                }
+                if (textureSheets.length - sheetsBefore >= 8)
+                {
+                    console.warn('loadAtlas made 8 new texture sheets, the rest of its frames are left out:', imageSrc);
+                    break;
+                }
                 const sourceSize = group.frames[0].sourceSize;
                 const blockSize = vec2(sourceSize.x*group.frames.length, sourceSize.y);
                 const added = textureSheetAdd(blockSize, sourceSize, padding);

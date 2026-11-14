@@ -351,10 +351,12 @@ export class Bullet extends LJS.EngineObject
         return true; 
     }
 
-    collideWithTile(data, pos)
+    collideWithTile(data, pos, isHit)
     {
         if (data <= 0)
             return false;
+        if (!isHit)
+            return true; // a tile only asked about, solid, nothing broken
 
         // a bullet is where it meets the wall, so the sparks start there
         GameEffects.destroyTile(pos);

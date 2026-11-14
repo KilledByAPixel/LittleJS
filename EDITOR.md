@@ -156,10 +156,11 @@ For anything more than a button, `onPanel` gives you a box in the panel to fill 
 
 `addTool(name, tool)` adds a tool beside the editor's own: a button in the panel by its name, and a key if you
 give one. While it is on, the left button in the level is your tool's. Each callback is given
-`{pos, cell, ray, shift, ctrl}`:
+`{pos, cell, lastCell, ray, shift, ctrl}`:
 
 - `pos`: where the mouse is in the level. In 3D a `Vector3` on the level or the ground, in 2D a `Vector2`.
 - `cell`: 2D, the tile cell under the mouse on the selected tile layer, or undefined.
+- `lastCell`: 2D, in a drag, the cell at the callback before, so a quick drag can fill the cells between.
 - `ray`: 3D, the mouse's ray.
 
 What the callbacks change is one undo: the editor ends the stroke at the release, and takes it back when the
@@ -188,7 +189,7 @@ levelEditor.addTool('Posts',
 });
 ```
 
-2D, a tool that paints a tile wherever it is dragged, Shift erasing, tested:
+2D, a tool that paints a tile wherever it is dragged, the cells between filled, Shift erasing, tested:
 
 <!-- test:tool2d -->
 ```javascript
@@ -197,7 +198,14 @@ levelEditor.addTool('Water',
     key: 'w',
     hint: 'Water: drag to fill cells · Shift erases',
     onPress(at) { at.cell && levelEditor.edit2D.paint(at.cell, at.shift ? -1 : 7); },
-    onDrag(at)  { at.cell && levelEditor.edit2D.paint(at.cell, at.shift ? -1 : 7); },
+    onDrag(at)
+    {
+        // the mouse may skip cells in a frame, so the line from the last one is painted
+        if (!at.cell) return;
+        const from = at.lastCell ?? at.cell, steps = max(abs(at.cell.x - from.x), abs(at.cell.y - from.y));
+        for (let i = 1; i <= max(steps, 1); ++i)
+            levelEditor.edit2D.paint(from.lerp(at.cell, i / max(steps, 1)).round(), at.shift ? -1 : 7);
+    },
     onDraw(at)
     {
         // a cell is counted from its layer's corner, which is at the layer's pos in the world

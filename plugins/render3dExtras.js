@@ -861,11 +861,14 @@ class MeshCollider extends EngineObject3D
             next[j] = d[axis] ? ((cell[j] + (d[axis] > 0 ? 1 : 0)) * s - o[axis]) / d[axis] : Infinity;
             delta[j] = d[axis] ? s / abs(d[axis]) : Infinity;
         });
+        // and stops a cell's worth of the ray past where it leaves the box, more than any rounding, so a shallow
+        // pick leaving a terrain through its top does not walk on along the whole row
+        const stop = exit + min(delta[0], delta[1], delta[2]);
         for (;;)
         {
             g.cells.get(render3DGridKey(cell[0], cell[1], cell[2]))?.forEach(test);
             const j = next[0] <= next[1] && next[0] <= next[2] ? 0 : next[1] <= next[2] ? 1 : 2;
-            if ((best ?? Infinity) <= next[j]) break;
+            if ((best ?? Infinity) <= next[j] || next[j] > stop) break;
             cell[j] += step[j], next[j] += delta[j];
             if (cell[j] < lo[j] || cell[j] > hi[j]) break;
         }
@@ -3051,7 +3054,8 @@ function render3DCSGPolygons(mesh, matrix)
     ASSERT(mesh instanceof Mesh, 'CSG takes a Mesh');
     ASSERT(!mesh.doubleSided, 'CSG needs closed meshes, a doubleSided one like buildGrid has no inside');
     const list = new Mesh().combine(mesh, matrix).toIndexed();
-    ASSERT(!list.points.length || render3DMeshIsClosed(list), 'CSG needs closed meshes, every edge shared by two triangles');
+    ASSERT(!list.points.length || render3DMeshIsClosed(list), 'CSG needs closed meshes, every edge shared by two ' +
+        'triangles; a long chain of cuts can leave a small hole, see Mesh.subtract');
     const vertex = (i)=> new Render3DCSGVertex(list.points[i], list.normals[i], list.uvs[i], list.colors[i]);
     const polygons = [];
     for (let t = 0; t < list.indices.length; t += 3)
@@ -3064,7 +3068,7 @@ function render3DCSGPolygons(mesh, matrix)
 }
 
 // the meshes CSG made, whose edges meet their neighbors at every point, see render3DCSGMesh, each with its counts of
-// points and indices, so one changed since by combine or an add is not trusted
+// points and indices, so one changed since by combine or an add is not trusted, and how many open edges it has
 const render3DCSGResults = /* @__PURE__ */ new WeakMap;
 const render3DCSGCounts = (mesh)=> mesh.points.length + ',' + mesh.indices?.length;
 
@@ -3263,7 +3267,8 @@ function render3DMeshCSG(a, b, matrix, operation)
     const polygonsA = render3DCSGPolygons(a), polygonsB = render3DCSGPolygons(b, matrix);
     // the points and edges of the first mesh as given, when CSG made it and they met already, see render3DCSGMesh
     const originals = new Set, oldEdges = new Map;
-    if (render3DCSGResults.get(a) === render3DCSGCounts(a))
+    const mark = render3DCSGResults.get(a), trusted = mark?.counts === render3DCSGCounts(a);
+    if (trusted)
     for (const polygon of polygonsA)
     {
         const vertices = polygon.vertices;
@@ -3283,13 +3288,15 @@ function render3DMeshCSG(a, b, matrix, operation)
         // trusting the first mesh's edges can leave a crack where a cut took away what was between two runs of them
         // nearly in a line, the long edge then skipping points now on it; that is made again with every point, kept
         // when it has fewer, since a crack of rounding an earlier cut left shows in both and the full step grows
-        const open = originals.size && render3DCSGOpen(mesh);
-        if (open)
+        // only when it has more than its input had, so a crack the full step can not close either is not made twice
+        // at every later cut
+        let open = render3DCSGOpen(mesh);
+        if (trusted && open > mark.open)
         {
-            const full = render3DCSGMesh(polygons);
-            render3DCSGOpen(full) < open && (mesh = full);
+            const full = render3DCSGMesh(polygons), fullOpen = render3DCSGOpen(full);
+            fullOpen < open && (mesh = full, open = fullOpen);
         }
-        render3DCSGResults.set(mesh, render3DCSGCounts(mesh));
+        render3DCSGResults.set(mesh, {counts: render3DCSGCounts(mesh), open});
         return mesh;
     };
     const [nearA, farA] = render3DCSGNear(polygonsA, polygonsB), [nearB, farB] = render3DCSGNear(polygonsB, polygonsA);

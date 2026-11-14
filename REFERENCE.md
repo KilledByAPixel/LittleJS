@@ -341,7 +341,7 @@ new Shader(fragmentCode, vertexCode, uniforms) // uniforms: values the snippets 
                                   // declared for them, a number a float, a boolean a bool, a Vector2, Vector3 or
                                   // Color a vec2 to vec4, a list of 2 to 4, 9 or 16 numbers or a Matrix4 a vector,
                                   // mat3 or mat4, column by column; a name the engine's shader uses already, like
-                                  // tint or lightColor, fails to compile with the GLSL error naming it
+                                  // lightColor, or tint in vertex code, is refused by an assert in debug builds
 shader.setUniform(name, value)    // change one, no recompile; in 2D the draws before keep the old value, in 3D set it
                                   // outside the 3D pass and it holds for the frame
 new Shader(fragmentCode, vertexCode) // 3D: vertexCode defines void mainVertex(inout vec3 pos, inout vec3 normal),
@@ -1006,7 +1006,8 @@ tweenStopAll()                 // Stop every active tween (e.g. on level reset)
 - UI objects and tweens are not objects of the scene and stay: end them in its `leave` with
   `uiSystem.destroyObjects()` and `tweenStopAll()`, or a title's buttons stay on screen and clickable in the game
 - From a Box2D contact callback `setScene` waits for the physics step to end, so it is the safe way to restart from
-  one; destroying and making bodies there yourself is not
+  one, and several calls in one step switch once, to the last scene asked for; destroying and making bodies there
+  yourself is not
 - Pause is the engine's `paused`: a scene's update stops with gameUpdate, its render hooks keep drawing
 - See the Scenes short and the Box2D example
 
@@ -1095,7 +1096,8 @@ pf.debugTime = 1           // seconds debug visuals persist
 pf.findPath(startPos, endPos, rebuild=true) // Returns array of world positions, or empty if no path;
                                      // rebuild false reuses the grid read from the layer last time
 pf.buildNodeData()                   // Read the grid from the layer again, what findPath does when rebuild is true
-pf.getNearestClearNode(worldPos, searchRange=10, rebuild=true) // Snap an obstructed point to the nearest open tile
+pf.getNearestClearNode(worldPos, searchRange=10, rebuild=true) // The nearest open tile's PathFinderNode to a point,
+                                     // null when none is within range
 pf.isWalkable(x, y)                  // Override for custom walkability
 pf.getCost(x, y)                     // Override for weighted tiles (0 = clear)
 
@@ -1864,7 +1866,9 @@ mesh.subtract(otherMesh, matrix)              // grids or ribbons), neither chan
 mesh.intersect(otherMesh, matrix)             // other cut out, or only what is in both; matrix or a vec3 places
                                               // the other; cut faces take its normals, uvs and colors; parts that
                                               // overlap must be joined with union, not combine, mirror or spin;
-                                              // cuts add triangles, so build shapes this way at load time
+                                              // cuts add triangles, so build shapes this way at load time; a
+                                              // chain of a few dozen cuts can now and then leave a small hole,
+                                              // so join cutters with union and cut once
 mesh.scaleUVs(scale)                          // repeat a wrapping texture across the mesh, a vec2 or a number
 mesh.transform(matrix)                        // move every vertex in place, a mirror turns the faces too
 mesh.flipNormals()                            // turn it inside out, for rooms and domes seen from within
@@ -1934,8 +1938,8 @@ buildText3D(text, size, depth, font) // extruded glyphs from an ImageFont, the w
 // Height map terrain - from a 2D array [row][column] of 0-1 heights or an image's red channel; row 0 is the far edge at
 // -Z, column 0 the left edge at -X
 const terrain = new HeightMap(heights, mapSize=vec2(1), height=1, colors, pos3D=vec3(), smooth) // an EngineObject3D
-        // that draws itself and that objects with collideLevel stand on; heights and colors take the array, an image
-        // or a canvas; pos3D is its center, and it stays upright and unscaled
+        // that draws itself and that objects with collideLevel stand on; heights and colors take an array of rows
+        // (heights[row][column], at least 2 by 2), an image or a canvas; pos3D is its center, and it stays upright and unscaled
 terrain.rebuild()                             // make the mesh again after changing heights, colors or smooth
 terrain.buildMesh(smooth)                     // one vertex per sample, centered on its own origin, for other uses
 terrain.getHeight(pos3D) or (x, z)            // world height of the drawn mesh there, to stand things on it; the
@@ -2301,7 +2305,8 @@ obj.syncMesh()                 // copy the 2D transform to the mesh
 ## LittleJS Box2D Physics
 - Optional plugin wrapping the Box2D physics engine (via box2d.wasm.js)
 - Drop-in replacement for engine objects: `Box2dObject extends EngineObject`; Box2D moves it, so pos and angle are
-  read only, move it with `setPosition`, `setAngle` or `setTransform` and push it with velocities and forces
+  read only, move it with `setPosition(pos)`, `setAngle(angle)` or `setTransform(pos, angle)`, the angle left out
+  kept, and push it with velocities and forces
 - Joints, raycasting, polygon/circle/edge fixtures
 - Angular values are clockwise like `angle`: angular velocity, torque, joint angles and limits, motor speeds
 - The EngineObject's own physics fields do nothing on a Box2dObject, Box2D moves it: `velocity`, `angleVelocity`,
@@ -2650,7 +2655,7 @@ levelEditor.is3D           // Is the editor in use the 3D one? read only
 levelEditor.addKey('k', (shift)=> {}, 'K: what it does') // A key of your own: a letter, a name like 'F2', 'ctrl+k'
 levelEditor.addButton('Label', ()=> {}, 'title')         // A button of your own in the panel
 levelEditor.addTool('Name', {key, hint, onPress, onDrag, onRelease, onDraw}) // A tool of your own: while it is on
-                           // the left button is its; each callback gets {pos, cell, ray, shift, ctrl}, and a
+                           // the left button is its; each callback gets {pos, cell, lastCell, ray, shift, ctrl}, and a
                            // press, drag and release are one undo
 levelEditor.tool           // The name of your tool that is on, undefined for one of the editor's
 levelEditor.onOpen = ()=> {}   onClose   onUpdate   onDraw // Moments the editor calls: opened, closed, each

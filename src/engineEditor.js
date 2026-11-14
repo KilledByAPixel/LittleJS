@@ -41,6 +41,7 @@
  *  @property {P} pos - Where the mouse is in the level: a Vector2 in the 2D editor; in the 3D one a Vector3 on
  *    the level or the ground, undefined when the mouse is over the panel
  *  @property {Vector2|undefined} cell - 2D: the tile cell under the mouse on the selected tile layer
+ *  @property {Vector2} [lastCell] - 2D: in a drag, the cell at the callback before, to fill the cells between
  *  @property {Ray3D|undefined} ray - 3D: the mouse's Ray3D
  *  @property {boolean} shift - Is Shift held
  *  @property {boolean} ctrl - Is Ctrl held
@@ -313,9 +314,9 @@ class LevelEditor
 
     /** Add a tool of the game's own: a button in the panel by its name, and while it is on the left button in the
      *  level is its, not the editor's own tools'
-     *  - Each callback is given {pos, cell, ray, shift, ctrl}: pos is where the mouse is in the level, a Vector2 in
-     *    2D and a Vector3 on the level or the ground in 3D; cell is the tile under it in 2D; ray is the mouse's
-     *    in 3D
+     *  - Each callback is given {pos, cell, lastCell, ray, shift, ctrl}: pos is where the mouse is in the level, a
+     *    Vector2 in 2D and a Vector3 on the level or the ground in 3D; cell is the tile under it in 2D, and lastCell
+     *    the one at the callback before in a drag, to fill the cells a quick drag skipped; ray is the mouse's in 3D
      *  - What the callbacks change through edit2D or edit3D is one undo: the editor ends the stroke at the release,
      *    and takes it back when the right button or Escape ends the press
      *  @template [P=Vector2]
@@ -678,13 +679,13 @@ function editorMapRestore(map)
     {
         record.pending = saved;
         console.warn(`LittleJS editor: ${record.fileName} changed since its autosaved edits, ` +
-            'open the editor (Esc then 0) to apply or drop them');
+            `open the editor (${editorOpenText()}) to apply or drop them`);
     }
     else
     {
         editorRestoreObjects(map, saved, true);
         console.warn(`LittleJS editor: brought back unsaved edits to ${record.fileName}, ` +
-            'Save in the editor (Esc then 0) writes them to the file');
+            `Save in the editor (${editorOpenText()}) writes them to the file`);
         saved.stale && console.warn(`LittleJS editor: they are older than the last edits to ${record.fileName}, ` +
             'which storage had no room for');
     }
@@ -2283,8 +2284,12 @@ function editorKeyText(text)
 {
     if (debugKey === 'Escape') return text;
     if (debugKey) return text.replace(/\bEsc(ape)?\b/g, debugKey);
-    return text.replace(/Esc or r/g, 'R').split(' · ').filter((part)=> !/\bEsc(ape)?\b/.test(part)).join(' · ');
+    return text.replace(/Esc or r/g, 'R').replace(/ or Esc\b/g, '').split(' · ')
+        .filter((part)=> !/\bEsc(ape)?\b/.test(part)).join(' · ');
 }
+
+// how a player opens the editor, for the console notes: the debug key then 0, or with no debug key the call
+const editorOpenText = ()=> debugKey ? editorKeyText('Esc then 0') : 'levelEditor.open()';
 
 // the list of keys ? shows
 const editorHelpLines =
@@ -2388,11 +2393,11 @@ function editorPanelInit()
 
     editorElement('div', editorPanel, 'font-weight:bold', 'Level Editor');
     const top = row();
-    // with no debug key nothing comes back from playing, so there is no Play
+    // with no debug key nothing comes back from playing, so there is no Play, shown or not as the panel updates
     const play = button(top, 'Play', ()=> editorPlay(editorCameraPos),
         editorKeyText('Esc, and Esc again comes back to the editor'));
-    debugKey || (play.style.display = 'none');
-    const restart = button(top, 'Restart', editorRestart, 'Rebuild the level and play it');
+    const restart = button(top, 'Restart', editorRestart, 'Rebuild the level and play it, or with no debug key ' +
+        'rebuild it and stay');
     button(top, 'Exit', ()=> levelEditor.close(), editorKeyText('0, then Esc opens the debug overlay again') || '0');
     const undo = row();
     button(undo, 'Undo', ()=> editorUndo(), 'Ctrl+Z');
@@ -2492,7 +2497,7 @@ function editorPanelInit()
     const gameHelp = editorElement('div', help);
     button(help, 'Close', ()=> editorHelp = false, '?');
 
-    editorPanelParts = {game, gameHelp, pendingUnfit, reset, advancedToggle, advanced, playFromLabel, playFrom, sizeRow, sizeX, sizeY, resize, restart, pending, layerRow, allLayers, turns, palette, brush, properties, status, storage, hint, help, layers: undefined};
+    editorPanelParts = {play, game, gameHelp, pendingUnfit, reset, advancedToggle, advanced, playFromLabel, playFrom, sizeRow, sizeX, sizeY, resize, restart, pending, layerRow, allLayers, turns, palette, brush, properties, status, storage, hint, help, layers: undefined};
 }
 
 // the palette's cell size in pixels and how many to a row
@@ -2670,6 +2675,7 @@ function editorPanelUpdate()
     p.help.style.display = editorHelp ? '' : 'none';
     p.storage.style.display = editorSaveFailed ? '' : 'none';
     p.restart.style.display = editorHas('onRestart') ? '' : 'none';
+    p.play.style.display = debugKey ? '' : 'none';
     p.advancedToggle.textContent = editorAdvanced ? 'Advanced ▾' : 'Advanced ▸';
     p.advanced.style.display = editorAdvanced ? '' : 'none';
     p.playFromLabel.style.display = editorHas('onPlayFrom') ? 'flex' : 'none';
@@ -2998,8 +3004,9 @@ function editorUpdate()
         keyWasPressed('Digit' + i) && inputClearKey('Digit' + i);
 
     // 0 exits the editor, the overlay's 0 does it while the overlay is open; cleared so debugKeysAlways
-    // does not toggle it back in the same step
-    if (!debugOverlay && keyWasPressed('Digit0'))
+    // does not toggle it back in the same step; not with Ctrl or Cmd, the browser's zoom, or a game's ctrl+ key
+    const ctrlHeld = ['ControlLeft', 'ControlRight', 'MetaLeft', 'MetaRight'].some((key)=> keyIsDown(key));
+    if (!debugOverlay && !ctrlHeld && keyWasPressed('Digit0'))
     {
         inputClearKey('Digit0');
         levelEditor.close();
@@ -3008,7 +3015,7 @@ function editorUpdate()
 
     // 1 to 9 pick a layer from the back; taken, so debugKeysAlways does not also flip the debug views, the overlay
     // keeps them while it is open
-    for (let i = 1; !debugOverlay && i <= 9; ++i)
+    for (let i = 1; !debugOverlay && !ctrlHeld && i <= 9; ++i)
     {
         // a digit of the game's own is its, by the digit or its code
         if (!keyWasPressed('Digit' + i) || levelEditor.keys[i] || levelEditor.keys['Digit' + i]) continue;
@@ -3098,7 +3105,7 @@ function editorUpdate()
 
 // a tool of the game's own: if its press is held, and what was picked in the editor when it was turned on, since
 // picking a layer, a tile or an object type puts the game's tool down
-let editorToolHeld = false, editorToolName, editorToolPicked = [];
+let editorToolHeld = false, editorToolName, editorToolPicked = [], editorToolLastCell;
 
 // what a tool's callbacks are given: where the mouse is in the level, the cell under it on the selected tile
 // layer, and the keys held
@@ -3107,7 +3114,7 @@ function editorToolAt()
     const layer = editorObjectLayer || editorLayer?.live.destroyed ? undefined : editorLayer;
     const pos = screenToWorld(editorMouseScreen);
     return {pos, cell: layer && !editorMouseOnPanel ? editorCellAt(layer.live, pos) || undefined : undefined,
-        ray: undefined, shift: keyIsDown('ShiftLeft') || keyIsDown('ShiftRight'),
+        lastCell: editorToolLastCell?.copy(), ray: undefined, shift: keyIsDown('ShiftLeft') || keyIsDown('ShiftRight'),
         ctrl: keyIsDown('ControlLeft') || keyIsDown('ControlRight') || keyIsDown('MetaLeft') || keyIsDown('MetaRight')};
 }
 
@@ -3139,6 +3146,8 @@ function editorToolUpdate(space)
         editorToolHeld = tool.onPress?.(at) !== false;
     else if (editorToolHeld && mouseIsDown(0))
         tool.onDrag?.(at);
+    // the cell under the mouse at the last callback, given to the next as lastCell, so a quick drag can fill between
+    editorToolLastCell = editorToolHeld ? at.cell ?? editorToolLastCell : undefined;
     if (editorToolHeld && !mouseIsDown(0))
     {
         // let go first and the stroke ended whatever the release does, so one that throws is not released again
@@ -3181,6 +3190,7 @@ function editorRestart()
     if (!editorHas('onRestart')) return;
     editorSetOpen(false); // ends a held stroke, and hands back the game's pause and camera, Escape comes back
     levelEditor.onRestart();
+    debugKey || editorSetOpen(true); // with no debug key nothing would come back, so it stays in the editor
 }
 
 // called by the engine before the camera goes to WebGL, so the level is drawn with the editor's view, a game may move

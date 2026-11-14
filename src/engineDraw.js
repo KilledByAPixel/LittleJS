@@ -612,6 +612,14 @@ const SHADER_RESERVED_NAMES = /* @__PURE__ */ new Set(['main', 'mainImage', 'mai
     'gelAxes', 'tex', 'normalTex', 'emissiveTex', 'gelTex', 'envMap', 'envParams', 'shadowMap', 'shadow', 'gel',
     'normalMapNormal', 'roundNormal']);
 
+// the short names of the wrappers' inputs, outputs and uniforms, which a uniform can not take in a stage whose
+// snippet names it, where it would be declared: the 2D fragment's and the 3D fragment's, and the 3D vertex
+// stage's, its depth program's (cut, a float the engine sets, A) too; a name a snippet does not use is never declared
+const SHADER_FRAGMENT_NAMES = /* @__PURE__ */ new Set(['v', 'l', 'd', 'e', 'c', 'm', 'P', 'N', 'T', 'L', 'C', 'S',
+    'o']);
+const SHADER_VERTEX_NAMES = /* @__PURE__ */ new Set(['p', 'n', 't', 'c', 'm0', 'm1', 'm2', 'm3', 'tint', 'uvRect',
+    'P', 'N', 'T', 'L', 'C', 'S', 'A', 'cut']);
+
 ///////////////////////////////////////////////////////////////////////////////
 /** A value a Shader's snippet reads as a uniform: a number, a boolean, a Vector2, a Vector3, a Color, a Matrix4, or a
  *  list of 2, 3, 4, 9 or 16 numbers
@@ -657,8 +665,8 @@ const SHADER_RESERVED_NAMES = /* @__PURE__ */ new Set(['main', 'mainImage', 'mai
  *   need not declare them: new Shader(code, '', {glow: 1, tint: RED}), then shader.setUniform('glow', 2) as often as
  *   needed, with no recompile; each is declared in the snippets that use it, so one may share a name with an input
  *   of the engine's in the other stage, and is sent to a program only when it changed; a name the engine's shader
- *   uses already, like tint or lightColor, fails to compile with the GLSL error naming it; a matrix list is column
- *   by column; in 3D set a value outside the 3D pass, it holds for the frame
+ *   uses already, like lightColor, or tint in vertex code, is refused by an assert in debug builds; a matrix list
+ *   is column by column; in 3D set a value outside the 3D pass, it holds for the frame
  * @example
  * const fade = new Shader(`
  * void mainImage(out vec4 c, vec2 uv)
@@ -717,10 +725,12 @@ class Shader
             ASSERT(/^[A-Za-z_][A-Za-z0-9_]*$/.test(name) && !name.startsWith('gl_'),
                 'a Shader uniform is named as a GLSL variable is', name);
             // the wrappers' own names would be declared twice or turned into something else by their macros: i and a
-            // capital as iTime, the one letter names of their inputs, outputs and uniforms, and the rest of the 2D and
-            // 3D wrappers' names, listed here since core can not read the plugin's
-            ASSERT(!/^i[A-Z]/.test(name) && name.length > 1 && !/^m[0-3]$/.test(name) &&
-                !SHADER_RESERVED_NAMES.has(name),
+            // capital as iTime, the rest of the 2D and 3D wrappers' names, listed here since core can not read the
+            // plugin's, and their short names in a stage whose snippet names them
+            const names = (code)=> new RegExp('\\b' + name + '\\b').test(code);
+            ASSERT(!/^i[A-Z]/.test(name) && !SHADER_RESERVED_NAMES.has(name) &&
+                !(SHADER_FRAGMENT_NAMES.has(name) && names(fragmentCode)) &&
+                !(SHADER_VERTEX_NAMES.has(name) && names(vertexCode)),
                 'a Shader uniform has a name of its own, not one of the engine\'s', name);
             const type = this.uniformTypes[name] = glUniformType(uniforms[name]);
             ASSERT(!!type, 'a Shader uniform is a number, boolean, vector, Color, matrix or list of 2, 3, 4, 9 or 16 numbers',

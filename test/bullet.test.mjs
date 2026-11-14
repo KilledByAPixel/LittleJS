@@ -319,7 +319,7 @@ test('a negative tile value in front of a wall, a ladder, is not solid to a bull
     const { run } = loadEngine();
     run(level(`layer.setCollisionData(vec2(9, 5), -1);`));
     const stop = run(`
-        bullet.pos = vec2(9.3, 5.5); bullet.velocity = vec2(.7, 0);
+        bullet.pos = vec2(8.5, 5.5); bullet.velocity = vec2(1.6, 0); bullet.clampSpeed = false;
         frames(1); bullet.pos.x`);
     assert.ok(abs(stop - (10 - 2e-3)) < 1e-9, 'a hair off the face, not on it, ' + stop);
 });

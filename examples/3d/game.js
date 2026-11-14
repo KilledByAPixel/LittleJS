@@ -34,7 +34,7 @@ class Player extends EngineObject3D
     constructor(pos)
     {
         super(pos.copy(), buildSphere(2));
-        this.pos3D.y = terrain.getHeight(this.pos3D) + 1; // start on the ground
+        this.pos3D.y = groundHeight(this.pos3D) + 1; // start on the ground
         this.color = hsl(.55,.8,.6);
         this.specular = .5;
         this.speed = vec3();
@@ -59,7 +59,7 @@ class Player extends EngineObject3D
         this.pos3D.z = clamp(this.pos3D.z, -limit, limit);
 
         // space jumps when on the ground recently enough
-        const ground = terrain.getHeight(this.pos3D) + 1;
+        const ground = groundHeight(this.pos3D) + 1;
         if (this.pos3D.y < ground + .1)
             this.groundTimer.set(.1);
         if (this.groundTimer.active() && !freeCamera && keyWasPressed('Space'))
@@ -107,7 +107,7 @@ class Orb extends EngineObject3D
     {
         // bob in place until the player reaches it
         const bob = sin(time*2 + this.pos3D.x)*.3;
-        this.pos3D.y = terrain.getHeight(this.pos3D) + 2 + bob;
+        this.pos3D.y = groundHeight(this.pos3D) + 2 + bob;
         if (this.pos3D.distance(player.pos3D) > 2.5)
             return;
 
@@ -227,6 +227,15 @@ function makeLevel()
     return {littlejs3D: 1, terrain, objects};
 }
 
+// the ground's height under a point, 0 with no terrain; the editor may take the terrain out of the world or make
+// a new one, so the one held is looked up again when it is gone
+function groundHeight(pos)
+{
+    if (!terrain || terrain.destroyed || !engineObjects.includes(terrain))
+        terrain = engineObjects.find((o)=> o instanceof HeightMap && !o.destroyed);
+    return terrain ? terrain.getHeight(pos) : 0;
+}
+
 // build the level from its data, and again when the editor restarts it
 function loadLevel()
 {
@@ -278,7 +287,7 @@ async function gameInit()
     // title text, extruded from the engine font
     const titleMesh = buildText3D('LITTLEJS 3D', 5, 2);
     title = new EngineObject3D(vec3(0,0,-40), titleMesh);
-    title.pos3D.y = terrain.getHeight(title.pos3D) + 7; // just above the ground
+    title.pos3D.y = groundHeight(title.pos3D) + 7; // just above the ground
     title.color = hsl(.1,1,.6);
     title.specular = 1;
     title.persistent = true;

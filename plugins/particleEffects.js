@@ -248,8 +248,9 @@ function particleEffectColor(value)
  *  @memberof ParticleEffects */
 function particleEffectSanitize(raw)
 {
-    // one line of text, line breaks and control characters made spaces
-    const text = typeof raw?.name === 'string' ? raw.name.replace(/[\x00-\x1f\x7f]+/g, ' ').trim() : '';
+    // one line of text, line breaks and control characters made spaces, from a few hundred characters at most, as
+    // only 60 are kept and a name of megabytes would be split into characters whole
+    const text = typeof raw?.name === 'string' ? raw.name.slice(0, 600).replace(/[\x00-\x1f\x7f]+/g, ' ').trim() : '';
     // whole characters, and no space left where it was cut
     const name = text ? textGraphemes(text).slice(0, 60).join('').trim() : 'Effect';
     const input = raw?.settings && typeof raw.settings === 'object' ? {...raw.settings} : {};

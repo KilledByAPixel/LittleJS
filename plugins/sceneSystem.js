@@ -24,10 +24,14 @@
 
 let sceneCurrent, sceneLeaving = false, scenePluginAdded = false;
 
+// the scene a call during a Box2D step asked for, entered once after it, see setScene
+let sceneQueued, sceneIsQueued = false;
+
 /** Leave the current scene, destroy every object that is not persistent, and enter the next scene
  *  - Setting the current scene again restarts it, and no scene leaves the game with none
  *  - The switch happens at once, it can be called from anywhere but a scene's leave; from a Box2D contact callback it
- *    happens once the physics step is done, since Box2D can not make bodies during one
+ *    happens once the physics step is done, since Box2D can not make bodies during one, and several calls in one
+ *    step, as two fixtures touching spikes make, switch once, to the scene the last one asked for
  *  - UI objects and tweens are not objects of the scene and stay, uiSystem.destroyObjects() and tweenStopAll() end them
  *  @param {Scene} [scene] - The scene to enter
  *  @memberof SceneSystem */
@@ -36,7 +40,17 @@ function setScene(scene)
     ASSERT(!sceneLeaving, 'setScene can not be called from a scene leave');
     if (sceneLeaving) return; // a release build, the leave would call itself till the stack runs out
     if (typeof box2d != 'undefined' && box2d?.world?.IsLocked())
-        return void box2dWhenUnlocked(()=> setScene(scene)); // in a Box2D step, after it
+    {
+        // in a Box2D step, after it, once however many contacts ask
+        sceneQueued = scene;
+        sceneIsQueued || box2dWhenUnlocked(()=>
+        {
+            sceneIsQueued = false;
+            setScene(sceneQueued);
+        });
+        sceneIsQueued = true;
+        return;
+    }
     if (!scenePluginAdded)
     {
         scenePluginAdded = true;

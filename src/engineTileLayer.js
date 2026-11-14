@@ -314,6 +314,7 @@ function tileLayersLoad(tileMapData, tileInfo=tileLayerDefaultTile(), renderOrde
         `tileLayersLoad: a map of ${tileMapData.orientation} orientation is read as orthogonal, square cells`);
 
     // the editor, in debug builds, keeps the map as the source of its edits and brings back autosaved ones
+    objectLayersListProperties(tileMapData);
     tileMapData = editorMapRestore(tileMapData);
 
     // validate the tile map data: a size that is not whole cells, or tiles that do not fill it, is said in any build,
@@ -636,6 +637,7 @@ function objectLayersAddType(name, make, defaults={}, tileInfo)
 function objectLayersLoad(tileMapData)
 {
     // the level editor, in debug builds, keeps the map and brings back its autosaved objects before they are made
+    objectLayersListProperties(tileMapData);
     tileMapData && editorMapRestore(tileMapData);
     const made = [];
     const addObjects = (dataLayers)=>
@@ -656,6 +658,37 @@ function objectLayersLoad(tileMapData)
     };
     addObjects(tileMapData?.layers);
     return made;
+}
+
+// object properties written as an object of names, by Tiled before 1.2 or by hand, made the list of {name, type,
+// value} Tiled writes now, in the map itself, so the loader, the editor and its autosaves see one form; said once
+function objectLayersListProperties(tileMapData)
+{
+    let changed = 0;
+    const walk = (layers)=>
+    {
+        for (const layer of isArray(layers) ? layers : [])
+        {
+            layer?.type === 'group' && walk(layer.layers);
+            for (const object of layer?.type === 'objectgroup' && isArray(layer.objects) ? layer.objects : [])
+            {
+                const properties = object?.properties;
+                if (!properties || typeof properties != 'object' || isArray(properties)) continue;
+                object.properties = Object.keys(properties).map((name)=>
+                {
+                    const value = properties[name];
+                    const type = typeof value == 'boolean' ? 'bool' : typeof value == 'number' ?
+                        Number.isInteger(value) ? 'int' : 'float' : value && typeof value == 'object' ? 'class' :
+                        'string';
+                    return {name, type, value};
+                });
+                ++changed;
+            }
+        }
+    };
+    walk(tileMapData?.layers);
+    debug && changed && console.warn(`objectLayersLoad: ${changed} objects have properties written as an object, ` +
+        'as Tiled before 1.2 wrote them, read as a list; save the map again in a newer Tiled');
 }
 
 // a property's value for one object of its own: a Color or vector copied, and an array or plain object copied with
@@ -707,16 +740,24 @@ function objectLayersProperties(type, object)
     const properties = {}, set = (key, value)=> objectPropertySet(properties, key, value);
     for (const [key, value] of Object.entries(type.defaults))
         set(key, objectPropertyCopy(value));
-    // a list of {name, type, value}, as Tiled 1.2 and on write it; an object of names, from an older Tiled or a
-    // hand edit, is said and left out, the object made with its defaults
-    const list = object.properties ?? [];
-    isArray(list) || console.warn(`objectLayersLoad: object ${object.id}'s properties are not a list, ` +
-        'save the map again with Tiled 1.2 or later; its defaults are used');
-    for (const property of isArray(list) ? list : [])
+    // a list of {name, type, value}, as Tiled 1.2 and on write it, an older map's made one when it loaded; an entry
+    // that is not one, or a color that is not a hex string, is said and left out, read before the object is made
+    const list = isArray(object.properties) ? object.properties : [];
+    for (const property of list)
     {
+        if (!property || typeof property != 'object' || typeof property.name != 'string')
+        {
+            debug && console.warn(`objectLayersLoad: object ${object.id} has a property that is not {name, value}`);
+            continue;
+        }
         const {name, value} = property;
         if (property.type === 'color')
-            value && set(name, tileLayersColor(value)); // an empty color is unset
+        {
+            const hex = typeof value == 'string' && /^#([0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})$/i.test(value);
+            value && !hex && debug && console.warn(`objectLayersLoad: object ${object.id}'s color ${name} is not a ` +
+                'hex color, left out');
+            hex && set(name, tileLayersColor(value)); // an empty color is unset
+        }
         else if (isVector2(objectPropertyDefault(type.defaults, name)))
         {
             // Tiled has no Vector2, one is the string x,y, and one it can not read keeps the default
@@ -746,9 +787,11 @@ function objectLayersMake(tileMapData, object)
     }
     const {height=0, tilewidth=1, tileheight=1} = tileMapData;
     const pos = vec2(object.x / tilewidth, height - object.y / tileheight);
+    // its properties read first, so a map that can not be read stops before anything is made for it
+    const properties = objectLayersProperties(type, object);
     const {make} = type, result = make.prototype ? new make(pos) : make(pos);
     if (!result || typeof result !== 'object') return;
-    for (const [key, value] of Object.entries(objectLayersProperties(type, object)))
+    for (const [key, value] of Object.entries(properties))
         objectPropertyAssign(result, key, value, name);
     return result;
 }

@@ -280,7 +280,8 @@ function readSaveData(saveName, defaultSaveData)
     const result = { .../** @type {object} */ (defaultSaveData), ...loadedData };
     // a vec2 or a Color written as JSON is only its numbers, made one again from a copy of its default, taking only
     // the numbers the copy has, so a saved key of another name, a null JSON wrote for Infinity, or a __proto__ key,
-    // changes nothing; a value with more than numbers, a Matrix4, stays as JSON gave it
+    // changes nothing; a value with more than numbers, a Matrix4, stays as JSON gave it; a saved value that is not
+    // an object at all, a string or a number from an older save format, is the default, never handed back as it is
     for (const key in defaultSaveData ?? {})
     {
         const value = defaultSaveData[key];
@@ -295,6 +296,8 @@ function readSaveData(saveName, defaultSaveData)
                 Number.isFinite(saved[field]) && (copy[field] = saved[field]);
             result[key] = copy;
         }
+        else if (!saved || typeof saved !== 'object' || isArray(saved))
+            result[key] = copy;
     }
     return result;
 }

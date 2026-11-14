@@ -170,7 +170,8 @@ test('a Shader uniform can not take a name the 2D or 3D wrapper has, and can tak
             catch { return true; }
         }));
     })()`));
-    assert.deepEqual(refused, ['sunColor', 'worldPos', 'lightDir', 'tex', 'shadow', 'cameraDir', 'm', 'c', 'v', 'm0']);
+    // a short name of a wrapper's only where its snippet uses it, as this one's c (pass 11)
+    assert.deepEqual(refused, ['sunColor', 'worldPos', 'lightDir', 'tex', 'shadow', 'cameraDir', 'c']);
 });
 
 test('one glTF object parsed several times at once gives each parse its own budget for zeros', async ()=>
@@ -408,9 +409,10 @@ test('Tiled object properties written as an object, by an older Tiled, are said 
             {type: 'objectgroup', name: 'things', objects: [{id: 1, type: 'Thing', x: 16, y: 16, width: 16,
                 height: 16, properties: {speed: 5}}]}]});
         return JSON.stringify({count: made.length, speed: made[0]?.speed,
-            warned: warnings.some((w)=> w.includes('not a list'))});
+            warned: warnings.some((w)=> w.includes('written as an object'))});
     })()`));
-    assert.deepEqual(result, {count: 1, speed: 2, warned: true});
+    // read as the list Tiled writes now (pass 11)
+    assert.deepEqual(result, {count: 1, speed: 5, warned: true});
 });
 
 test('particle behaviors not known yet are kept once each, a few dozen at most, and clamped when they are added',

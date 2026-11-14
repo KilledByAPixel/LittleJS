@@ -915,11 +915,12 @@ function inputUpdate()
                 for (let k = 2; k < inputData.length; ++k)
                 for (const j in inputData[k] ?? [])
                     inputData[k][j] = inputData[k][j] & 1 ? 4 : 0;
-                // and their sticks and dpads centered, as nothing reads them meanwhile
+                // and their sticks and dpads centered, as nothing reads them meanwhile, with new vectors, as the
+                // polls make, so one the game kept from an earlier frame keeps its value
                 for (let k = 1; k < gamepadStickData.length; ++k)
-                    gamepadStickData[k]?.forEach((stick)=> stick.set());
+                    gamepadStickData[k] &&= gamepadStickData[k].map(()=> vec2());
                 for (let k = 1; k < gamepadDpadData.length; ++k)
-                    gamepadDpadData[k]?.set();
+                    gamepadDpadData[k] &&= vec2();
                 gamepadButtonsLast.length = 0;
             }
 
