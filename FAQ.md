@@ -20,6 +20,7 @@ If you don't find an answer here, feel free to ask the community or check the do
 - [How do I use Vite with LittleJS?](#how-do-i-use-vite-with-littlejs)
 - [How do I use Box2D with Vite?](#how-do-i-use-box2d-with-vite)
 - [How do I build and publish my game?](#how-do-i-build-and-publish-my-game)
+- [How do I make a standalone game, like an exe?](#how-do-i-make-a-standalone-game-like-an-exe)
 - [How do I shrink my game for js13kGames?](#how-do-i-shrink-my-game-for-js13kgames)
 
 **Graphics and Sound**
@@ -405,6 +406,41 @@ Then zip up your game folder for itch.io or push to GitHub Pages.
 **For itch.io**, zip your build output and upload as an HTML5 game. Tick "This file will be played in the browser" in the upload settings.
 
 **For size coding competitions** like js13kGames, see the [js13k branch](https://github.com/KilledByAPixel/LittleJS/tree/js13k) which provides a build that fits in 7KB zipped.
+
+### How do I make a standalone game, like an exe?
+
+A LittleJS game is a web page, so it becomes a desktop program by putting it in a wrapper that opens the page in a window of its own. [Electron](https://www.electronjs.org) is the most used one, and it takes very little. In your game's folder, beside its `index.html`, install it:
+
+```
+npm init -y
+npm install --save-dev electron @electron/packager
+```
+
+Add a file, `electron.js`, that opens the game in a window:
+
+```javascript
+const { app, BrowserWindow } = require('electron');
+
+app.whenReady().then(()=>
+{
+    const mainWindow = new BrowserWindow({width: 1280, height: 720});
+    mainWindow.setMenu(null);          // no menu bar
+    mainWindow.loadFile('index.html'); // the game's page
+    //mainWindow.setFullScreen(true);
+});
+
+app.on('window-all-closed', ()=> app.quit());
+```
+
+And point `package.json` at it:
+
+```json
+"main": "electron.js"
+```
+
+`npx electron .` runs the game in its window, and `npx @electron/packager . --overwrite` builds a folder with the program in it, an exe on Windows, for the system it is run on. That folder is what you zip for itch.io or upload to Steam.
+
+The game needs no changes: use the release build of the engine as for the web, and keep file paths relative. The program is large, 100 MB or more, since Electron carries a whole browser with it; the engine is a small part of that, and in the game itself the music and images take most of the space. [Tauri](https://tauri.app) is a wrapper that uses the browser already on the player's machine, for a far smaller program, at the cost of the game running in whichever browser that is.
 
 ### How do I shrink my game for js13kGames?
 
