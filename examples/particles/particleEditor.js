@@ -938,7 +938,7 @@ function gameUpdatePost()
 
     // zoom works while paused too
     if (mouseWheel && previewHover && !view3D)
-        setCameraScale(clamp(cameraScale * (1 - sign(mouseWheel)/5), 10, 300));
+        setCameraScale(clamp(cameraScale * .8 ** mouseWheel, 10, 300)); // a notch a step, a pinch a part
 
     // debug key 3 toggles the bounds too
     if ($('debugCheckbox').checked !== debugParticles)

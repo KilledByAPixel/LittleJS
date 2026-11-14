@@ -105,7 +105,7 @@ function gameUpdate()
     if (mouseWheel)
     {
         // zoom in and out with mouse wheel
-        cameraScale -= sign(mouseWheel)*cameraScale/5;
+        cameraScale *= .8 ** mouseWheel; // a notch a step, a pinch a part of one
         cameraScale = clamp(cameraScale, 10, 300);
     }
 

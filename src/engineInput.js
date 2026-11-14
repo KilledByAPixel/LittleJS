@@ -138,6 +138,8 @@ const inputArrowToWASD = {ArrowUp:'KeyW', ArrowDown:'KeyS', ArrowLeft:'KeyA', Ar
 const inputKeysHeld = new Set; // the keys physically down, since an arrow's slot is shared with its alias
 let inputPinch; // the two fingers pinching and how far apart they were, undefined with no pinch
 let inputWasTouching = 0, inputTouchIdentifier; // the touch driving the mouse, cleared with the input so only a new touch presses
+// the touches the game saw start, so one that began on a debug panel, which keeps its touchstart, is no game finger
+const inputTouchIds = /* @__PURE__ */ new Set;
 let inputLastTouchTime = -1e9; // when a touch event last came, the mouse events a browser makes from a tap follow it
 
 // is this mouse event one the browser made from a touch, which the touch input already handled
@@ -675,7 +677,8 @@ function inputInit()
             // a trackpad pinch, or Ctrl with the wheel: the game's pinch while touchPinchWheel is on, as two fingers
             // on a screen are, by how far it moved, 1 for every 50 pixels; off, it is the browser's zoom
             if (!touchPinchWheel) return;
-            const delta = e.deltaY * (e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? 400 : 1) / 50;
+            // a notch of a mouse wheel held with Ctrl is at most one, as a plain notch is
+            const delta = clamp(e.deltaY * (e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? 400 : 1) / 50, -1, 1);
             touchPinch += delta, mouseWheel += delta;
         }
         else
@@ -713,6 +716,16 @@ function inputInit()
                 audioResume();
             // a touch anywhere is the player back on the screen, so a touch gamepad always shown shows again
             e.type === 'touchstart' && (touchGamepadHandedOver = false);
+            // the game's fingers are the ones it saw start; an end of one it never saw, a tap on a panel's canvas, is
+            // left alone, not cancelled, so the panel gets its click
+            const changed = [...e.changedTouches], ending = e.type === 'touchend' || e.type === 'touchcancel';
+            e.type === 'touchstart' && changed.forEach((t)=> inputTouchIds.add(t.identifier));
+            const known = changed.some((t)=> inputTouchIds.has(t.identifier));
+            // a finger no longer on the screen is gone, the ones this event lifts and any lifted unseen
+            const down = new Set([...e.touches].map((t)=> t.identifier));
+            for (const id of [...inputTouchIds])
+                down.has(id) || inputTouchIds.delete(id);
+            if (ending && !known) return true;
 
             if (!touchInputEnable || touchGamepadEnable && !touchGamepadPassthrough)
             {
@@ -736,7 +749,7 @@ function inputInit()
                     touchGamepadSideZones.includes(t.target) || t.target === touchGamepadZoneC;
                 const gameTouches = [];
                 for (const t of e.touches)
-                    if (!isGamepadTouch(t)) gameTouches.push(t);
+                    if (!isGamepadTouch(t) && inputTouchIds.has(t.identifier)) gameTouches.push(t);
 
                 // check if touching and pass to mouse events
                 const touching = gameTouches.length;

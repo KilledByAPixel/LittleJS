@@ -446,17 +446,19 @@ function editor3DBoxOffset(object)
     return box ? box.pos.subtract(editor3DPos(object)) : vec3();
 }
 
-// every object gets an id of its own, a whole number: one without, or with one already used, gets a new one
+// every object gets an id of its own, a whole number from 0 below 2^31: one without, with one already used, or with
+// one so big that one more is the same number, as a hand-written 2^53 is, gets a new one
 function editor3DFixIds(objects)
 {
     const isObject = (o)=> !!o && typeof o === 'object', seen = new Set;
+    const isId = (id)=> Number.isInteger(id) && id >= 0 && id < 2 ** 31;
     let next = 1;
     for (const o of objects)
-        isObject(o) && Number.isInteger(o.id) && (next = max(next, o.id + 1));
+        isObject(o) && isId(o.id) && (next = max(next, o.id + 1));
     for (const o of objects)
     {
         if (!isObject(o)) continue;
-        if (!Number.isInteger(o.id) || seen.has(o.id))
+        if (!isId(o.id) || seen.has(o.id))
             o.id = next++;
         seen.add(o.id);
     }
@@ -1860,7 +1862,13 @@ function editor3DToolUpdate(ray, idle, shift, ctrl)
 {
     const picked = [editor3DTool, editor3DBrush];
     if (levelEditor.tool !== editor3DToolName)
+    {
+        // switched by the game while a press is held: the held tool, or the editor's own drag, ends as it is, one
+        // undo, and the new tool waits for a press of its own
+        if (editor3DToolHeld || editor3DDrag)
+            editor3DToolHeld = false, editor3DDrag = undefined, editor3DStrokeEnd();
         editor3DToolName = levelEditor.tool, editor3DToolPicked = picked; // turned on, or off, by its key or button
+    }
     else if (picked.some((value, i)=> value !== editor3DToolPicked[i]))
         levelEditor.tool = editor3DToolName = undefined; // a tool or a type of the editor's was picked
     const tool = editorGameTool();

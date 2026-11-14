@@ -83,6 +83,10 @@ let timeReal = 0;
  *  @memberof Engine */
 let paused = false;
 
+// the game is held still: paused, or a level editor is open, which a game that unpauses itself on a key, from
+// gameUpdatePost as pausing is done, can not undo while the designer paints
+const enginePausedNow = ()=> paused || levelEditor.isOpen;
+
 /** Get if game is paused
  *  @return {boolean}
  *  @memberof Engine */
@@ -557,7 +561,7 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
             if (frameTimeDeltaUnscaledMS > 0 || manualStepAtStart)
             {
                 // frozen stands still as in the fixed step, and timeDelta keeps the last update's
-                const frozenTick = paused || !combinedScale;
+                const frozenTick = enginePausedNow() || !combinedScale;
                 if (!frozenTick)
                 {
                     timeDelta = manualStepAtStart ? combinedScale / frameRate :
@@ -572,7 +576,7 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
         {
             // paused or a time scale of 0 is frozen: it ticks on unscaled time, so the update rate stays fixed instead
             // of following however fast the display refreshes, and gameUpdatePost and input still run to leave it
-            const frozen = paused || !combinedScale;
+            const frozen = enginePausedNow() || !combinedScale;
             frameTimeBufferMS += frozen ? frameTimeDeltaUnscaledMS : frameTimeDeltaMS;
             frameTimeBufferMS = min(frameTimeBufferMS, 50 * (frozen ? 1 : max(1, combinedScale))); // clamp min framerate
 
@@ -595,7 +599,7 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
                     try
                     {
                         // read again each tick, so a pause set by the game stops the rest of this frame's catch-up ticks
-                        const frozenTick = paused || !(timeScale * debugScale);
+                        const frozenTick = enginePausedNow() || !(timeScale * debugScale);
 
                         // increment frame and update time, frozen does not advance time
                         if (!frozenTick)

@@ -1537,7 +1537,7 @@ class InstancedMesh3D extends EngineObject3D
         ASSERT(this.count >= 0 && this.count <= this.maxCount, 'count must be within the count it was made with');
         if (r.transparentQueue) // sorted as one thing with the other transparent draws
             return r.queueTransparent(this.getWorldPos3D(), ()=> this.render3D());
-        if (!mesh || !this.count || !render3DCanDraw()) return;
+        if (!mesh || !(this.count > 0) || !render3DCanDraw()) return; // a release build's negative count draws none
         if (r.shadowPass && !r.depthPass && !r.lighting) return; // unlit casts no shadow, but is in the depth
         render3DMeshUpload(mesh);
         if (!mesh.bufferCount) return;

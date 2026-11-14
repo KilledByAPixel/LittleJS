@@ -112,7 +112,7 @@ function gameUpdate(): void
     {
         // zoom in and out with mouse wheel, an imported variable is set
         // through its setter
-        const scale = LJS.cameraScale - LJS.sign(LJS.mouseWheel)*LJS.cameraScale/5;
+        const scale = LJS.cameraScale * .8 ** LJS.mouseWheel; // a notch a step, a pinch a part of one
         LJS.setCameraScale(LJS.clamp(scale, 10, 300));
     }
 

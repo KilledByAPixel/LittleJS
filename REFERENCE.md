@@ -588,9 +588,11 @@ mousePos                              // World space mouse position
 mousePosScreen                        // Screen space mouse position
 mouseDelta                            // World space mouse movement delta
 mouseDeltaScreen                      // Screen space mouse movement delta
-mouseWheel                            // Delta mouse wheel this frame, a touch pinch turns it too
+mouseWheel                            // Delta mouse wheel this frame, a notch 1; a touch or trackpad pinch turns it
+                                      // too, by a part of a notch each frame
 touchPinch                            // Pinch of two fingers this frame in wheel units: apart is negative like
-                                      // the wheel up, 1 for every 50 pixels; the mouse is between the fingers
+                                      // the wheel up, 1 for every 50 pixels; the mouse is between the fingers; a
+                                      // trackpad pinch, a wheel with Ctrl, counts too while touchPinchWheel is on
 touchPinchWheel = true                // Add touchPinch to mouseWheel? A second finger then lets go of the button
                                       // the first pressed; setTouchPinchWheel(false) leaves the first finger the
                                       // mouse, for a game with its own use for two fingers
@@ -840,7 +842,9 @@ tileCollisionGetData(pos, solidOnly=true)           // Get tile collision data a
 tileCollisionTest(pos, size=(0,0), object, solidOnly=true) // Check if collision should occur
 tileCollisionRaycast(posStart, posEnd, callbackObject, normal, solidOnly=true) // Where the ray meets the first tile hit,
                                                     // or undefined; a normal vec2 passed in is set to the surface's
-tileCollisionLayers                                 // List of all tile collision layers
+tileCollisionLayers                                 // List of all tile collision layers, every layer tileLayersLoad
+                                                    // made, art layers too, top first; the solid one is the
+                                                    // collisionLayer index of the array tileLayersLoad returns
 tileLayersLoad(tileMapData, tileInfo=tile(), renderOrder=0, collisionLayer, draw=true) // collisionLayer is the index
                                                     // or the name of the layer that gets collision, no tile when no
                                                     // image is loaded
@@ -1716,7 +1720,9 @@ obj.groundAngle = PI/4                  // the steepest slope it stands on, in r
                                         // box's face within this of flat holds it still, steeper it slides down, and
                                         // a sphere, an edge or a corner is nothing to stand on; on a MeshCollider or
                                         // HeightMap a face steeper than this and than 45 degrees stops a walk into it
-                                        // unless it is a curb lower than the body's step; raise it for a player
+                                        // unless it is a curb lower than the body's step, a quarter of its height on
+                                        // a HeightMap and what its round foot rides on a MeshCollider, about half its
+                                        // radius walking and most of it running; raise it for a player
                                         // meant to walk up steeper ramps
 obj.softShadow = 2                      // 0 by default; a soft shadow of that diameter under the object on
                                         // render3D.softShadowHeight; scale3D and a parent's scale grow it, so set it

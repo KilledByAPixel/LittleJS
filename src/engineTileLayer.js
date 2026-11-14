@@ -807,6 +807,9 @@ function objectPropertyAssign(target, key, value, name)
         target[key] = value;
 }
 
+// the object ids and property names whose kind warning was said, see objectLayersProperties
+const objectLayersKindSaid = /* @__PURE__ */ new Set;
+
 // a type's default for a property, its own, not one every object has, like constructor or toString
 const objectPropertyDefault = (defaults, key)=>
     Object.prototype.hasOwnProperty.call(defaults, key) ? defaults[key] : undefined;
@@ -847,7 +850,9 @@ function objectLayersProperties(type, object)
             const kind = (v)=> isArray(v) ? 'array' : v === null ? 'null' : typeof v;
             if (fallback !== undefined && kind(fallback) !== kind(value))
             {
-                debug && console.warn(`objectLayersLoad: object ${object.id}'s ${name} is a ${kind(value)}, its ` +
+                const said = object.id + ' ' + name; // once for each, the editor makes an object again as it is dragged
+                debug && !objectLayersKindSaid.has(said) && objectLayersKindSaid.add(said) && console.warn(
+                    `objectLayersLoad: object ${object.id}'s ${name} is a ${kind(value)}, its ` +
                     `default a ${kind(fallback)}, the default is kept`);
                 continue;
             }

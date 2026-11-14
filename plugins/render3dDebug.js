@@ -18,7 +18,9 @@ function render3DRenderDebug()
 {
     if (!render3DDebugPrimitives.length) return;
     render3DDebugPrimitives = render3DDebugPrimitives.filter(p=> p.clearCount === debugClearCount);
-    // unfogged and unfaded, and flushed while so, as fog is read when a batch draws, so one far off still shows
+    // unfogged and unfaded, and flushed while so, as fog is read when a batch draws, so one far off still shows;
+    // what the game drew before goes first, under its own fog
+    render3D.flush();
     render3DWithState({lighting: false, depthTest: false, receiveShadow: false, additive: false, shader: undefined,
         emissiveMap: undefined, fogEnd: 0, fogFadeStart: 0, fogFadeEnd: 0}, ()=>
     {

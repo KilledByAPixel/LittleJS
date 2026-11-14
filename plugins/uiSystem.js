@@ -166,11 +166,14 @@ class UISystemPlugin
             // way whichever comes first
             const o = this._keyInputObject;
             if (!o || !uiObjectIsUsable(o) || uiObjectIsBehindDialog(o)) return;
-            // a key typed into a text field of the page, as the tweakables panel's, is that field's: the edit ends
-            const target = e.target;
-            if (target && (target.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName ?? '')))
+            // a key typed into a text field of the page is that field's: the edit ends; a slider, checkbox or button
+            // of the page that has the focus, as a click on the canvas leaves it, takes no typing and is passed by
+            const target = e.target, tag = target?.tagName;
+            const typing = target?.isContentEditable || tag === 'TEXTAREA' || tag === 'SELECT' || tag === 'INPUT' &&
+                !['button','checkbox','color','file','image','radio','range','reset','submit'].includes(target.type);
+            if (typing)
             {
-                o instanceof UITextInput ? o.stopEditing() : this._keyInputObject = undefined;
+                o instanceof UITextInput ? o.stopEditing() : this.keyInputObject = undefined;
                 return;
             }
 
@@ -822,7 +825,8 @@ class UISystemPlugin
         {
             // not the press that opened it, a game may open it on the same back button, so its first update is skipped
             // (not by frame number, which does not advance while paused, where a confirm is usually shown)
-            if (opened && (keyWasPressed(exitKey) || gamepadWasPressed(1)))
+            // and not while a level editor is open, which has the keys and pads
+            if (opened && !levelEditor.isOpen && (keyWasPressed(exitKey) || gamepadWasPressed(1)))
             {
                 closeMenu(); // the exit key or gamepad B answers no
                 noCallback && noCallback();
@@ -1202,7 +1206,7 @@ class UIObject
                         else
                         {
                             uiSystem.activeObject = this;
-                            uiActiveReleased = !mouseDown;
+                            uiActiveReleased = !mouseDown && !inputPinchReleased; // a pinch's let go is no click
                         }
 
                         if (newPress && uiSystem.activateOnPress)

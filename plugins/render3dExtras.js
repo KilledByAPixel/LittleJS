@@ -733,6 +733,9 @@ class HeightMap extends EngineObject3D
         {
             const depth = (ground + half - p.y) * n.y, into = v.dot(n);
             p.set(p.x + n.x * depth, p.y + n.y * depth, p.z + n.z * depth);
+            // never under the ground where the push left it, as a pit or a post's normal, read across its cells, can
+            // push it sideways over higher ground
+            p.y = max(p.y, this.getHeight(p.x, p.z) + half);
             if (into < 0)
                 v.set(v.x - n.x * into, v.y - n.y * into, v.z - n.z * into);
         }
@@ -1190,7 +1193,7 @@ function meshColliderRiseAhead(collider, center, half, radius, dx, dz)
 const meshColliderPushed = [0, 0, 0];
 function meshColliderResolve(collider, center, half, radius, groundAngle, walls, moveX=0, moveZ=0)
 {
-    let ground = false;
+    let ground = false, sumX = 0, sumY = 0, sumZ = 0;
     const push = meshColliderPushed, cosGround = cos(groundAngle), n = collider.normals;
     for (let pass = 0; pass < 8; ++pass)
     {
@@ -1210,6 +1213,7 @@ function meshColliderResolve(collider, center, half, radius, groundAngle, walls,
                 deepest = i, depth = d, up = faceUp, px = push[0], py = push[1], pz = push[2];
         }
         if (deepest < 0) break;
+        sumX += px, sumY += py, sumZ += pz;
         // the triangle's own normal, on the side it pushes to
         const k = deepest * 3, along = n[k]*px + n[k+1]*py + n[k+2]*pz, length = depth ** .5;
         if (n[k+1] * sign(along) >= cosGround && py > 0)
@@ -1242,6 +1246,9 @@ function meshColliderResolve(collider, center, half, radius, groundAngle, walls,
             }
         }
     }
+    // held by faces whose pushes add up to within groundAngle of up, as a V between two steep faces is, it stands
+    // there, so a game's jump takes it out; one steep face alone still slides
+    if (!ground && sumY > 0 && sumY >= cosGround * hypot(sumX, sumY, sumZ)) ground = true;
     return ground;
 }
 
@@ -1413,7 +1420,8 @@ class CameraControl3D extends EngineObject3D
             this.yaw += this.idleSpin;
         this.pitch = clamp(this.pitch, this.pitchRange.x, this.pitchRange.y);
         if (this.zoomSpeed && mouseWheel)
-            this.distance = clamp(this.distance * (1 + sign(mouseWheel) * this.zoomSpeed), this.zoomRange.x, this.zoomRange.y);
+            // by how far the wheel turned, a notch a step, a pinch a part of one each frame
+            this.distance = clamp(this.distance * (1 + this.zoomSpeed) ** mouseWheel, this.zoomRange.x, this.zoomRange.y);
     }
 
     /** Camera controls draw nothing */

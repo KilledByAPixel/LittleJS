@@ -28,7 +28,7 @@ What changed in each release, newest first. Releases before 1.20.0 are on the
 - `Mesh.union`, `subtract` and `intersect` say a known limit: a chain of a few dozen cuts can now and then leave a small hole, which the next CSG asserts on
 - The game's UI takes no mouse or keys while a level editor is open, so a click paints and does not also press the button under it
 - A plain object that starts a frame inside tiles, spawned, moved or grown there, passes the tiles it was in and still lands on the rest, where it passed every tile and could fall out of the level
-- `loadAtlas` keeps trimmed frames whose untrimmed size is bigger than the image, and packs at most 4 times the image's area a load
+- `loadAtlas` keeps trimmed frames whose untrimmed size is bigger than the image, and packs at most 16 times the image's area, or 8 sheets, a load
 - A trackpad pinch, a wheel with Ctrl, is the game's pinch, `touchPinch` and `mouseWheel`, while `touchPinchWheel` is on, and the browser's zoom while it is off, where it reached neither
 - With a level editor open the game's UI keeps updating and drawing, its `onUpdate` and videos too, and takes no input; `uiSystem.isMouseOverUI()` is false
 
@@ -116,6 +116,14 @@ What changed in each release, newest first. Releases before 1.20.0 are on the
 - A Tiled property of another kind than its default, as text over a number, keeps the default, as the 3D loader does; the warning for properties that are null or text says so
 - A CanvasLayer drawn into outside `redrawStart` in Canvas2D draws pixel art hard edged; a grid tile layer's tile past its image draws nothing; a remade light system frees the sun's programs; a 3D camera shake keeps a move the game made during the render; 3D debug draws are not fogged; `InstancedMesh3D` clamps its draws to the count it was made with; the 3D editor's scale input keeps at least .01; a 3D Save whose remembered file can not ask permission shows the picker
 - REFERENCE lists the Box2D joints' motor and limit methods; the MeshCollider step height and the moving solids' order are documented
+- A level editor holds the game still while it is open, so a game that unpauses itself on a key does not move under it; the game's confirm dialog takes no keys or pads then
+- 3D: a body never ends under a HeightMap with sharp pits or posts, and one held in a V of steep MeshCollider faces stands, so a jump takes it out (regressions of the last fixes)
+- 2D: a player standing on a crate no longer walks through a crate stack beside it (a regression of the last fixes)
+- Touch: a tap on an editor's palette or block swatches picks again, and a finger resting on a debug panel is not taken as a second game finger (regressions of the last fixes); a pinch whose fingers land together does not click a UI button; a Ctrl wheel notch counts as one
+- A UI text field's edit no longer ends when a page slider or checkbox has the focus (a regression of the last fixes); the 3D orbit camera and the examples zoom by how far the wheel or a pinch turned
+- 2D editor: a paint while an async `onRestart` makes the resized layers lands in its cell; Reset to file leaves waiting autosaved edits waiting; a layer is not picked by a name several share; it opens on a visible layer; a property kind warning is said once; a game tool switched mid press ends the first one's stroke, in both editors
+- 3D editor: an object id too big to add one to is given a new one
+- `loadAtlas` counts the sheets it makes, keeps a trimmed frame inside its own cell, rounds untrimmed sizes to whole pixels, leaves out an entry with no frame or name instead of loading nothing, and warns of an Aseprite export with split layers; 3D debug draws no longer take away the fog of the see-through draw before them; an `InstancedMesh3D` with a negative count draws nothing
 
 ## 1.30.1 - 2026-11-12
 

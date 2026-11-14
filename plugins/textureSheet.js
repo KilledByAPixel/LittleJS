@@ -406,10 +406,16 @@ function loadAtlas(imageSrc, jsonSrc, padding=textureSheetPadding)
             // one load packs are, by area, well past any real atlas, 16 times the image's or 8 sheets', so a small
             // json can not ask for a thousand sheets of empty cells
             const w = image.width, h = image.height;
-            let budget = max(16 * w * h, 8 * textureSheetSize ** 2);
+            // charged by cells and by whole sheets made, the more of the two, so cells a hair over half a sheet,
+            // a sheet each, can not make hundreds of sheets
+            const budget = max(16 * w * h, 8 * textureSheetSize ** 2), sheetsBefore = textureSheets.length;
+            let spent = 0;
             const isSize = (n)=> Number.isFinite(n) && n > 0;
             const inImage = (f)=> f.pos.x >= 0 && f.pos.y >= 0 && isSize(f.sourceSize.x) && isSize(f.sourceSize.y) &&
-                f.pos.x + (f.rotated ? f.size.y : f.size.x) <= w && f.pos.y + (f.rotated ? f.size.x : f.size.y) <= h;
+                f.pos.x + (f.rotated ? f.size.y : f.size.x) <= w && f.pos.y + (f.rotated ? f.size.x : f.size.y) <= h &&
+                // and its trimmed part inside its untrimmed size, or it draws into the next sprite's cell
+                f.offset.x >= 0 && f.offset.y >= 0 && f.offset.x + f.size.x <= f.sourceSize.x &&
+                f.offset.y + f.size.y <= f.sourceSize.y;
             for (const group of parseAtlas(data))
             {
                 // reserve a block of full size cells, one per frame
@@ -421,7 +427,7 @@ function loadAtlas(imageSrc, jsonSrc, padding=textureSheetPadding)
                 }
                 const sourceSize = group.frames[0].sourceSize;
                 const area = (sourceSize.x + padding*2) * (sourceSize.y + padding*2) * group.frames.length;
-                if (area > budget)
+                if (spent + area > budget)
                 {
                     console.warn('loadAtlas frames would take more sheet area than 16 times the image or 8 sheets, ' +
                         'left out:', group.name);
@@ -434,7 +440,8 @@ function loadAtlas(imageSrc, jsonSrc, padding=textureSheetPadding)
                     console.warn('loadAtlas frames are too large to fit on a texture sheet:', group.name);
                     continue;
                 }
-                budget -= area; // only what was packed counts
+                // only what was packed counts, by its cells or the sheets made so far, whichever is more
+                spent = max(spent + area, (textureSheets.length - sheetsBefore) * textureSheetSize ** 2);
                 const {sheet, tile} = added;
 
                 // draw each frame untrimmed into its cell
@@ -521,17 +528,25 @@ function parseAtlas(data)
 {
     ASSERT(!!data?.frames, 'unrecognized atlas format, expected TexturePacker or Aseprite json');
 
-    // normalize both hash and array frame layouts into a single list
-    const frames = (isArray(data.frames) ?
-        data.frames.map(f=> [f.filename, f]) : Object.entries(data.frames))
-        .map(([name, f])=> ({
-            name: name.replace(/\.[^.\\/]+$/, ''), // strip file extension
+    // normalize both hash and array frame layouts into a single list; an entry with no frame rect, or no name, is
+    // left out, kept as a gap so a tag's frame numbers still match, and the rest load; the untrimmed size is whole
+    // pixels, as its cells are, or a cell of 6.9 rounds so that the last frame lands outside the block
+    const entries = isArray(data.frames) ? data.frames.map(f=> [f?.filename, f]) : Object.entries(data.frames);
+    let bad = 0;
+    const frames = entries.map(([name, f])=>
+    {
+        if (!f || typeof f.frame != 'object' || !f.frame || (typeof name != 'string' && typeof name != 'number'))
+            return ++bad, undefined;
+        return {
+            name: String(name).replace(/\.[^.\\/]+$/, ''), // strip file extension
             pos:        vec2(f.frame.x, f.frame.y),
             size:       vec2(f.frame.w, f.frame.h),
             offset:     vec2(f.spriteSourceSize?.x ?? 0, f.spriteSourceSize?.y ?? 0),
-            sourceSize: vec2(f.sourceSize?.w ?? f.frame.w, f.sourceSize?.h ?? f.frame.h),
+            sourceSize: vec2(ceil(f.sourceSize?.w ?? f.frame.w), ceil(f.sourceSize?.h ?? f.frame.h)),
             rotated:    !!f.rotated,
-        }));
+        };
+    });
+    bad && console.warn(`loadAtlas: ${bad} frame entries have no frame rect or name, left out`);
 
     const groups = [];
     const tags = data.meta?.frameTags;
@@ -543,7 +558,7 @@ function parseAtlas(data)
         {
             // a tag reaches only frames there are, whatever its numbers say
             const from = max(0, floor(tag.from) || 0), to = min(frames.length - 1, floor(tag.to) || 0);
-            const list = frames.slice(from, to + 1), size = list[0]?.sourceSize;
+            const list = frames.slice(from, to + 1).filter(Boolean), size = list[0]?.sourceSize;
             // its frames are packed in cells of one size, so a tag of frames of other sizes leaves them alone
             if (list.some((f)=> f.sourceSize.x !== size.x || f.sourceSize.y !== size.y))
             {
@@ -556,14 +571,19 @@ function parseAtlas(data)
             for (let i = from; i <= to; ++i)
                 tagged.add(i);
         }
-        frames.forEach((f, i)=> tagged.has(i) || groups.push({name: f.name, frames: [f]}));
+        frames.forEach((f, i)=> f && !tagged.has(i) && groups.push({name: f.name, frames: [f]}));
+        // a tag numbers frames, and Aseprite exported with split layers has an entry for each layer of each frame,
+        // so its tags would take the wrong entries
+        const layers = data.meta?.layers?.length || 0, last = max(...tags.map((tag)=> floor(tag.to) || 0));
+        layers > 1 && frames.length >= (last + 1) * layers && console.warn('loadAtlas: the atlas looks exported ' +
+            'with split layers, which its frame tags do not number; export it with the layers merged');
         return parseAtlasNamesCheck(groups);
     }
 
     // group frames that share a name stem with contiguous trailing numbers
     // run_0.png and run_1.png become a 2 frame animation named run, and so do the folder style run/0.png and run/1.png
     const stems = new Map;
-    for (const f of frames)
+    for (const f of frames.filter(Boolean))
     {
         let match = f.name.match(/^(.+?)([-_ /])?(\d+)$/);
         if (match && !match[2] && /\d$/.test(match[1]))

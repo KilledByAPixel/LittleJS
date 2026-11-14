@@ -535,8 +535,10 @@ class EngineObject
 
                 // one already standing on something does not move down for one with mass above it, which would push it
                 // back into what it stands on, as the middle of a stack on a rising lift was; the pair is left for the
-                // one above, which sees this one fixed and is pushed up
-                if (this.groundObject && o.mass && (o.pos.y - this.pos.y) * gravityY < 0)
+                // one above, which sees this one fixed and is pushed up; only one that was above it, not beside it,
+                // or a player on a crate would walk through the stack in front of it
+                if (this.groundObject && o.mass && (o.pos.y - this.pos.y) * gravityY < 0 &&
+                    abs(oldPos.y - o.pos.y)*2 >= this.size.y + o.size.y)
                 {
                     engineObjectsCollidePairAdd(this, o, true);
                     continue;

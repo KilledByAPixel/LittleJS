@@ -528,9 +528,13 @@ let editorLayerName;
 function editorPickLayer()
 {
     const layers = editorLayers(), tiles = layers.filter((layer)=> !layer.isObjects);
-    layers.includes(editorLayer) || (editorLayer = (editorLayerName !== undefined ?
-        tiles.find((layer)=> layer.source?.name === editorLayerName) : undefined) ??
-        layers.find((layer)=> layer.live?.isSolid) ?? tiles.pop());
+    // by name only when one layer has it, as every layer made in code is Tile Layer 1
+    const named = editorLayerName === undefined ? [] : tiles.filter((layer)=> layer.source?.name === editorLayerName);
+    // a visible one before a hidden one, as an LDtk level's IntGrid collision layer is, which draws nothing painted
+    const shown = tiles.filter((layer)=> layer.source?.visible !== false);
+    layers.includes(editorLayer) || (editorLayer = (named.length === 1 ? named[0] : undefined) ??
+        shown.find((layer)=> layer.live?.isSolid) ?? shown[shown.length - 1] ??
+        layers.find((layer)=> layer.live?.isSolid) ?? tiles[tiles.length - 1]);
     editorLayer && (editorLayerName = editorLayer.source?.name);
     layers.includes(editorObjectLayer) || (editorObjectLayer = editorLayer ? undefined :
         layers.find((layer)=> layer.isObjects));
@@ -1186,7 +1190,10 @@ function editorDiscardPending(record)
 function editorRevert(record)
 {
     if (!record || record.synthetic) return; // a layer made in code has no file
-    record.pending = record.pendingUnfit = undefined;
+    // with autosaved edits waiting for Apply or Drop, the map is the file's already, edits are refused meanwhile,
+    // and the waiting edits stay, only Drop takes them away
+    if (record.pending) return;
+    record.pendingUnfit = undefined;
     const {width, height} = record.originalSize ?? record.map;
     editorPaintData(record, record.original, record.originalObjects, width, height);
 }
@@ -1316,14 +1323,18 @@ function editorBulkEdit(edit)
 function editorSetCell(layer, pos, gid)
 {
     const {source, live, color} = layer;
-    const index = pos.x + (live.size.y - 1 - pos.y) * live.size.x;
+    const index = editorCellIndex(layer, pos);
     const before = source.data[index];
+    // a live layer of another size than the map, the old one while an async onRestart makes the new, is not drawn
+    // into, as one the game let go of is not
+    const stale = live.destroyed || live.size.x !== (source.width ?? live.size.x) ||
+        live.size.y !== (source.height ?? live.size.y);
     // the same, unless the layer lost the tile in play, a ghost painted with its own tile, or the game put a tile on
     // a cell the map has empty, which erasing takes away
-    if (before === gid && (live.destroyed || (live.getData(pos).tile !== undefined) === !!gid))
+    if (before === gid && (stale || (live.getData(pos).tile !== undefined) === !!gid))
         return before;
     source.data[index] = gid;
-    if (live.destroyed) return before; // a layer the game let go of, the map still has the change
+    if (stale) return before; // a layer the game let go of, or one it is making again, the map still has the change
 
     // a plain cell draws itself here; held draws, a game's onTile, which may change the cells around, and its own
     // drawing over the layer show only when the whole layer draws again, once the change is done
@@ -1345,9 +1356,17 @@ function editorSetCell(layer, pos, gid)
 }
 
 // paint a cell as part of the stroke being made
+// a cell's index in the map's layer data, by the map's own size, which a resize changes before the game makes its
+// layers again
+function editorCellIndex(layer, pos)
+{
+    const {source, live} = layer, width = source.width ?? live.size.x, height = source.height ?? live.size.y;
+    return pos.x + (height - 1 - pos.y) * width;
+}
+
 function editorPaint(layer, pos, gid)
 {
-    const {source, live} = layer, index = pos.x + (live.size.y - 1 - pos.y) * live.size.x, before = source.data[index];
+    const {source} = layer, index = editorCellIndex(layer, pos), before = source.data[index];
     // in the stroke once the map changed, even when the game's onTile throws after, so it is undone and saved with it
     try { editorSetCell(layer, pos, gid); }
     finally
@@ -1897,7 +1916,7 @@ function editorStampTile(gid) { return {width: 1, height: 1, grids: [[gid]]}; }
 
 // the gid in a cell of a layer, as the map holds it
 function editorGidAt(layer, cell)
-{ return layer.source.data[cell.x + (layer.live.size.y - 1 - cell.y) * layer.live.size.x]; }
+{ return layer.source.data[editorCellIndex(layer, cell)]; }
 
 // each layer a stamp paints with its grid: a stamp of one grid paints the layer being edited, one copied from all
 // layers paints the layers of that layer's map, as many as it has
@@ -2722,7 +2741,7 @@ function editorPanelUpdate()
     editorPropertiesUpdate(p.properties);
 
     const t = editorHover && editorGidToTile(editorLayer.source.data[editorHover.x +
-        (live.size.y - 1 - editorHover.y) * live.size.x]);
+        (live.size.y - 1 - editorHover.y) * live.size.x]); // the live layer's own tiles, as it draws them
     p.status.textContent = editorHover ? `cell ${editorHover.x}, ${editorHover.y}` +
         (t ? `  tile ${t.tile}` : '') : '';
 }
@@ -3136,7 +3155,17 @@ function editorToolUpdate(space)
 {
     const picked = [editorLayer, editorObjectLayer, editorBrush, editorObjectBrush];
     if (levelEditor.tool !== editorToolName)
+    {
+        // switched by the game while a press is held: the held tool, or the editor's own drag, ends as it is, one
+        // undo, and the press is spent, so the new tool waits for a press of its own
+        if (mouseIsDown(0) && (editorToolHeld || editorStroke || editorObjectDrag || editorSelectionDrag))
+        {
+            editorToolHeld = false, editorLeftSpent = true;
+            editorObjectDrag = editorSelectionDrag = editorObjectBox = undefined;
+            editorStrokeEnd();
+        }
         editorToolName = levelEditor.tool, editorToolPicked = picked; // turned on, or off, by its key or button
+    }
     else if (picked.some((value, i)=> value !== editorToolPicked[i]))
         levelEditor.tool = editorToolName = undefined; // something of the editor's was picked
     const tool = editorGameTool();
