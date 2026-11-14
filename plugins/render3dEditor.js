@@ -1480,14 +1480,21 @@ function editor3DMapBack(map)
 // block back, by part name, the last few of each, so the map a game holds comes back rather than a third one
 const editor3DMapsRemoved = new Map;
 
-// put a map away for an undo, the oldest of its kind destroyed past four
+// put a map away for an undo, the oldest of its kind destroyed past four, never the first one put away, which is
+// nearly always the one level3DLoad gave the game
 function editor3DMapKeep(name, map)
 {
     editor3DMapAway(map);
-    const list = editor3DMapsRemoved.get(name) ?? [];
+    const list = /** @type {Array<EngineObject3D> & {first?: EngineObject3D}} */
+        (editor3DMapsRemoved.get(name) ?? []);
     editor3DMapsRemoved.set(name, list);
+    list.first ??= map;
     list.push(map);
-    list.length > 4 && list.shift().destroy();
+    if (list.length > 4)
+    {
+        const i = list.findIndex((kept)=> kept !== list.first);
+        list.splice(i, 1)[0].destroy();
+    }
 }
 
 // a map put away that fits the block again, back in the world, undefined when none does
@@ -1885,8 +1892,8 @@ function editor3DDrawGame()
     if (!editor3DIsOpen) return;
     editorCall('onDraw');
     const held = (...codes)=> inputCaptureRead(()=> codes.some((code)=> keyIsDown(code)));
-    editorGameTool()?.onDraw?.(editor3DToolAt(undefined, held('ShiftLeft', 'ShiftRight'),
-        held('ControlLeft', 'ControlRight', 'MetaLeft', 'MetaRight')));
+    editorToolDraw(()=> editorGameTool()?.onDraw?.(editor3DToolAt(undefined, held('ShiftLeft', 'ShiftRight'),
+        held('ControlLeft', 'ControlRight', 'MetaLeft', 'MetaRight'))));
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -2635,8 +2642,10 @@ function editor3DEditorUpdate(seconds)
     for (let i = 0; editor3DToolHeld && i <= 9; ++i)
         keyWasPressed('Digit' + i) && inputClearKey('Digit' + i);
 
-    // 0 exits the editor; cleared, so debugKeysAlways does not open it again in the same step
-    if (keyWasPressed('Digit0'))
+    // 0 exits the editor; cleared, so debugKeysAlways does not open it again in the same step; not with Ctrl or
+    // Cmd, the browser's zoom reset
+    const ctrlHeld = ['ControlLeft', 'ControlRight', 'MetaLeft', 'MetaRight'].some((key)=> keyIsDown(key));
+    if (keyWasPressed('Digit0') && !ctrlHeld)
     {
         inputClearKey('Digit0');
         editor3DClose();

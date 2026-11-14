@@ -333,7 +333,9 @@ function debugUpdate()
 
     if (debugKey && keyWasPressed(debugKey)) // Esc, or none when the game set ''
         debugOverlay = !debugOverlay;
-    const debugKeys = debugOverlay || debugKeysAlways; // the keys work while the overlay is open, or always if set
+    // the keys work while the overlay is open, or always if set; not with Ctrl or Cmd, the browser's zoom
+    const debugKeys = (debugOverlay || debugKeysAlways) &&
+        !['ControlLeft', 'ControlRight', 'MetaLeft', 'MetaRight'].some((key)=> keyIsDown(key));
     if (debugKeys)
     {
         if (keyWasPressed('Digit1'))

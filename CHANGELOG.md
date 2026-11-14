@@ -26,6 +26,12 @@ What changed in each release, newest first. Releases before 1.20.0 are on the
 - A 2D editor tool's callbacks get `lastCell`, the cell at the callback before in a drag, so a quick drag can fill the cells between, as EDITOR.md's Water tool now does
 - `Box2dObject.setTransform(pos)` keeps the angle when it is left out
 - `Mesh.union`, `subtract` and `intersect` say a known limit: a chain of a few dozen cuts can now and then leave a small hole, which the next CSG asserts on
+- The game's UI takes no mouse or keys while a level editor is open, so a click paints and does not also press the button under it
+- A plain object that starts a frame inside tiles, spawned, moved or grown there, passes the tiles it was in and still lands on the rest, where it passed every tile and could fall out of the level
+- `loadAtlas` keeps trimmed frames whose untrimmed size is bigger than the image, and packs at most 4 times the image's area a load
+
+### Breaking Changes
+- 3D: walking into a MeshCollider face, or HeightMap ground, steeper than the object's `groundAngle` stops it, where it climbed any slope a HeightMap had and MeshCollider faces up to about 80 degrees; a gentle one still climbs
 
 ### Fixes
 - `ThirdPersonCamera3D` no longer shakes from side to side when the player walks back toward it: its swing behind the way the target moves fades out as the move turns toward the camera, where the short way round flipped sides each frame, and keys that move the way the camera faces turned the move with it
@@ -83,9 +89,9 @@ What changed in each release, newest first. Releases before 1.20.0 are on the
 - glTF: one json object parsed several times at once has a zero budget per parse; an animation whose values do not fit its keys, or with a time that is not a number, is a file error, where it posed parts at NaN
 - Input: turning the touch gamepad off between frames keeps a real gamepad 0's press; real gamepads after the first have their sticks and dpads centered when the touch gamepad takes over; a key event with no code, as Android soft keyboards send, is no key
 - Editors: a game key added by its code, `'Digit1'`, no longer also picks a layer; a game tool whose release throws is let go once; a code layer's file that can no longer be written is forgotten
-- Tiled object properties written as an object, by Tiled before 1.2, are said and left out, where `objectLayersLoad` threw part way; particle behaviors not known yet are kept once each, 64 at most, and clamped to their range once the game adds them
+- Particle behaviors not known yet are kept once each, 64 at most, and clamped to their range once the game adds them
 - A looping or ping-pong `SpriteAnimation` played backward shows its first frame as long as the others
-- A Tiled map whose object properties are an object, as Tiled before 1.2 wrote them, is read as the list form, so the 2D editor edits it and keeps its autosave; a null property entry or a color that is not a hex string is left out with a warning, before the object is made
+- Tiled object properties written as an object, as Tiled before 1.2 wrote them, are read, typed by its `propertytypes`, where `objectLayersLoad` threw part way; the game's map is left as it is, and in debug builds it is made the list form so the 2D editor edits it and keeps its autosave; a null property entry or a color that is not a hex string is left out with a warning, before the object is made
 - Two `setScene` calls in one Box2D step, as a body and its foot sensor touching spikes make, enter the scene once
 - A bullet destroyed by its own hit is no longer asked about tiles it never touched, which broke a second tile in the platformer
 - The Shader uniform check refuses a wrapper's short names only in a stage whose snippet uses them, and `tint`, `uvRect` and `cut` in vertex code, where pass 10 refused every one letter name
@@ -93,6 +99,13 @@ What changed in each release, newest first. Releases before 1.20.0 are on the
 - The touch gamepad taking over no longer zeroes a stick vector the game kept; `engineObjectsCollect3D()` with no position leaves out lights, emitters and instanced meshes; Ctrl or Cmd with a digit no longer closes the 2D editor or picks a layer
 - glTF node positions, turns, scales and matrices that are not numbers are a file error in every build; `readSaveData` gives the default where a vec2 or Color was saved as another kind; a particle effect name of megabytes is cut first; `loadAtlas` leaves out frames outside its image and makes 8 new sheets at most
 - The 3D editor brings back the map a game holds when a block map resize or a terrain change is undone; examples/3d looks its terrain up again after the editor takes it out; a shallow MeshCollider pick stops near where it leaves the collider
+- `loadAtlas` frames that are trimmed, stored turned, or more than 8 sheets' worth load again (a regression of the last fixes); EDITOR.md's Water tool and a game tool's `onDraw` that throws no longer stop the frame, the tool is put down
+- A fast body following a MeshCollider slope down is no longer pushed through a thin floor or off the ground; a box snapped against a wall no longer ends a hair inside a one way tile; a rider of a plain moving solid sits on it whatever the update order
+- Old Tiled properties keep their `propertytypes`, so a color is a Color; release builds leave the game's map as it is; a null or text `properties` is cleaned up so the 2D editor keeps its autosave
+- Editors: a game tool's `lastCell` clears off the map and at each press; Ctrl with a digit is left to the browser under `setDebugKeysAlways` and in the 3D editor; the map a game holds is never thrown out past four resizes; with no debug key Restart keeps the view and picks a layer an async `onRestart` makes
+- UI: a slider held when a confirm dialog opens lets go; an object its callback destroyed is called no more; a second `UISystemPlugin` in a release build ends the first's edit
+- A HeightMap with heights outside 0 to 1 is hit by raycasts where it goes past them; `Box2dObject.setTransform(pos)` from a contact keeps the angle the body has when it moves; glTF node numbers that are Infinity are a file error
+- REFERENCE says `randInt(a, b)` leaves out the top, `setUseRealTime` is for an unset timer, how UI navigation keys work, what `engineObjectsCollect3D()` takes, and lists `engineImageFont`
 
 ## 1.30.1 - 2026-11-12
 

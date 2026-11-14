@@ -522,6 +522,17 @@ let editorAllLayers = false;
 // the grid drawn over the layer, G, and the list of keys in the panel, ?
 let editorGrid = true, editorHelp = false;
 
+// the layer edited last, when it is still there, or the collision layer, or for a level of objects alone its first
+// object layer
+function editorPickLayer()
+{
+    const layers = editorLayers();
+    layers.includes(editorLayer) || (editorLayer = layers.find((layer)=> layer.live?.isSolid) ??
+        layers.filter((layer)=> !layer.isObjects).pop());
+    layers.includes(editorObjectLayer) || (editorObjectLayer = editorLayer ? undefined :
+        layers.find((layer)=> layer.isObjects));
+}
+
 // open or close the editor, the game is paused while it is open and carries on with the changes after
 function editorSetOpen(open)
 {
@@ -534,12 +545,7 @@ function editorSetOpen(open)
         setPaused(true);
         setDebugOverlay(false); // out of the way of the level
 
-        // the layer edited last, when it is still there, or the collision layer
-        const layers = editorLayers();
-        layers.includes(editorLayer) || (editorLayer = layers.find((layer)=> layer.live?.isSolid) ??
-            layers.filter((layer)=> !layer.isObjects).pop());
-        layers.includes(editorObjectLayer) || (editorObjectLayer = editorLayer ? undefined :
-            layers.find((layer)=> layer.isObjects)); // a level of objects alone
+        editorPickLayer();
         editorCall('onOpen');
         editorKeyClashes();
     }
@@ -725,6 +731,8 @@ function editorMapLoaded(map, tileLayers, flatLayers)
         const layer = record.layers.find((layer)=> layer.source === source);
         layer ? Object.assign(layer, {live, color}) : record.layers.push({record, source, live, color});
     });
+    // layers made while the editor is open with none picked, as an onRestart that loads after an await does
+    editorIsOpen && !editorLayer && !editorObjectLayer && editorPickLayer();
 }
 
 // the editor's record of a live layer; a layer the game made in code gets a map of its own, from its tiles now
@@ -3133,6 +3141,7 @@ function editorToolUpdate(space)
         editorToolHeld = false;
         return false;
     }
+    editorToolHeld || (editorToolLastCell = undefined); // a press starts with none, not the last drag's
     const at = editorToolAt();
     editorHover = at.cell;
     editorRightPress = undefined; // a right press from before the tool was on is not the editor's to finish
@@ -3147,7 +3156,8 @@ function editorToolUpdate(space)
     else if (editorToolHeld && mouseIsDown(0))
         tool.onDrag?.(at);
     // the cell under the mouse at the last callback, given to the next as lastCell, so a quick drag can fill between
-    editorToolLastCell = editorToolHeld ? at.cell ?? editorToolLastCell : undefined;
+    // a frame off the map clears it, so a drag that comes back in elsewhere does not join the two
+    editorToolLastCell = editorToolHeld ? at.cell : undefined;
     if (editorToolHeld && !mouseIsDown(0))
     {
         // let go first and the stroke ended whatever the release does, so one that throws is not released again
@@ -3188,9 +3198,11 @@ const editorEdit2D =
 function editorRestart()
 {
     if (!editorHas('onRestart')) return;
+    const view = editorCameraPos.copy();
     editorSetOpen(false); // ends a held stroke, and hands back the game's pause and camera, Escape comes back
     levelEditor.onRestart();
-    debugKey || editorSetOpen(true); // with no debug key nothing would come back, so it stays in the editor
+    // with no debug key nothing would come back, so it stays in the editor, and its view where it was
+    debugKey || (editorSetOpen(true), editorCameraPos = view);
 }
 
 // called by the engine before the camera goes to WebGL, so the level is drawn with the editor's view, a game may move
@@ -3286,7 +3298,19 @@ function editorRenderGame()
 {
     if (!editorIsOpen) return;
     editorCall('onDraw');
-    editorGameTool()?.onDraw?.(editorToolAt());
+    editorToolDraw(()=> editorGameTool()?.onDraw?.(editorToolAt()));
+}
+
+// a game tool's onDraw, which runs every frame: one that throws is said once and the tool put down, so the game's
+// frame goes on, as a release that throws is let go
+function editorToolDraw(draw)
+{
+    try { draw(); }
+    catch (error)
+    {
+        console.error(`levelEditor: the tool ${levelEditor.tool}'s onDraw threw, the tool is put down`, error);
+        levelEditor.tool = undefined;
+    }
 }
 
 // the lines of the game's own keys in a panel's help, made again when they change

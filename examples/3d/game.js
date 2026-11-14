@@ -228,11 +228,16 @@ function makeLevel()
 }
 
 // the ground's height under a point, 0 with no terrain; the editor may take the terrain out of the world or make
-// a new one, so the one held is looked up again when it is gone
+// a new one, so the one held is looked up again when it is gone, checked once a frame
+let terrainChecked;
 function groundHeight(pos)
 {
-    if (!terrain || terrain.destroyed || !engineObjects.includes(terrain))
-        terrain = engineObjects.find((o)=> o instanceof HeightMap && !o.destroyed);
+    if (terrainChecked !== frame)
+    {
+        terrainChecked = frame;
+        if (!terrain || terrain.destroyed || !engineObjects.includes(terrain))
+            terrain = engineObjects.find((o)=> o instanceof HeightMap && !o.destroyed);
+    }
     return terrain ? terrain.getHeight(pos) : 0;
 }
 

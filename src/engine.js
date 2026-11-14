@@ -1016,22 +1016,23 @@ function engineObjectsUpdate()
 
     // update physics before object update, each solid put where it moved to in the grid, for the movers after it;
     // the grid is let go even when a callback throws, so an updatePhysics called before the next update checks all
-    // a one way solid with no mass moves first, nothing pushes it, so what lands on it or passes up through it sees it
-    // where it is now and where it was, whatever the render order
-    const oneWayFirst = (o)=> o.oneWay && !o.mass;
+    // a solid with no mass that moves, an elevator, and a one way one, moves first, nothing pushes it, so what lands
+    // on it, rides it or passes up through it sees it where it is now and where it was, whatever the render order
+    const first = new Set(engineObjectsCollide.filter((o)=> !o.mass && !o.parent &&
+        (o.oneWay || o.isSolid && (o.velocity.x || o.velocity.y))));
     engineObjectsPhysicsRunning = true;
     try
     {
-        if (engineObjectsOneWayStart)
+        if (first.size)
             for (const o of engineObjects)
-                if (!o.parent && !o.destroyed && oneWayFirst(o))
+                if (!o.parent && !o.destroyed && first.has(o))
                 {
                     o.updatePhysics();
                     engineCollideGrid?.built && engineCollideGridPlace(engineCollideGrid.built, o);
                     engineObjectsPhysicsDone?.(o);
                 }
         for (const o of engineObjects)
-            if (!o.parent && !o.destroyed && !(engineObjectsOneWayStart && oneWayFirst(o)))
+            if (!o.parent && !o.destroyed && !first.has(o))
             {
                 o.updatePhysics();
                 engineCollideGrid?.built && engineCollideGridPlace(engineCollideGrid.built, o);

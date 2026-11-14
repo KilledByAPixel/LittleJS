@@ -120,6 +120,41 @@ let tileCollisionFromObject, tileCollisionFromPos;
 // the object whose tiles are asked about where its move put it, for collideWithTile's isHit
 let tileCollisionHitObject;
 
+// an object that started its move inside tiles, and how far in it was on each side, [left, right, bottom, top]: its
+// own tests take its box in by that much, so the tiles it was in are passed and every other tile still stops it, see
+// updatePhysicsTiles and tileCollisionInsetsOf
+let tileCollisionStuckObject, tileCollisionStuckInsets;
+
+// how far a box is inside the tiles that block it, on each side, [left, right, bottom, top]: each tile it overlaps
+// pushes in the side it is shallower on, as a box 0.001 into a wall beside it is in 0.001 on that side, not as deep as
+// the wall is tall; undefined when that would leave no box, inside tiles all round
+function tileCollisionInsetsOf(pos, size, object)
+{
+    const insets = [0, 0, 0, 0], left = pos.x - size.x/2, right = pos.x + size.x/2;
+    const bottom = pos.y - size.y/2, top = pos.y + size.y/2;
+    for (const layer of tileCollisionLayers)
+    {
+        if (!layer.isSolid) continue;
+        const test = tileCollisionTester(object), from = layer.oneWayTiles.size && tileCollisionFromObject === object ?
+            tileCollisionFromPos : undefined;
+        for (let y = max(floor(bottom - layer.pos.y), 0); y < min(top - layer.pos.y, layer.size.y); ++y)
+        for (let x = max(floor(left - layer.pos.x), 0); x < min(right - layer.pos.x, layer.size.x); ++x)
+        {
+            const data = layer.collisionData[y*layer.size.x + x], wx = x + layer.pos.x, wy = y + layer.pos.y;
+            if (!data || from && tileCollisionOneWayPass(layer, x, y, from.x, from.y, size.x, size.y) ||
+                !test(data, vec2(wx, wy)))
+                continue;
+            const inX = min(wx + 1 - left, right - wx), inY = min(wy + 1 - bottom, top - wy);
+            if (inX <= inY)
+                wx + .5 < pos.x ? insets[0] = max(insets[0], inX) : insets[1] = max(insets[1], inX);
+            else
+                wy + .5 < pos.y ? insets[2] = max(insets[2], inY) : insets[3] = max(insets[3], inY);
+        }
+    }
+    if (insets[0] + insets[1] < size.x && insets[2] + insets[3] < size.y)
+        return insets.map((inset)=> inset && inset + 1e-9);
+}
+
 // a one way tile at a layer's cell lets a box at from pass, when the cell draws a tile set one way and the box was not
 // wholly on its solid side, the side it can be passed through toward; the way is turned and mirrored as the tile's
 // art is, mirror first, then its quarter turns clockwise; a point is a box of no size
@@ -660,10 +695,32 @@ function objectLayersLoad(tileMapData)
     return made;
 }
 
-// object properties written as an object of names, by Tiled before 1.2 or by hand, made the list of {name, type,
-// value} Tiled writes now, in the map itself, so the loader, the editor and its autosaves see one form; said once
+// an object's properties as the list of {name, type, value} Tiled writes now: properties written as an object of
+// names, by Tiled before 1.2 or by hand, typed by its propertytypes when it has them, and a list without the entries
+// that are not {name}; none for anything else, null or a string
+function objectLayersPropertyList(object)
+{
+    const properties = object?.properties;
+    if (isArray(properties))
+        return properties.filter((p)=> p && typeof p == 'object' && typeof p.name == 'string');
+    if (!properties || typeof properties != 'object') return [];
+    const types = object.propertytypes && typeof object.propertytypes == 'object' ? object.propertytypes : {};
+    return Object.keys(properties).map((name)=>
+    {
+        const value = properties[name], given = types[name];
+        const type = typeof given == 'string' ? given : typeof value == 'boolean' ? 'bool' :
+            typeof value == 'number' ? Number.isInteger(value) ? 'int' : 'float' :
+            value && typeof value == 'object' ? 'class' : 'string';
+        return {name, type, value};
+    });
+}
+
+// in debug builds, where the level editor edits the map the game gave it in place, its objects' properties made the
+// list form in the map, so the editor and its autosaves see one form, said once; a release build leaves the game's
+// map as it is and the loader reads either form
 function objectLayersListProperties(tileMapData)
 {
+    if (!debug) return;
     let changed = 0;
     const walk = (layers)=>
     {
@@ -672,22 +729,18 @@ function objectLayersListProperties(tileMapData)
             layer?.type === 'group' && walk(layer.layers);
             for (const object of layer?.type === 'objectgroup' && isArray(layer.objects) ? layer.objects : [])
             {
-                const properties = object?.properties;
-                if (!properties || typeof properties != 'object' || isArray(properties)) continue;
-                object.properties = Object.keys(properties).map((name)=>
-                {
-                    const value = properties[name];
-                    const type = typeof value == 'boolean' ? 'bool' : typeof value == 'number' ?
-                        Number.isInteger(value) ? 'int' : 'float' : value && typeof value == 'object' ? 'class' :
-                        'string';
-                    return {name, type, value};
-                });
-                ++changed;
+                if (!object || typeof object != 'object' || object.properties === undefined) continue;
+                const list = objectLayersPropertyList(object);
+                if (isArray(object.properties) && list.length === object.properties.length) continue;
+                isArray(object.properties) ? console.warn(`objectLayersLoad: object ${object.id} has a property ` +
+                    'that is not {name, value}, left out') : ++changed;
+                object.properties = list;
+                delete object.propertytypes;
             }
         }
     };
     walk(tileMapData?.layers);
-    debug && changed && console.warn(`objectLayersLoad: ${changed} objects have properties written as an object, ` +
+    changed && console.warn(`objectLayersLoad: ${changed} objects have properties written as an object, ` +
         'as Tiled before 1.2 wrote them, read as a list; save the map again in a newer Tiled');
 }
 
@@ -740,16 +793,13 @@ function objectLayersProperties(type, object)
     const properties = {}, set = (key, value)=> objectPropertySet(properties, key, value);
     for (const [key, value] of Object.entries(type.defaults))
         set(key, objectPropertyCopy(value));
-    // a list of {name, type, value}, as Tiled 1.2 and on write it, an older map's made one when it loaded; an entry
-    // that is not one, or a color that is not a hex string, is said and left out, read before the object is made
-    const list = isArray(object.properties) ? object.properties : [];
+    // a list of {name, type, value}, as Tiled 1.2 and on write it, or an older map's object of them; an entry that is
+    // not one, or a color that is not a hex string, is said and left out, read before the object is made
+    const list = objectLayersPropertyList(object);
+    debug && isArray(object.properties) && list.length < object.properties.length &&
+        console.warn(`objectLayersLoad: object ${object.id} has a property that is not {name, value}`);
     for (const property of list)
     {
-        if (!property || typeof property != 'object' || typeof property.name != 'string')
-        {
-            debug && console.warn(`objectLayersLoad: object ${object.id} has a property that is not {name, value}`);
-            continue;
-        }
         const {name, value} = property;
         if (property.type === 'color')
         {
@@ -1682,6 +1732,13 @@ class TileCollisionLayer extends TileLayer
         // a one way tile goes by where an object was before the physics moved it, or where it is now
         const object = callbackObject instanceof EngineObject && this.oneWayTiles.size ? callbackObject : undefined;
         const from = object && (object === tileCollisionFromObject ? tileCollisionFromPos : object.pos);
+        // an object stuck in tiles is tested taken in by how far in it was, see tileCollisionInsetsOf
+        const stuck = callbackObject && callbackObject === tileCollisionStuckObject ? tileCollisionStuckInsets : undefined;
+        if (stuck)
+        {
+            pos = vec2(pos.x + (stuck[0] - stuck[1]) / 2, pos.y + (stuck[2] - stuck[3]) / 2);
+            size = vec2(size.x - stuck[0] - stuck[1], size.y - stuck[2] - stuck[3]);
+        }
 
         // check any tiles in the area for collision
         const posX = pos.x - this.pos.x;

@@ -564,8 +564,8 @@ async function parseGLTF(data, baseUrl='', files)
         for (const [key, count] of [['translation', 3], ['rotation', 4], ['scale', 3], ['matrix', 16]])
         {
             const value = node?.[key];
-            if (value !== undefined && !(isArray(value) && value.length === count && value.every(isNumber)))
-                throw new Error(`glTF node ${i} has a ${key} that is not ${count} numbers`);
+            if (value !== undefined && !(isArray(value) && value.length === count && value.every(Number.isFinite)))
+                throw new Error(`glTF node ${i} has a ${key} that is not ${count} finite numbers`);
         }
     });
     // one that only may use them has other images to fall back on, or none: said, since it loads with them left out

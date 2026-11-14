@@ -20,7 +20,8 @@
  *  @type {UISystemPlugin}
  *  @memberof UISystem */
 let uiSystem;
-// its hooks are added once: one made again, as in a scene's enter, takes the old one's place and its hooks drive it
+// its hooks are added once; there is one UI system, made in gameInit, and a debug build asserts on a second, while
+// in a release build a second takes the first's place, the first's edit ended so its key listener lets go
 let uiSystemPluginAdded = false;
 
 /** Enable UI system debug drawing
@@ -65,6 +66,8 @@ class UISystemPlugin
     {
         ASSERT(!uiSystem, 'UI system already initialized');
         ASSERT(context || headlessMode, 'create the UISystemPlugin after engineInit, in gameInit');
+        const old = uiSystem?.keyInputObject; // a field the one replaced was editing stops, and its key listener
+        old instanceof UITextInput && !old.destroyed && old.stopEditing();
         uiSystem = this;
 
         // default settings
@@ -211,10 +214,28 @@ class UISystemPlugin
         function uiUpdate()
         {
             ++updatePass;
+            // the level editor has the mouse and keys while it is open, so a click paints and does not also press
+            // the game's button under it: what was held lets go, what was hovered is left, an edit ends, and the
+            // objects keep their places to be drawn
+            if (levelEditor.isOpen)
+            {
+                const held = uiSystem.activeObject, hover = uiSystem.hoverObject;
+                uiSystem.activeObject = uiSystem.hoverObject = uiSystem.lastHoverObject = undefined;
+                uiSystem.navigationObject = undefined;
+                const editing = uiSystem.keyInputObject;
+                editing instanceof UITextInput && !editing.destroyed && editing.stopEditing();
+                held && !held.destroyed && held !== editing && held.onRelease();
+                hover && !hover.destroyed && hover.onLeave();
+                const place = (o)=> { updateTransforms(o); o.children.forEach(place); };
+                uiSystem.uiObjects.forEach((o)=> o.parent || place(o));
+                return;
+            }
             // a held or focused object that can no longer be used, itself or through a parent, lets go,
             // and one that was hidden or disabled is still released, a destroyed one stays silent
+            // and one held when a confirm dialog opened over it lets go, so it does not follow the mouse behind it
             const activeObject = uiSystem.activeObject;
-            if (activeObject && !uiObjectIsUsable(activeObject))
+            if (activeObject && (!uiObjectIsUsable(activeObject) ||
+                activeObject !== uiSystem.keyInputObject && uiObjectIsBehindDialog(activeObject)))
             {
                 // a text field being edited is active without being held, it was released when the press ended
                 uiSystem.activeObject = undefined;
@@ -1196,6 +1217,7 @@ class UIObject
             this.onRelease();
             this.soundRelease && this.soundRelease.play();
             uiSystem.activeObject = undefined;
+            if (this.destroyed) return; // its release destroyed it, nothing more is called on it
         }
 
         // call enter/leave events
@@ -1639,7 +1661,7 @@ class UICheckbox extends UIObject
     {
         this.checked = !this.checked;
         super.click(playSound); // the click callback and sound, as every UI object has
-        this.onChange();
+        this.destroyed || this.onChange(); // not after an onClick that destroyed it
     }
     render()
     {
@@ -1791,8 +1813,9 @@ class UISlider extends UIObject
         // toggle value between 0 and 1
         this.value = this.value ? 0 : 1;
         this.onChange();
+        if (this.destroyed) return; // a callback that destroyed it ends it
         this.onRelease();
-        super.navigatePressed();
+        this.destroyed || super.navigatePressed();
     }
 }
 

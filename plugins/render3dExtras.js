@@ -480,6 +480,8 @@ class HeightMap extends EngineObject3D
         this.mapSize = mapSize.copy();
         /** @property {number} - World height of a full value */
         this.height = height;
+        /** @type {Array<number>} the lowest and highest of the heights, kept by rebuild */
+        this.heightRange = [0, 1];
         /** @property {boolean} - Smooth shading, rebuild() after changing it */
         this.smooth = !!smooth;
         // its box, centered on pos3D, reaches a full height above and below, so it holds the surface rising from it
@@ -563,10 +565,13 @@ class HeightMap extends EngineObject3D
         const size = this.mapSize, height = this.height, length = direction.length();
         if (!length) return;
 
-        // clip to the box around the terrain, from where the ray enters it to where it leaves the map's footprint
-        const start = raycastBox(new Ray3D(origin, direction), vec3(0, height / 2, 0), vec3(size.x, abs(height) + 1e-3, size.y));
+        // clip to the box around the terrain, from where the ray enters it to where it leaves the map's footprint, as
+        // low and high as its values go, outside 0 to 1 too
+        const [lo, hi] = this.heightRange, bottom = min(lo * height, hi * height, 0), top = max(lo * height, hi * height);
+        const start = raycastBox(new Ray3D(origin, direction), vec3(0, (bottom + top) / 2, 0),
+            vec3(size.x, top - bottom + 1e-3, size.y));
         if (start === undefined || !(size.x > 0 && size.y > 0)) return;
-        let end = start + hypot(size.x, size.y, height) / length;
+        let end = start + hypot(size.x, size.y, top - bottom) / length;
         if (direction.x)
             end = min(end, (sign(direction.x) * size.x / 2 - origin.x) / direction.x);
         if (direction.z)
@@ -626,7 +631,16 @@ class HeightMap extends EngineObject3D
     }
 
     /** Make the mesh again from the heights and colors, after changing them or smooth */
-    rebuild() { this.setMesh(this.buildMesh(this.smooth)); }
+    rebuild()
+    {
+        // the lowest and highest values, which may be outside 0 to 1, for the raycast's box
+        let lo = Infinity, hi = -Infinity;
+        for (const row of this.heights)
+            for (const value of row)
+                lo = min(lo, value), hi = max(hi, value);
+        this.heightRange = [lo, hi];
+        this.setMesh(this.buildMesh(this.smooth));
+    }
 
     /** How far along a ray the surface is, for picking, see raycast
      *  @param {Ray3D} ray
@@ -643,7 +657,7 @@ class HeightMap extends EngineObject3D
     levelSegment3D(from, to)
     {
         // a move above the highest the ground goes misses it, which is most particles most of the time
-        const top = this.pos3D.y + max(this.height, 0);
+        const [lo, hi] = this.heightRange, top = this.pos3D.y + max(lo * this.height, hi * this.height, 0);
         if (from.y > top && to.y > top) return undefined;
         if (from.y < this.getHeight(from.x, from.z)) return undefined; // under from the start, let go
         // the ground is flat in each triangle, not between the ends, so a ridge both ends are above is still met:
@@ -665,6 +679,23 @@ class HeightMap extends EngineObject3D
         if (abs(p.x - m.x) > size.x / 2 || abs(p.z - m.z) > size.y / 2) return; // off the map
         const half = o.size3D.y * abs(o.scale3D.y) / 2;
         let ground = this.getHeight(p.x, p.z);
+        // ground steeper than its groundAngle that it would rise onto is a wall to walk into, as a MeshCollider's
+        // steep face is: the part of the move and the speed up its slope are taken back, so it slides along the foot
+        // of a cliff and does not walk up it
+        if (oldPos && ground > oldPos.y - half + 1e-6)
+        {
+            const n = this.getNormal(p.x, p.z);
+            if (n.y < cos(o.groundAngle))
+            {
+                const l = hypot(n.x, n.z), nx = n.x / l, nz = n.z / l;
+                const into = (p.x - oldPos.x) * nx + (p.z - oldPos.z) * nz;
+                if (into < 0)
+                    p.x -= nx * into, p.z -= nz * into, ground = this.getHeight(p.x, p.z);
+                const v = o.velocity3D, vInto = v.x * nx + v.z * nz;
+                if (vInto < 0)
+                    v.x -= nx * vInto, v.z -= nz * vInto;
+            }
+        }
         // only the ends of a move are kept above the ground, so a ridge it goes over is met by a sweep, as a
         // particle's move is, a quarter of its height up from its foot, from where it was to where it would stand: a
         // bump lower than that is walked over as before, and it goes up on the near side of anything taller
@@ -1163,8 +1194,21 @@ function meshColliderResolve(collider, center, half, radius, groundAngle, walls)
         }
         else
         {
-            center.x += px, center.y += py, center.z += pz;
-            walls.push(vec3(px / length, py / length, pz / length));
+            // a face too steep to stand on and steeper than about 45 degrees pushes level, as far as it takes to
+            // leave the face, so walking into it does not climb it; a gentler one pushes along its normal, so a
+            // body with a tiny groundAngle still rolls down a ramp
+            const level = px*px + pz*pz;
+            if (py > 0 && level > depth * .01 && n[k+1] * sign(along) < .7)
+            {
+                const s = depth / level, l = level ** .5;
+                center.x += px * s, center.z += pz * s;
+                walls.push(vec3(px / l, 0, pz / l));
+            }
+            else
+            {
+                center.x += px, center.y += py, center.z += pz;
+                walls.push(vec3(px / length, py / length, pz / length));
+            }
         }
     }
     return ground;
@@ -1199,11 +1243,18 @@ function meshColliderCollide(collider, o, oldPos, wasOn)
     }
     if (!ground && wasOn && o.velocity3D.y <= 0)
     {
-        // down a slope: try it as far below as it moved across, and keep that if it lands
-        const follow = hypot(mx, mz) + 1e-3, below = center.copy();
-        below.y -= follow;
-        if (meshColliderResolve(collider, below, half, radius, o.groundAngle, []) && below.y < center.y)
-            center.set(below.x, below.y, below.z), ground = true;
+        // down a slope: try it below, as far down as it moved across, in steps of half its radius as the move is,
+        // and keep the first that lands, so a fast one is not pushed through a floor thinner than it or past it
+        const follow = hypot(mx, mz) + 1e-3, down = min(64, ceil(follow / (radius / 2)));
+        for (let i = 1; i <= down; ++i)
+        {
+            const below = vec3(center.x, center.y - follow * i / down, center.z);
+            if (meshColliderResolve(collider, below, half, radius, o.groundAngle, []))
+            {
+                below.y < center.y && (center.set(below.x, below.y, below.z), ground = true);
+                break;
+            }
+        }
     }
     p.set(center.x, center.y, center.z);
     const v = o.velocity3D, restitution = max(o.restitution, collider.restitution);

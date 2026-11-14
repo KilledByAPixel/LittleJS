@@ -208,9 +208,11 @@ levelEditor.addTool('Water',
     },
     onDraw(at)
     {
-        // a cell is counted from its layer's corner, which is at the layer's pos in the world
+        // a cell is counted from its layer's corner, which is at the layer's pos in the world; there is no
+        // cell and no tile layer while an object layer is picked
+        if (!at.cell) return;
         const corner = levelEditor.edit2D.layer.pos;
-        at.cell && drawRect(corner.add(at.cell).add(vec2(.5)), vec2(1), hsl(.55, 1, .5, .4));
+        drawRect(corner.add(at.cell).add(vec2(.5)), vec2(1), hsl(.55, 1, .5, .4));
     },
 });
 ```

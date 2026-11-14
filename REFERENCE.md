@@ -184,7 +184,7 @@ writeSaveData(saveName, saveData)     // Write a save data object to localStorag
 
 // Random functions
 rand(valueA=1, valueB=0)             // Random float between values
-randInt(valueA, valueB=0)            // Random integer between values
+randInt(valueA, valueB=0)            // Random integer from the lower up to but not the higher, randInt(1, 7) is a die
 randBool(chance=.5)                  // Random boolean with given chance (0 to 1)
 randSign()                           // Randomly either -1 or 1
 randVec2(length=1)                   // Random Vector2 with the passed in length
@@ -258,7 +258,7 @@ RED, ORANGE, YELLOW, GREEN, CYAN, BLUE, PURPLE, MAGENTA
 RandomGenerator(seed)                     // Create a random number generator, reseed by setting r.seed;
                                           // a seed that is 0 as an integer uses the default seed
 RandomGenerator.float(valueA=1, valueB=0) // Random float between values
-RandomGenerator.int(valueA, valueB=0)     // Random integer between values
+RandomGenerator.int(valueA, valueB=0)     // Random integer from the lower up to but not the higher
 RandomGenerator.sign()                    // Randomly either -1 or 1
 RandomGenerator.bool(chance=.5)           // Random boolean with given chance (0 to 1)
 RandomGenerator.floatSign(valueA=1, valueB=0) // Random float between values with a random sign
@@ -273,7 +273,7 @@ RandomGenerator.mutateColor(color, amount=.05, alphaAmount=0) // Copy of a color
 // Time tracking system
 Timer(timeLeft, useRealTime=false)    // Create a timer object
 Timer.set(timeLeft=0)                 // Set the timer with seconds passed in
-Timer.setUseRealTime(useRealTime=true) // Keep running while the game is paused
+Timer.setUseRealTime(useRealTime=true) // Keep running while the game is paused, on an unset timer, before set
 Timer.unset()                         // Unset the timer
 Timer.isSet()                         // Returns true if set
 Timer.active()                        // Returns true if set and has not elapsed
@@ -405,6 +405,7 @@ await loadTexture(textureIndex, src) // Load an image after engineInit into text
 
 // Image Font Object draws text using characters in an image
 ImageFont(tileInfo)     // Create a font from a tile sheet
+engineImageFont         // The engine's own 8x8 white font, an ImageFont ready after engineInit
 ImageFont.drawText(text, pos, size=1, center=true, color=WHITE, useWebGL=glEnable, context)
                         // Draw text in world space, size is a character's size in world units, a number or vec2
                         // stays upright when the camera turns, glyphs snap to whole pixels
@@ -1151,6 +1152,10 @@ UIObject.visible / disabled            // Hidden objects are skipped, disabled o
 UIObject.text / textHeight             // The text it draws, and a fixed height per line, undefined fits it to the
                                         // size, its lines sharing the height
 UIObject.navigationIndex               // Order for keyboard and gamepad navigation, undefined leaves it out
+UIObject.navigationAutoSelect         // Selected first when navigation starts
+uiSystem.navigationDirection          // Which keys move the selection: 1 Up and Down (the default), 0 Left and
+                                      // Right, 2 both, as a grid of buttons wants; Space, Enter or gamepad A press
+uiSystem.navigationDelay              // Seconds between moves while a key or stick is held, .2
 UIObject.addChild(child)               // Returns child, parents it
 UIObject.removeChild(child)
 UIObject.destroy()
@@ -1772,7 +1777,8 @@ obj.setWorldRotation3D(rotation)        // turn a child to a world rotation, set
 obj.getForward3D() .getRight3D() .getUp3D() // the object's axes in the world, forward is -Z
 engineObjectsCollect3D(pos, size, objects, testCenters) // the EngineObject3D objects whose boxes overlap a sphere,
                                            // size a number (diameter, 0 or left out for a point), or a box,
-                                           // size a vec3; no pos is every 3D object; testCenters as in 2D
+                                           // size a vec3; no pos is every 3D object with a body (no lights,
+                                           // emitters or instanced meshes); testCenters as in 2D
 engineObjectsCallback3D(pos, size, callback, objects, testCenters)
 engineObjectsRaycast3D(ray, objects)       // every object along the ray, nearest first, like engineObjectsRaycast in
                                            // 2D; the ray has no end, use render3D.pick for just the nearest one

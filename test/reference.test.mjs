@@ -36,7 +36,7 @@ const allowlist = new Set([
     'engineObjectsCollide', 'engineObjectsUpdate',
     // internal canvases and render stats
     'workCanvas', 'workContext', 'workReadCanvas', 'workReadContext',
-    'drawCount', 'primitiveCount', 'engineImageFont',
+    'drawCount', 'primitiveCount',
     // low level audio internals
     'audioDefaultSampleRate', 'zzfxG',
     // plugin internals

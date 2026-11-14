@@ -664,13 +664,33 @@ class EngineObject
         // the first test is where the move put it, so the tiles it asks about are hits; the tests after it only try
         // places to find which side it hit and where it can go
         tileCollisionHitObject = this;
-        const hitLayer = tileCollisionTest(this.pos, this.size, this);
+        let hitLayer = tileCollisionTest(this.pos, this.size, this);
         tileCollisionHitObject = undefined;
-        if (hitLayer)
+        if (!hitLayer) return;
+
+        // one that started inside tiles, spawned or moved there, or grown into them, is tested taken in by how far in
+        // it was on each side, so it passes the tiles it was in and still collides with the rest, and can not fall
+        // through the floor beside a wall it was put into; one inside tiles all round collides with none, as before
+        const stuckObject = tileCollisionStuckObject, stuckInsets = tileCollisionStuckInsets;
+        if (tileCollisionTest(oldPos, this.size, this))
         {
-            // if already was stuck in collision, don't do anything
-            // this should not happen unless something starts in collision
-            if (!tileCollisionTest(oldPos, this.size, this))
+            const insets = tileCollisionInsetsOf(oldPos, this.size, this);
+            if (!insets) return;
+            tileCollisionStuckObject = this, tileCollisionStuckInsets = insets;
+            hitLayer = tileCollisionTest(this.pos, this.size, this);
+        }
+        // a place it snaps to: a one way tile goes by that place, so one the snap would leave it a hair inside, less
+        // than the one way margin, blocks it there, or the next frame it starts inside the tile and passes it
+        const snapBlocked = (pos)=>
+        {
+            const fromPos = tileCollisionFromPos;
+            tileCollisionFromPos = pos;
+            try { return tileCollisionTest(pos, this.size, this); }
+            finally { tileCollisionFromPos = fromPos; }
+        };
+        try
+        {
+            if (hitLayer)
             {
                 // test which side we bounced off (or both if a corner)
                 const isBlockedX = tileCollisionTest(vec2(this.pos.x, oldPos.y), this.size, this);
@@ -703,7 +723,7 @@ class EngineObject
                         floor(oldPos.x - layerX - this.size.x/2) + offsetX :
                         ceil( oldPos.x - layerX + this.size.x/2) - offsetX);
                     const x = movingLeft ? min(snap, oldPos.x) : max(snap, oldPos.x);
-                    this.pos.x = tileCollisionTest(vec2(x, oldPos.y), this.size, this) ? oldPos.x : x;
+                    this.pos.x = snapBlocked(vec2(x, oldPos.y)) ? oldPos.x : x;
                     this.velocity.x *= -restitution;
                 }
                 if (isBlockedY || !isBlockedX)
@@ -718,7 +738,7 @@ class EngineObject
                     const y = layerY + (this.pos.y < oldPos.y ?
                         floor(oldPos.y - layerY - this.size.y/2) + offset :
                         ceil( oldPos.y - layerY + this.size.y/2) - offset);
-                    const isClear = this.pos.y !== oldPos.y && !tileCollisionTest(vec2(this.pos.x, y), this.size, this);
+                    const isClear = this.pos.y !== oldPos.y && !snapBlocked(vec2(this.pos.x, y));
                     this.pos.y = isClear ? y : oldPos.y;
 
                     // set ground object for tile collision
@@ -730,6 +750,7 @@ class EngineObject
                 debugPhysics && debugRect(this.pos, this.size, '#f00', 0, 0, false, false);
             }
         }
+        finally { tileCollisionStuckObject = stuckObject, tileCollisionStuckInsets = stuckInsets; }
     }
 
     /** Update the object, called automatically by engine once each frame. Does nothing by default */

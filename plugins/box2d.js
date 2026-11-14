@@ -981,9 +981,11 @@ class Box2dObject extends EngineObject
 
     /** Sets the position and angle, from a contact callback the body moves once the step is done
      *  @param {Vector2} pos
-     *  @param {number} [angle] - Left out, the angle it has */
-    setTransform(pos, angle=this.angle)
+     *  @param {number} [angle] - Left out, the angle it has when the move happens, as setPosition keeps */
+    setTransform(pos, angle)
     {
+        if (angle === undefined)
+            return this.setPosition(pos);
         ASSERT(isVector2(pos) && isNumber(angle), 'setTransform takes a vec2 and an angle', pos, angle);
         this.pos.set(pos.x, pos.y); // its own pos kept, as an EngineObject's is
         this.angle = angle;
