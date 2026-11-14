@@ -36,3 +36,12 @@ test('the same on a level whose autosave waits, reloaded through another level l
 {
     assert.deepEqual(await (await fuzzWith('?big'))(false, 3, 60, 401), []);
 });
+
+test('the seeds that once lost the map a game holds keep it, 100 edits each (full pass 13)', async ()=>
+{
+    const fuzz = await fuzzWith('');
+    assert.deepEqual(await fuzz(false, 1, 100, 60020), []);
+    for (const seed of [61001, 61009, 61038])
+        assert.deepEqual(await fuzz(true, 1, 100, seed), []);
+    assert.deepEqual(await (await fuzzWith('?mid&inplace'))(false, 1, 100, 62016), []);
+});

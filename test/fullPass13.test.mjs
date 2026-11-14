@@ -232,3 +232,187 @@ test('loadAtlas keeps 100 trimmed glow sprites, a group too big for a sheet leav
     assert.ok(keys.includes('after') && !keys.includes('huge') && !keys.includes('bad'), keys.join());
     assert.ok(warnings.some((w)=> w.includes('no size')));
 });
+
+
+async function engine2D(extra={})
+{
+    const e = loadEngine({ location: { pathname: '/game/' }, ...extra });
+    e.run('setHeadlessMode(true)');
+    await e.run('setEngineManualStep(true); engineInit(()=> {}, ()=> {}, ()=> {}, ()=> {}, ()=> {})');
+    return e;
+}
+const twoLayers = `tileLayersLoad({width: 4, height: 2, layers: [
+    {type: 'tilelayer', name: 'back', width: 4, height: 2, data: [0, 0, 0, 0, 1, 1, 1, 1]},
+    {type: 'tilelayer', name: 'front', width: 4, height: 2, data: [0, 0, 0, 0, 1, 1, 1, 1]}]}, undefined, 0, 0);`;
+
+test('a game tool put down while its press is held ends its stroke, and the brush does not paint the rest', async ()=>
+{
+    const { run } = await engine2D();
+    run(`${twoLayers}
+        levelEditor.addTool('T', { onPress: ()=> levelEditor.edit2D.paint(vec2(0, 0), 3) });
+        levelEditor.open(); editorSelectLayer(editorLayers()[0]); levelEditor.tool = 'T';
+        editorMouseOnPanel = false;
+        mousePosScreen = worldToScreen(vec2(.5, .5)); inputData[0][0] = 3; engineStep();
+        inputData[0][0] = 1; levelEditor.tool = undefined;
+        mousePosScreen = worldToScreen(vec2(2.5, .5)); engineStep();
+        inputData[0][0] = 4; engineStep(); inputData[0][0] = 0;`);
+    const result = JSON.parse(run(`JSON.stringify([editorToolHeld, !!editorStroke, editorUndoList.length,
+        editorLayers()[0].source.data[2]])`));
+    assert.deepEqual(result, [false, false, 1, 0], 'one undo, nothing painted at the second cell');
+    run('levelEditor.close()');
+});
+
+test('with the 2D editor open the game\'s UI updates with no input, and isMouseOverUI is false', async ()=>
+{
+    const { run } = await engine2D();
+    const result = JSON.parse(run(`(()=>
+    {
+        new UISystemPlugin;
+        ${twoLayers}
+        const button = new UIButton(vec2(0, 0), vec2(4000, 4000), 'x');
+        let updates = 0, clicks = 0;
+        button.onUpdate = ()=> ++updates;
+        button.onClick = ()=> ++clicks;
+        button.navigationIndex = 0;
+        levelEditor.open();
+        mousePosScreen = button.nativePos.copy();
+        engineStep();
+        const over = uiSystem.isMouseOverUI();
+        inputData[0].Space = 3; engineStep(); inputData[0].Space = 0;
+        inputData[0].Enter = 3; engineStep(); inputData[0].Enter = 0;
+        levelEditor.close();
+        return JSON.stringify({updates: updates > 0, over, clicks});
+    })()`));
+    assert.deepEqual(result, {updates: true, over: false, clicks: 0});
+});
+
+test('Ctrl with + or - does not change the debug time scale', async ()=>
+{
+    const { run } = loadEngine();
+    run('setHeadlessMode(true); setDebugKeysAlways(true)');
+    await run('setEngineManualStep(true); engineInit(()=> {}, ()=> {}, ()=> {}, ()=> {}, ()=> {})');
+    run('engineStep()');
+    const before = run('timeReal');
+    run('inputData[0].ControlLeft = 1; inputData[0].Equal = 1; engineStep()');
+    const ctrl = run('timeReal') - before;
+    run('inputData[0].ControlLeft = 0; inputData[0].Equal = 0');
+    assert.ok(ctrl < .05, 'one frame of real time, not ten: ' + ctrl);
+});
+
+test('old Tiled properties that are null are said as such, not as Tiled before 1.2', async ()=>
+{
+    const { run } = await engine2D();
+    const warnings = JSON.parse(run(`(()=>
+    {
+        const warnings = [];
+        console.warn = (...a)=> warnings.push(a.join(' '));
+        objectLayersAddType('Coin', class extends EngineObject {}, {value: 1});
+        objectLayersLoad({width: 4, height: 2, tilewidth: 16, tileheight: 16, layers: [{type: 'objectgroup',
+            name: 'o', objects: [{id: 1, type: 'Coin', x: 8, y: 8, properties: null}]}]});
+        return JSON.stringify(warnings);
+    })()`));
+    assert.ok(warnings.some((w)=> w.includes('neither a list nor an object')), warnings.join());
+    assert.ok(!warnings.some((w)=> w.includes('before 1.2')));
+});
+
+test('a pinch started on a UI button does not click it, and a trackpad pinch is the game\'s pinch', async ()=>
+{
+    const { run, handlers } = await engine2D();
+    run(`new UISystemPlugin; var button = new UIButton(vec2(0, 0), vec2(4000, 4000), 'x'), clicks = 0;
+        button.onClick = ()=> ++clicks; engineStep();`);
+    // the release a second finger makes as it starts a pinch is flagged, and not taken as a click
+    run(`mousePosScreen = button.nativePos.copy(); inputData[0][0] = 3; engineStep();
+        inputData[0][0] = 4; inputPinchReleased = true; engineStep(); inputData[0][0] = 0;`);
+    assert.equal(run('clicks'), 0);
+    // a wheel with Ctrl, a trackpad pinch: the game's pinch while touchPinchWheel is on
+    const wheel = (deltaY)=> handlers.wheel({ deltaY, deltaMode: 0, ctrlKey: true, target: {}, cancelable: false,
+        preventDefault() {} });
+    run('touchPinch = mouseWheel = 0');
+    wheel(25);
+    assert.deepEqual(JSON.parse(run('JSON.stringify([touchPinch, mouseWheel])')), [.5, .5]);
+    run('touchPinch = mouseWheel = 0; setTouchPinchWheel(false)'); // headless skips the frame's input reset
+    wheel(25);
+    assert.deepEqual(JSON.parse(run('JSON.stringify([touchPinch, mouseWheel])')), [0, 0], 'off, the browser zooms');
+});
+
+test('a key typed into an HTML text field ends the edit of a UI text field', async ()=>
+{
+    const { run } = await engine2D();
+    const result = run(`(()=>
+    {
+        new UISystemPlugin;
+        const field = new UITextInput(vec2(0, 0), vec2(200, 40));
+        uiSystem.keyInputObject = field;
+        uiSystem._onKeyDown({key: 'a', type: 'keydown', target: {tagName: 'INPUT'}, stopPropagation() {},
+            preventDefault() {}});
+        return uiSystem.keyInputObject === undefined;
+    })()`);
+    assert.equal(result, true);
+});
+
+test('a grid tile layer tile past the bottom of its image draws nothing', async ()=>
+{
+    const { run } = await engine2D();
+    const result = JSON.parse(run(`(()=>
+    {
+        const info = new TileInfo(vec2(), vec2(16), new TextureInfo({width: 64, height: 32}), 0);
+        return JSON.stringify([!!tileLayerTileInfo(info, 7), tileLayerTileInfo(info, 8) === undefined]);
+    })()`));
+    assert.deepEqual(result, [true, true]);
+});
+
+test('the 3D camera shake keeps a move the game made to the camera during the frame\'s render', ()=>
+{
+    const { run } = loadEngine();
+    const x = run(`(()=>
+    {
+        setHeadlessMode(true); new Render3DPlugin;
+        const camera = render3D.camera;
+        cameraShake(1);
+        render3DShakeBegin();
+        camera.pos = vec3(100, 0, 0); // the game moves it in its render
+        render3DShakeEnd();
+        return camera.pos.x;
+    })()`);
+    assert.equal(x, 100);
+});
+
+test('with no debug key and an async onRestart, Restart picks the layer that was edited, by its name', async ()=>
+{
+    const { run } = await engine2D();
+    run(`setDebugKey('');
+        var map = {width: 4, height: 2, layers: [
+            {type: 'tilelayer', name: 'back', width: 4, height: 2, data: [0, 0, 0, 0, 1, 1, 1, 1]},
+            {type: 'tilelayer', name: 'front', width: 4, height: 2, data: [0, 0, 0, 0, 1, 1, 1, 1]}]};
+        tileLayersLoad(map, undefined, 0, 1);
+        levelEditor.onRestart = ()=>
+        {
+            engineObjectsDestroy();
+            Promise.resolve().then(()=> tileLayersLoad(map, undefined, 0, 1));
+        };
+        levelEditor.open();
+        editorSelectLayer(editorLayers().find((l)=> l.source.name === 'back'));
+        editorRestart();`);
+    await run('Promise.resolve()');
+    await run('Promise.resolve()');
+    assert.equal(run('editorLayer.source.name'), 'back');
+    run('levelEditor.close()');
+});
+
+test('the 3D panel keeps a scale of at least .01, its sign kept', async ()=>
+{
+    const { run } = loadEngine({ location: { pathname: '/game/' } });
+    run('setHeadlessMode(true)');
+    await run('setEngineManualStep(true); engineInit(()=> { new Render3DPlugin }, ()=> {}, ()=> {}, ()=> {}, ()=> {})');
+    const scale = JSON.parse(run(`(()=>
+    {
+        level3DLoad({littlejs3D: 1, objects: [{id: 1, type: 'Box', pos: [0, .5, 0]}]});
+        editor3DSetOpen(true);
+        editor3DSelection.add(1);
+        editor3DSetSelectedTransform('scale', vec3(0, 0, -2));
+        const s = editor3DObjects()[0].scale;
+        editor3DSetOpen(false);
+        return JSON.stringify(s);
+    })()`));
+    assert.deepEqual(scale, [.01, .01, -2]);
+});
