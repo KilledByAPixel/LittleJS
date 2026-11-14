@@ -30,7 +30,13 @@ async function loadEngine(file)
         localStorage: { getItem: (k)=> items[k] ?? null, setItem: (k, v)=> { items[k] = String(v); },
             removeItem: (k)=> { delete items[k]; } },
         location: { pathname: '/game/', href: 'http://localhost/game/' },
-        Image: class {},
+        // an image that loads at once, 128 square, and a canvas that draws nothing, for loadAtlas
+        Image: class { set src(v) { this.width = this.height = 128; queueMicrotask(()=> this.onload?.()); } },
+        OffscreenCanvas: class
+        {
+            constructor(w, h) { this.width = w; this.height = h; }
+            getContext() { return new Proxy({canvas: this}, {get: (t, k)=> k in t ? t[k] : ()=> ({}), set: ()=> true}); }
+        },
     };
     context.globalThis = context;
     vm.createContext(context);
@@ -73,6 +79,8 @@ test(`every loader, given ${cases} mutated files each, answers, in little memory
             const result = await Promise.race([Promise.resolve(run(`targets.${target}.run(__case.value)`))
                 .catch(()=> 'threw'), timeout(10000)]); // long, a loaded machine is slow, only a load that hangs fails
             result === 'no answer' && failures.push(`${target} ${i} ${log}: no answer in 10 s`);
+            // a load's sheets stay within the budget of 8 sheets' area, one more for rounding
+            result?.sheets > 9 && failures.push(`${target} ${i} ${log}: made ${result.sheets} sheets`);
         }
         catch {} // a broken file may throw or assert
         // a step after it, where a half-made object, as a glTF node of bad numbers was, would throw

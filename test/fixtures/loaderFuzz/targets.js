@@ -6,6 +6,21 @@ var targets = (function()
     objectLayersAddType('Coin', Coin, {value: 1, tint: RED, offset: vec2(), tags: {}, list: [1, 2], name: 'c'});
     objectLayersAddType('Start', (pos)=> { started.push(pos); });
 
+    // loadAtlas out of headless mode with WebGL off, the image the context's stub, and how many sheets it made
+    let atlasLoads = 0;
+    async function atlasLoad(v)
+    {
+        const before = textureSheets.length, headless = headlessMode, webgl = glEnable;
+        headlessMode = false, glEnable = false;
+        try
+        {
+            const atlas = loadAtlas('fuzz' + ++atlasLoads + '.png', v);
+            await spritesReady();
+            return {frames: Object.keys(atlas).length, sheets: textureSheets.length - before};
+        }
+        finally { headlessMode = headless, glEnable = webgl; }
+    }
+
     const flip = (gid, h, v, d)=> (gid | (h ? 0x80000000 : 0) | (v ? 0x40000000 : 0) | (d ? 0x20000000 : 0)) >>> 0;
     const tiledBase = {width: 4, height: 3, tilewidth: 16, tileheight: 16, infinite: false, nextobjectid: 5,
         tilesets: [{firstgid: 1, name: 't', image: 't.png', imagewidth: 70, imageheight: 52, tilewidth: 16,
@@ -220,6 +235,8 @@ var targets = (function()
         }},
         atlas: {base: atlasBase, run(v) { return {groups: parseAtlas(v).length}; }},
         atlasArray: {base: atlasArrayBase, run(v) { return {groups: parseAtlas(v).length}; }},
+        // loadAtlas itself, packing onto sheets of the stub canvas, its sheets counted by the test (pass 13)
+        atlasLoad: {base: atlasBase, run: atlasLoad},
         particles: {base: particleBase, run(v)
         {
             const effects = particleEffectsFromData(v);

@@ -8,8 +8,7 @@ import { loadEngine } from './vmEngine.mjs';
 // - into: a box ends a frame overlapping a solid cell it did not overlap at its start
 // - stuck: with no gravity and some speed, a box that has not moved for 30 frames
 // - nan: a position that is not a number
-// - oneWay: a box ends a frame in a one way cell whose blocking side it was wholly on; a box moving a whole tile a
-//   frame can still end there now and then, a few in ten thousand frames, so this is only kept low
+// - oneWay: a box ends a frame more than 2e-3 into a one way cell whose blocking side it was wholly on
 const scene = (seed, scenes)=> `
     setHeadlessMode(true);
     var mulberry = (a)=> ()=> { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a);
@@ -119,7 +118,9 @@ const scene = (seed, scenes)=> `
                         stats.ex.into.length < 5 && stats.ex.into.push({scene, f, from: [a.x, a.y], to: [p.x, p.y],
                             size: [s.x, s.y], v: [b.velocity.x, b.velocity.y], cell: [X, Y], g, hist: o.hist.slice(-5), around: around()});
                     }
-                    if (c.kind == 2 && farSide(a, s, X, Y, c.way))
+                    // past the one way margin, 2e-3 deep, as resting in the margin is allowed
+                    if (c.kind == 2 && farSide(a, s, X, Y, c.way) && p.x + s.x/2 > X + 2e-3 && p.x - s.x/2 < X + 1 - 2e-3 &&
+                        p.y + s.y/2 > Y + 2e-3 && p.y - s.y/2 < Y + 1 - 2e-3)
                     {
                         ++stats.oneWay;
                         stats.ex.oneWay.length < 5 && stats.ex.oneWay.push({scene, f, from: [a.x, a.y], to: [p.x, p.y],
@@ -150,5 +151,5 @@ test(`plain boxes against tiles never end inside a solid tile, never stick and s
     const stats = JSON.parse(run(scene(seed, 40)));
     assert.equal(stats.frames, 9600);
     assert.deepEqual([stats.into, stats.stuck, stats.nan], [0, 0, 0], JSON.stringify(stats.ex).slice(0, 2000));
-    assert.ok(stats.oneWay <= 20, 'one way ' + stats.oneWay);
+    assert.equal(stats.oneWay, 0, 'one way ' + JSON.stringify(stats.ex.oneWay).slice(0, 1500));
 });
