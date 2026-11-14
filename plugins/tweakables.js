@@ -289,8 +289,8 @@ function tweakPanelInit()
         'box-sizing:border-box;padding:8px;background:#111d;color:#eee;font:12px monospace;' +
         'border-radius:4px;z-index:9999');
 
-    // a click or touch on the panel is not the game's, a mouse up still goes on so a button can let go
-    for (const type of ['mousedown','wheel','touchstart','touchmove','touchend','touchcancel'])
+    // a click or touch on the panel is not the game's, a mouse up and a touch end still go on so a button can let go
+    for (const type of ['mousedown','wheel','touchstart','touchmove'])
         tweakPanel.addEventListener(type, (e)=> e.stopPropagation());
 
     tweakElement('div', tweakPanel, 'font-weight:bold;margin-bottom:4px', 'Tweakables');

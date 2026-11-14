@@ -166,6 +166,13 @@ class UISystemPlugin
             // way whichever comes first
             const o = this._keyInputObject;
             if (!o || !uiObjectIsUsable(o) || uiObjectIsBehindDialog(o)) return;
+            // a key typed into a text field of the page, as the tweakables panel's, is that field's: the edit ends
+            const target = e.target;
+            if (target && (target.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName ?? '')))
+            {
+                o instanceof UITextInput ? o.stopEditing() : this._keyInputObject = undefined;
+                return;
+            }
 
             // the field has the key, the game's input never sees it; browser shortcuts still work,
             // and only the keys a field uses lose their default, so F5, F11, F12 and the like still work
@@ -216,7 +223,7 @@ class UISystemPlugin
             ++updatePass;
             // the level editor has the mouse and keys while it is open, so a click paints and does not also press
             // the game's button under it: what was held lets go, what was hovered is left, an edit ends, and the
-            // objects keep their places to be drawn
+            // objects still update, their onUpdate and a video's volume and mute, with no input
             if (levelEditor.isOpen)
             {
                 const held = uiSystem.activeObject, hover = uiSystem.hoverObject;
@@ -226,8 +233,10 @@ class UISystemPlugin
                 editing instanceof UITextInput && !editing.destroyed && editing.stopEditing();
                 held && !held.destroyed && held !== editing && held.onRelease();
                 hover && !hover.destroyed && hover.onLeave();
-                const place = (o)=> { updateTransforms(o); o.children.forEach(place); };
-                uiSystem.uiObjects.forEach((o)=> o.parent || place(o));
+                const uiObjects = uiSystem.uiObjects;
+                for (let i = uiObjects.length; i--;)
+                    uiObjects[i].parent || updateObject(uiObjects[i]);
+                uiSystem.uiObjects = uiSystem.uiObjects.filter(o=>!o.destroyed);
                 return;
             }
             // a held or focused object that can no longer be used, itself or through a parent, lets go,
@@ -701,10 +710,12 @@ class UISystemPlugin
     /** Check if the mouse is over a visible UI object that can be hovered, or anywhere while the
      *  confirm dialog is open, so a game can leave world clicks on the UI alone, on touch too.
      *  The UI uses up a click before objects update and gameUpdatePost, so read world clicks there,
-     *  or check this in gameUpdate, which runs first. Positions are from the last UI update.
+     *  or check this in gameUpdate, which runs first. Positions are from the last UI update; false while a level
+     *  editor is open, which has the mouse.
      *  @return {boolean} */
     isMouseOverUI()
     {
+        if (levelEditor.isOpen) return false; // the editor has the mouse, the game's UI takes none
         function isOverRecursive(o)
         {
             if (o.destroyed || !o.visible)
@@ -1135,7 +1146,8 @@ class UIObject
             // a field being edited is ended by the next UI update, through stopEditing, so onChange keeps its text
         }
 
-        if (uiSystem.keyInputObject)
+        // no mouse while a field is edited, nor while a level editor is open, which has it
+        if (uiSystem.keyInputObject || levelEditor.isOpen)
             return;
 
         const wasHover = uiSystem.lastHoverObject === this;
@@ -1203,7 +1215,7 @@ class UIObject
                 // frame is clicked on the next, with its release, not on both
                 if (!uiSystem.activateOnPress)
                 if (!mouseDown && isActive && this.isActiveObject() && this.interactive)
-                if (mouseWasReleased(0) || uiActiveReleased)
+                if (mouseWasReleased(0) && !inputPinchReleased || uiActiveReleased) // a pinch's let go is no click
                     this.click();
                 if (this.destroyed) return;
             }

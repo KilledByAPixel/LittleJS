@@ -316,13 +316,18 @@ function tileCollisionRaycast(posStart, posEnd, callbackObject, normal, solidOnl
 const tileLayersTiledFlips = [[0,0], [3,1], [2,1], [3,0], [0,1], [1,0], [2,0], [1,1]];
 
 // the tile info a layer's tile info gives a tile: a tile set's tile, a frame of a sheet read by its columns, or a
-// tile of its grid; undefined past the end of a tile set, or of a sheet read by its columns, as values kept only for
-// collision can be, which the level editor reads the same way
+// tile of its grid; undefined past the end of a tile set, a sheet read by its columns or its grid's image, as values
+// kept only for collision can be, which the level editor reads the same way
 function tileLayerTileInfo(t, tile)
 {
     if (!t) return;
     if (t.tiles) return t.tiles[tile];
-    if (!t.columns) return t.index(tile);
+    if (!t.columns)
+    {
+        // a tile of the grid past the image's bottom draws a smear in WebGL and nothing in Canvas2D, so it is none
+        const info = t.index(tile);
+        return t.textureInfo && info.pos.y + info.size.y > t.textureInfo.size.y ? undefined : info;
+    }
     if (t.textureInfo && t.pos.y + (tile / t.columns | 0) * (t.size.y + t.padding*2) + t.size.y > t.textureInfo.size.y)
         return;
     return t.frame(tile);
@@ -736,7 +741,7 @@ function objectLayersPropertyList(object)
 function objectLayersListProperties(tileMapData)
 {
     if (!debug) return;
-    let changed = 0;
+    let changed = 0, odd = 0;
     const walk = (layers)=>
     {
         for (const layer of isArray(layers) ? layers : [])
@@ -747,8 +752,10 @@ function objectLayersListProperties(tileMapData)
                 if (!object || typeof object != 'object' || object.properties === undefined) continue;
                 const list = objectLayersPropertyList(object);
                 if (isArray(object.properties) && list.length === object.properties.length) continue;
-                isArray(object.properties) ? console.warn(`objectLayersLoad: object ${object.id} has a property ` +
-                    'that is not {name, value}, left out') : ++changed;
+                const properties = object.properties;
+                isArray(properties) ? console.warn(`objectLayersLoad: object ${object.id} has a property ` +
+                    'that is not {name, value}, left out') : properties && typeof properties == 'object' ? ++changed :
+                    ++odd;
                 object.properties = list;
                 delete object.propertytypes;
             }
@@ -757,6 +764,8 @@ function objectLayersListProperties(tileMapData)
     walk(tileMapData?.layers);
     changed && console.warn(`objectLayersLoad: ${changed} objects have properties written as an object, ` +
         'as Tiled before 1.2 wrote them, read as a list; save the map again in a newer Tiled');
+    odd && console.warn(`objectLayersLoad: ${odd} objects have properties that are neither a list nor an ` +
+        'object, as null or text, read as none');
 }
 
 // a property's value for one object of its own: a Color or vector copied, and an array or plain object copied with
@@ -831,7 +840,19 @@ function objectLayersProperties(type, object)
                 set(name, vec2(x, y));
         }
         else
+        {
+            // a value of another kind than its type's default, the text '5' over a number or over a Color, keeps the
+            // default, as the 3D loader does, so a game never gets '5' + 1
+            const fallback = objectPropertyDefault(type.defaults, name);
+            const kind = (v)=> isArray(v) ? 'array' : v === null ? 'null' : typeof v;
+            if (fallback !== undefined && kind(fallback) !== kind(value))
+            {
+                debug && console.warn(`objectLayersLoad: object ${object.id}'s ${name} is a ${kind(value)}, its ` +
+                    `default a ${kind(fallback)}, the default is kept`);
+                continue;
+            }
             set(name, objectPropertyCopy(value)); // a class property is the map's own object
+        }
     }
     return properties;
 }
@@ -1189,6 +1210,8 @@ class CanvasLayer extends EngineObject
             glSkipScreenSpace = false; // its screen space is the layer's own canvas
             useWebGL && glSetRenderTarget(this.textureInfo.glTexture);
             const drawContext = useWebGL ? undefined : this.context;
+            // a canvas drawn into outside redrawStart smooths as the images do, pixel art hard edged as in WebGL
+            drawContext && (drawContext.imageSmoothingEnabled = !tilesPixelated);
             drawTile(pos, size, tileInfo, color, angle, mirror, undefined, useWebGL, true, drawContext);
         }
         finally

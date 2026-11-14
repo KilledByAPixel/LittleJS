@@ -29,6 +29,8 @@ What changed in each release, newest first. Releases before 1.20.0 are on the
 - The game's UI takes no mouse or keys while a level editor is open, so a click paints and does not also press the button under it
 - A plain object that starts a frame inside tiles, spawned, moved or grown there, passes the tiles it was in and still lands on the rest, where it passed every tile and could fall out of the level
 - `loadAtlas` keeps trimmed frames whose untrimmed size is bigger than the image, and packs at most 4 times the image's area a load
+- A trackpad pinch, a wheel with Ctrl, is the game's pinch, `touchPinch` and `mouseWheel`, while `touchPinchWheel` is on, and the browser's zoom while it is off, where it reached neither
+- With a level editor open the game's UI keeps updating and drawing, its `onUpdate` and videos too, and takes no input; `uiSystem.isMouseOverUI()` is false
 
 ### Breaking Changes
 - 3D: MeshCollider and HeightMap follow one slope rule. A face or ground steeper than both the object's `groundAngle` and 45 degrees stops a move into it, when it rises past the body's step, so a curb lower than the step is still walked over; ground steeper than `groundAngle` is not ground, so it is not stood or jumped on, and the body slides down it. Before, a HeightMap let a body walk up any slope and MeshCollider faces up to about 80 degrees were climbed. A game whose levels have steep ramps meant to be walked raises the walker's `groundAngle`, up to just under PI/2
@@ -109,6 +111,11 @@ What changed in each release, newest first. Releases before 1.20.0 are on the
 - 3D: a body in a V between two steep MeshCollider faces no longer falls through the world, nor does one slide down a steep face at free fall pace (a regression of the last fixes); with a small `groundAngle` a HeightMap no longer stops a body at the foot of a gentle hill
 - A plain object stood up under a low ceiling, or grown or spawned into the floor, lands and walks out instead of sinking or falling out of the level; a box resting in a one way tile's margin no longer passes through it; a stack of crates on a rising lift stays stacked
 - `loadAtlas` keeps every frame of big and trimmed atlases again, counts only what it packed, leaves out a group too big for a sheet without stopping the rest, and leaves out frames with no size, which could make hundreds of sheets in release
+- Editors: a game tool put down while its press is held ends its stroke, and the 2D brush does not paint the rest; an undo of a resize brings back the map a game holds in more cases; with no debug key, Restart picks the edited layer again by its name
+- Ctrl with + or - no longer changes the debug time scale; a pinch started on a UI button does not click it; a second finger on a debug panel no longer leaves the mouse button held; a key typed into a page's text field ends a UI text field's edit; the free camera hides a pinch from the game
+- A Tiled property of another kind than its default, as text over a number, keeps the default, as the 3D loader does; the warning for properties that are null or text says so
+- A CanvasLayer drawn into outside `redrawStart` in Canvas2D draws pixel art hard edged; a grid tile layer's tile past its image draws nothing; a remade light system frees the sun's programs; a 3D camera shake keeps a move the game made during the render; 3D debug draws are not fogged; `InstancedMesh3D` clamps its draws to the count it was made with; the 3D editor's scale input keeps at least .01; a 3D Save whose remembered file can not ask permission shows the picker
+- REFERENCE lists the Box2D joints' motor and limit methods; the MeshCollider step height and the moving solids' order are documented
 
 ## 1.30.1 - 2026-11-12
 

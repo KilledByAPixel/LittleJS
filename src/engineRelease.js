@@ -29,6 +29,7 @@ function ASSERT          (){}
 function LOG             (){}
 function debugInit       (){}
 function debugUpdate     (){}
+function debugKeysActive (){ return false; }
 function debugRender     (){}
 function debugRect       (){}
 function debugPoly       (){}

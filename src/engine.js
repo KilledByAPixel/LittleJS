@@ -538,8 +538,8 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
         if (!manualStepAtStart)
             frameTimeDeltaMS = engineSmoothDelta(frameTimeDeltaMS);
         audioUpdateVolume();
-        // the time keys work while the debug overlay is open, or always when debugKeysAlways is set
-        const debugKeys = debug && (debugOverlay || debugKeysAlways);
+        // the time keys work as the other debug keys do, see debugKeysActive
+        const debugKeys = debug && debugKeysActive();
         const debugSpeedUp   = debugKeys && keyIsDown('Equal'); // +
         const debugSpeedDown = debugKeys && keyIsDown('Minus'); // -
         const debugScale = debugSpeedUp ? 10 : debugSpeedDown ? .1 : 1;

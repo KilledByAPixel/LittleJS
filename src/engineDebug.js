@@ -327,15 +327,21 @@ function debugInit()
         console.warn("LittleJS DEBUG build loaded. Use the release build for production.");
 }
 
+// whether the debug keys work now, the digits and the time keys: while the overlay is open, or always when
+// debugKeysAlways is set, and not with Ctrl or Cmd held, as the browser's zoom keys are Ctrl with 0, + and -
+function debugKeysActive()
+{
+    return debug && (debugOverlay || debugKeysAlways) &&
+        !['ControlLeft', 'ControlRight', 'MetaLeft', 'MetaRight'].some((key)=> keyIsDown(key));
+}
+
 function debugUpdate()
 {
     if (!debug) return;
 
     if (debugKey && keyWasPressed(debugKey)) // Esc, or none when the game set ''
         debugOverlay = !debugOverlay;
-    // the keys work while the overlay is open, or always if set; not with Ctrl or Cmd, the browser's zoom
-    const debugKeys = (debugOverlay || debugKeysAlways) &&
-        !['ControlLeft', 'ControlRight', 'MetaLeft', 'MetaRight'].some((key)=> keyIsDown(key));
+    const debugKeys = debugKeysActive();
     if (debugKeys)
     {
         if (keyWasPressed('Digit1'))
@@ -839,5 +845,5 @@ function inputCaptureMouse()
     inputCaptureDeltaScreen = mouseDeltaScreen;
     inputCaptureWheel = mouseWheel;
     mouseDeltaScreen = vec2();
-    mouseWheel = 0;
+    mouseWheel = touchPinch = 0; // a pinch too, a game that zooms on it does not zoom under the free camera
 }

@@ -2983,17 +2983,20 @@ function render3DShakeBegin()
     const camera = render3D.camera;
     if (!cameraShakeTrauma || camera.align2D) return;
     const offset = cameraShakeOffset();
-    render3DShakeSaved = [camera, camera.pos, camera.rotation];
+    const pos = camera.pos, rotation = camera.rotation;
     camera.pos = camera.pos.add(camera.getRight().scale(offset.pos.x)).add(camera.getUp().scale(offset.pos.y));
     camera.rotation = camera.rotation.add(vec3(0, 0, -offset.angle)); // 2D angles turn the other way
+    render3DShakeSaved = [camera, pos, rotation, camera.pos, camera.rotation];
 }
 
-// give the game its own 3D camera back after the frame's passes, the one that was shaken
+// give the game its own 3D camera back after the frame's passes, the one that was shaken; a place or turn the game
+// set during the frame's render stays, as 2D cameraShakeEnd keeps it, only the shaken values are put back
 function render3DShakeEnd()
 {
     if (!render3DShakeSaved) return;
-    const [camera, pos, rotation] = render3DShakeSaved;
-    camera.pos = pos, camera.rotation = rotation;
+    const [camera, pos, rotation, shakenPos, shakenRotation] = render3DShakeSaved;
+    camera.pos === shakenPos && (camera.pos = pos);
+    camera.rotation === shakenRotation && (camera.rotation = rotation);
     render3DShakeSaved = undefined;
 }
 

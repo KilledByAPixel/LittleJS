@@ -1567,8 +1567,10 @@ class InstancedMesh3D extends EngineObject3D
         }
         else
         {
+            // a range clamped to the instances there are, as a release build does not assert on an index past them
             const upload = (buffer, data, floats, start, end)=>
             {
+                start = max(start, 0), end = min(end, this.maxCount);
                 if (end <= start) return;
                 gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
                 gl.bufferSubData(gl.ARRAY_BUFFER, start * floats * 4, data, start * floats, (end - start) * floats);
@@ -1585,11 +1587,14 @@ class InstancedMesh3D extends EngineObject3D
                 gl.bindBuffer(gl.ARRAY_BUFFER, this.dataBuffer = gl.createBuffer());
                 gl.bufferData(gl.ARRAY_BUFFER, this.dataValues, gl.DYNAMIC_DRAW);
             }
-            else if (this.dataDirtyEnd > this.dataDirtyStart)
+            else
             {
-                gl.bindBuffer(gl.ARRAY_BUFFER, this.dataBuffer);
-                gl.bufferSubData(gl.ARRAY_BUFFER, this.dataDirtyStart * 16, this.dataValues, this.dataDirtyStart * 4,
-                    (this.dataDirtyEnd - this.dataDirtyStart) * 4);
+                const start = max(this.dataDirtyStart, 0), end = min(this.dataDirtyEnd, this.maxCount);
+                if (end > start)
+                {
+                    gl.bindBuffer(gl.ARRAY_BUFFER, this.dataBuffer);
+                    gl.bufferSubData(gl.ARRAY_BUFFER, start * 16, this.dataValues, start * 4, (end - start) * 4);
+                }
             }
             this.dataDirtyStart = Infinity, this.dataDirtyEnd = 0;
         }
@@ -1599,8 +1604,8 @@ class InstancedMesh3D extends EngineObject3D
         render3DFlushBeforeOverlay(); // as in drawMesh, what was drawn before goes under it
         const cullBackFaces = r.cullBackFaces, tileInfo = this.tileInfo;
         r.cullBackFaces = !mesh.doubleSided;
-        render3DDrawInstanced(mesh, this.buffer, this.count, render3DTextureOf(tileInfo), r, this.colorBuffer,
-            this.dataBuffer);
+        render3DDrawInstanced(mesh, this.buffer, min(this.count, this.maxCount), render3DTextureOf(tileInfo), r,
+            this.colorBuffer, this.dataBuffer);
         r.cullBackFaces = cullBackFaces;
     }
 

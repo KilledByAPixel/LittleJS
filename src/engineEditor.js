@@ -522,13 +522,16 @@ let editorAllLayers = false;
 // the grid drawn over the layer, G, and the list of keys in the panel, ?
 let editorGrid = true, editorHelp = false;
 
-// the layer edited last, when it is still there, or the collision layer, or for a level of objects alone its first
-// object layer
+// the layer edited last, when it is still there, or one of its name, as a Restart makes them again, or the collision
+// layer, or for a level of objects alone its first object layer
+let editorLayerName;
 function editorPickLayer()
 {
-    const layers = editorLayers();
-    layers.includes(editorLayer) || (editorLayer = layers.find((layer)=> layer.live?.isSolid) ??
-        layers.filter((layer)=> !layer.isObjects).pop());
+    const layers = editorLayers(), tiles = layers.filter((layer)=> !layer.isObjects);
+    layers.includes(editorLayer) || (editorLayer = (editorLayerName !== undefined ?
+        tiles.find((layer)=> layer.source?.name === editorLayerName) : undefined) ??
+        layers.find((layer)=> layer.live?.isSolid) ?? tiles.pop());
+    editorLayer && (editorLayerName = editorLayer.source?.name);
     layers.includes(editorObjectLayer) || (editorObjectLayer = editorLayer ? undefined :
         layers.find((layer)=> layer.isObjects));
 }
@@ -1647,6 +1650,7 @@ function editorSelectLayer(layer)
     {
         editorObjectLayer = undefined;
         editorLayer = layer;
+        editorLayerName = layer.source?.name; // picked again by name when a Restart makes the layers again
     }
 }
 
@@ -2384,8 +2388,8 @@ function editorPanelInit()
         'box-sizing:border-box;padding:8px;background:#111d;color:#eee;font:12px monospace;' +
         'border-radius:4px;z-index:9999;user-select:none');
 
-    // a click or touch on the panel is not the game's, a mouse up still goes on so a drag can let go
-    for (const type of ['mousedown','wheel','touchstart','touchmove','touchend','touchcancel'])
+    // a click or touch on the panel is not the game's, a mouse up and a touch end still go on so a drag can let go
+    for (const type of ['mousedown','wheel','touchstart','touchmove'])
         editorPanel.addEventListener(type, (e)=> e.stopPropagation());
     editorPanel.addEventListener('mouseenter', ()=> editorMouseOnPanel = true);
     editorPanel.addEventListener('mouseleave', ()=> editorMouseOnPanel = false);
@@ -3138,6 +3142,9 @@ function editorToolUpdate(space)
     const tool = editorGameTool();
     if (!tool)
     {
+        // put down while its press is held, its onDraw threw or the game cleared the tool: its stroke ends as it
+        // is, one undo, and the rest of the press is spent, not handed to the editor's brush
+        editorToolHeld && (editorStrokeEnd(), editorLeftSpent = true);
         editorToolHeld = false;
         return false;
     }

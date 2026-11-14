@@ -38,11 +38,15 @@ let mouseDeltaScreen = vec2();
 let mouseWheel = 0;
 
 /** Touch pinch delta this frame, in the mouse wheel's units: two fingers moving apart are negative, as the wheel
- *  turned up is, and moving together positive, 1 for every 50 pixels; added to mouseWheel while touchPinchWheel
- *  is on, so a game that zooms with the wheel zooms with a pinch
+ *  turned up is, and moving together positive, 1 for every 50 pixels; a trackpad pinch too while touchPinchWheel
+ *  is on; added to mouseWheel while touchPinchWheel is on, so a game that zooms with the wheel zooms with a pinch
  *  @type {number}
  *  @memberof Input */
 let touchPinch = 0;
+
+// a release of the mouse button this frame made by a second finger starting a pinch, not by lifting a finger, so the
+// UI does not take it as a click
+let inputPinchReleased = false;
 
 /** True if mouse was inside the document window, set to false when mouse leaves
  *  @type {boolean}
@@ -666,7 +670,15 @@ function inputInit()
         const target = /** @type {HTMLElement} */ (e.target);
         if (target?.closest?.('input,textarea,select,[contenteditable]'))
             return;
-        if (!e.ctrlKey)
+        if (e.ctrlKey)
+        {
+            // a trackpad pinch, or Ctrl with the wheel: the game's pinch while touchPinchWheel is on, as two fingers
+            // on a screen are, by how far it moved, 1 for every 50 pixels; off, it is the browser's zoom
+            if (!touchPinchWheel) return;
+            const delta = e.deltaY * (e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? 400 : 1) / 50;
+            touchPinch += delta, mouseWheel += delta;
+        }
+        else
             mouseWheel += sign(e.deltaY);
         if (inputPreventDefault && e.cancelable && document.hasFocus())
             e.preventDefault(); // prevent page scrolling
@@ -766,7 +778,7 @@ function inputInit()
                     {
                         // a pinch is not a press or a drag, the finger that pressed lets go
                         if (inputData[0][button] & 1)
-                            inputData[0][button] = inputData[0][button] & 2 | 4;
+                            inputData[0][button] = inputData[0][button] & 2 | 4, inputPinchReleased = true;
                     }
                     else if (inputWasTouching && touch.identifier === inputTouchIdentifier)
                         mouseDeltaScreen = mouseDeltaScreen.add(mousePosScreen.subtract(mousePosScreenLast));
@@ -1107,6 +1119,7 @@ function inputUpdatePost()
     for (const i in deviceInputData)
         deviceInputData[i] &= 1;
     mouseWheel = touchPinch = 0;
+    inputPinchReleased = false;
     mouseDelta = vec2();
     mouseDeltaScreen = vec2();
 }

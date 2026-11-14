@@ -59,7 +59,7 @@ test('a Color or Vector2 default is copied for each object', () =>
     assert.deepEqual([...same], [false, false]);
 });
 
-test('a string x,y is a Vector2 where the default is one, and left a string where it is not', () =>
+test('a string x,y is a Vector2 where the default is one, and keeps a number default where it is not', () =>
 {
     const { run } = engine();
     const values = run(`${coinCode}
@@ -71,7 +71,8 @@ test('a string x,y is a Vector2 where the default is one, and left a string wher
                 '{"name":"value","type":"string","value":"2,3"}],')
             .replace('"id":2,', '"id":2,"properties":[{"name":"offset","type":"string","value":"up"}],')});
         [isVector2(a.offset), a.offset.x, a.offset.y, a.value, b.offset.x, b.offset.y];`);
-    assert.deepEqual([...values], [true, 2, -3.5, '2,3', 1, 2], 'one it can not read keeps the default');
+    // text over a number default keeps the default, as the 3D loader does (full pass 13 L-E4)
+    assert.deepEqual([...values], [true, 2, -3.5, 0, 1, 2], 'one it can not read keeps the default');
 });
 
 test('a Tiled 1.9 map\'s class field names the type, and an empty color property is left at its default', () =>

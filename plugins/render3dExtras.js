@@ -761,7 +761,8 @@ class HeightMap extends EngineObject3D
  * - It draws nothing: make an EngineObject3D with the same mesh to see it, or with a mesh of its own to show more
  *   than collides; Debug Physics on the debug overlay draws its edges
  * - An object collides with it as a capsule as tall as its height and as wide as its narrowest side, so it rides up
- *   a step lower than its round foot and over small bumps, and one with collideAsSphere3D as its sphere; a flat
+ *   a step and over small bumps, one up to half its radius at a slow walk and up to most of its radius at a run,
+ *   and one with collideAsSphere3D as its sphere; a flat
  *   wide object, as a plank, is a sphere as thick as it is, at its middle, and its turn is not taken into account
  * - Its triangles are taken from the mesh in world space where it is, through its pos3D, rotation3D and scale3D, and
  *   taken again when it moves; call rebuild() after changing the mesh

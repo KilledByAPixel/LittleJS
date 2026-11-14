@@ -25,6 +25,9 @@ is run by `test/editorCustom.test.mjs` straight from this file, so it works as w
    button's click, a tool's callbacks, `onUpdate`, `onDraw`. In a release build none of those are ever called;
    `edit2D` is there and changes nothing, and `edit3D` is undefined, as it is in a game without the 3D plugins.
 7. **`levelEditor.is3D`** says which editor is in use, for a game that has both kinds of level.
+8. **The editor has the mouse and keys while it is open.** The game is paused, and its UI keeps drawing and
+   updating, `onUpdate` and videos included, but takes no input: what was held or edited lets go, and
+   `uiSystem.isMouseOverUI()` answers false. The 3D editor also hides input from the game itself.
 
 ## The hooks
 

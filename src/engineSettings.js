@@ -334,7 +334,8 @@ let touchGamepadPassthrough = false;
 /** True if a pinch of two fingers turns the mouse wheel: touchPinch is added to mouseWheel, so what zooms with
  *  the wheel zooms with a pinch, the mouse is between the two fingers, and a second finger lets go of the button
  *  the first pressed, since a pinch is not a drag; turn it off for a game with its own use for two fingers, the
- *  first finger stays the mouse and touchPinch can still be read
+ *  first finger stays the mouse and touchPinch can still be read; a trackpad pinch, a wheel with Ctrl, is a pinch
+ *  too while it is on, and the browser's zoom while it is off
  *  @type {boolean}
  *  @default
  *  @memberof Settings */

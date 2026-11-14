@@ -738,8 +738,10 @@ function editor3DVoxelShow()
     const fits = (map)=> shape && sameVector(map.pos3D, shape.pos) && sameVector(map.mapSize, shape.size);
     if (map && !fits(map))
     {
+        // the one an undo brings back is taken out first, so keeping this one can not throw it out
+        const back = shape && editor3DMapRestore('voxels', fits);
         editor3DMapKeep('voxels', map);
-        map = level3DVoxelMap = undefined;
+        map = level3DVoxelMap = back;
     }
     if (!shape) return;
     map ||= level3DVoxelMap = editor3DMapRestore('voxels', fits);
@@ -909,8 +911,10 @@ function editor3DTerrainShow()
         map.height === shape.height && map.rows === shape.heights.length && map.columns === shape.heights[0].length;
     if (map && !fits(map))
     {
+        // the one an undo brings back is taken out first, so keeping this one can not throw it out
+        const back = shape && editor3DMapRestore('terrain', fits);
         editor3DMapKeep('terrain', map);
-        map = level3DTerrainMap = undefined;
+        map = level3DTerrainMap = back;
     }
     if (!shape) return;
     map ||= level3DTerrainMap = editor3DMapRestore('terrain', fits);
@@ -1862,6 +1866,7 @@ function editor3DToolUpdate(ray, idle, shift, ctrl)
     const tool = editorGameTool();
     if (!tool)
     {
+        editor3DToolHeld && editor3DStrokeEnd(); // put down while held: its stroke ends as it is, one undo
         editor3DToolHeld = false;
         return false;
     }
@@ -2098,10 +2103,15 @@ async function editor3DSaveText(level, record, text, pickAgain)
         {
             if (!pickAgain && !record.fileHandle)
             {
+                // a handle that can not ask, its permission call throwing, is passed by for the picker, as in 2D
                 const handle = await editorFileStore.get(fileKey), mode = {mode: 'readwrite'};
-                if (handle && (await handle.queryPermission(mode) === 'granted' ||
-                    await handle.requestPermission(mode) === 'granted'))
-                    record.fileHandle = handle;
+                try
+                {
+                    if (handle && (await handle.queryPermission(mode) === 'granted' ||
+                        await handle.requestPermission(mode) === 'granted'))
+                        record.fileHandle = handle;
+                }
+                catch {}
             }
             if (pickAgain || !record.fileHandle)
             {
@@ -2782,6 +2792,9 @@ function editor3DSetSelectedTransform(field, value)
 {
     const selected = editor3DSelected(), id = selected[0]?.id;
     if (selected.length !== 1 || !isVector3(value)) return false;
+    // a scale at least .01 on each axis, as the Scale handles keep it, its sign kept so a mirror stays one
+    const least = (n)=> abs(n) < .01 ? (n < 0 ? -.01 : .01) : n;
+    field === 'scale' && (value = vec3(least(value.x), least(value.y), least(value.z)));
     editor3DStrokeEnd();
     editor3DChange((list)=> editor3DSetTransform(list.find((o)=> o.id === id), field === 'pos' ? value : undefined,
         field === 'rotation' ? value : undefined, field === 'scale' ? value : undefined));
@@ -3006,7 +3019,7 @@ function editor3DPanelInit()
         'border-radius:4px;z-index:9999;user-select:none');
 
     // a click or touch on the panel is not the level's, a mouse up still goes on so a drag can let go
-    for (const type of ['mousedown','wheel','touchstart','touchmove','touchend','touchcancel'])
+    for (const type of ['mousedown','wheel','touchstart','touchmove'])
         panel.addEventListener(type, (e)=> e.stopPropagation());
     panel.addEventListener('mouseenter', ()=> editor3DMouseOnPanel = true);
     panel.addEventListener('mouseleave', ()=> editor3DMouseOnPanel = false);

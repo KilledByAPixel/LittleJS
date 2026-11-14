@@ -1442,7 +1442,7 @@ function lightSystemFreeGL(old)
         v instanceof Shader ? v.dispose() : undefined;
     for (const value of Object.values(old))
         free(value);
-    for (const program of Object.values(old.directionalPrograms ?? {}))
-        for (const value of Object.values(program ?? {}))
-            free(value);
+    // its programs and their vertex arrays, kept by name in one object
+    for (const value of Object.values(old.directionalPrograms ?? {}))
+        free(value);
 }

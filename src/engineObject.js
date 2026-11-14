@@ -198,7 +198,8 @@ function engineObjectChildPlaced(o)
  * - If an object starts or is moved inside tile collision, it will not collide with that tile
  * - Collision for objects can be set to be solid to block other objects
  * - Objects may get pushed into overlapping other solid objects, if so they will push away
- * - A static solid (mass 0) moved by its velocity, like a door or an elevator, pushes objects out of its way
+ * - A static solid (mass 0) moved by its velocity, like a door or an elevator, moves before the other objects and
+ *   pushes them out of its way, so what rides it sits on it whatever the order they update in
  * - Solid objects are more performance intensive and should be used sparingly
  * @memberof Engine
  * @example

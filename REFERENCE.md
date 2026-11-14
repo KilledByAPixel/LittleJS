@@ -2415,6 +2415,14 @@ new Box2dFrictionJoint(objectA, objectB, anchor, collide=false)
 new Box2dPulleyJoint(objectA, objectB, groundAnchorA, groundAnchorB, anchorA, anchorB, ratio=1, collide=false)
 new Box2dMotorJoint(objectA, objectB)
 new Box2dGearJoint(objectA, objectB, joint1, joint2, ratio=1) // turns objectB of each joint, which must be dynamic
+// Motors and limits: a motor does nothing until its max torque or force is set, and turns as angle does, clockwise;
+// a prismatic or wheel joint moves along its axis
+revolute.enableMotor() / setMotorSpeed(speed) / setMaxMotorTorque(torque) / getMotorTorque()
+revolute.enableLimit() / setLimits(minAngle, maxAngle) / getJointAngle() / getJointSpeed()
+prismatic.enableMotor() / setMotorSpeed(speed) / setMaxMotorForce(force) / getMotorForce()
+prismatic.enableLimit() / setLimits(min, max) / getJointTranslation() / getJointSpeed()
+wheel.enableMotor() / setMotorSpeed(speed) / setMaxMotorTorque(torque) // a car's wheel, sprung along its axis:
+wheel.setSpringFrequencyHz(hz) / setSpringDampingRatio(ratio)            // stiffer with a higher frequency
 ```
 
 ## LittleJS Medals & Newgrounds
