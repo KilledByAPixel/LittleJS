@@ -1769,8 +1769,8 @@ obj.setWorldRotation3D(rotation)        // turn a child to a world rotation, set
                                         // unless a parent above it is scaled unevenly
 obj.getForward3D() .getRight3D() .getUp3D() // the object's axes in the world, forward is -Z
 engineObjectsCollect3D(pos, size, objects, testCenters) // the EngineObject3D objects whose boxes overlap a sphere,
-                                           // size a number (diameter, 0 for a point), or a box, size a vec3;
-                                           // testCenters as in 2D
+                                           // size a number (diameter, 0 or left out for a point), or a box,
+                                           // size a vec3; no pos is every 3D object; testCenters as in 2D
 engineObjectsCallback3D(pos, size, callback, objects, testCenters)
 engineObjectsRaycast3D(ray, objects)       // every object along the ray, nearest first, like engineObjectsRaycast in
                                            // 2D; the ray has no end, use render3D.pick for just the nearest one
@@ -1959,8 +1959,8 @@ const map = new VoxelMap(pos3D=vec3(), mapSize=vec3(16), tileInfo=tile()) // a g
         // that objects with collideLevel collide with; pos3D is its corner and a cell is 1 unit, it stays upright
 map.setVoxel(cell, type) / map.getVoxel(cell) // type 1-255 shows that tile on every face, 0 is empty, a cell outside
                                               // the map is ignored and reads 0
-map.setBlockType(type, faces, {seeThrough, transparent, doubleSided}) // faces: a tile, six (+x, -x, +y, -y, +z,
-        // -z), or {top, side, bottom}; seeThrough for holes like leaves, transparent to blend like water, drawn after
+map.setBlockType(type, faces, {seeThrough, transparent, doubleSided}) // faces: a tile index, six (+x, -x, +y, -y,
+        // +z, -z), or {top, side, bottom} of them; seeThrough for holes like leaves, transparent to blend like water, drawn after
         // the rest; doubleSided for faces seen from inside too, so the surface of water shows from under it
 map.raycast(ray, maxDistance, test)           // {distance, cell, normal, type} of the first block a ray hits, or
                                               // undefined; test(type, cell) says which blocks count
@@ -2175,7 +2175,8 @@ level3DVoxelSetup(tileInfo, (map)=> {})           // The sheet a level's block m
     {"id": 3, "type": "PlayerStart", "pos": [0, 2, 3]}]}
 
 // A level can set the scene too, in a scene block beside its objects; level3DLoad applies what the block has, what
-// it leaves out stays as the game set it, and a level with no block changes nothing
+// it leaves out stays as the game set it, and a level with no block puts back what the last level's block set,
+// leaving the rest as the game set it
 {"littlejs3D": 1,
  "scene": {"sky": ["#5aa6f0", "#d6ecff", "#d6ecff"], // top, horizon and bottom colors, as render3D.setSky
            "ambient": 0.5,                            // how much of the sky colors lights the scene

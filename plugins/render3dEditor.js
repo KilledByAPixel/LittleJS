@@ -484,10 +484,16 @@ function editor3DLevelLoaded(level)
     }
     if (!editor3DPrefabLevels.has(level) && editor3DPrefabStack.length)
     {
-        // the game loaded a level while a prefab was open: what was open is gone with what it was opened from
+        // the game loaded a level while a prefab was open: what was open is gone with what it was opened from, the
+        // maps put away with it too
+        for (const frame of editor3DPrefabStack)
+            for (const map of frame.maps)
+                map && !map.destroyed && map.destroy();
         editor3DPrefabStack.length = 0;
         editor3DPrefabEdits = {};
     }
+    // the maps an undo could have put back are the last load's
+    editor3DPrefabLevels.has(level) || editor3DMapsRemovedClear();
     editor3DLevel = level;
     editor3DInstances.clear();
     if (isArray(level.objects))
@@ -721,19 +727,22 @@ function editor3DVoxelMap()
     return map && !map.destroyed && editor3DLevelPart('voxels') ? map : undefined;
 }
 
-// bring the game's map in line with the level's voxels block: made, made again when its place or size changed,
-// its cells set, or destroyed with the block gone
+// bring the game's map in line with the level's voxels block: made, made again when its place or size changed, as
+// a resize does, its cells set, or put away with the block gone, and the same one back when an undo brings it back
 function editor3DVoxelShow()
 {
     const voxels = editor3DLevelPart('voxels'), shape = level3DVoxelsShape(voxels);
     let map = level3DVoxelMap && !level3DVoxelMap.destroyed ? level3DVoxelMap : undefined;
     const sameVector = (a, b)=> a.x === b.x && a.y === b.y && a.z === b.z;
-    if (map && !(shape && sameVector(map.pos3D, shape.pos) && sameVector(map.mapSize, shape.size)))
+    const fits = (map)=> shape && sameVector(map.pos3D, shape.pos) && sameVector(map.mapSize, shape.size);
+    if (map && !fits(map))
     {
-        map.destroy();
+        if (shape) map.destroy();
+        else editor3DMapAway(map), editor3DMapsRemoved.get('voxels')?.destroy(), editor3DMapsRemoved.set('voxels', map);
         map = level3DVoxelMap = undefined;
     }
     if (!shape) return;
+    map ||= level3DVoxelMap = editor3DMapRestore('voxels', fits);
     if (!map)
     {
         level3DVoxelMap = level3DVoxelsMake(voxels);
@@ -891,19 +900,21 @@ function editor3DTerrainMap()
 }
 
 // bring the game's map in line with the level's terrain block: made, made again when its place or shape changed,
-// its heights and color set, or destroyed with the block gone
+// its heights and color set, or put away with the block gone, and the same one back when an undo brings it back
 function editor3DTerrainShow()
 {
     const terrain = editor3DLevelPart('terrain'), shape = level3DTerrainShape(terrain);
     let map = level3DTerrainMap && !level3DTerrainMap.destroyed ? level3DTerrainMap : undefined;
-    const fits = map && shape && map.pos3D.distance(shape.pos) === 0 && map.mapSize.distance(shape.size) === 0 &&
+    const fits = (map)=> shape && map.pos3D.distance(shape.pos) === 0 && map.mapSize.distance(shape.size) === 0 &&
         map.height === shape.height && map.rows === shape.heights.length && map.columns === shape.heights[0].length;
-    if (map && !fits)
+    if (map && !fits(map))
     {
-        map.destroy();
+        if (shape) map.destroy();
+        else editor3DMapAway(map), editor3DMapsRemoved.get('terrain')?.destroy(), editor3DMapsRemoved.set('terrain', map);
         map = level3DTerrainMap = undefined;
     }
     if (!shape) return;
+    map ||= level3DTerrainMap = editor3DMapRestore('terrain', fits);
     if (!map)
     {
         level3DTerrainMap = level3DTerrainMake(terrain);
@@ -1416,7 +1427,8 @@ function editor3DPrefabJSON(name)
 
 // the prefabs opened one inside the other, each with the level it was opened from, its name, the selection there
 // and the ids of that level's objects that had something made for them
-/** @type {Array<{level: Object, name: string, selection: Array<number>, made: Set<number>, entered?: string}>} */
+/** @type {Array<{level: Object, name: string, selection: Array<number>, made: Set<number>, entered?: string,
+ *  maps: Array<EngineObject3D|undefined>}>} */
 const editor3DPrefabStack = [];
 // the levels that are a prefab being edited, they have no autosave of their own
 const editor3DPrefabLevels = new WeakSet;
@@ -1448,6 +1460,64 @@ function editor3DPrefabFileCheck(name, content, edited=false)
         editor3DPrefabDirty.add(name);
 }
 
+// a map is put away rather than destroyed while the editor may want it back, so a game that holds the map
+// level3DLoad gave it still has the live one: out of the world and the level's collision, with its children, kept
+// as it is, and back again
+function editor3DMapAway(map)
+{
+    const away = new Set, add = (o)=> { away.add(o); o.children.forEach(add); };
+    render3DLevelLeave(map);
+    add(map);
+    engineObjects = engineObjects.filter((o)=> !away.has(o));
+}
+function editor3DMapBack(map)
+{
+    const add = (o)=> { engineObjects.includes(o) || engineObjects.push(o); o.children.forEach(add); };
+    render3DLevel.includes(map) || render3DLevel.push(map);
+    add(map);
+}
+
+// a map whose block an edit took out of the level, put away for an undo that puts the block back, by part name
+const editor3DMapsRemoved = new Map;
+
+// the map put away when its block was taken out, back in the world when it still fits the block, or destroyed
+function editor3DMapRestore(name, fits)
+{
+    const map = editor3DMapsRemoved.get(name);
+    editor3DMapsRemoved.delete(name);
+    if (!map || map.destroyed) return;
+    if (fits(map))
+    {
+        editor3DMapBack(map);
+        return map;
+    }
+    map.destroy();
+}
+
+// destroy the maps put away for an undo, as another level loads
+function editor3DMapsRemovedClear()
+{
+    for (const map of editor3DMapsRemoved.values())
+        map.destroyed || map.destroy();
+    editor3DMapsRemoved.clear();
+}
+
+// take the level's maps out of the world as a prefab is entered; returns them
+function editor3DMapsPutAway()
+{
+    const maps = [level3DVoxelMap, level3DTerrainMap].map((map)=> map && !map.destroyed ? map : undefined);
+    maps.forEach((map)=> map && editor3DMapAway(map));
+    level3DVoxelMap = level3DTerrainMap = undefined;
+    return maps;
+}
+
+// put the maps editor3DMapsPutAway took back, as the level's maps again
+function editor3DMapsBring(maps)
+{
+    maps.forEach((map)=> map && !map.destroyed && editor3DMapBack(map));
+    [level3DVoxelMap, level3DTerrainMap] = maps.map((map)=> map && !map.destroyed ? map : undefined);
+}
+
 // destroy what the level being edited has in the world, its objects' and its maps'
 function editor3DPrefabClear()
 {
@@ -1471,7 +1541,7 @@ function editor3DPrefabEnter(id)
     editor3DStrokeEnd();
     editor3DDrag = editor3DHover = undefined;
     const frame = {level: from, name: made.prefabName, selection: [...editor3DSelection],
-        made: new Set(editor3DInstances.keys()), entered: undefined};
+        made: new Set(editor3DInstances.keys()), entered: undefined, maps: editor3DMapsPutAway()};
     editor3DPrefabStack.push(frame);
     editor3DPrefabClear();
     const level = {littlejs3D: LEVEL3D_VERSION, ...(prefab.attached ? {attached: true} : {}),
@@ -1509,7 +1579,8 @@ function editor3DPrefabBack()
     // was opened after a Save, it is not what the file has
     editor3DPrefabFileCheck(frame.name, JSON.stringify(objects), changed);
 
-    // the level it was opened from is the editor's again, with its own undo
+    // the level it was opened from is the editor's again, with its own undo, and its maps, the same ones
+    editor3DMapsBring(frame.maps);
     const level = editor3DLevel = frame.level, record = editor3DRecords.get(level);
     editor3DUndoList = record.undo, editor3DRedoList = record.redo;
     editor3DStroke = undefined;
@@ -1791,9 +1862,10 @@ function editor3DToolUpdate(ray, idle, shift, ctrl)
         tool.onDrag?.(at);
     if (editor3DToolHeld && !mouseIsDown(0))
     {
-        tool.onRelease?.(at);
-        editor3DStrokeEnd();
+        // let go first and the stroke ended whatever the release does, so one that throws is not released again
         editor3DToolHeld = false;
+        try { tool.onRelease?.(at); }
+        finally { editor3DStrokeEnd(); }
     }
     return true;
 }
@@ -2663,7 +2735,7 @@ function editor3DHint()
     if (editorGameTool()) return editorGameTool().hint || levelEditor.tool;
     if (editor3DDrag)
         return editor3DDrag.kind === 'box' ? 'Let go to select what is inside' :
-            'Esc or right click puts it back · Ctrl flips the snap';
+            editorKeyText('Esc or right click puts it back · Ctrl flips the snap');
     if (inputCaptureRead(()=> mouseIsDown(2)))
         return 'WASD and QE fly · Shift faster · the wheel sets the speed';
     if (editor3DBrush)
@@ -2953,9 +3025,12 @@ function editor3DPanelInit()
 
     editorElement('div', panel, 'font-weight:bold', '3D Level Editor');
     const top = row();
-    button(top, 'Play', ()=> editor3DPlay(editor3DViewPoint()), 'Esc, and Esc again comes back to the editor');
+    // with no debug key nothing comes back from playing, so there is no Play
+    const play = button(top, 'Play', ()=> editor3DPlay(editor3DViewPoint()),
+        editorKeyText('Esc, and Esc again comes back to the editor'));
+    debugKey || (play.style.display = 'none');
     const restart = button(top, 'Restart', editor3DRestart, 'Rebuild the level and play it');
-    button(top, 'Exit', ()=> levelEditor.close(), '0, then Esc opens the debug overlay again');
+    button(top, 'Exit', ()=> levelEditor.close(), editorKeyText('0, then Esc opens the debug overlay again') || '0');
     const undo = row();
     button(undo, 'Undo', ()=> editor3DUndo(), 'Ctrl+Z');
     button(undo, 'Redo', ()=> editor3DUndo(true), 'Ctrl+Y');
@@ -3033,7 +3108,7 @@ function editor3DPanelInit()
         'Put the level back as its file has it, or as Save last wrote it; Undo brings the edits back');
     /** @type {any} */ (globalThis).showSaveFilePicker || (saveAs.style.display = 'none');
     const playFrom = check(panel, 'Play from mouse', (on)=> editor3DPlayFromMouse = on,
-        'Escape starts play with the player at the mouse, Play at the middle of the view');
+        editorKeyText('Escape starts play with the player at the mouse, Play at the middle of the view'));
 
     const storage = editorElement('div', panel, 'color:#f86;margin-top:4px',
         'Autosave failed, storage is full: Save to a file');
@@ -3041,7 +3116,7 @@ function editor3DPanelInit()
     const hint = editorElement('div', panel, 'color:#8ab;margin-top:4px');
     const help = editorElement('div', panel, 'color:#aaa;margin-top:4px;border-top:1px solid #444;padding-top:4px');
     for (const line of editor3DHelpLines)
-        editorElement('div', help, 'margin:2px 0', line);
+        editorElement('div', help, 'margin:2px 0', editorKeyText(line));
     const gameHelp = editorElement('div', help);
     button(help, 'Close', ()=> editor3DHelp = false, '?');
 

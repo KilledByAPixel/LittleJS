@@ -309,7 +309,7 @@ test('an atlas whose data throws as it is read is loaded again on the next call,
             set src(value) { queueMicrotask(()=> this.onload()); }
         };
         const good = {frames: {'hero.png': {frame: {x: 0, y: 0, w: 16, h: 16}}}};
-        globalThis.fetch = async ()=> { ++fetches; return {ok: true, json: async ()=> valid ? good : {frames: null}}; };
+        globalThis.fetch = async ()=> { ++fetches; return {ok: true, text: async ()=> JSON.stringify(valid ? good : {frames: null})}; };
         textureSheetAdd = ()=> ({tile: new TileInfo(vec2(), vec2(16), undefined, 0, 0, 1),
             sheet: {context: {drawImage() {}}}});
         const first = loadAtlas('atlas.png', 'atlas.json');

@@ -63,16 +63,16 @@ test('objects start with no shader, 3D objects included', () =>
 
 test('uniforms take their GLSL type from their first value, and keep it', () =>
 {
-    const shader = new Shader(code, '', {a: 1, b: true, c: vec2(1, 2), d: vec3(1, 2, 3), e: RED, f: [1, 2, 3, 4],
-        g: new Array(9).fill(0), h: new Matrix4});
-    assert.deepEqual(shader.uniformTypes, {a: 'float', b: 'bool', c: 'vec2', d: 'vec3', e: 'vec4', f: 'vec4',
-        g: 'mat3', h: 'mat4'});
+    const shader = new Shader(code, '', {va: 1, vb: true, vc: vec2(1, 2), vd: vec3(1, 2, 3), ve: RED, vf: [1, 2, 3, 4],
+        vg: new Array(9).fill(0), vh: new Matrix4});
+    assert.deepEqual(shader.uniformTypes, {va: 'float', vb: 'bool', vc: 'vec2', vd: 'vec3', ve: 'vec4', vf: 'vec4',
+        vg: 'mat3', vh: 'mat4'});
     const version = shader.uniformsVersion;
-    shader.setUniform('a', 2);
-    shader.setUniform('d', vec3(4, 5, 6));
+    shader.setUniform('va', 2);
+    shader.setUniform('vd', vec3(4, 5, 6));
     assert.equal(shader.uniformsVersion, version + 2);
-    assert.deepEqual([...shader.uniformValues.d], [4, 5, 6]);
-    assert.throws(()=> shader.setUniform('a', vec2()), 'the kind stays');
+    assert.deepEqual([...shader.uniformValues.vd], [4, 5, 6]);
+    assert.throws(()=> shader.setUniform('va', vec2()), 'the kind stays');
     assert.throws(()=> shader.setUniform('missing', 1), 'only uniforms it was made with');
     assert.throws(()=> new Shader(code, '', {'bad name': 1}));
     assert.throws(()=> new Shader(code, '', {text: 'red'}));

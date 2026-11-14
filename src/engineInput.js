@@ -523,7 +523,8 @@ function inputInit()
         const typing = isTextInput(e.target) || isTextInput(document.activeElement);
         // a key already held, a keydown the browser did not mark as a repeat, is not pressed again, but with Cmd down
         // it is: a Mac sends no keyup for a key let go while Cmd is held, so each tap of Cmd+Z comes as a keydown alone
-        if (!e.repeat && !typing && (!inputKeysHeld.has(e.code) || e.metaKey))
+        // an event with no code, as an Android soft keyboard sends, is no key, '' reads as none
+        if (e.code && !e.repeat && !typing && (!inputKeysHeld.has(e.code) || e.metaKey))
         {
             inputKeysHeld.add(e.code);
             // an arrow its alias already holds down is not pressed again, like its release waits for both; a release
@@ -576,6 +577,7 @@ function inputInit()
     }
     function onKeyUp(e)
     {
+        if (!e.code) return; // no key's code, as an Android soft keyboard sends, '' is no key
         inputKeysHeld.delete(e.code);
         // the key's own slot and the arrow slot an alias shares, each released only once nothing holds it:
         // an arrow held with its alias stays down until both are let go; a slot not down was never pressed as far
@@ -913,6 +915,11 @@ function inputUpdate()
                 for (let k = 2; k < inputData.length; ++k)
                 for (const j in inputData[k] ?? [])
                     inputData[k][j] = inputData[k][j] & 1 ? 4 : 0;
+                // and their sticks and dpads centered, as nothing reads them meanwhile
+                for (let k = 1; k < gamepadStickData.length; ++k)
+                    gamepadStickData[k]?.forEach((stick)=> stick.set());
+                for (let k = 1; k < gamepadDpadData.length; ++k)
+                    gamepadDpadData[k]?.set();
                 gamepadButtonsLast.length = 0;
             }
 
@@ -966,6 +973,14 @@ function inputUpdate()
 
             // real gamepads are not read while the touch gamepad is in use
             return;
+        }
+        if (touchGamepadOwning)
+        {
+            // the touch gamepad was turned off since the last poll, from a page's own button: slot 0 is the real
+            // pads' again from this poll, so what a real pad 0 holds is read, not let go when the overlay hides
+            touchGamepadOwning = false;
+            inputData[1] = undefined;
+            gamepadStickData[0] = gamepadDpadData[0] = undefined;
         }
 
         // only poll gamepads when focused or in debug mode;

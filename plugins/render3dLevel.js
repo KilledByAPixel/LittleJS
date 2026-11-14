@@ -101,6 +101,9 @@ function level3DAddMesh(name, mesh, tileInfo, color=WHITE, meshCollision=false)
  *    sun's lens flare, and skyBox and environment, each six image urls as loadCubeMap takes them, which load in
  *    the background and are set when they have; what the block leaves out stays as the game set it, and the
  *    next level, with a block or none, puts back what this block set, each setting the game has not changed since
+ *  - The 3D editor keeps the HeightMap and VoxelMap made here through its edits, so a game may hold them, but a voxel
+ *    resize or a terrain of another shape is a new map: a game that holds one takes it again in onRestart, or looks
+ *    it up when the one it holds is destroyed
  *  @param {Level3D} level - The level, the level editor edits this same object
  *  @return {Array<any>} - What each object's type made, a function that made nothing is left out
  *  @memberof Level3D */

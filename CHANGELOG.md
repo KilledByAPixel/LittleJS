@@ -18,6 +18,11 @@ What changed in each release, newest first. Releases before 1.20.0 are on the
 - A debug build asserts on a `Shader` uniform named like one of the engine's own, as `iTime`, which failed only when the shader compiled, and on a `UISlider` value outside 0 to 1; a 3D particle trail longer than its 10 seconds is said once
 - A `MeshCollider` raycast, as picking, the third person camera's wall test and a lens flare's check send, walks the collider's grid and tests only the triangles along the ray; a CSG cut places each point once, about twice as fast
 - `distanceAngle` and `distanceWrap` say they give A minus B, and REFERENCE that an `InstancedMesh3D` is never hit by pick, raycasts or collect
+- `levelEditor.addKey` takes key codes, as `'KeyE'` or `'Numpad1'`, in both editors, warns when one is a key the 2D editor has, and refuses `'Digit0'` as it refuses `'0'`
+- `engineObjectsCollect3D` with no position collects every 3D object, and with no size the ones at a point, as `engineObjectsCollect` does
+- `loadSprite` packs the whole frames of an image its frame size does not divide in every build, where a debug build asserted, says so in debug builds, and warns when the image is smaller than one frame
+- `loadAtlas` says which file failed and why when its json can not be loaded
+- With no debug key (`setDebugKey('')`) the editors have no Play button and their help leaves out what needs the key; another key is named in place of Esc
 
 ### Fixes
 - `ThirdPersonCamera3D` no longer shakes from side to side when the player walks back toward it: its swing behind the way the target moves fades out as the move turns toward the camera, where the short way round flipped sides each frame, and keys that move the way the camera faces turned the move with it
@@ -67,6 +72,16 @@ What changed in each release, newest first. Releases before 1.20.0 are on the
 - Loaders: a Tiled tileset margin or spacing that is not a number is none, and a tile layer whose constructor failed no longer stops every later `engineObjectsDestroy`; a glTF with indices past its vertices throws in every build, where a release build loaded it and failed at every pick; Wavedash `cloudLoad` of data that is neither text nor bytes fails as a load, not a rejection; an atlas frame named `__proto__` is a frame; an editor autosave whose objects have no position is dropped
 - `Matrix4.getRotation` keeps the turn of a matrix scaled to 0 on one axis; a particle effect taken from an attached emitter keeps its own angle, not its parent's added
 - Debug builds say more: a tween path to a property the target does not have, `level3DSpawn` of a type there is not, a Tiled object whose type is in its Name, a `Box2dObject` with no shape, and its `pos` or `angle` set by hand, which the next step puts back
+- A bouncing bullet whose path went through a grid corner on a wall's face, or that started in a one way tile's margin, froze on the wall; a negative tile value, as a ladder's, in front of a wall counted as solid
+- `render3D.pick` and the third-person camera went through a MeshCollider face lying on a cell border, as a floor at y = 0 or a turned wall; a ray across a sparse collider no longer walks thousands of empty cells
+- The 3D editor's Edit prefab and Back, and removing a terrain or voxel map then undoing it, no longer destroy the map `level3DLoad` gave the game, so a game holding it reads the live one
+- CSG comes out closed from a mesh `combine` added to after a cut, and from a chain of cuts that removed what was between two runs of old edges
+- A Shader uniform named as something of the 3D or 2D wrapper's, as `sunColor`, `lightDir` or a one letter name, is refused by the assert instead of failing to compile
+- glTF: one json object parsed several times at once has a zero budget per parse; an animation whose values do not fit its keys, or with a time that is not a number, is a file error, where it posed parts at NaN
+- Input: turning the touch gamepad off between frames keeps a real gamepad 0's press; real gamepads after the first have their sticks and dpads centered when the touch gamepad takes over; a key event with no code, as Android soft keyboards send, is no key
+- Editors: a game key added by its code, `'Digit1'`, no longer also picks a layer; a game tool whose release throws is let go once; a code layer's file that can no longer be written is forgotten
+- Tiled object properties written as an object, by Tiled before 1.2, are said and left out, where `objectLayersLoad` threw part way; particle behaviors not known yet are kept once each, 64 at most, and clamped to their range once the game adds them
+- A looping or ping-pong `SpriteAnimation` played backward shows its first frame as long as the others
 
 ## 1.30.1 - 2026-11-12
 

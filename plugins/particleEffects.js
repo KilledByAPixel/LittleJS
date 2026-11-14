@@ -293,11 +293,13 @@ function particleEffectSanitize(raw)
         behaviors.push({name:b.name, strength});
     }
 
-    // behaviors not known yet stay, a game may add them after the effect is loaded
+    // behaviors not known yet stay, a game may add them after the effect is loaded; each name once, and a few
+    // dozen at most, a file of thousands is not an effect
+    const names = new Set(behaviors.map(b=> b.name));
     for (const x of list)
-        if (typeof x?.name === 'string' && x.name && !particleEffectBehavior(x.name) &&
-            !behaviors.some(b=> b.name === x.name))
-            behaviors.push({name:x.name, strength: isNumber(x.strength) ? x.strength : 1});
+        if (typeof x?.name === 'string' && x.name && !names.has(x.name) && names.size < 64 &&
+            !particleEffectBehavior(x.name))
+            names.add(x.name), behaviors.push({name:x.name, strength: isNumber(x.strength) ? x.strength : 1});
     return {name, settings, behaviors};
 }
 
@@ -518,11 +520,15 @@ function particleEffectsAddBehavior(name, update, update3D, min=-2, max=2, value
     particleEffectBehaviors.push({name, update, update3D, min, max, value, description});
 }
 
-// the update callback that runs an effect's behaviors, in 2D or 3D, undefined when it has none for that
+// the update callback that runs an effect's behaviors, in 2D or 3D, undefined when it has none for that; a strength
+// is clamped to its behavior's range here, as one loaded before the game added the behavior was not
 function particleEffectUpdateCallback(behaviors, is3D)
 {
-    const calls = behaviors.map(b=> [particleEffectBehavior(b.name)?.[is3D ? 'update3D' : 'update'], b.strength])
-        .filter(c=> c[0]);
+    const calls = behaviors.map(b=>
+    {
+        const behavior = particleEffectBehavior(b.name);
+        return [behavior?.[is3D ? 'update3D' : 'update'], behavior && clamp(b.strength, behavior.min, behavior.max)];
+    }).filter(c=> c[0]);
     if (calls.length)
         return (p)=> { for (const [update, strength] of calls) update(p, strength); };
 }

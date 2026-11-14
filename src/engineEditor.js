@@ -279,10 +279,10 @@ class LevelEditor
     get edit3D() { return editorOther?.edit; }
 
     /** Add a key of the game's own to the editor, the 2D and the 3D one
-     *  - Escape and 0 are the editor's own, to play and to exit, and Ctrl is the one modifier: Shift is given to
-     *    the action
-     *  @param {string} key - A letter or digit, 'k', or a key's name in any case, 'Delete', 'F2', 'Enter', 'Space';
-     *    'ctrl+k' with Ctrl or Cmd
+     *  - Escape and 0 ('Digit0' too) are the editor's own, to play and to exit, and Ctrl is the one modifier:
+     *    Shift is given to the action
+     *  @param {string} key - A letter or digit, 'k', a key's name in any case, 'Delete', 'F2', 'Enter', 'Space', or a
+     *    key code with its capital, 'ShiftLeft', 'Numpad1', 'KeyE', which both editors read; 'ctrl+k' with Ctrl or Cmd
      *  @param {function(boolean): unknown} action - Called with whether Shift is held; returning false says it did
      *    nothing, and the key is left to the browser in the 2D editor; the 3D editor reads keys in its update, after
      *    the browser has them, so it keeps every key added here from the browser
@@ -292,7 +292,7 @@ class LevelEditor
         ASSERT(typeof action == 'function', 'a key needs an action');
         const spelled = editorKeySpelling(key), name = spelled.replace('ctrl+', '');
         const lower = name.length > 1 && !(name[0] >= 'A' && name[0] <= 'Z');
-        if (name === 'Escape' || name === '0' || name.length > 1 && name.includes('+') || lower)
+        if (name === 'Escape' || name === '0' || name === 'Digit0' || name.length > 1 && name.includes('+') || lower)
         {
             // said once here, a key code with no capital, as 'shift', would assert every frame in the editors
             console.warn(`levelEditor.addKey: ${key} is not taken, ` + (lower ?
@@ -419,9 +419,11 @@ function editorKeyClashes()
     for (const [spelled, key] of Object.entries(levelEditor.keys))
     {
         const ctrl = spelled.startsWith('ctrl+'), name = spelled.slice(ctrl ? 5 : 0);
-        // in 2D the digits 1 to 9 pick a layer
-        const clash = levelEditor.is3D ? editorOther.hasKey(name, ctrl) :
-            !!(ctrl ? editorCtrlKeys : editorKeys)[name] || !ctrl && name.length === 1 && name >= '1' && name <= '9';
+        // in 2D the digits 1 to 9 pick a layer, and a letter's or a digit's code is that key, 'KeyE' the E
+        const code = name.match(/^(?:Key([A-Z])|Digit([0-9]))$/);
+        const key2D = code ? (code[1] ?? code[2]).toLowerCase() : name;
+        const clash = levelEditor.is3D ? editorOther.hasKey(name, ctrl) : !!(ctrl ? editorCtrlKeys : editorKeys)[key2D] ||
+            !ctrl && key2D.length === 1 && key2D >= '1' && key2D <= '9';
         if (key.warned || !clash) continue;
         key.warned = true;
         console.warn(`levelEditor.addKey: ${spelled} is a key of the editor's, the game's takes its place`);
@@ -835,9 +837,11 @@ async function editorRememberedFile(record)
     let handle = await editorFileStore.get(editorFileKey(record));
     if (!handle && record.oldKey && record.oldKey !== record.key)
     {
-        // remembered under the key 1.30.1 gave a layer made in code, kept under its own from now on
-        handle = await editorFileStore.get(editorFileKey({key: record.oldKey}));
-        handle && editorFileStore.set(editorFileKey(record), handle);
+        // remembered under the key 1.30.1 gave a layer made in code, moved to its own from now on, so a file that
+        // can no longer be written and is forgotten is not found under the old key again
+        const oldKey = editorFileKey({key: record.oldKey});
+        handle = await editorFileStore.get(oldKey);
+        handle && (editorFileStore.set(editorFileKey(record), handle), editorFileStore.set(oldKey, undefined));
     }
     const mode = {mode: 'readwrite'};
     try
@@ -2273,6 +2277,15 @@ function editorPaste()
 
 let editorPanel, editorPanelParts;
 
+// a line of the editors' help that names Esc, the debug key, with the key the game set, or with no debug key the
+// parts that need it left out, as playing and coming back
+function editorKeyText(text)
+{
+    if (debugKey === 'Escape') return text;
+    if (debugKey) return text.replace(/\bEsc(ape)?\b/g, debugKey);
+    return text.replace(/Esc or r/g, 'R').split(' · ').filter((part)=> !/\bEsc(ape)?\b/.test(part)).join(' · ');
+}
+
 // the list of keys ? shows
 const editorHelpLines =
 [
@@ -2375,9 +2388,12 @@ function editorPanelInit()
 
     editorElement('div', editorPanel, 'font-weight:bold', 'Level Editor');
     const top = row();
-    button(top, 'Play', ()=> editorPlay(editorCameraPos), 'Esc, and Esc again comes back to the editor');
+    // with no debug key nothing comes back from playing, so there is no Play
+    const play = button(top, 'Play', ()=> editorPlay(editorCameraPos),
+        editorKeyText('Esc, and Esc again comes back to the editor'));
+    debugKey || (play.style.display = 'none');
     const restart = button(top, 'Restart', editorRestart, 'Rebuild the level and play it');
-    button(top, 'Exit', ()=> levelEditor.close(), '0, then Esc opens the debug overlay again');
+    button(top, 'Exit', ()=> levelEditor.close(), editorKeyText('0, then Esc opens the debug overlay again') || '0');
     const undo = row();
     button(undo, 'Undo', ()=> editorUndo(), 'Ctrl+Z');
     button(undo, 'Redo', ()=> editorUndo(true), 'Ctrl+Y');
@@ -2433,7 +2449,7 @@ function editorPanelInit()
     advancedToggle.onclick = ()=> { editorAdvanced = !editorAdvanced; advancedToggle.blur(); };
     const advanced = editorElement('div', editorPanel, 'margin:4px 0;padding:4px;background:#222;border-radius:3px');
     const playFromLabel = editorElement('label', advanced, 'display:flex;gap:6px;align-items:center;margin:2px 0');
-    playFromLabel.title = 'Escape starts play with the player at the mouse, Play at the view center';
+    playFromLabel.title = editorKeyText('Escape starts play with the player at the mouse, Play at the view center');
     const playFrom = editorElement('input', playFromLabel);
     playFrom.type = 'checkbox';
     playFrom.onchange = ()=> { editorPlayFromMouse = playFrom.checked; playFrom.blur(); };
@@ -2472,7 +2488,7 @@ function editorPanelInit()
     const hint = editorElement('div', editorPanel, 'color:#8ab;margin-top:4px');
     const help = editorElement('div', editorPanel, 'color:#aaa;margin-top:4px;border-top:1px solid #444;padding-top:4px');
     for (const line of editorHelpLines)
-        editorElement('div', help, 'margin:2px 0', line);
+        editorElement('div', help, 'margin:2px 0', editorKeyText(line));
     const gameHelp = editorElement('div', help);
     button(help, 'Close', ()=> editorHelp = false, '?');
 
@@ -2609,7 +2625,7 @@ function editorPaletteDraw(canvas, layer)
 let editorTag;
 function editorTagUpdate()
 {
-    const show = editorSession && !editorIsOpen;
+    const show = editorSession && !editorIsOpen && !!debugKey; // with no debug key, no key comes back
     if (!show && !editorTag) return;
     editorTag ||= editorElement('div', document.body, 'position:fixed;bottom:8px;left:8px;padding:4px 8px;' +
         'background:#111d;color:#eee;font:12px monospace;border-radius:4px;z-index:9999;pointer-events:none');
@@ -2994,7 +3010,8 @@ function editorUpdate()
     // keeps them while it is open
     for (let i = 1; !debugOverlay && i <= 9; ++i)
     {
-        if (!keyWasPressed('Digit' + i) || levelEditor.keys[i]) continue; // a digit of the game's own is its
+        // a digit of the game's own is its, by the digit or its code
+        if (!keyWasPressed('Digit' + i) || levelEditor.keys[i] || levelEditor.keys['Digit' + i]) continue;
         inputClearKey('Digit' + i);
         const layer = editorLayers()[i - 1];
         layer && layer !== (editorObjectLayer ?? editorLayer) && editorSelectLayer(layer); // a drag does not carry across
@@ -3124,9 +3141,11 @@ function editorToolUpdate(space)
         tool.onDrag?.(at);
     if (editorToolHeld && !mouseIsDown(0))
     {
-        tool.onRelease?.(at);
-        editorStrokeEnd();
+        // let go first and the stroke ended whatever the release does, so one that throws is not released again
+        // every frame with the stroke left open
         editorToolHeld = false;
+        try { tool.onRelease?.(at); }
+        finally { editorStrokeEnd(); }
     }
     return true;
 }

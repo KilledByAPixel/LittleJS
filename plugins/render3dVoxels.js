@@ -174,7 +174,8 @@ class VoxelMap extends EngineObject3D
         const f = /** @type {any} */ (faces);
         const list = isNumber(f) ? [f, f, f, f, f, f] : isArray(f) ? f :
             [f.side, f.side, f.top ?? f.side, f.bottom ?? f.side, f.side, f.side];
-        ASSERT(list.length === 6 && list.every(isNumber), 'faces is a tile index, six of them, or {top, side, bottom}');
+        ASSERT(list.length === 6 && list.every(isNumber),
+            'faces is a tile index, the number, not a tile(), six of them, or {top, side, bottom}');
         this.blockTypes[type] = {faces: list, seeThrough: seeThrough || transparent, transparent, doubleSided};
         this.rebuild();
     }

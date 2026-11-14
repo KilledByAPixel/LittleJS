@@ -97,8 +97,6 @@ class TextureSheet
         // the source may have its own padding baked in around each frame
         const sourceCellWidth = frameSize.x + sourcePad.x*2;
         const sourceCellHeight = frameSize.y + sourcePad.y*2;
-        ASSERT(imageSize.x % sourceCellWidth === 0 && imageSize.y % sourceCellHeight === 0,
-            'image size must be a multiple of the padded frame size');
 
         const cellWidth = frameSize.x + padding*2;
         const cellHeight = frameSize.y + padding*2;
@@ -247,6 +245,17 @@ function loadSprite(src, frameSize, padding=textureSheetPadding, sourcePadding=0
             // pack onto a sheet, then fill in the tile that was already handed out,
             // copying every field so nothing is missed if TileInfo gains more of them
             const imageSize = vec2(image.width, image.height);
+            // whole frames are packed, in every build: one that does not divide the image leaves the rest out
+            const pad = isNumber(sourcePadding) ? vec2(/** @type {number} */ (sourcePadding)) :
+                /** @type {Vector2} */ (sourcePadding);
+            const cell = frameSize && /** @type {Vector2} */ (frameSize).add(pad.scale(2));
+            if (cell && (imageSize.x < cell.x || imageSize.y < cell.y))
+            {
+                console.warn('loadSprite image is smaller than one frame:', src, imageSize, frameSize);
+                return;
+            }
+            debug && cell && (imageSize.x % cell.x || imageSize.y % cell.y) && console.warn(
+                'loadSprite image is not a whole number of frames, the part past the last whole frame is left out:', src);
             const added = textureSheetAdd(imageSize, frameSize, padding, sourcePadding);
             if (!added)
             {
@@ -373,7 +382,7 @@ function loadAtlas(imageSrc, jsonSrc, padding=textureSheetPadding)
 
     // start fetching the json and decoding the image right away, in parallel
     const jsonPromise = typeof jsonSrc === 'object' ? Promise.resolve(jsonSrc) :
-        fetch(jsonSrc).then(r=> r.ok && r.json()).catch(()=> undefined);
+        fetchJSON(jsonSrc).catch((error)=> void console.warn('loadAtlas:', error.message)); // which file and why
     const image = new Image;
     const imagePromise = new Promise(resolve =>
     {

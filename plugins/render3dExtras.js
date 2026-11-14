@@ -839,21 +839,35 @@ class MeshCollider extends EngineObject3D
             if (t !== undefined && !(t >= best))
                 best = t;
         };
+        // a ray through more cells than there are triangles, across a sparse collider, tests them all instead
+        let cells = 1;
+        for (const axis of ['x', 'y', 'z'])
+            cells += abs(d[axis]) * (exit - enter) / s;
+        if (cells > this.triangleCount)
+        {
+            for (let i = 0; i < this.triangleCount; ++i)
+                test(i);
+            return best;
+        }
         g.big.forEach(test);
-        const cell = [0, 0, 0], step = [0, 0, 0], next = [0, 0, 0], delta = [0, 0, 0];
+        // the walk keeps to the grid's cells, and starts one cell back on each axis it moves along, since the point
+        // it enters at can round past a face on a cell border, as a floor at y = 0 always is
+        const cell = [0, 0, 0], step = [0, 0, 0], next = [0, 0, 0], delta = [0, 0, 0], lo = [0, 0, 0], hi = [0, 0, 0];
         ['x', 'y', 'z'].forEach((axis, j)=>
         {
-            cell[j] = floor((o[axis] + d[axis] * enter) / s);
+            lo[j] = floor(g.min[axis] / s), hi[j] = floor(g.max[axis] / s);
             step[j] = sign(d[axis]);
+            cell[j] = clamp(floor((o[axis] + d[axis] * enter) / s) - step[j], lo[j], hi[j]);
             next[j] = d[axis] ? ((cell[j] + (d[axis] > 0 ? 1 : 0)) * s - o[axis]) / d[axis] : Infinity;
             delta[j] = d[axis] ? s / abs(d[axis]) : Infinity;
         });
         for (;;)
         {
             g.cells.get(render3DGridKey(cell[0], cell[1], cell[2]))?.forEach(test);
-            const j = next[0] <= next[1] && next[0] <= next[2] ? 0 : next[1] <= next[2] ? 1 : 2, leave = next[j];
-            if ((best ?? Infinity) <= leave || !(leave <= exit)) break;
+            const j = next[0] <= next[1] && next[0] <= next[2] ? 0 : next[1] <= next[2] ? 1 : 2;
+            if ((best ?? Infinity) <= next[j]) break;
             cell[j] += step[j], next[j] += delta[j];
+            if (cell[j] < lo[j] || cell[j] > hi[j]) break;
         }
         return best;
     }
@@ -3049,8 +3063,27 @@ function render3DCSGPolygons(mesh, matrix)
     return polygons;
 }
 
-// the meshes CSG made, whose edges meet their neighbors at every point, see render3DCSGMesh
-const render3DCSGResults = /* @__PURE__ */ new WeakSet;
+// the meshes CSG made, whose edges meet their neighbors at every point, see render3DCSGMesh, each with its counts of
+// points and indices, so one changed since by combine or an add is not trusted
+const render3DCSGResults = /* @__PURE__ */ new WeakMap;
+const render3DCSGCounts = (mesh)=> mesh.points.length + ',' + mesh.indices?.length;
+
+// how many edges of a CSG mesh have no edge back along them, a crack, by where its points are
+function render3DCSGOpen(mesh)
+{
+    const p = mesh.points, ids = mesh.indices, key = (i)=> p[i].x + ',' + p[i].y + ',' + p[i].z;
+    const edges = new Map, count = (edge, add)=> edges.set(edge, (edges.get(edge) || 0) + add);
+    for (let t = 0; t < ids.length; t += 3)
+    for (let e = 0; e < 3; ++e)
+    {
+        const a = key(ids[t + e]), b = key(ids[t + (e + 1) % 3]);
+        a === b || (count(a + '|' + b, 1), count(b + '|' + a, -1));
+    }
+    let open = 0;
+    for (const n of edges.values())
+        n > 0 && (open += n);
+    return open;
+}
 
 // a mesh from CSG polygons: points close together made one, and each edge given the points other polygons have
 // along it, so neighbors meet at every point with no crack between them; each polygon then as a fan of triangles;
@@ -3230,7 +3263,7 @@ function render3DMeshCSG(a, b, matrix, operation)
     const polygonsA = render3DCSGPolygons(a), polygonsB = render3DCSGPolygons(b, matrix);
     // the points and edges of the first mesh as given, when CSG made it and they met already, see render3DCSGMesh
     const originals = new Set, oldEdges = new Map;
-    if (render3DCSGResults.has(a))
+    if (render3DCSGResults.get(a) === render3DCSGCounts(a))
     for (const polygon of polygonsA)
     {
         const vertices = polygon.vertices;
@@ -3246,8 +3279,17 @@ function render3DMeshCSG(a, b, matrix, operation)
     }
     const result = (polygons)=>
     {
-        const mesh = render3DCSGMesh(polygons, originals, oldEdges);
-        render3DCSGResults.add(mesh);
+        let mesh = render3DCSGMesh(polygons, originals, oldEdges);
+        // trusting the first mesh's edges can leave a crack where a cut took away what was between two runs of them
+        // nearly in a line, the long edge then skipping points now on it; that is made again with every point, kept
+        // when it has fewer, since a crack of rounding an earlier cut left shows in both and the full step grows
+        const open = originals.size && render3DCSGOpen(mesh);
+        if (open)
+        {
+            const full = render3DCSGMesh(polygons);
+            render3DCSGOpen(full) < open && (mesh = full);
+        }
+        render3DCSGResults.set(mesh, render3DCSGCounts(mesh));
         return mesh;
     };
     const [nearA, farA] = render3DCSGNear(polygonsA, polygonsB), [nearB, farB] = render3DCSGNear(polygonsB, polygonsA);

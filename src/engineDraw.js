@@ -497,9 +497,11 @@ class SpriteAnimation
         this.isDone; // a read after a play ends calls onEnd, which may start it over
         if (this.heldFrame !== undefined)
             return this.heldFrame;
-        const n = this.frameCount, f = floor(this.elapsedFrames);
+        // backward a frame shows from when the count reaches it until the next, as forward, so the first shows
+        // for as long as the rest
+        const n = this.frameCount, f = this.speed < 0 ? ceil(this.elapsedFrames) : floor(this.elapsedFrames);
         if (this.mode == 'once') // backward it counts down from the last frame, showing it from the start
-            return clamp(this.speed < 0 ? n - 1 + ceil(this.elapsedFrames) : f, 0, n - 1);
+            return clamp(this.speed < 0 ? n - 1 + f : f, 0, n - 1);
         if (this.mode == 'loop')
             return mod(f, n);
         const period = max(2 * n - 2, 1), k = mod(f, period); // there and back, the ends once each
@@ -598,6 +600,17 @@ class SpriteAnimator
      *  @return {boolean} */
     get isDone() { return this.settledClip.isDone; }
 }
+
+// the names in the 2D and 3D shader wrappers, and those the docs promise the snippets, that a Shader's uniform can
+// not take, see the Shader constructor
+const SHADER_RESERVED_NAMES = /* @__PURE__ */ new Set(['main', 'mainImage', 'mainVertex', 'mainNormal', 'localUV',
+    'premultipliedTexture', 'cameraPos', 'cameraDir', 'modelMatrix', 'vertexColor', 'viewProjection', 'viewProj',
+    'lightViewProj', 'instanceData', 'instanceDataV', 'sceneDepth', 'worldPos', 'worldNormal', 'sunDirection',
+    'sunColor', 'ambientColor', 'ambientGroundColor', 'lightCount', 'lights', 'lightColors', 'lightDir', 'lightColor',
+    'ambientFog', 'ambientGround', 'fogColor', 'fogFade', 'shadowParams', 'extraLights', 'extraLightColors',
+    'extraLightCones', 'extraLightCount', 'materialParams', 'emissiveTint', 'skyTop', 'skyHorizon', 'skyBottom',
+    'gelAxes', 'tex', 'normalTex', 'emissiveTex', 'gelTex', 'envMap', 'envParams', 'shadowMap', 'shadow', 'gel',
+    'normalMapNormal', 'roundNormal']);
 
 ///////////////////////////////////////////////////////////////////////////////
 /** A value a Shader's snippet reads as a uniform: a number, a boolean, a Vector2, a Vector3, a Color, a Matrix4, or a
@@ -703,11 +716,11 @@ class Shader
         {
             ASSERT(/^[A-Za-z_][A-Za-z0-9_]*$/.test(name) && !name.startsWith('gl_'),
                 'a Shader uniform is named as a GLSL variable is', name);
-            // the wrappers' own names, i and a capital as iTime, and those the docs promise the snippets, would be
-            // declared twice
-            ASSERT(!/^i[A-Z]/.test(name) && !['main', 'mainImage', 'mainVertex',
-                'mainNormal', 'localUV', 'premultipliedTexture', 'cameraPos', 'modelMatrix', 'vertexColor',
-                'viewProjection', 'instanceData', 'sceneDepth'].includes(name),
+            // the wrappers' own names would be declared twice or turned into something else by their macros: i and a
+            // capital as iTime, the one letter names of their inputs, outputs and uniforms, and the rest of the 2D and
+            // 3D wrappers' names, listed here since core can not read the plugin's
+            ASSERT(!/^i[A-Z]/.test(name) && name.length > 1 && !/^m[0-3]$/.test(name) &&
+                !SHADER_RESERVED_NAMES.has(name),
                 'a Shader uniform has a name of its own, not one of the engine\'s', name);
             const type = this.uniformTypes[name] = glUniformType(uniforms[name]);
             ASSERT(!!type, 'a Shader uniform is a number, boolean, vector, Color, matrix or list of 2, 3, 4, 9 or 16 numbers',

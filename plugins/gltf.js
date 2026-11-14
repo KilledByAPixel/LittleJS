@@ -549,7 +549,6 @@ async function parseGLTF(data, baseUrl='', files)
     }
     if (typeof json == 'string')
         json = JSON.parse(json);
-    gltfZeroCounts.delete(json); // counted for this parse, the same object parsed again starts from none
     if (!json.asset || !String(json.asset.version).startsWith('2'))
         throw new Error('only glTF 2.0 is read'); // a file problem, not a code one, so it throws in every build
     // compressed geometry has no plain accessors to read; the other extensions add to what is here, and can be left out
@@ -683,11 +682,17 @@ async function parseGLTF(data, baseUrl='', files)
             animation.channels.filter(c=> c.target.node !== undefined &&
                 ['translation', 'rotation', 'scale'].includes(c.target.path) && !json.nodes[c.target.node].matrix).map(c=>
             {
-                const sampler = animation.samplers[c.sampler];
-                return {node: c.target.node, path: c.target.path, interpolation: sampler.interpolation || 'LINEAR',
-                    times: gltfAccessor(json, buffers, sampler.input).data,
-                    values: gltfAccessor(json, buffers, sampler.output).data,
-                    components: c.target.path === 'rotation' ? 4 : 3};
+                const sampler = animation.samplers[c.sampler], interpolation = sampler.interpolation || 'LINEAR';
+                const times = gltfAccessor(json, buffers, sampler.input).data;
+                const values = gltfAccessor(json, buffers, sampler.output).data;
+                const components = c.target.path === 'rotation' ? 4 : 3;
+                // a value for each key, three with cubic spline's tangents, and times that are numbers, or the pose
+                // goes to NaN once the play passes the keys there are; a file problem, so it throws in every build
+                const keys = times.length, wanted = keys * components * (interpolation === 'CUBICSPLINE' ? 3 : 1);
+                if (!keys || values.length !== wanted || !times.every(isFinite))
+                    throw new Error(`glTF animation ${i} has ${keys} keys and ${values.length} values for ` +
+                        `${c.target.path}, ${wanted} were wanted, or a time that is not a number`);
+                return {node: c.target.node, path: c.target.path, interpolation, times, values, components};
             })));
 
         // a skinned part rests as its joints place it, with nothing moved
@@ -1079,7 +1084,8 @@ function gltfNodeMatrix(node)
 
 // an accessor's values as floats, one row per element, normalized integer types brought to 0 to 1; a sparse one
 // starts from its bufferView, or from zeros without one, and then has the listed elements replaced
-// the elements with no buffer each parse of a file made so far, which cost nothing in the file, see gltfAccessor
+// the elements with no buffer each parse of a file made so far, which cost nothing in the file, see gltfAccessor;
+// by the parse's list of buffers, its own, so parses of one json object at once count apart
 const gltfZeroCounts = /* @__PURE__ */ new WeakMap;
 
 function gltfAccessor(json, buffers, index)
@@ -1095,11 +1101,11 @@ function gltfAccessor(json, buffers, index)
     const scale = a.normalized ? new Map(scales).get(Type) || 1 : 1;
     // with a buffer under it the count is bounded by the buffer, without one it is all zeros and a sparse few, which
     // no real model makes millions of; counted over the whole file, as many parts may read the same one
-    const zeros = view ? 0 : (gltfZeroCounts.get(json) ?? 0) + a.count;
+    const zeros = view ? 0 : (gltfZeroCounts.get(buffers) ?? 0) + a.count;
     if (!view && !(zeros <= 1 << 20))
         throw new Error('glTF accessor ' + index + ' has no buffer and a count of ' + a.count +
             ', past what a file may make of them');
-    view || gltfZeroCounts.set(json, zeros);
+    view || gltfZeroCounts.set(buffers, zeros);
     // its elements must lie in its buffer before so many floats are made for them
     const viewEnd = view && (buffers[view.buffer]?.byteLength ?? 0), stride = view?.byteStride || components * size;
     if (view && !((view.byteOffset || 0) + (a.byteOffset || 0) + (a.count - 1) * stride + components * size <= viewEnd))

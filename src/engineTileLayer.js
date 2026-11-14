@@ -707,7 +707,12 @@ function objectLayersProperties(type, object)
     const properties = {}, set = (key, value)=> objectPropertySet(properties, key, value);
     for (const [key, value] of Object.entries(type.defaults))
         set(key, objectPropertyCopy(value));
-    for (const property of object.properties || [])
+    // a list of {name, type, value}, as Tiled 1.2 and on write it; an object of names, from an older Tiled or a
+    // hand edit, is said and left out, the object made with its defaults
+    const list = object.properties ?? [];
+    isArray(list) || console.warn(`objectLayersLoad: object ${object.id}'s properties are not a list, ` +
+        'save the map again with Tiled 1.2 or later; its defaults are used');
+    for (const property of isArray(list) ? list : [])
     {
         const {name, value} = property;
         if (property.type === 'color')

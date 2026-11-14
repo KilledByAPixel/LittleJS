@@ -2516,7 +2516,9 @@ class Box2dPlugin
         let done = false;
         try
         {
-            // what waited behind a queued change that threw goes first, or a body destroyed then collides once more
+            // what waited behind a queued change that threw goes first, or a body destroyed then collides once more;
+            // a callback error it raises skips this frame's steps, as one raised by a step skips the rest, since it
+            // only follows an error of the game's, thrown after
             box2dRunPending();
             for (let i=frames; i-- && !box2dCallbackError;)
             {

@@ -93,7 +93,8 @@ objectLayersAddType('Coin', Coin, {value: 1});
 ## A key of your own
 
 `addKey(key, action, helpLine)`. The key is a letter or digit (`'k'`), a key's name in any case (`'Delete'`,
-`'F2'`, `'Enter'`, `'Space'`), or either with `'ctrl+'` in front. The action is called with whether Shift is
+`'F2'`, `'Enter'`, `'Space'`), a key code with its capital (`'ShiftLeft'`, `'Numpad1'`, `'KeyE'`), which both
+editors read, or any of them with `'ctrl+'` in front. Escape and 0 (`'Digit0'` too) are the editors' own. The action is called with whether Shift is
 held. Return `false` when it did nothing.
 
 - A key the editor already uses is replaced by yours, with a warning in the console when the editor opens. The

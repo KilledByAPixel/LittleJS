@@ -1043,15 +1043,18 @@ function* render3DGridWalk(grid, reach, center, before)
  * Collect the EngineObject3D objects whose boxes overlap a sphere or a box, the 3D twin of engineObjectsCollect
  * - Each object is its size3D box at its world position, turned as it is turned; lights, emitters and trails have no
  *   size and are never collected
- * @param {Vector3} pos - Center of the area
- * @param {Vector3|number} size - Diameter of a sphere if a number, 0 for a point, full size of a box if a Vector3
+ * @param {Vector3} [pos] - Center of the area, or undefined for every 3D object, as in 2D
+ * @param {Vector3|number} [size] - Diameter of a sphere if a number, full size of a box if a Vector3, left out or 0
+ *   the objects whose boxes hold the point at pos
  * @param {Array<EngineObject>} [objects] - Defaults to every object
  * @param {boolean} [testCenters] - Test only each object's center, a little faster, and ignores object sizes
  * @return {Array<EngineObject3D>}
  * @memberof Render3D
  */
-function engineObjectsCollect3D(pos, size, objects=engineObjects, testCenters=false)
+function engineObjectsCollect3D(pos, size=0, objects=engineObjects, testCenters=false)
 {
+    if (!pos)
+        return /** @type {Array<EngineObject3D>} */ (objects.filter((o)=> o instanceof EngineObject3D && !o.destroyed));
     // a size of 0 is a point, tested against each box, since a sphere of no size could never hit
     const radiusSquared = typeof size === 'number' && size > 0 ? (size/2)**2 : undefined;
     const box = radiusSquared ? undefined : typeof size === 'number' ? vec3() : render3DSize3(size);
