@@ -1,4 +1,11 @@
-// A seeded random-operation fuzz of the 2D level editor, as test/editor3DFuzz.test.mjs is for the 3D one.
+// A seeded random-operation fuzz of the 2D level editor, as test/editor3DFuzz.test.mjs is for the 3D one. Since full
+// pass 9 also: the Coin type has a default of every kind the properties box
+// edits (int, float, bool, string, Color, Vector2), set through editorSetSelectedProperty and read back; every
+// property of every live coin compared with the map's; a resize taken back (and done and taken back again, with an
+// edit between); an Apply taken back and redone; edits tried while an autosave waits (they must change nothing); a
+// game tool 'Stamp' (paints on press, drag and release) driven through engineStep and the input state, ended by a
+// release, Escape, the right button, a close and open, or a digit then a release; Save with an async onSave, kept by
+// the game or written through a stub file picker, with an edit made while it waits, or two saves queued.
 // Run from the repo root:
 //   node --import ./test/setup.mjs --test test/editor2DFuzz.test.mjs
 // FUZZ_SEEDS=1,2,3 FUZZ_OPS=400 pick the seeds and the operations per seed (8 seeds of 300 take about 5 s).
@@ -52,7 +59,27 @@ const fileMap =
 // the game and the fuzz helpers, run inside each engine
 const gameCode = `
 class Coin extends EngineObject { constructor(pos) { super(pos, vec2(1)); this.value = 0; } }
-objectLayersAddType('Coin', Coin, { value: 1 });
+var coinDefaults = { value: 1, solid: false, speed: 1.5, label: 'a', tint: hsl(0, 1, .5), dir: vec2(1, 0) };
+objectLayersAddType('Coin', Coin, coinDefaults);
+var toolLog = [];
+levelEditor.addTool('Stamp', {
+    onPress(at) { toolLog.push('press'); at.cell && levelEditor.edit2D.paint(at.cell, 2); },
+    onDrag(at) { at.cell && levelEditor.edit2D.paint(at.cell, 3); },
+    onRelease(at) { toolLog.push('release'); at.cell && levelEditor.edit2D.paint(at.cell, 4); },
+});
+function fzMouseAt(layer, cell)
+{
+    editorApplyCamera();
+    mousePosScreen = worldToScreen(layer.live.pos.add(cell).add(vec2(.5)));
+}
+function fzClearInput() { for (const k in inputData[0]) inputData[0][k] = 0; }
+// Save's file picker, download and remembered files, as a browser that lets a page write files has them
+var fuzzWritten = [], fuzzDownloads = [], fuzzPickName = 'fuzz.json', fuzzStore = new Map;
+globalThis.showSaveFilePicker = async ()=> ({name: fuzzPickName, queryPermission: async ()=> 'granted',
+    createWritable: async ()=> { let t = ''; return {write: async (x)=> { t += x; },
+        close: async ()=> { fuzzWritten.push(t); }}; }});
+saveText = (t)=> fuzzDownloads.push(t);
+editorFileStore = {get: async (k)=> fuzzStore.get(k), set: async (k, h)=> { h ? fuzzStore.set(k, h) : fuzzStore.delete(k); }};
 var map;
 function loadLevel()
 {
@@ -96,7 +123,7 @@ function fuzzSnap()
         objects: editorObjectsKept(editorObjectGroups(map.layers).map((g)=> g.objects ?? []), 0)});
 }
 
-var modelUndo = [], modelRedo = [];
+var modelUndo = [], modelRedo = [], fuzzToolProblem = '', fuzzToolEnd = '';
 
 // one random edit, as the editor's keys, mouse and panel make it
 function fuzzEdit(op)
@@ -188,7 +215,7 @@ function fuzzEdit(op)
     {
         const layer = objectLayer();
         editorSelectLayer(layer);
-        const properties = fzRand() < .5 ? [{name: 'value', type: 'int', value: fzInt(9)}] : [];
+        const properties = fzRand() < .5 ? [{name: 'value', type: 'int', value: 2 + fzInt(9)}] : [];
         const pos = vec2(fzRand() * map.width, fzRand() * map.height);
         editorPlaceObjects(layer, fzRand() < .5 ? editorSnap(pos) : pos, [{type: 'Coin', properties, offset: vec2()}]);
         break;
@@ -229,9 +256,64 @@ function fuzzEdit(op)
     {
         const layer = objectLayer(), count = objectsOf(layer).length;
         if (!count) break;
-        const i = fzInt(count), value = fzInt(4);
-        editorChangeObjects(layer, (list)=> editorObjectSetProperty(list[i], 'value', value, 1));
-        editorStrokeEnd();
+        // each type through the properties box's path
+        const i = fzInt(count), names = Object.keys(coinDefaults), name = names[fzInt(names.length)];
+        const value = name === 'value' ? (fzRand() < .7 ? fzInt(4) : fzInt(4) + .5) :
+            name === 'solid' ? fzRand() < .5 : name === 'speed' ? (fzRand() < .5 ? fzInt(3) : 1.5) :
+            name === 'label' ? ['a', 'b', '', ' x,y'][fzInt(4)] :
+            name === 'tint' ? hsl(fzInt(3) / 3, 1, .5, fzRand() < .2 ? .5 : 1) :
+            vec2(fzInt(3) - 1, fzRand() < .3 ? .25 : fzInt(2));
+        editorSelectLayer(layer);
+        editorObjectSelection.add(objectsOf(layer)[i].id);
+        const id = objectsOf(layer)[i].id;
+        editorSetSelectedProperty(name, value);
+        editorObjectSelection.clear();
+        // what the map reads back is the value set, a color to its 8 bits
+        const object = objectsOf(layer).find((o)=> o.id === id);
+        const read = objectLayersProperties(objectLayersTypes.get('Coin'), object)[name];
+        const text = (v)=> isColor(v) ? v.toString() : JSON.stringify(v);
+        pending || text(read) === text(value) || (fuzzToolProblem = 'property ' + name + ' set ' + text(value) + ' read ' +
+            text(read));
+        break;
+    }
+    case 'tool':
+    {
+        // a game tool pressed on a tile layer, dragged, and ended by a release, Escape, the right button, a close
+        // and open, or a digit (taken while held) then a release
+        if (pending) break;
+        const layer = tileLayer();
+        editorSelectLayer(layer);
+        levelEditor.tool = 'Stamp';
+        fzClearInput();
+        engineStep(); // the tool is turned on
+        const presses = toolLog.length, snap0 = fuzzSnap(), undo0 = editorUndoList.length;
+        fzMouseAt(layer, fzCell());
+        inputData[0][0] = 3; engineStep(); inputData[0][0] = 1;
+        for (let k = fzInt(3); k--;) { fzMouseAt(layer, fzCell()); engineStep(); }
+        const end = ['release', 'escape', 'right', 'close', 'digit'][fzInt(5)];
+        fuzzToolEnd = end;
+        if (end === 'release') { inputData[0][0] = 4; engineStep(); }
+        else if (end === 'escape')
+            { inputData[0].Escape = 3; engineStep(); fzClearInput(); inputData[0][0] = 4; engineStep(); }
+        else if (end === 'right')
+            { inputData[0][2] = 3; engineStep(); fzClearInput(); inputData[0][0] = 4; engineStep(); }
+        else if (end === 'close') { levelEditor.close(); levelEditor.open(); }
+        else { inputData[0].Digit1 = 3; engineStep(); inputData[0].Digit1 = 1; inputData[0][0] = 4; engineStep(); }
+        fzClearInput();
+        if (!levelEditor.isOpen) fuzzToolProblem = 'editor closed by ' + end;
+        if (editorToolHeld) fuzzToolProblem = 'tool still held after ' + end;
+        const log = toolLog.slice(presses).join();
+        const want = end === 'escape' || end === 'right' ? 'press' : 'press,release';
+        log === want || (fuzzToolProblem = end + ' log ' + log);
+        // Escape and the right button take the press back whole, with no undo entry
+        if (want === 'press' && (fuzzSnap() !== snap0 || editorUndoList.length !== undo0))
+            fuzzToolProblem = end + ' did not take the press back';
+        // a press that changed the map ends as one undo entry
+        if (want !== 'press' && fuzzSnap() !== snap0 && editorUndoList.length !== Math.min(100, undo0 + 1))
+            fuzzToolProblem = end + ' undo entries ' + (editorUndoList.length - undo0);
+        levelEditor.tool = undefined;
+        engineStep();
+        fzClearInput();
         break;
     }
     case 'undo': editorUndo(); break;
@@ -257,6 +339,8 @@ function fuzzEdit(op)
 function fuzzCheck()
 {
     const problems = [], record = fuzzRecord();
+    fuzzToolProblem && problems.push(fuzzToolProblem);
+    fuzzToolProblem = '';
     if (!record) return ['no record for the map'];
     const records = editorMapList.filter((r)=> !r.synthetic);
     records.length === 1 || problems.push('records ' + records.length);
@@ -298,8 +382,21 @@ function fuzzCheck()
             if (!made || made.destroyed) { problems.push('object ' + object.id + ' has no game object'); continue; }
             const pos = editorObjectPos(record, object);
             made.pos.distance(pos) < 1e-6 || problems.push('object ' + object.id + ' at ' + made.pos + ' map ' + pos);
-            const value = (object.properties ?? []).find((p)=> p.name === 'value')?.value ?? 1;
-            made.value === value || problems.push('object ' + object.id + ' value ' + made.value + ' map ' + value);
+            const want = objectLayersProperties(objectLayersTypes.get('Coin'), object);
+            for (const name in want)
+                JSON.stringify(made[name]) === JSON.stringify(want[name]) ||
+                    problems.push('object ' + object.id + ' ' + name + ' ' + JSON.stringify(made[name]) + ' map ' +
+                    JSON.stringify(want[name]));
+            // each property written as the kind the type reads back, none equal to its default
+            for (const p of object.properties ?? [])
+            {
+                const d = coinDefaults[p.name];
+                const kind = typeof d === 'boolean' ? 'bool' : isColor(d) ? 'color' : typeof d === 'number' ?
+                    (Number.isInteger(p.value) && Number.isInteger(d) ? 'int' : 'float') : 'string';
+                p.type === kind || kind === 'int' && p.type === 'float' || problems.push('object ' + object.id + ' property ' + p.name + ' type ' + p.type);
+                JSON.stringify(want[p.name]) === JSON.stringify(d) &&
+                    problems.push('object ' + object.id + ' property ' + p.name + ' kept at its default');
+            }
         }
         // a destroyed one left in the map, of an object a resize dropped, is only kept memory
         for (const [id, made] of layer.instances)
@@ -364,7 +461,7 @@ function fuzzStep(op)
         modelUndo.length > 100 && modelUndo.shift();
         modelRedo = [];
         // a stroke may paint a cell or move an object and put it back, as a drag does, an entry that ends where it began
-        s1 === s0 && !['paint', 'move', 'paste', 'pasteObjects'].includes(op) &&
+        s1 === s0 && !['paint', 'move', 'paste', 'pasteObjects', 'tool'].includes(op) &&
             problems.push('an undo entry that changed nothing');
     }
     else if (s1 !== s0)
@@ -419,7 +516,8 @@ function changeFile(text, rand)
 
 const OPS = ['paint', 'paint', 'paint', 'cancel', 'fill', 'fill', 'clear', 'drag', 'drag', 'copy', 'cut', 'paste',
     'paste', 'place', 'place', 'move', 'move', 'delete', 'copyObjects', 'cutObjects', 'pasteObjects', 'property',
-    'undo', 'undo', 'undo', 'redo', 'redo', 'resize', 'revert', 'closeOpen', 'save'];
+    'undo', 'undo', 'undo', 'redo', 'redo', 'resize', 'revert', 'closeOpen', 'save', 'property', 'property',
+    'tool', 'tool'];
 
 async function runSeed(seed, opCount)
 {
@@ -452,6 +550,18 @@ async function runSeed(seed, opCount)
                 problems.push('the reload did not bring back the edits');
             if (pending)
             {
+                // edits tried while the autosave waits change nothing and make no undo entry
+                for (let k = rand() < .5 ? 4 : 0; k--;)
+                {
+                    const o = OPS[rand() * OPS.length | 0];
+                    if (o === 'save' || o === 'revert') continue;
+                    const snap = engine.run('fuzzSnap()'), s = engine.run(`fuzzStep('${o}')`);
+                    trail.push(`${i} ${o} while pending`);
+                    problems.push(...s.problems);
+                    engine.run('!!fuzzRecord().pending') || problems.push(o + ' ended the pending autosave');
+                    engine.run('fuzzSnap()') === snap || problems.push(o + ' changed the map while pending');
+                    engine.run('editorUndoList.length') && problems.push(o + ' made an undo entry while pending');
+                }
                 const op = rand() < .6 ? 'apply' : 'drop';
                 const step = engine.run(`fuzzStep('${op}')`);
                 trail.push(`${i} ${op}${step.pending ? ' (still pending)' : ''}`);
@@ -461,6 +571,16 @@ async function runSeed(seed, opCount)
                         engine.run('fuzzSnap()'));
                 if (op === 'apply' && step.pending)
                     engine.run(`fuzzStep('drop')`);
+                // an Apply is one undo: taken back, and done again
+                if (op === 'apply' && !step.pending && rand() < .5)
+                {
+                    for (const o of rand() < .5 ? ['undo'] : ['undo', 'redo', 'undo'])
+                    {
+                        const s = engine.run(`fuzzStep('${o}')`);
+                        trail.push(`${i} ${o} after apply`);
+                        problems.push(...s.problems);
+                    }
+                }
             }
             problems.length && failures.push({ seed, i, op: 'reload', problems, trail: trail.slice(-12) });
             continue;
@@ -488,6 +608,65 @@ async function runSeed(seed, opCount)
             problems.push(...engine.run('fuzzCheck()'));
             !wasPending && engine.run('fuzzSnap()') !== before && problems.push('the edits did not come back');
             problems.length && failures.push({ seed, i, op: 'switch', problems, trail: trail.slice(-12) });
+            continue;
+        }
+        if (r < .11)
+        {
+            // a resize taken straight back, sometimes done and taken back again, with an edit between
+            const seq = rand() < .5 ? ['resize', 'undo'] : ['resize', 'paint', 'undo', 'undo', 'redo', 'redo', 'undo'];
+            const problems = [];
+            for (const o of seq)
+            {
+                const s = engine.run(`fuzzStep('${o}')`);
+                trail.push(`${i} ${o} (seq)`);
+                problems.push(...s.problems);
+            }
+            problems.length && failures.push({ seed, i, op: 'resizeSeq', problems, trail: trail.slice(-12) });
+            continue;
+        }
+        if (r < .14)
+        {
+            // Save with an async onSave: kept by the game, or written to the file, with an edit made while it waits,
+            // or two saves queued with an edit between
+            const kind = ['kept', 'written', 'twice'][rand() * 3 | 0];
+            engine.run(`fuzzWritten = []; fuzzDownloads = [];
+                levelEditor.onSave = async (text)=> { await null; await null; return ${kind === 'kept'}; }`);
+            const problems = [];
+            const text0 = engine.run('editorMapJSON(fuzzRecord())');
+            const p0 = engine.run('editorSave(fuzzRecord())');
+            const editOp = ['paint', 'place', 'property', 'move'][rand() * 4 | 0];
+            problems.push(...engine.run(`fuzzStep('${editOp}')`).problems);
+            let text1, p1;
+            if (kind === 'twice')
+            {
+                text1 = engine.run('editorMapJSON(fuzzRecord())');
+                p1 = engine.run('editorSave(fuzzRecord())');
+            }
+            const r0 = await p0, r1 = p1 && await p1;
+            await new Promise((resolve)=> setTimeout(resolve, 0));
+            const written = engine.run('fuzzWritten.slice()'), downloads = engine.run('fuzzDownloads.length');
+            if (kind === 'kept')
+                r0 === 'kept' && !written.length || problems.push('kept save ' + r0 + ' wrote ' + written.length);
+            else
+            {
+                r0 === 'written' || problems.push('save ' + r0);
+                written[0] === text0 || problems.push('first save wrote another text');
+                if (kind === 'twice')
+                {
+                    r1 === 'written' || problems.push('second save ' + r1);
+                    written[1] === text1 || problems.push('second save wrote another text');
+                }
+                written.length === (kind === 'twice' ? 2 : 1) || problems.push('writes ' + written.length);
+                fileText = written[written.length - 1]; // the file the game loads now
+                // the file written is the baseline, Reset to file goes back to it
+                engine.run(`JSON.stringify(fuzzRecord().original) === JSON.stringify(editorTileLayerData(
+                    JSON.parse(${JSON.stringify(fileText)}).layers))`) || problems.push('baseline is not the file written');
+            }
+            downloads && problems.push('downloads ' + downloads);
+            engine.run('levelEditor.onSave = undefined');
+            trail.push(`${i} save ${kind} with ${editOp}`);
+            problems.push(...engine.run('fuzzCheck()'));
+            problems.length && failures.push({ seed, i, op: 'saveAsync', problems, trail: trail.slice(-12) });
             continue;
         }
         const op = OPS[rand() * OPS.length | 0];
