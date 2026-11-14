@@ -311,7 +311,7 @@ function render3DQuadAxes(center, right, up)
 function render3DSetObjectState(o)
 {
     const r = render3D;
-    const transparent = o?.transparent;
+    const transparent = o?.drawOwner ? render3DSetting(o, 'transparent') : o?.transparent;
     const p = o?.drawOwner ? render3DPartSettings(o) : o; // a part draws with its owner's settings
     const emissive = p?.emissive || 0;
     ASSERT(isNumber(emissive) && emissive >= 0, 'emissive must be a number, 0 or more', emissive);
@@ -1215,8 +1215,12 @@ class Render3DPlugin
             let x = 0, y = 0, z = 0;
             for (const p of points)
                 x += p.x, y += p.y, z += p.z;
+            // a single normal, uv or color is copied as every other queued draw copies its own, so a scratch value
+            // reused does not replay every strip with its last value; arrays are read as they are, see above
+            const n = isArray(normals) ? normals : normals?.copy(), u = isArray(uvs) ? uvs : uvs?.copy();
+            const c = isArray(colors) ? colors : colors?.copy();
             return this.queueTransparent(vec3(x, y, z).scale(1 / points.length),
-                ()=> this.drawStrip(points, normals, uvs, colors, tileInfo));
+                ()=> this.drawStrip(points, n, u, c, tileInfo));
         }
         ASSERT(isArray(points) && points.length > 2, 'strip needs at least 3 points');
         const n = points.length, count = render3DStripCount(n);
@@ -1295,7 +1299,7 @@ class Render3DPlugin
     {
         const opaque = [], transparent = [];
         for (const o of objects)
-            (o.transparent || render3DSetting(o, 'additive') ? transparent : opaque).push(o);
+            (render3DSetting(o, 'transparent') || render3DSetting(o, 'additive') ? transparent : opaque).push(o);
 
         isDefault && (this.skyBox && this.skyBox !== this.capturingCube || this.sky) && this.drawSky();
 
@@ -3215,7 +3219,7 @@ function render3DRenderShadowMap()
     {
         // see through objects cast only when textured, their alpha cuts the shadow out
         const casters = render3DLayerObjects(!!r.renderAfter2D).filter(o=>
-            render3DSetting(o, 'castShadow') && !render3DSetting(o, 'additive') && (!o.transparent || o.tileInfo));
+            render3DSetting(o, 'castShadow') && !render3DSetting(o, 'additive') && (!render3DSetting(o, 'transparent') || o.tileInfo));
         render3DDrawObjects(casters);
         r.onRenderOpaque?.();
         r.flush();
@@ -3281,7 +3285,7 @@ function render3DRenderDepth()
     try
     {
         const solids = render3DLayerObjects(!!r.renderAfter2D).filter(o=>
-            !render3DSetting(o, 'additive') && (!o.transparent || o.tileInfo));
+            !render3DSetting(o, 'additive') && (!render3DSetting(o, 'transparent') || o.tileInfo));
         render3DDrawObjects(solids);
         r.onRenderOpaque?.();
         r.flush();

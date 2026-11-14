@@ -686,8 +686,10 @@ class EngineObject
         // a place it snaps to is blocked when a one way tile blocks it judged from there or from where it was, so the
         // snap never leaves it a hair inside one, less than the one way margin, nor takes it through one whose margin
         // it rested in
+        const oneWay = tileCollisionLayers.some((layer)=> layer.oneWayTiles?.size); // only those judge by a place
         const snapBlocked = (pos)=>
         {
+            if (!oneWay) return tileCollisionTest(pos, this.size, this);
             const fromPos = tileCollisionFromPos;
             tileCollisionFromPos = pos;
             try { return tileCollisionTest(pos, this.size, this) || (tileCollisionFromPos = fromPos,

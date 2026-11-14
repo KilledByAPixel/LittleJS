@@ -428,17 +428,18 @@ class EngineObject3D extends EngineObject
     render3D()
     {
         // an opaque draw comes out solid however low its alpha is, so a fade with no flag looks like nothing happened
-        ASSERT(this.transparent || render3DSetting(this, 'additive') || this.color.a >= 1, // a part, its owner's
-            'an object that fades needs its transparent flag, an opaque draw ignores the color alpha', this.color);
+        const color = this.drawOwner ? render3DPartColor(this) : this.color; // a part, its owners' too
+        ASSERT(render3DSetting(this, 'transparent') || render3DSetting(this, 'additive') || color.a >= 1,
+            'an object that fades needs its transparent flag, an opaque draw ignores the color alpha', color);
         // the matrix the object keeps, rebuilt only when it moved, the same one for the shadow pass and the main pass
         const matrix = render3DObjectMatrix(this);
         if (this.mesh)
-            render3D.drawMesh(this.mesh, matrix, this.tileInfo, this.color);
+            render3D.drawMesh(this.mesh, matrix, this.tileInfo, color);
         else if (this.tileInfo)
         {
             // a sprite, at the world size the collect, pick and solid collision helpers measure it at
             const m = matrix.m, size = render3DWorldSize(this, m);
-            render3D.drawBillboard(vec3(m[12], m[13], m[14]), vec2(size.x, size.y), this.tileInfo, this.color,
+            render3D.drawBillboard(vec3(m[12], m[13], m[14]), vec2(size.x, size.y), this.tileInfo, color,
                 this.rotation3D.z, this.upright);
         }
     }
@@ -449,7 +450,7 @@ class EngineObject3D extends EngineObject
 const RENDER3D_PART_SETTINGS = {emissive: 0, additive: false, specular: 0, shininess: 16, reflectivity: 0,
     normalMap: undefined, normalScale: 1, emissiveMap: undefined, emissiveMapColor: WHITE, receiveShadow: true,
     castShadow: true, pixelated: false, shader: undefined, environment: undefined, renderAfter2D: undefined,
-    renderOrder: 0, roundLighting: false};
+    renderOrder: 0, roundLighting: false, transparent: false};
 
 // make a part draw with its owner's settings: it draws with the owner's where the owner set it away from the default,
 // and its own otherwise, so a model's unlit or rough part keeps what its file gave it; a link the renderer follows
@@ -469,6 +470,22 @@ function render3DSetting(o, name)
             return value;
     }
     return o[name];
+}
+
+// the color an object draws with: a part's own times its owners', so a hit flash or a fade set on a model tints and
+// fades every part; its own when no owner changed it, in a color kept for it otherwise, so nothing is made per draw
+const render3DPartColorScratch = /* @__PURE__ */ new Color;
+function render3DPartColor(o)
+{
+    let color = o.color;
+    for (let owner = o.drawOwner; owner; owner = owner.drawOwner)
+    {
+        const c = owner.color;
+        if (!c || c.r === 1 && c.g === 1 && c.b === 1 && c.a === 1) continue;
+        color === render3DPartColorScratch || (color = render3DPartColorScratch.set(color.r, color.g, color.b, color.a));
+        color.r *= c.r, color.g *= c.g, color.b *= c.b, color.a *= c.a;
+    }
+    return color;
 }
 
 // a part's draw settings gathered for the draw state, in one object kept for it, so nothing is made per draw
@@ -1716,6 +1733,11 @@ class Light3D extends EngineObject3D
         old && old.destroy();
         if (flare)
         {
+            // handed over from another light: that one has it no more, and it is this one's child, not that one's
+            const was = flare.light;
+            if (was && was !== this && was.flareObject === flare)
+                was.flareObject = undefined;
+            was && was !== this && flare.parent === was && was.removeChild(flare);
             flare.light = this;
             flare.parent || this.addChild(flare);
         }

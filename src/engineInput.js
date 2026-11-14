@@ -677,8 +677,9 @@ function inputInit()
             // a trackpad pinch, or Ctrl with the wheel: the game's pinch while touchPinchWheel is on, as two fingers
             // on a screen are, by how far it moved, 1 for every 50 pixels; off, it is the browser's zoom
             if (!touchPinchWheel) return;
-            // a notch of a mouse wheel held with Ctrl is at most one, as a plain notch is
-            const delta = clamp(e.deltaY * (e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? 400 : 1) / 50, -1, 1);
+            // a notch of a mouse wheel held with Ctrl is one, as a plain notch is: in lines or pages it is a wheel,
+            // since a trackpad sends pixels, and in pixels at most one
+            const delta = e.deltaMode ? sign(e.deltaY) : clamp(e.deltaY / 50, -1, 1);
             touchPinch += delta, mouseWheel += delta;
         }
         else
@@ -1406,10 +1407,10 @@ function touchGamepadRender()
 {
     if (!touchGamepadOverlay || headlessMode) return;
 
-    // hide and bail if disabled at runtime (overlay stays in the DOM for reuse)
+    // hide and bail if disabled at runtime or under an open level editor (overlay stays in the DOM for reuse)
     // display:none also takes the input zones out of hit-testing so touches are
-    // not silently captured away from the game while disabled
-    if (!touchGamepadEnable || !isTouchDevice)
+    // not silently captured away from the game or the editor
+    if (!touchGamepadEnable || !isTouchDevice || levelEditor.isOpen)
     {
         if (touchGamepadOverlay.style.display !== 'none')
         {

@@ -564,8 +564,19 @@ class SpriteAnimator
     set(name, onEnd)
     {
         ASSERT(this.clips[name], 'no clip named ' + name);
-        if (name == this.name && !this.clip.isDone)
-            return this;
+        if (name == this.name)
+        {
+            // showing and not ended, it plays on, with the onEnd given now when there is one
+            const clip = this.clip;
+            if (!clip.isDone)
+            {
+                onEnd && (clip.onEnd = onEnd);
+                return this;
+            }
+            // it just ended and its onEnd, called by that check, switched to another clip, which stands
+            if (name != this.name)
+                return this;
+        }
         this.name = name;
         this.clip.restart();
         this.clip.onEnd = onEnd;

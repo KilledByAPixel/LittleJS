@@ -1750,7 +1750,8 @@ class UISlider extends UIObject
             return; // destroyed by its onUpdate, it no longer follows the mouse or calls onChange
 
         const oldValue = this.value;
-        if (wasActive || this.isActiveObject())
+        // not in the frame a second finger turns the press into a pinch, whose mouse is between the fingers
+        if ((wasActive || this.isActiveObject()) && !inputPinchReleased)
         {
             // handle horizontal or vertical slider
             const isHorizontal = this.size.x > this.size.y;

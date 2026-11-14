@@ -82,12 +82,26 @@ function editor3DWithView(fn)
     const r = render3D, camera = r.camera;
     r.camera = editor3DCamera;
     r.updateMatrices();
+    ++editor3DViewDepth;
     try { return fn(); }
     finally
     {
+        --editor3DViewDepth;
         r.camera = camera;
         r.updateMatrices();
     }
+}
+
+// how deep in editor3DWithView, and what leaves the editor from inside it, run once the game has its camera back so
+// the game's onPlayFrom, onClose and onRestart see and move its own camera
+let editor3DViewDepth = 0, editor3DAfterView;
+
+// run fn now, or once the view is handed back when inside it; true when it was put off
+function editor3DOutsideView(fn)
+{
+    if (!editor3DViewDepth) return false;
+    editor3DAfterView = fn;
+    return true;
 }
 
 // called by the 3D pass before it works out its matrices: the frame is drawn with the editor's camera
@@ -446,12 +460,13 @@ function editor3DBoxOffset(object)
     return box ? box.pos.subtract(editor3DPos(object)) : vec3();
 }
 
-// every object gets an id of its own, a whole number from 0 below 2^31: one without, with one already used, or with
-// one so big that one more is the same number, as a hand-written 2^53 is, gets a new one
+// every object gets an id of its own, a whole number: one without, with one already used, or with one so big that
+// the ids after it are not exact, as a hand-written 2^53 is, gets a new one; the rest, negatives too, are kept, so a
+// game's links by id hold after a Save, and the level loads the same in a release build, which checks none
 function editor3DFixIds(objects)
 {
     const isObject = (o)=> !!o && typeof o === 'object', seen = new Set;
-    const isId = (id)=> Number.isInteger(id) && id >= 0 && id < 2 ** 31;
+    const isId = (id)=> Number.isInteger(id) && abs(id) <= 2 ** 52;
     let next = 1;
     for (const o of objects)
         isObject(o) && isId(o.id) && (next = max(next, o.id + 1));
@@ -1780,6 +1795,7 @@ function editor3DOpen()
 // close the editor and end its session, Escape opens the debug overlay again
 function editor3DClose()
 {
+    if (editor3DOutsideView(editor3DClose)) return;
     editor3DSession = false;
     editor3DSetOpen(false);
 }
@@ -1787,6 +1803,7 @@ function editor3DClose()
 // switch to playing, from a position when Play from mouse is on
 function editor3DPlay(pos)
 {
+    if (editor3DOutsideView(()=> editor3DPlay(pos))) return;
     editor3DSetOpen(false);
     editor3DPlayFromMouse && pos && editorHas('onPlayFrom') && levelEditor.onPlayFrom(pos.copy());
 }
@@ -1794,7 +1811,7 @@ function editor3DPlay(pos)
 // rebuild the level through the game's hook and play it
 function editor3DRestart()
 {
-    if (!editorHas('onRestart')) return;
+    if (!editorHas('onRestart') || editor3DOutsideView(editor3DRestart)) return;
     editor3DSetOpen(false);
     levelEditor.onRestart();
     debugKey || editor3DSetOpen(true); // with no debug key nothing would come back, so it stays in the editor
@@ -1863,10 +1880,16 @@ function editor3DToolUpdate(ray, idle, shift, ctrl)
     const picked = [editor3DTool, editor3DBrush];
     if (levelEditor.tool !== editor3DToolName)
     {
-        // switched by the game while a press is held: the held tool, or the editor's own drag, ends as it is, one
-        // undo, and the new tool waits for a press of its own
-        if (editor3DToolHeld || editor3DDrag)
-            editor3DToolHeld = false, editor3DDrag = undefined, editor3DStrokeEnd();
+        // switched by the game while a press is held: the held tool is released, it or the editor's own drag ends as
+        // it is, one undo, and the new tool waits for a press of its own
+        const held = editor3DToolHeld, oldTool = levelEditor.tools[editor3DToolName];
+        if (held || editor3DDrag)
+        {
+            editor3DToolHeld = false, editor3DDrag = undefined;
+            editor3DToolName = levelEditor.tool, editor3DToolPicked = picked;
+            try { held && oldTool?.onRelease?.(editor3DToolAt(ray, shift, ctrl)); }
+            finally { editor3DStrokeEnd(); }
+        }
         editor3DToolName = levelEditor.tool, editor3DToolPicked = picked; // turned on, or off, by its key or button
     }
     else if (picked.some((value, i)=> value !== editor3DToolPicked[i]))
@@ -3745,7 +3768,14 @@ function editor3DUpdate()
     if (editor3DBrush && (!level3DTypes.has(editor3DBrush) || editor3DPrefabSelf(editor3DBrush)))
         editor3DBrush = undefined;
     if (editor3DIsOpen)
-        return inputCaptureRead(()=> editor3DWithView(()=> editor3DEditorUpdate(seconds)));
+    {
+        editor3DAfterView = undefined;
+        inputCaptureRead(()=> editor3DWithView(()=> editor3DEditorUpdate(seconds)));
+        const after = editor3DAfterView;
+        editor3DAfterView = undefined;
+        after?.();
+        return;
+    }
 
     // playing in an editing session, Escape, the debug key, goes back to the editor; taken, so the debug overlay
     // waits till the session ends; a captured mouse the browser let go of is Escape too, Chrome keeps that key

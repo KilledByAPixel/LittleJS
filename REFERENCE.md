@@ -2013,7 +2013,8 @@ model.mesh, model.textureInfo        // everything as one Mesh tinted by its mat
                                      // several textures or unlit parts, draws right through createObject
 model.createObject(pos3D)            // a GLTFObject, an EngineObject3D with a child per part, each with its own
                                      // texture and blending, so windows and other see through parts show, and
-                                     // emissive 1 for an unlit one; move and turn the root and the parts follow
+                                     // emissive 1 for an unlit one; move and turn the root and the parts follow;
+                                     // its color multiplies the parts' and its transparent fades them, a hit flash
 model.animations                     // one GLTFAnimation each: name, duration in seconds, and the channels that
                                      // move, turn and scale nodes; model.getAnimation(nameOrNumber) finds one
 object.play(animation=0, loop=true, speed=1, blend=0) // play one on a GLTFObject by name or number, its parts move

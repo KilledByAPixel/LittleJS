@@ -2887,8 +2887,8 @@ async function box2dInit()
     // add the box2d plugin to the engine
     function box2dUpdate()
     {
-        // frozen like the engine objects while paused or time is stopped
-        if (paused || !timeScale)
+        // frozen like the engine objects while paused, time is stopped or a level editor is open
+        if (paused || engineFrozenTick)
         {
             // what was destroyed while frozen leaves the list, the step does it otherwise
             box2d.objects = box2d.objects.filter(o=>!o.destroyed);

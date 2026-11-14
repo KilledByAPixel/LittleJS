@@ -807,15 +807,16 @@ function objectPropertyAssign(target, key, value, name)
         target[key] = value;
 }
 
-// the object ids and property names whose kind warning was said, see objectLayersProperties
-const objectLayersKindSaid = /* @__PURE__ */ new Set;
+// for each map, the object ids and property names whose kind warning was said, see objectLayersProperties; the
+// editor makes an object again from a copy as it is dragged, so it is the map's ids, not the objects
+const objectLayersKindSaid = /* @__PURE__ */ new WeakMap;
 
 // a type's default for a property, its own, not one every object has, like constructor or toString
 const objectPropertyDefault = (defaults, key)=>
     Object.prototype.hasOwnProperty.call(defaults, key) ? defaults[key] : undefined;
 
 // the defaults of an object's type, each copied for it, then its properties in Tiled over them
-function objectLayersProperties(type, object)
+function objectLayersProperties(type, object, tileMapData)
 {
     const properties = {}, set = (key, value)=> objectPropertySet(properties, key, value);
     for (const [key, value] of Object.entries(type.defaults))
@@ -850,8 +851,10 @@ function objectLayersProperties(type, object)
             const kind = (v)=> isArray(v) ? 'array' : v === null ? 'null' : typeof v;
             if (fallback !== undefined && kind(fallback) !== kind(value))
             {
-                const said = object.id + ' ' + name; // once for each, the editor makes an object again as it is dragged
-                debug && !objectLayersKindSaid.has(said) && objectLayersKindSaid.add(said) && console.warn(
+                const said = object.id + ' ' + name, map = tileMapData ?? objectLayersKindSaid; // once for each
+                objectLayersKindSaid.has(map) || objectLayersKindSaid.set(map, new Set);
+                const saidSet = objectLayersKindSaid.get(map);
+                debug && !saidSet.has(said) && saidSet.add(said) && console.warn(
                     `objectLayersLoad: object ${object.id}'s ${name} is a ${kind(value)}, its ` +
                     `default a ${kind(fallback)}, the default is kept`);
                 continue;
@@ -879,7 +882,7 @@ function objectLayersMake(tileMapData, object)
     const {height=0, tilewidth=1, tileheight=1} = tileMapData;
     const pos = vec2(object.x / tilewidth, height - object.y / tileheight);
     // its properties read first, so a map that can not be read stops before anything is made for it
-    const properties = objectLayersProperties(type, object);
+    const properties = objectLayersProperties(type, object, tileMapData);
     const {make} = type, result = make.prototype ? new make(pos) : make(pos);
     if (!result || typeof result !== 'object') return;
     for (const [key, value] of Object.entries(properties))

@@ -176,8 +176,8 @@ looks at, so the 80 stars made in `gameInit` drift on through every
 switch. A star moves .02 units left each update and `mod` wraps it
 around the 40 unit width.
 
-`Ball` starts above the view with a speed downward, and
-`super.update()` moves it. It is caught when it is level with the
+`Ball` starts above the view with a speed downward, and the
+engine's physics moves it each update. It is caught when it is level with the
 paddle and within 3 units of its middle, and lost below the view. The
 paddle is not an object: the scene keeps its x and draws a rectangle.
 

@@ -31,6 +31,8 @@ What changed in each release, newest first. Releases before 1.20.0 are on the
 - `loadAtlas` keeps trimmed frames whose untrimmed size is bigger than the image, and packs at most 16 times the image's area, or 8 sheets, a load
 - A trackpad pinch, a wheel with Ctrl, is the game's pinch, `touchPinch` and `mouseWheel`, while `touchPinchWheel` is on, and the browser's zoom while it is off, where it reached neither
 - With a level editor open the game's UI keeps updating and drawing, its `onUpdate` and videos too, and takes no input; `uiSystem.isMouseOverUI()` is false
+- A `GLTFObject`'s `color` multiplies every part's and its `transparent` makes them see through, so a hit flash or a fade is set on the model
+- The 2D level editor zooms with a two finger pinch on a touch screen
 
 ### Breaking Changes
 - 3D: MeshCollider and HeightMap follow one slope rule. A face or ground steeper than both the object's `groundAngle` and 45 degrees stops a move into it, when it rises past the body's step, so a curb lower than the step is still walked over; ground steeper than `groundAngle` is not ground, so it is not stood or jumped on, and the body slides down it. Before, a HeightMap let a body walk up any slope and MeshCollider faces up to about 80 degrees were climbed. A game whose levels have steep ramps meant to be walked raises the walker's `groundAngle`, up to just under PI/2
@@ -124,6 +126,14 @@ What changed in each release, newest first. Releases before 1.20.0 are on the
 - 2D editor: a paint while an async `onRestart` makes the resized layers lands in its cell; Reset to file leaves waiting autosaved edits waiting; a layer is not picked by a name several share; it opens on a visible layer; a property kind warning is said once; a game tool switched mid press ends the first one's stroke, in both editors
 - 3D editor: an object id too big to add one to is given a new one
 - `loadAtlas` counts the sheets it makes, keeps a trimmed frame inside its own cell, rounds untrimmed sizes to whole pixels, leaves out an entry with no frame or name instead of loading nothing, and warns of an Aseprite export with split layers; 3D debug draws no longer take away the fog of the see-through draw before them; an `InstancedMesh3D` with a negative count draws nothing
+- Box2D holds still under an open level editor, as every other object does, when the game unpauses itself; the touch gamepad hides under an open editor (gaps in the last fixes)
+- An Aseprite sheet exported with Inner Padding loads its sprites again, from inside the padding, and a frame a pixel over its size loads; the split layers warning is no longer given for a merged export that lists its layers (a regression of the last fixes)
+- 2D editor: an edit while an async `onRestart` makes the layers of a shrunk map is refused, not put in the wrong cell (the last fix was for a grown map); a tool switched in the frame its press is let go is released and its stroke ends; it opens on a layer shown, not one hidden by its group; a property kind warning is said again for another level; Reset to file with autosaved edits waiting flashes the note saying why
+- 3D editor: Escape and 0 close the editor before the game's `onPlayFrom` and `onClose`, so they move the game's camera, not the editor's; a level's own ids, negatives and big ones too, are kept, so links by id hold after a Save
+- `SpriteAnimator.set` called each update no longer undoes a switch the ended clip's onEnd made, and takes a new onEnd for the clip showing
+- A UI slider held when a second finger lands stays where it was; a Ctrl wheel notch in lines counts as one
+- A lens flare handed to another light is that light's child, and destroying the first light leaves it; a single color, normal or uv given to `drawStrip` in the transparent stage is copied
+- 3D: a body walking into a HeightMap cliff at an angle, into its corner, slowly or fast, is stopped at its foot, its side at the cliff as a MeshCollider stops it, where it could pop up to two units in a frame or walk up a sheer face in steps; a slide never carries it onto a ledge
 
 ## 1.30.1 - 2026-11-12
 

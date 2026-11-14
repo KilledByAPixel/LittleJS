@@ -668,6 +668,33 @@ class HeightMap extends EngineObject3D
         return {distance, normal: this.getNormal(from.x + (to.x - from.x) * distance, from.z + (to.z - from.z) * distance)};
     }
 
+    /** Where a move across the map first rises past a height, when the ground there is steeper than a slope: a quarter
+     *  of a cell at a time, the slope's way across, toward higher ground, and how far along the move it is
+     *  @param {Vector3} from
+     *  @param {Vector3} to
+     *  @param {number} step - The height it may rise to
+     *  @param {number} steep - The least normal y that is not a wall
+     *  @param {number} ahead - How far past the end it looks, so a slow walk up a cliff, in rises below the step
+     *  each frame, is a walk into it
+     *  @return {{nx: number, nz: number, distance: number}|undefined}
+     *  @ignore */
+    wallAhead(from, to, step, steep, ahead)
+    {
+        const dx = to.x - from.x, dz = to.z - from.z, length = hypot(dx, dz);
+        if (!length) return;
+        const cell = min(this.mapSize.x / (this.columns - 1), this.mapSize.y / (this.rows - 1));
+        const reach = length + ahead, count = min(ceil(reach / cell * 4), 1e3);
+        for (let i = 1; i <= count; ++i)
+        {
+            const distance = reach * i / count, x = from.x + dx * distance / length, z = from.z + dz * distance / length;
+            if (this.getHeight(x, z) > step)
+            {
+                const n = this.getNormal(x, z), l = hypot(n.x, n.z);
+                return n.y < steep && l ? {nx: n.x / l, nz: n.z / l, distance} : undefined;
+            }
+        }
+    }
+
     /** Keep an object above the ground, called by the engine for each object with collideLevel
      *  @param {EngineObject3D} o
      *  @param {Vector3} oldPos - Where it was before it moved
@@ -681,18 +708,40 @@ class HeightMap extends EngineObject3D
         let ground = this.getHeight(p.x, p.z);
         // the wall rule, as a MeshCollider's: ground steeper than its groundAngle and than about 45 degrees that it
         // would rise onto, past its step, the quarter of its height the sweep below lets it take, is a wall to walk
-        // into: the part of the move and the speed up its slope are taken back, so it slides along the foot of a
-        // cliff and does not walk up it, and a curb lower than its step is walked over
-        if (oldPos && ground > oldPos.y - half + 1e-6)
+        // into: it goes on till its side is at the wall, and the rest of the move and the speed into it are taken
+        // back, so it slides along the foot of a cliff and does not walk up it, and a curb lower than its step is
+        // walked over; read where the move first rises past the step, looking that quarter of its height ahead, as
+        // a MeshCollider's step ray is, since at a corner or a move at an angle the slope where it ends faces across
+        // the move, or is the flat top, and a slow walk rises less than its step each frame; one that slid along it
+        // and still rises past the step, into an inside corner, goes only as far as its side reaches the wall
+        if (oldPos)
         {
-            const n = this.getNormal(p.x, p.z);
-            const l = hypot(n.x, n.z), nx = n.x / l, nz = n.z / l;
-            if (n.y < min(cos(o.groundAngle), .7) &&
-                this.getHeight(p.x - nx * half / 2, p.z - nz * half / 2) > oldPos.y - half / 2)
+            const step = max(oldPos.y - half, this.getHeight(oldPos.x, oldPos.z)) + half / 2;
+            const side = min(o.size3D.x * abs(o.scale3D.x), o.size3D.z * abs(o.scale3D.z), half) / 2;
+            const steep = min(cos(o.groundAngle), .7), wall = this.wallAhead(oldPos, p, step, steep, half / 2);
+            // the part of the move from oldPos to p before its side meets a wall found along it, none when that is up
+            // the steep slope itself, a ramp, which it would creep up a little each frame
+            const oldFoot = oldPos.y - half, upTo = (hit)=>
             {
-                const into = (p.x - oldPos.x) * nx + (p.z - oldPos.z) * nz;
+                const dx = p.x - oldPos.x, dz = p.z - oldPos.z, f = clamp((hit.distance - side) / hypot(dx, dz), 0, 1);
+                const x = oldPos.x + dx * f, z = oldPos.z + dz * f;
+                return f && this.getHeight(x, z) > oldFoot + 1e-6 && this.getNormal(x, z).y < steep ? 0 : f;
+            };
+            if (wall)
+            {
+                const {nx, nz} = wall, f = upTo(wall), dx = p.x - oldPos.x, dz = p.z - oldPos.z;
+                let rx = dx * (1 - f), rz = dz * (1 - f);
+                const into = rx * nx + rz * nz;
                 if (into < 0)
-                    p.x -= nx * into, p.z -= nz * into, ground = this.getHeight(p.x, p.z);
+                    rx -= nx * into, rz -= nz * into;
+                p.x = oldPos.x + dx * f + rx, p.z = oldPos.z + dz * f + rz;
+                const corner = this.wallAhead(oldPos, p, step, steep, half / 2);
+                if (corner)
+                {
+                    const g = upTo(corner);
+                    p.x = oldPos.x + (p.x - oldPos.x) * g, p.z = oldPos.z + (p.z - oldPos.z) * g;
+                }
+                ground = this.getHeight(p.x, p.z);
                 const v = o.velocity3D, vInto = v.x * nx + v.z * nz;
                 if (vInto < 0)
                     v.x -= nx * vInto, v.z -= nz * vInto;
@@ -731,11 +780,16 @@ class HeightMap extends EngineObject3D
         }
         else
         {
-            const depth = (ground + half - p.y) * n.y, into = v.dot(n);
+            const depth = (ground + half - p.y) * n.y, into = v.dot(n), x = p.x, z = p.z;
             p.set(p.x + n.x * depth, p.y + n.y * depth, p.z + n.z * depth);
             // never under the ground where the push left it, as a pit or a post's normal, read across its cells, can
-            // push it sideways over higher ground
-            p.y = max(p.y, this.getHeight(p.x, p.z) + half);
+            // push it sideways over higher ground; a push onto ground higher than its step, a ledge's top, is not
+            // made, it is lifted where it is, or the lift would carry it up the ledge
+            const pushedGround = this.getHeight(p.x, p.z);
+            if (pushedGround > ground + half / 2)
+                p.x = x, p.z = z, p.y = max(p.y, ground + half);
+            else
+                p.y = max(p.y, pushedGround + half);
             if (into < 0)
                 v.set(v.x - n.x * into, v.y - n.y * into, v.z - n.z * into);
         }
@@ -2721,7 +2775,7 @@ class LensFlare3D extends EngineObject3D
         if (!source) return true;
         const ray = new Ray3D(render3D.camera.pos, source.direction), reach = source.distance;
         const blockers = engineObjects.filter((o)=> o !== this && o instanceof EngineObject3D && !o.destroyed &&
-            !o.transparent && !render3DSetting(o, 'additive'));
+            !render3DSetting(o, 'transparent') && !render3DSetting(o, 'additive'));
         // a voxel map says block by block what is see through: glass, water and leaves let the sun by, and the
         // ray goes on to the blocks behind them
         const maps = /** @type {Array<VoxelMap>} */ (typeof VoxelMap == 'undefined' ? [] :

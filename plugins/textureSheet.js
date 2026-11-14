@@ -537,12 +537,20 @@ function parseAtlas(data)
     {
         if (!f || typeof f.frame != 'object' || !f.frame || (typeof name != 'string' && typeof name != 'number'))
             return ++bad, undefined;
+        // a frame rect bigger than its sprite: Aseprite's inner padding puts a border inside the rect on each side,
+        // so the sprite is the middle of it, and one a pixel over, a scaled export's rounding, is the sprite's size
+        const sw = f.spriteSourceSize?.w ?? f.frame.w, sh = f.spriteSourceSize?.h ?? f.frame.h;
+        const size = vec2(min(f.frame.w, sw), min(f.frame.h, sh));
+        const inset = (d)=> d >= 2 ? floor(d / 2) : 0, ix = inset(f.frame.w - size.x), iy = inset(f.frame.h - size.y);
+        const offset = vec2(f.spriteSourceSize?.x ?? 0, f.spriteSourceSize?.y ?? 0);
+        const sourceSize = vec2(ceil(f.sourceSize?.w ?? f.frame.w), ceil(f.sourceSize?.h ?? f.frame.h));
+        // and a trimmed part placed a pixel over its untrimmed size, the same rounding, loses that pixel
+        const over = (o, s, source)=> o + s - source > 0 && o + s - source <= 1 ? source - o : s;
+        size.x = over(offset.x, size.x, sourceSize.x), size.y = over(offset.y, size.y, sourceSize.y);
         return {
             name: String(name).replace(/\.[^.\\/]+$/, ''), // strip file extension
-            pos:        vec2(f.frame.x, f.frame.y),
-            size:       vec2(f.frame.w, f.frame.h),
-            offset:     vec2(f.spriteSourceSize?.x ?? 0, f.spriteSourceSize?.y ?? 0),
-            sourceSize: vec2(ceil(f.sourceSize?.w ?? f.frame.w), ceil(f.sourceSize?.h ?? f.frame.h)),
+            pos:        vec2(f.frame.x + (f.rotated ? iy : ix), f.frame.y + (f.rotated ? ix : iy)), // turned in the image
+            size, offset, sourceSize,
             rotated:    !!f.rotated,
         };
     });
@@ -573,10 +581,12 @@ function parseAtlas(data)
         }
         frames.forEach((f, i)=> f && !tagged.has(i) && groups.push({name: f.name, frames: [f]}));
         // a tag numbers frames, and Aseprite exported with split layers has an entry for each layer of each frame,
-        // so its tags would take the wrong entries
-        const layers = data.meta?.layers?.length || 0, last = max(...tags.map((tag)=> floor(tag.to) || 0));
-        layers > 1 && frames.length >= (last + 1) * layers && console.warn('loadAtlas: the atlas looks exported ' +
-            'with split layers, which its frame tags do not number; export it with the layers merged');
+        // so its tags would take the wrong entries; those entries are named with their layer in brackets, as
+        // "hero (body) 0.aseprite", while a merged export lists its layers too but names no entry by them
+        const layers = (isArray(data.meta?.layers) ? data.meta.layers : []).map((layer)=> '(' + layer?.name + ')');
+        layers.length > 1 && frames.some((f)=> f && layers.some((layer)=> f.name.includes(layer))) &&
+            console.warn('loadAtlas: the atlas looks exported with split layers, which its frame tags do not ' +
+            'number; export it with the layers merged');
         return parseAtlasNamesCheck(groups);
     }
 
