@@ -225,6 +225,10 @@ const checkCode = `(function()
                 problems.push('held terrain destroyed for one of the same shape');
             if (globalThis.heldV && globalThis.heldV.destroyed && V && V !== globalThis.heldV && shapeV(V) === globalThis.heldShapeV)
                 problems.push('held voxels destroyed for one of the same shape');
+            for (const [h, cur, name] of [[globalThis.heldT, T, 'terrain'], [globalThis.heldV, V, 'voxels']])
+                if (h && !h.destroyed && cur && cur !== h && (editor3DMapsRemoved.get(name) ?? []).includes(h) &&
+                    (name === 'terrain' ? shapeT(h) === shapeT(cur) : shapeV(h) === shapeV(cur)))
+                    problems.push('held ' + name + ' kept and fits, but another is live');
             if (T) globalThis.heldT = T, globalThis.heldShapeT = shapeT(T);
             if (V) globalThis.heldV = V, globalThis.heldShapeV = shapeV(V);
         }
@@ -360,6 +364,16 @@ for (let seed = firstSeed; seed < firstSeed + seeds; ++seed)
             // Reset to file, which applies the whole scene again, and the editor closed and opened, from full pass 10
             revert: 'while (editor3DPrefabBack()); editor3DRevert()',
             closeOpen: 'editor3DStrokeEnd(); editor3DSetOpen(false); editor3DSetOpen(true)',
+
+            restartKey: `while (editor3DPrefabBack()); levelEditor.onRestart = ()=> { engineObjectsDestroy(); level3DLoad(level); };
+                editor3DRestart(); globalThis.heldT = globalThis.heldV = undefined; editor3DSetOpen(true)`,
+            restartNoKey: `while (editor3DPrefabBack()); setDebugKey(''); levelEditor.onRestart = ()=> { engineObjectsDestroy(); level3DLoad(level); };
+                editor3DRestart(); globalThis.heldT = globalThis.heldV = undefined;
+                { const open = editor3DIsOpen; setDebugKey('Escape'); if (!open) throw new Error('no debug key restart closed the editor'); }`,
+            playFrames: `editor3DStrokeEnd(); editor3DSetOpen(false); engineStep(${1 + (random() * 4 | 0)}); editor3DSetOpen(true)`,
+            resizeUndo: `editor3DVoxelResize(vec3(${pick([3, 6, 9])}, ${pick([2, 3])}, ${pick([4, 6])})) && (editor3DUndo(), ${random() < .5 ? 'editor3DUndo(true)' : '0'})`,
+            resizeBurst: `for (const s of [[3,2,3],[7,3,5],[4,4,4],[9,2,9],[5,3,6],[6,3,4]].slice(0, ${2 + (random() * 2 | 0)})) editor3DVoxelResize(vec3(...s)); ${random() < .7 ? 'for (let i = 6; i--;) editor3DUndo()' : ''}`,
+            terrainShape: `editor3DTerrainRemove(); editor3DTerrainAdd(vec2(${pick([8, 16, 24])}), ${pick([2, 4, 8])}, ${pick([2, 4])}); ${random() < .6 ? 'editor3DUndo(); editor3DUndo()' : ''}`,
         };
         // GAME_SCENE=1: the game sets its own fog color and sun in code before loading the level again (finding G1)
         ops.gameSceneReload = `while (editor3DPrefabBack()); render3D.fogColor = hsl(${num(0, 1, 2)}, 1, .5);
@@ -376,7 +390,7 @@ for (let seed = firstSeed; seed < firstSeed + seeds; ++seed)
             `render3D.fogColor = hsl(${num(0, 1, 2)}, 1, .5); render3D.sunDirection = vec3(${num(-1, 1)}, 1, 0);`}
             gameFog = render3D.fogColor.toString(); gameSun = render3D.sunDirection.copy();
             ${ops.scene}; editor3DSetPart('scene', editor3DLevelPart('scene'))`;
-        const names = Object.keys(ops), weights = {back: depth ? 3 : 0, enter: 2, reload: 1, revert: 1, closeOpen: 1,
+        const names = Object.keys(ops), weights = {restartKey: 1, restartNoKey: 1, playFrames: 2, back: depth ? 3 : 0, enter: 2, reload: 1, revert: 1, closeOpen: 1,
             gameSceneReload: gameScene ? 2 : 0, gameMid: MID ? 2 : 0, gameMidScene: MID ? 2 : 0, scene: CUBE ? 4 : 2};
         const bag = names.flatMap((n)=> Array(weights[n] ?? 2).fill(n));
         const op = pick(bag);
