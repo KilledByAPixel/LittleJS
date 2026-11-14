@@ -580,11 +580,15 @@ test('the wheel zooms by how far it moved and toward the mouse, and a pinch zoom
     assert.ok(small > 100 && big / small > small / 100, 'a bigger wheel move zooms more');
     const [scaled, drift] = wheel(100);
     assert.ok(scaled < big && drift < 1e-9, 'the point under the mouse stays put');
-    // a trackpad pinch, a wheel with Ctrl, is the engine's touchPinch while touchPinchWheel is on, which the update
-    // zooms by, as it does a pinch on a touch screen, so the wheel handler leaves it
-    assert.equal(wheel(-10, true)[0], scaled, 'the handler leaves a pinch to the update');
-    const pinched = run('touchPinch = -.2; editorUpdate(); touchPinch = 0; editorCameraScale');
-    assert.ok(pinched > scaled, 'a pinch zooms in');
+    // a trackpad pinch, a wheel with Ctrl, the handler zooms by; a touch screen's pinch, the part of touchPinch that
+    // no wheel made, the update zooms by
+    const [pinched] = wheel(-10, true);
+    assert.ok(pinched > scaled, 'a trackpad pinch zooms in');
+    const touched = run('touchPinch = -1; inputWheelPinch = 0; editorUpdate(); touchPinch = 0; editorCameraScale');
+    assert.ok(touched > pinched, 'a touch pinch zooms in');
+    const wheelOnly = run(`touchPinch = inputWheelPinch = -1; editorUpdate();
+        touchPinch = inputWheelPinch = 0; editorCameraScale`);
+    assert.equal(wheelOnly, touched, 'the part a wheel made is not zoomed twice');
 });
 
 test('1 to 9 pick layers from the back, the key is taken so debugKeysAlways leaves the debug views, and a drag '
