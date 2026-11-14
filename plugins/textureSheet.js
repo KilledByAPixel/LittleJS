@@ -101,7 +101,8 @@ class TextureSheet
         const cellWidth = frameSize.x + padding*2;
         const cellHeight = frameSize.y + padding*2;
         const maxColumns = this.size / cellWidth | 0;
-        ASSERT(maxColumns > 0, 'frame is too wide to fit on a texture sheet');
+        if (maxColumns < 1)
+            return undefined; // a frame wider than a sheet fits on none, the caller says so and goes on
 
         // keep the layout of the source image, but narrow it if a row is too wide
         // frames wrap down to the next row, which TileInfo.frame handles via columns
@@ -351,8 +352,8 @@ function loadTiles(sources, tileSize=tileDefaultSize, padding=textureSheetPaddin
  *    whichever way the tag plays, which parseAtlas gives as the group's direction
  *  - Trimmed frames are restored to their full source size when packed
  *  - Rotated frames are rotated back upright when packed
- *  - A frame outside the image is left out, and one load packs at most 4 times the image's area, or one sheet's,
- *    of untrimmed frames, the rest left out with a warning
+ *  - A frame outside the image or with no size is left out, and one load packs at most 16 times the image's area,
+ *    or 8 sheets', of untrimmed frames, the rest left out with a warning
  *  - The same atlas loaded again by its paths, with the same padding, gives back what the first load did, packed
  *    once, unless that load failed
  *  @param {string} imageSrc - Atlas image path
@@ -400,12 +401,14 @@ function loadAtlas(imageSrc, jsonSrc, padding=textureSheetPadding)
         await imagePromise;
         if (image.width && data)
         {
-            // a frame's rect lies in the image, turned when it is stored turned; its untrimmed size may be bigger
-            // than the image, a glow trimmed down, so it is not bound by the image but the cells one load reserves
-            // are, by area, so a small json can not ask for a thousand sheets of empty cells
+            // a frame's rect lies in the image, turned when it is stored turned, and its untrimmed size is a size;
+            // that may be bigger than the image, a glow trimmed down, so it is not bound by the image, but the cells
+            // one load packs are, by area, well past any real atlas, 16 times the image's or 8 sheets', so a small
+            // json can not ask for a thousand sheets of empty cells
             const w = image.width, h = image.height;
-            let budget = max(4 * w * h, textureSheetSize ** 2);
-            const inImage = (f)=> f.pos.x >= 0 && f.pos.y >= 0 &&
+            let budget = max(16 * w * h, 8 * textureSheetSize ** 2);
+            const isSize = (n)=> Number.isFinite(n) && n > 0;
+            const inImage = (f)=> f.pos.x >= 0 && f.pos.y >= 0 && isSize(f.sourceSize.x) && isSize(f.sourceSize.y) &&
                 f.pos.x + (f.rotated ? f.size.y : f.size.x) <= w && f.pos.y + (f.rotated ? f.size.x : f.size.y) <= h;
             for (const group of parseAtlas(data))
             {
@@ -413,16 +416,16 @@ function loadAtlas(imageSrc, jsonSrc, padding=textureSheetPadding)
                 if (!group.frames.length) continue; // a tag with no frames, the groups after it still load
                 if (!group.frames.every(inImage))
                 {
-                    console.warn('loadAtlas frames lie outside the image, left out:', group.name);
+                    console.warn('loadAtlas frames lie outside the image or have no size, left out:', group.name);
                     continue;
                 }
                 const sourceSize = group.frames[0].sourceSize;
-                budget -= (sourceSize.x + padding*2) * (sourceSize.y + padding*2) * group.frames.length;
-                if (budget < 0)
+                const area = (sourceSize.x + padding*2) * (sourceSize.y + padding*2) * group.frames.length;
+                if (area > budget)
                 {
-                    console.warn('loadAtlas frames would take more sheet area than 4 times the image has, the rest ' +
-                        'are left out:', imageSrc);
-                    break;
+                    console.warn('loadAtlas frames would take more sheet area than 16 times the image or 8 sheets, ' +
+                        'left out:', group.name);
+                    continue;
                 }
                 const blockSize = vec2(sourceSize.x*group.frames.length, sourceSize.y);
                 const added = textureSheetAdd(blockSize, sourceSize, padding);
@@ -431,6 +434,7 @@ function loadAtlas(imageSrc, jsonSrc, padding=textureSheetPadding)
                     console.warn('loadAtlas frames are too large to fit on a texture sheet:', group.name);
                     continue;
                 }
+                budget -= area; // only what was packed counts
                 const {sheet, tile} = added;
 
                 // draw each frame untrimmed into its cell

@@ -1714,7 +1714,10 @@ obj.groundObject                        // what it stands on this frame, a heigh
                                         // the two, relative to it, so a moving platform carries what rides it
 obj.groundAngle = PI/4                  // the steepest slope it stands on, in radians under PI/2: resting on a
                                         // box's face within this of flat holds it still, steeper it slides down, and
-                                        // a sphere, an edge or a corner is nothing to stand on; a player climbs more
+                                        // a sphere, an edge or a corner is nothing to stand on; on a MeshCollider or
+                                        // HeightMap a face steeper than this and than 45 degrees stops a walk into it
+                                        // unless it is a curb lower than the body's step; raise it for a player
+                                        // meant to walk up steeper ramps
 obj.softShadow = 2                      // 0 by default; a soft shadow of that diameter under the object on
                                         // render3D.softShadowHeight; scale3D and a parent's scale grow it, so set it
                                         // for the unscaled object

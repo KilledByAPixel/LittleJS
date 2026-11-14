@@ -31,7 +31,7 @@ What changed in each release, newest first. Releases before 1.20.0 are on the
 - `loadAtlas` keeps trimmed frames whose untrimmed size is bigger than the image, and packs at most 4 times the image's area a load
 
 ### Breaking Changes
-- 3D: walking into a MeshCollider face, or HeightMap ground, steeper than the object's `groundAngle` stops it, where it climbed any slope a HeightMap had and MeshCollider faces up to about 80 degrees; a gentle one still climbs
+- 3D: MeshCollider and HeightMap follow one slope rule. A face or ground steeper than both the object's `groundAngle` and 45 degrees stops a move into it, when it rises past the body's step, so a curb lower than the step is still walked over; ground steeper than `groundAngle` is not ground, so it is not stood or jumped on, and the body slides down it. Before, a HeightMap let a body walk up any slope and MeshCollider faces up to about 80 degrees were climbed. A game whose levels have steep ramps meant to be walked raises the walker's `groundAngle`, up to just under PI/2
 
 ### Fixes
 - `ThirdPersonCamera3D` no longer shakes from side to side when the player walks back toward it: its swing behind the way the target moves fades out as the move turns toward the camera, where the short way round flipped sides each frame, and keys that move the way the camera faces turned the move with it
@@ -106,6 +106,9 @@ What changed in each release, newest first. Releases before 1.20.0 are on the
 - UI: a slider held when a confirm dialog opens lets go; an object its callback destroyed is called no more; a second `UISystemPlugin` in a release build ends the first's edit
 - A HeightMap with heights outside 0 to 1 is hit by raycasts where it goes past them; `Box2dObject.setTransform(pos)` from a contact keeps the angle the body has when it moves; glTF node numbers that are Infinity are a file error
 - REFERENCE says `randInt(a, b)` leaves out the top, `setUseRealTime` is for an unset timer, how UI navigation keys work, what `engineObjectsCollect3D()` takes, and lists `engineImageFont`
+- 3D: a body in a V between two steep MeshCollider faces no longer falls through the world, nor does one slide down a steep face at free fall pace (a regression of the last fixes); with a small `groundAngle` a HeightMap no longer stops a body at the foot of a gentle hill
+- A plain object stood up under a low ceiling, or grown or spawned into the floor, lands and walks out instead of sinking or falling out of the level; a box resting in a one way tile's margin no longer passes through it; a stack of crates on a rising lift stays stacked
+- `loadAtlas` keeps every frame of big and trimmed atlases again, counts only what it packed, leaves out a group too big for a sheet without stopping the rest, and leaves out frames with no size, which could make hundreds of sheets in release
 
 ## 1.30.1 - 2026-11-12
 

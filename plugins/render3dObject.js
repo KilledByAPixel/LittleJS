@@ -141,7 +141,9 @@ class EngineObject3D extends EngineObject
          *  around corners */
         this.collideAsSphere3D = false;
         /** @property {number} - The steepest slope it stands on, in radians from level, PI/4 by default: resting on
-         *  a solid within this of flat sets groundObject and holds it still, steeper it slides down */
+         *  a solid within this of flat sets groundObject and holds it still, steeper it slides down; on a MeshCollider
+         *  or HeightMap a face steeper than this and than 45 degrees, rising past its step, stops a move into it, a
+         *  gentler one or a curb lower than its step is walked up */
         this.groundAngle = PI / 4;
         /** @property {boolean} - Darkened by the shadow map when render3D.shadows is on */
         this.receiveShadow = true;

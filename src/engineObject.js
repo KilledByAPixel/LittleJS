@@ -532,6 +532,15 @@ class EngineObject
                     continue;
                 }
 
+                // one already standing on something does not move down for one with mass above it, which would push it
+                // back into what it stands on, as the middle of a stack on a rising lift was; the pair is left for the
+                // one above, which sees this one fixed and is pushed up
+                if (this.groundObject && o.mass && (o.pos.y - this.pos.y) * gravityY < 0)
+                {
+                    engineObjectsCollidePairAdd(this, o, true);
+                    continue;
+                }
+
                 // check for collision
                 const sizeBoth = this.size.add(o.size);
                 // prefer to push up if small delta, up away from this object's own gravity
@@ -661,35 +670,36 @@ class EngineObject
     /** @private */
     updatePhysicsTiles(oldPos, gravityY, wasFalling)
     {
-        // the first test is where the move put it, so the tiles it asks about are hits; the tests after it only try
-        // places to find which side it hit and where it can go
-        tileCollisionHitObject = this;
-        let hitLayer = tileCollisionTest(this.pos, this.size, this);
-        tileCollisionHitObject = undefined;
-        if (!hitLayer) return;
-
         // one that started inside tiles, spawned or moved there, or grown into them, is tested taken in by how far in
         // it was on each side, so it passes the tiles it was in and still collides with the rest, and can not fall
-        // through the floor beside a wall it was put into; one inside tiles all round collides with none, as before
-        const stuckObject = tileCollisionStuckObject, stuckInsets = tileCollisionStuckInsets;
+        // through the floor beside a wall it was put into; one inside tiles all round collides with none, as before;
+        // found first, so the one test that asks with isHit asks about the tiles it really hit
+        let insets;
         if (tileCollisionTest(oldPos, this.size, this))
         {
-            const insets = tileCollisionInsetsOf(oldPos, this.size, this);
+            insets = tileCollisionInsetsOf(oldPos, this.size, this);
             if (!insets) return;
-            tileCollisionStuckObject = this, tileCollisionStuckInsets = insets;
-            hitLayer = tileCollisionTest(this.pos, this.size, this);
         }
-        // a place it snaps to: a one way tile goes by that place, so one the snap would leave it a hair inside, less
-        // than the one way margin, blocks it there, or the next frame it starts inside the tile and passes it
+        // a place it snaps to is blocked when a one way tile blocks it judged from there or from where it was, so the
+        // snap never leaves it a hair inside one, less than the one way margin, nor takes it through one whose margin
+        // it rested in
         const snapBlocked = (pos)=>
         {
             const fromPos = tileCollisionFromPos;
             tileCollisionFromPos = pos;
-            try { return tileCollisionTest(pos, this.size, this); }
+            try { return tileCollisionTest(pos, this.size, this) || (tileCollisionFromPos = fromPos,
+                tileCollisionTest(pos, this.size, this)); }
             finally { tileCollisionFromPos = fromPos; }
         };
+        const stuckObject = tileCollisionStuckObject, stuckInsets = tileCollisionStuckInsets;
         try
         {
+            insets && (tileCollisionStuckObject = this, tileCollisionStuckInsets = insets);
+            // the first test is where the move put it, so the tiles it asks about are hits; the tests after it only
+            // try places to find which side it hit and where it can go
+            tileCollisionHitObject = this;
+            const hitLayer = tileCollisionTest(this.pos, this.size, this);
+            tileCollisionHitObject = undefined;
             if (hitLayer)
             {
                 // test which side we bounced off (or both if a corner)

@@ -125,10 +125,25 @@ let tileCollisionHitObject;
 // updatePhysicsTiles and tileCollisionInsetsOf
 let tileCollisionStuckObject, tileCollisionStuckInsets;
 
-// how far a box is inside the tiles that block it, on each side, [left, right, bottom, top]: each tile it overlaps
-// pushes in the side it is shallower on, as a box 0.001 into a wall beside it is in 0.001 on that side, not as deep as
-// the wall is tall; undefined when that would leave no box, inside tiles all round
+// how far a box is inside the tiles that block it, on each side, [left, right, bottom, top]: a tile above or below
+// its center, in its column, pushes in the top or bottom, one beside it, in its row, a side, and one at a corner the
+// side it is shallower on, as a box 0.001 into a wall beside it is in 0.001 on that side, not as deep as the wall is
+// tall, and one stood up under two ceiling tiles is taken in at the top, not at both sides; when that leaves no box,
+// as for a small one whose center is in a wall on a row line, every tile takes in a side, or else the top or bottom,
+// the way out it has; undefined when none leaves a box, inside tiles all round
 function tileCollisionInsetsOf(pos, size, object)
+{
+    for (const axis of [0, 1, 2])
+    {
+        const taken = tileCollisionInsetsOn(pos, size, object, axis);
+        if (taken[0] + taken[1] < size.x - 1e-6 && taken[2] + taken[3] < size.y - 1e-6)
+            return taken;
+    }
+}
+
+// the insets of tileCollisionInsetsOf by one rule: axis 0 by the center and the shallower side, 1 sides only, 2 the
+// top and bottom only
+function tileCollisionInsetsOn(pos, size, object, axis)
 {
     const insets = [0, 0, 0, 0], left = pos.x - size.x/2, right = pos.x + size.x/2;
     const bottom = pos.y - size.y/2, top = pos.y + size.y/2;
@@ -145,14 +160,14 @@ function tileCollisionInsetsOf(pos, size, object)
                 !test(data, vec2(wx, wy)))
                 continue;
             const inX = min(wx + 1 - left, right - wx), inY = min(wy + 1 - bottom, top - wy);
-            if (inX <= inY)
+            const inColumn = pos.x >= wx && pos.x <= wx + 1, inRow = pos.y >= wy && pos.y <= wy + 1;
+            if (axis ? axis === 1 : inColumn !== inRow ? inRow : inX <= inY)
                 wx + .5 < pos.x ? insets[0] = max(insets[0], inX) : insets[1] = max(insets[1], inX);
             else
                 wy + .5 < pos.y ? insets[2] = max(insets[2], inY) : insets[3] = max(insets[3], inY);
         }
     }
-    if (insets[0] + insets[1] < size.x && insets[2] + insets[3] < size.y)
-        return insets.map((inset)=> inset && inset + 1e-9);
+    return insets.map((inset)=> inset && inset + 1e-9);
 }
 
 // a one way tile at a layer's cell lets a box at from pass, when the cell draws a tile set one way and the box was not
@@ -1731,13 +1746,16 @@ class TileCollisionLayer extends TileLayer
 
         // a one way tile goes by where an object was before the physics moved it, or where it is now
         const object = callbackObject instanceof EngineObject && this.oneWayTiles.size ? callbackObject : undefined;
-        const from = object && (object === tileCollisionFromObject ? tileCollisionFromPos : object.pos);
-        // an object stuck in tiles is tested taken in by how far in it was, see tileCollisionInsetsOf
+        let from = object && (object === tileCollisionFromObject ? tileCollisionFromPos : object.pos);
+        // an object stuck in tiles is tested taken in by how far in it was, see tileCollisionInsetsOf, and where it
+        // was moved with it, so a one way tile judges the box it tests
         const stuck = callbackObject && callbackObject === tileCollisionStuckObject ? tileCollisionStuckInsets : undefined;
         if (stuck)
         {
-            pos = vec2(pos.x + (stuck[0] - stuck[1]) / 2, pos.y + (stuck[2] - stuck[3]) / 2);
+            const shiftX = (stuck[0] - stuck[1]) / 2, shiftY = (stuck[2] - stuck[3]) / 2;
+            pos = vec2(pos.x + shiftX, pos.y + shiftY);
             size = vec2(size.x - stuck[0] - stuck[1], size.y - stuck[2] - stuck[3]);
+            from &&= vec2(from.x + shiftX, from.y + shiftY);
         }
 
         // check any tiles in the area for collision

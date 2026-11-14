@@ -679,15 +679,17 @@ class HeightMap extends EngineObject3D
         if (abs(p.x - m.x) > size.x / 2 || abs(p.z - m.z) > size.y / 2) return; // off the map
         const half = o.size3D.y * abs(o.scale3D.y) / 2;
         let ground = this.getHeight(p.x, p.z);
-        // ground steeper than its groundAngle that it would rise onto is a wall to walk into, as a MeshCollider's
-        // steep face is: the part of the move and the speed up its slope are taken back, so it slides along the foot
-        // of a cliff and does not walk up it
+        // the wall rule, as a MeshCollider's: ground steeper than its groundAngle and than about 45 degrees that it
+        // would rise onto, past its step, the quarter of its height the sweep below lets it take, is a wall to walk
+        // into: the part of the move and the speed up its slope are taken back, so it slides along the foot of a
+        // cliff and does not walk up it, and a curb lower than its step is walked over
         if (oldPos && ground > oldPos.y - half + 1e-6)
         {
             const n = this.getNormal(p.x, p.z);
-            if (n.y < cos(o.groundAngle))
+            const l = hypot(n.x, n.z), nx = n.x / l, nz = n.z / l;
+            if (n.y < min(cos(o.groundAngle), .7) &&
+                this.getHeight(p.x - nx * half / 2, p.z - nz * half / 2) > oldPos.y - half / 2)
             {
-                const l = hypot(n.x, n.z), nx = n.x / l, nz = n.z / l;
                 const into = (p.x - oldPos.x) * nx + (p.z - oldPos.z) * nz;
                 if (into < 0)
                     p.x -= nx * into, p.z -= nz * into, ground = this.getHeight(p.x, p.z);
@@ -714,11 +716,26 @@ class HeightMap extends EngineObject3D
             const follow = wasOn && o.velocity3D.y <= 0 ? hypot(p.x - oldPos.x, p.z - oldPos.z) : 0;
             if (p.y - half > ground + follow) return;
         }
-        p.y = ground + half;
-        const v = o.velocity3D;
-        if (v.y < 0)
-            v.y *= -max(o.restitution, this.restitution);
-        o.groundObject = this;
+        // ground steeper than its groundAngle is not ground, as a MeshCollider's steep face is not: it is not stood
+        // on, so a jump can not climb it, and it is pushed out along the slope's normal, not straight up, so gravity
+        // slides it down whatever speed the game gives it across; one at the foot of a cliff, with gentle ground
+        // within half its width downhill, stands there
+        const v = o.velocity3D, n = this.getNormal(p.x, p.z), cosGround = cos(o.groundAngle), l = hypot(n.x, n.z);
+        const reach = min(o.size3D.x * abs(o.scale3D.x), o.size3D.z * abs(o.scale3D.z)) / 2;
+        if (n.y >= cosGround || l && this.getNormal(p.x + n.x / l * reach, p.z + n.z / l * reach).y >= cosGround)
+        {
+            p.y = ground + half;
+            if (v.y < 0)
+                v.y *= -max(o.restitution, this.restitution);
+            o.groundObject = this;
+        }
+        else
+        {
+            const depth = (ground + half - p.y) * n.y, into = v.dot(n);
+            p.set(p.x + n.x * depth, p.y + n.y * depth, p.z + n.z * depth);
+            if (into < 0)
+                v.set(v.x - n.x * into, v.y - n.y * into, v.z - n.z * into);
+        }
     }
 
     /** Keeps an eye on its placement, called automatically each frame */
@@ -1155,12 +1172,22 @@ function meshColliderPush(collider, i, ax, ay, az, bx, by, bz, radius, push)
     return true;
 }
 
+// whether a collider rises past a capsule's step in a direction across: a ray that way from its foot raised by its
+// radius, the step it rounds onto, meets a face within twice its radius
+function meshColliderRiseAhead(collider, center, half, radius, dx, dz)
+{
+    const origin = vec3(center.x, center.y - half, center.z);
+    const hit = collider.levelRaycast3D(new Ray3D(origin, vec3(dx, 0, dz)));
+    return hit !== undefined && hit >= 0 && hit <= 2 * radius;
+}
+
 // push a capsule standing at a center out of a collider's triangles near it, the deepest touch first each pass, so the
 // face under it is met before the edges of the ones beside it; it stands on what faces within groundAngle of
 // straight up, a face or an edge of one, as a step's, which lifts it onto the step; a push on such a face goes
 // straight up, so it does not creep down a slope; the rest are walls, their unit normals kept for the velocity
+// - moveX and moveZ, the move across this step, say whether it goes into a steep face, see the wall rule below
 const meshColliderPushed = [0, 0, 0];
-function meshColliderResolve(collider, center, half, radius, groundAngle, walls)
+function meshColliderResolve(collider, center, half, radius, groundAngle, walls, moveX=0, moveZ=0)
 {
     let ground = false;
     const push = meshColliderPushed, cosGround = cos(groundAngle), n = collider.normals;
@@ -1194,13 +1221,16 @@ function meshColliderResolve(collider, center, half, radius, groundAngle, walls)
         }
         else
         {
-            // a face too steep to stand on and steeper than about 45 degrees pushes level, as far as it takes to
-            // leave the face, so walking into it does not climb it; a gentler one pushes along its normal, so a
-            // body with a tiny groundAngle still rolls down a ramp
-            const level = px*px + pz*pz;
-            if (py > 0 && level > depth * .01 && n[k+1] * sign(along) < .7)
+            // the wall rule: a face too steep to stand on and steeper than about 45 degrees pushes level, as far as
+            // it takes to leave the face, when the move goes into it and it rises past the body's step, a ray across
+            // at its foot plus its radius, so walking into it does not climb it; otherwise along its normal, so a body
+            // in a V between two steep faces is held there and one on a steep face slides down it, a body with a tiny
+            // groundAngle rolls on a ramp, and a curb lower than its step is walked over
+            const level = px*px + pz*pz, l = level ** .5;
+            if (py > 0 && level > depth * .01 && n[k+1] * sign(along) < .7 && px * moveX + pz * moveZ < 0 &&
+                meshColliderRiseAhead(collider, center, half, radius, -px / l, -pz / l))
             {
-                const s = depth / level, l = level ** .5;
+                const s = depth / level;
                 center.x += px * s, center.z += pz * s;
                 walls.push(vec3(px / l, 0, pz / l));
             }
@@ -1239,7 +1269,7 @@ function meshColliderCollide(collider, o, oldPos, wasOn)
     for (let step = 1; step <= steps; ++step)
     {
         center.x += mx / steps, center.y += my / steps, center.z += mz / steps;
-        ground = meshColliderResolve(collider, center, half, radius, o.groundAngle, walls); // where it ends up
+        ground = meshColliderResolve(collider, center, half, radius, o.groundAngle, walls, mx, mz); // where it ends up
     }
     if (!ground && wasOn && o.velocity3D.y <= 0)
     {
@@ -1249,7 +1279,7 @@ function meshColliderCollide(collider, o, oldPos, wasOn)
         for (let i = 1; i <= down; ++i)
         {
             const below = vec3(center.x, center.y - follow * i / down, center.z);
-            if (meshColliderResolve(collider, below, half, radius, o.groundAngle, []))
+            if (meshColliderResolve(collider, below, half, radius, o.groundAngle, [], mx, mz))
             {
                 below.y < center.y && (center.set(below.x, below.y, below.z), ground = true);
                 break;
