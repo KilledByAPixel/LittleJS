@@ -1,60 +1,65 @@
 # Making your own level editor with LittleJS
 
-LittleJS has two level editors built in, one for 2D tile maps and one for 3D levels. They are meant to be a
-starting point: a game adds its own object types, properties, keys, buttons and tools, and ends up with an
-editor made for that one game. Everything goes through one object, `levelEditor`, and the same calls work in
-both editors.
+LittleJS has two level editors built in: one for 2D tile maps and one for 3D levels. You can use them as they
+are, or make them your game's own by adding its object types, keys, buttons and tools. Everything goes through
+one object, `levelEditor`, and the same calls work in both editors.
 
-This page is written to be followed by a person or by an AI coding assistant. Every code block marked "tested"
-is run by `test/editorCustom.test.mjs` straight from this file, so it works as written.
+**Contents**
 
-## The rules
+- [Quick start](#quick-start): open the editor, and hook up a level in a few lines
+- Making it your own: [object types](#your-own-object-types), [hooks](#the-hooks), [keys](#a-key-of-your-own),
+  [buttons](#a-panel-button-of-your-own), [tools](#a-tool-of-your-own), [an editor class](#an-editor-class-of-your-own)
+- [Things to know](#things-to-know): the rules every customization follows
+- Reference: [the edit functions](#the-edit-functions), [the files](#the-files),
+  [a checklist](#a-checklist-for-a-custom-editor), [the examples](#where-the-working-examples-are),
+  [what it does not do](#what-it-does-not-do)
 
-1. **Everything is on `levelEditor`**, or on a class of your own that extends `LevelEditor`. It is exported
-   from every build, script tag and ES module alike.
-2. **No guards are needed.** In release builds `LevelEditor` is a stub: it takes what you add and never calls
-   it. The editor's code is only in the debug builds (`dist/littlejs.js`, `dist/littlejs.esm.js`).
-3. **The level data is the source of truth.** The editor changes the level object (3D) or the Tiled map (2D) the
-   game loaded, and brings the game's objects in line. Change the level through `edit3D` or `edit2D`, never the
-   game's objects.
-4. **An edit is a stroke.** Make changes with `edit3D.change(...)`, `edit3D.place(...)`, `edit2D.paint(...)` or
-   `edit2D.changeObjects(...)`, then call `strokeEnd()`: that is one undo step, autosaved. A tool's press, drag
-   and release are ended for you.
-5. **A type is named by a string**, never by its class, because minified builds rename classes.
-6. **Use `levelEditor.edit3D` and `levelEditor.edit2D` only inside what the editor calls**: a key's action, a
-   button's click, a tool's callbacks, `onUpdate`, `onDraw`. In a release build none of those are ever called;
-   `edit2D` is there and changes nothing, and `edit3D` is undefined, as it is in a game without the 3D plugins.
-7. **`levelEditor.is3D`** says which editor is in use, for a game that has both kinds of level.
-8. **The editor has the mouse and keys while it is open.** The game is paused, and its UI keeps drawing and
-   updating, `onUpdate` and videos included, but takes no input: what was held or edited lets go, and
-   `uiSystem.isMouseOverUI()` answers false. The 3D editor also hides input from the game itself.
+**For AI coding assistants:** this page is meant to be followed as written. Every code block marked "tested" is
+run by `test/editorCustom.test.mjs` straight from this file. The full API is in
+[the edit functions](#the-edit-functions) tables and [the hooks](#the-hooks) block, and
+[the checklist](#a-checklist-for-a-custom-editor) is the order to build a custom editor in.
 
-## The hooks
+## Quick start
+
+**Using the editor, with no code.** Any game running the debug build has it.
+
+1. Press `Esc` for the debug overlay, then `0` to open the editor. It opens the 3D editor when the game loaded a
+   3D level, and the 2D one otherwise.
+2. Press `?` to see every control. Ctrl+Z undoes.
+3. Press `Esc` to switch between editing and playing, and `0` or the panel's Exit button to leave.
+4. Press the panel's Save button to write the level to a file. Edits are also autosaved in the browser, so a
+   reload brings back what was not saved yet.
+
+**Hooking up your game.** The editor edits the level data your game loaded, so load the level from data and
+rebuild it in one function. A 2D game:
 
 ```javascript
-levelEditor.open();                    // start in the editor; close() plays on with the changes
-levelEditor.isOpen;                    // true while editing
-levelEditor.onRestart = ()=> buildLevel();         // adds a Restart button: load the level again
-levelEditor.onPlayFrom = (pos)=> player.pos = pos; // adds "Play from mouse": put the player at the mouse
-levelEditor.onOpen = ()=> {};          // the editor opened
-levelEditor.onClose = ()=> {};         // it closed, the game plays on
-levelEditor.onUpdate = ()=> {};        // each frame while it is open
-levelEditor.onDraw = ()=> {};          // while it draws the level, for overlays of your own
-levelEditor.onPanel = (box)=> {};      // once, when the panel is made: a box in it for your own controls
-levelEditor.onSave = (text, name)=> false;     // Save: return true when you kept the file yourself
-levelEditor.use3D = true;              // force the 3D editor (false, the 2D one); undefined picks by the level
-levelEditor.onTile = (layer, pos, tile)=> {};  // 2D: a tile was painted, tile undefined when erased
-levelEditor.paletteTiles = [0, 1, 10]; // 2D: the tiles the palette shows, undefined for the whole sheet
+function loadLevel()
+{
+    engineObjectsDestroy();
+    // level is the Tiled map, from fetchJSON('level.json'); its layer 0 has collision
+    tileLayersLoad(level, tile(0, 16), 0, 0);
+    objectLayersLoad(level); // makes an object for each one in the map, by its type
+}
+
+function gameInit()
+{
+    objectLayersAddType('Coin', Coin, {value: 1}); // types are added before the level loads
+    loadLevel();
+    levelEditor.onRestart = loadLevel;             // the editor's Restart button rebuilds the level
+}
 ```
 
-Without code, `0` on the debug overlay (`Esc`) opens the editor, and `Esc` then switches between editing and
-playing.
+A 3D game does the same with `level3DAddType` and `level3DLoad(level)`. The rest of this page is about making
+the editor fit your game.
 
-## Your own object types, and their properties as panel inputs
+## Making it your own
 
-A type is a name, something to make, and default properties. The editor lists the type to place, and shows an
-input for each default whose value is a number, a true or false, a string, a `Color` or a vector. What the
-level designer sets is saved in the level and set on the object when the level loads.
+### Your own object types
+
+A type is a name, something to make, and default properties. The editor lists the type in its panel, ready to
+place. Each default whose value is a number, a true or false, a string, a `Color` or a vector gets an input in
+the panel. What the level designer sets is saved in the level, and set on the object when the level loads.
 
 3D, tested:
 
@@ -83,27 +88,55 @@ class Coin extends EngineObject
 objectLayersAddType('Coin', Coin, {value: 1});
 ```
 
-- In 3D a class needs its own constructor that takes the position: one that passes every argument on to
+- **In 3D, a class needs its own constructor that takes the position.** One that passes every argument on to
   `EngineObject3D` would pass the properties as its mesh.
-- `level3DAddMesh('Tree', mesh, tileInfo)` is a 3D type with no class: a static prop with `color`, `solid`, which
-  collides as its box, and `meshCollision`, which collides by its triangles, so a ramp or a rock placed in the
-  editor is walked on as it is shaped; `level3DAddMesh('Ramp', mesh, tileInfo, WHITE, true)` makes that the type's
-  default.
-- Changing a 3D object's property in the editor makes the object again, since its constructor takes them.
-- 3D prefabs, small levels placed many times, are types too: see "Prefabs" in [REFERENCE.md](REFERENCE.md). The
-  panel's Load prefab button adds one from a file to the level being edited.
+- **A 3D prop with no class:** `level3DAddMesh('Tree', mesh, tileInfo)` makes a static prop. Its properties are:
+  - `color`;
+  - `solid`, which collides as its box;
+  - `meshCollision`, which collides by its triangles, so a ramp or a rock placed in the editor is walked on as it
+    is shaped. `level3DAddMesh('Ramp', mesh, tileInfo, WHITE, true)` makes that the type's default.
+- **Changing a 3D object's property in the editor makes the object again**, since its constructor takes them.
+- **3D prefabs**, small levels placed many times, are types too: see "Prefabs" in [REFERENCE.md](REFERENCE.md).
+  The panel's Load prefab button adds one from a file to the level being edited.
 
-## A key of your own
+### The hooks
 
-`addKey(key, action, helpLine)`. The key is a letter or digit (`'k'`), a key's name in any case (`'Delete'`,
-`'F2'`, `'Enter'`, `'Space'`), a key code with its capital (`'ShiftLeft'`, `'Numpad1'`, `'KeyE'`), which both
-editors read, or any of them with `'ctrl+'` in front. Escape and 0 (`'Digit0'` too) are the editors' own. The action is called with whether Shift is
-held. Return `false` when it did nothing.
+Set the ones you need; each one you leave out does nothing.
 
-- A key the editor already uses is replaced by yours, with a warning in the console when the editor opens. The
-  two editors use different keys, so check the `?` help of the one your game uses.
-- `Escape` and `0` are the editor's own, to play and to exit, and are not taken.
-- Ctrl is the one modifier. For Shift, read the argument the action is given.
+```javascript
+levelEditor.open();                    // start in the editor; close() plays on with the changes
+levelEditor.isOpen;                    // true while editing
+levelEditor.onRestart = ()=> buildLevel();         // adds a Restart button: load the level again
+levelEditor.onPlayFrom = (pos)=> player.pos = pos; // adds "Play from mouse": put the player at the mouse
+levelEditor.onOpen = ()=> {};          // the editor opened
+levelEditor.onClose = ()=> {};         // it closed, the game plays on
+levelEditor.onUpdate = ()=> {};        // each frame while it is open
+levelEditor.onDraw = ()=> {};          // while it draws the level, for overlays of your own
+levelEditor.onPanel = (box)=> {};      // once, when the panel is made: a box in it for your own controls
+levelEditor.onSave = (text, name)=> false;     // Save: return true when you kept the file yourself
+levelEditor.use3D = true;              // force the 3D editor (false, the 2D one); undefined picks by the level
+levelEditor.onTile = (layer, pos, tile)=> {};  // 2D: a tile was painted, tile undefined when erased
+levelEditor.paletteTiles = [0, 1, 10]; // 2D: the tiles the palette shows, undefined for the whole sheet
+```
+
+### A key of your own
+
+`addKey(key, action, helpLine)` adds a key. The help line shows in the editor's `?` help.
+
+The key can be written any of these ways:
+
+| Form | Examples |
+| --- | --- |
+| A letter or digit | `'k'` |
+| A key's name, in any case | `'Delete'`, `'F2'`, `'Enter'`, `'Space'` |
+| A key code with its capital, which both editors read | `'ShiftLeft'`, `'Numpad1'`, `'KeyE'` |
+| Any of them with Ctrl | `'ctrl+k'` |
+
+- **The action is called with whether Shift is held.** Return `false` when it did nothing.
+- **Ctrl is the one modifier.** For Shift, read the argument the action is given.
+- **A key the editor already uses is replaced by yours**, with a warning in the console when the editor opens.
+  The two editors use different keys, so check the `?` help of the one your game uses.
+- **`Escape` and `0` (`'Digit0'` too) are the editor's own**, to play and to exit, and can not be taken.
 
 3D, tested:
 
@@ -138,9 +171,9 @@ levelEditor.addKey('t', ()=>
 }, 'T: paint tile 5 under the mouse');
 ```
 
-## A panel button of your own
+### A panel button of your own
 
-`addButton(label, onClick, title)`. Tested:
+`addButton(label, onClick, title)` adds a button to the panel. 3D, tested:
 
 <!-- test:button3d -->
 ```javascript
@@ -155,10 +188,12 @@ levelEditor.addButton('Scatter 5 spawners', ()=>
 
 For anything more than a button, `onPanel` gives you a box in the panel to fill with your own HTML.
 
-## A tool of your own
+### A tool of your own
+
+Use a tool for what is done with the mouse in the level: paths, zones, rows of things, links between objects.
 
 `addTool(name, tool)` adds a tool beside the editor's own: a button in the panel by its name, and a key if you
-give one. While it is on, the left button in the level is your tool's. Each callback is given
+give one. While it is on, the left mouse button in the level is your tool's. Each callback is given
 `{pos, cell, lastCell, ray, shift, ctrl}`:
 
 - `pos`: where the mouse is in the level. In 3D a `Vector3` on the level or the ground, in 2D a `Vector2`.
@@ -166,8 +201,8 @@ give one. While it is on, the left button in the level is your tool's. Each call
 - `lastCell`: 2D, in a drag, the cell at the callback before, so a quick drag can fill the cells between.
 - `ray`: 3D, the mouse's ray.
 
-What the callbacks change is one undo: the editor ends the stroke at the release, and takes it back when the
-right button or Escape ends the press. Do not call `strokeEnd` in a tool.
+**Do not call `strokeEnd` in a tool.** What its callbacks change is one undo: the editor ends the stroke at the
+release, and takes it back when the right button or Escape ends the press.
 
 3D, a tool that lays a row of posts along a drag, tested:
 
@@ -220,16 +255,16 @@ levelEditor.addTool('Water',
 });
 ```
 
-A tool is put down by its key or button again, or by picking one of the editor's own tools, layers or types.
-`levelEditor.tool` is the name of the one that is on.
+- **Turning it off:** a tool is put down by its key or button again, or by picking one of the editor's own
+  tools, layers or types. `levelEditor.tool` is the name of the one that is on.
+- **Drawing:** `onDraw`, a tool's and the editor's, draws in the level as the editor does. In the 2D editor use
+  the 2D draws (`drawRect`, `drawLine`). In the 3D editor it runs inside the 3D pass, so use `render3D.drawBox`,
+  `render3D.drawLine` and the rest.
 
-`onDraw`, a tool's and the editor's, draws in the level as the editor does: in the 2D editor with the 2D draws
-(`drawRect`, `drawLine`), and in the 3D editor inside the 3D pass, with `render3D.drawBox`, `render3D.drawLine`
-and the rest.
+### An editor class of your own
 
-## An editor class of your own
-
-Everything above can be a class instead, with the hooks as methods. Tested:
+Everything above can be a class instead, with the hooks as methods. That keeps a bigger editor in one place.
+Tested:
 
 <!-- test:class -->
 ```javascript
@@ -261,11 +296,34 @@ class MyEditor extends LevelEditor
 setLevelEditor(new MyEditor);
 ```
 
-- Call `setLevelEditor` before the editor opens, and use `levelEditor` itself afterwards, not a copy of it
-  taken earlier.
-- `keys`, `buttons`, `tools` and `tool` are fields the class keeps what you added in: do not name your own
-  fields those.
-- A method of your class is a hook the same as one you set: defining `onRestart` shows the Restart button.
+- **Call `setLevelEditor` before the editor opens.** Afterwards use `levelEditor` itself, not a copy of it taken
+  earlier.
+- **Do not name your own fields `keys`, `buttons`, `tools` or `tool`.** The class keeps what you added in them.
+- **A method of your class is a hook,** the same as one you set: defining `onRestart` shows the Restart button.
+
+## Things to know
+
+The rules every customization follows. The headline of each is enough to start with.
+
+1. **Everything is on `levelEditor`**, or on a class of your own that extends `LevelEditor`. It is exported
+   from every build, script tag and ES module alike.
+2. **No guards are needed for release builds.** There `LevelEditor` is a stub: it takes what you add and never
+   calls it. The editor's code is only in the debug builds (`dist/littlejs.js`, `dist/littlejs.esm.js`).
+3. **The level data is the source of truth.** The editor changes the level object (3D) or the Tiled map (2D) the
+   game loaded, and brings the game's objects in line. Change the level through `edit3D` or `edit2D`, never
+   through the game's objects.
+4. **An edit is a stroke.** Make changes with `edit3D.change(...)`, `edit3D.place(...)`, `edit2D.paint(...)` or
+   `edit2D.changeObjects(...)`, then call `strokeEnd()`. That makes one undo step, and autosaves it. A tool's
+   press, drag and release are ended for you.
+5. **A type is named by a string**, never by its class, because minified builds rename classes.
+6. **Use `levelEditor.edit3D` and `levelEditor.edit2D` only inside what the editor calls**: a key's action, a
+   button's click, a tool's callbacks, `onUpdate`, `onDraw`. In a release build none of those are ever called.
+   There `edit2D` is present and changes nothing, and `edit3D` is undefined, as it is in a game without the 3D
+   plugins.
+7. **`levelEditor.is3D` says which editor is in use**, for a game that has both kinds of level.
+8. **The editor has the mouse and keys while it is open.** The game is held still. Its UI keeps drawing and
+   updating, `onUpdate` and videos included, but takes no input: what was held or being edited lets go, and
+   `uiSystem.isMouseOverUI()` answers false. The 3D editor also hides input from the game itself.
 
 ## The edit functions
 
@@ -309,13 +367,14 @@ setLevelEditor(new MyEditor);
 
 ## The files
 
-- 3D: plain JSON, `{littlejs3D: 1, scene, voxels, terrain, prefabs, objects: [{id, type, pos, rotation, scale,
-  properties}]}`. Load with `level3DLoad(await fetchJSON('level.json'))`.
-- 2D: Tiled JSON. Load with `tileLayersLoad(map)` and `objectLayersLoad(map)`. Tiled itself can open the file.
-- A game that loads the same level object again, as a restart does, gets the edits.
-- A 3D level's block map shows the tiles of the sheet given to `level3DVoxelSetup`, or of the game's first image;
-  a game that has loaded no image gets plain colored blocks.
-- To keep levels somewhere of your own, a server or your own format, use `onSave`:
+- **3D:** plain JSON, `{littlejs3D: 1, scene, voxels, terrain, prefabs, objects: [{id, type, pos, rotation, scale,
+  properties}]}`. Load it with `level3DLoad(await fetchJSON('level.json'))`.
+- **2D:** Tiled JSON. Load it with `tileLayersLoad(map)` and `objectLayersLoad(map)`. Tiled itself can open the
+  file.
+- **Loading again keeps the edits:** a game that loads the same level object again, as a restart does, gets them.
+- **3D block maps:** a 3D level's block map shows the tiles of the sheet given to `level3DVoxelSetup`, or of the
+  game's first image. A game that has loaded no image gets plain colored blocks.
+- **Your own storage:** to keep levels somewhere of your own, a server or your own format, use `onSave`:
 
 ```javascript
 levelEditor.onSave = (text, fileName)=>
@@ -367,12 +426,15 @@ after a reload.
 
 ## What it does not do
 
-- **It does not replace the editor's own tools.** Your keys, buttons and tools are added beside them; how the
+- **It does not replace the editor's own tools.** Your keys, buttons and tools are added beside them. How the
   built-in Move tool snaps, or how painting works, is not something a game changes. That takes an engine build
-  of your own: get the LittleJS source at the version you use, edit `src/engineEditor.js` or
-  `plugins/render3dEditor.js`, run `npm run build`, and use the `dist/littlejs.js` it makes. A changed copy
-  of the file can not be loaded beside the engine, the debug build has the editor in it already, and a build of
-  your own has to be made again for each engine update.
+  of your own:
+  1. Get the LittleJS source at the version you use.
+  2. Edit `src/engineEditor.js` or `plugins/render3dEditor.js`.
+  3. Run `npm run build`, and use the `dist/littlejs.js` it makes.
+
+  A changed copy of the file can not be loaded beside the engine, since the debug build has the editor in it
+  already, and a build of your own has to be made again for each engine update.
 - **A tool has no handles of its own.** It has the press, the drag and the release, and it can draw.
 - **The editors' inner functions**, the ones named `editor...` and `editor3D...`, are not part of this. They can
   be reached in a script-tag debug build, but they change between versions.
