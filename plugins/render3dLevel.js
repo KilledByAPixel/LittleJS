@@ -668,7 +668,9 @@ function level3DPrefabPartTransform(instance, object)
  * prefab's objects made
  * - Parts of a prefab that is not attached are objects of their own in the world: moving, turning or sizing the
  *   handle puts them where it now says with its next update, or call placeParts; destroying it destroys them
- * - Parts of an attached prefab are its children and move with it as one body
+ * - Parts of an attached prefab are its children and move with it as one body; its color multiplies the color of
+ *   the parts that draw their mesh, Box, Sphere, Cylinder, a mesh type and a glTF model, while a part that draws
+ *   itself, a class of the game's own, a light's glow or particles, keeps its own
  * @extends EngineObject3D
  * @memberof Level3D
  */

@@ -19,6 +19,7 @@ export
     paused,
     getPaused,
     setPaused,
+    engineIsFrozen,
     engineInit,
     engineStep,
     engineObjectsUpdate,

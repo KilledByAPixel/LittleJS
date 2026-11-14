@@ -31,6 +31,8 @@ averageFPS            // Display frames per second, smoothed, whether or not eac
 timeDelta             // Seconds the update covers: 1/60, or the display frame's time with engineVariableStep
 timeScale = 1         // Game speed, more or fewer fixed updates per second; with engineVariableStep it scales timeDelta
 paused                // Is the game paused? (set with setPaused)
+engineIsFrozen()      // Is the game held still this update: paused, timeScale 0 or a level editor open; a plugin's
+                      // update that moves the game returns while it is true
 headlessMode = false  // Run without rendering for testing/servers (set before engineInit)
 engineManualStep      // Advance only via engineStep, default false; can be turned on and off while running
 engineStep(frames=1)  // Advance the engine manually, needs engineManualStep
@@ -2014,7 +2016,7 @@ model.mesh, model.textureInfo        // everything as one Mesh tinted by its mat
 model.createObject(pos3D)            // a GLTFObject, an EngineObject3D with a child per part, each with its own
                                      // texture and blending, so windows and other see through parts show, and
                                      // emissive 1 for an unlit one; move and turn the root and the parts follow;
-                                     // its color multiplies the parts' and its transparent fades them, a hit flash
+                                     // its color multiplies the parts' and its transparent lets them blend, so the color's alpha fades them
 model.animations                     // one GLTFAnimation each: name, duration in seconds, and the channels that
                                      // move, turn and scale nodes; model.getAnimation(nameOrNumber) finds one
 object.play(animation=0, loop=true, speed=1, blend=0) // play one on a GLTFObject by name or number, its parts move

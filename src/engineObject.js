@@ -611,9 +611,9 @@ class EngineObject
         if (this.collideLevel)
         {
             // check collision against tiles, one way tiles go by where it was; put back after, a callback may throw
-            const fromObject = tileCollisionFromObject, fromPos = tileCollisionFromPos;
+            const fromObject = tileCollisionFromObject, fromPos = tileCollisionFromPos, fromOn = tileCollisionFromOn;
             const hitObject = tileCollisionHitObject;
-            tileCollisionFromObject = this, tileCollisionFromPos = oldPos;
+            tileCollisionFromObject = this, tileCollisionFromPos = oldPos, tileCollisionFromOn = wasOn;
             try
             {
                 this.isBullet ? this.updatePhysicsBullet(oldPos, gravityY, wasFalling) :
@@ -621,9 +621,16 @@ class EngineObject
             }
             finally
             {
-                tileCollisionFromObject = fromObject, tileCollisionFromPos = fromPos;
+                tileCollisionFromObject = fromObject, tileCollisionFromPos = fromPos, tileCollisionFromOn = fromOn;
                 tileCollisionHitObject = hitObject;
             }
+            // the box it stands on a tile layer with, for its one way platforms next frame; standing on on the same
+            // layer, a grown one sunk into the platform it stood on keeps the edges it stood there with
+            const ground = this.groundObject, stood = wasOn === ground && tileCollisionStood.get(this);
+            const bottom = this.pos.y - this.size.y/2, top = this.pos.y + this.size.y/2;
+            ground instanceof TileCollisionLayer ?
+                tileCollisionStood.set(this, stood ? [max(bottom, stood[0]), min(top, stood[1])] : [bottom, top]) :
+                tileCollisionStood.delete(this);
         }
     }
 

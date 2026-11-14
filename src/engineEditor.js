@@ -1193,6 +1193,8 @@ function editorRevert(record)
     // with autosaved edits waiting for Apply or Drop, the map is the file's already, edits are refused meanwhile,
     // and the waiting edits stay, only Drop takes them away; the panel's note flashes to say so
     if (record.pending) return editorPendingNudge();
+    // and while an async onRestart makes a resized map's layers, which take no edits till then
+    if (record.layers.some(editorLayerResizing)) return editorBusyNudge();
     record.pendingUnfit = undefined;
     const {width, height} = record.originalSize ?? record.map;
     editorPaintData(record, record.original, record.originalObjects, width, height);
@@ -1370,7 +1372,7 @@ function editorLayerResizing(layer)
 
 function editorPaint(layer, pos, gid)
 {
-    if (editorLayerResizing(layer)) return;
+    if (editorLayerResizing(layer)) return editorBusyNudge();
     const {source} = layer, index = editorCellIndex(layer, pos), before = source.data[index];
     // in the stroke once the map changed, even when the game's onTile throws after, so it is undone and saved with it
     try { editorSetCell(layer, pos, gid); }
@@ -1426,7 +1428,11 @@ function editorStrokeCancel()
 function editorUndo(redo=false)
 {
     editorStrokeEnd();
-    const stroke = (redo ? editorRedoList : editorUndoList).pop();
+    const list = redo ? editorRedoList : editorUndoList, last = list[list.length - 1];
+    // a stroke on a layer an async onRestart is making again waits on its list, as its cells are not the map's
+    // yet; undoing the resize itself goes on, which is how a Restart that never lands is ended
+    if (last?.some((entry)=> entry.layer && editorLayerResizing(entry.layer))) return editorBusyNudge();
+    const stroke = list.pop();
     if (!stroke) return;
     (redo ? editorUndoList : editorRedoList).push(stroke);
     editorBulkEdit(()=>
@@ -1921,7 +1927,12 @@ function editorStampTile(gid) { return {width: 1, height: 1, grids: [[gid]]}; }
 
 // the gid in a cell of a layer, as the map holds it
 function editorGidAt(layer, cell)
-{ return layer.source.data[editorCellIndex(layer, cell)]; }
+{
+    if (!editorLayerResizing(layer)) return layer.source.data[editorCellIndex(layer, cell)];
+    // the map is a new size while the game makes its layers again: the live layer's own tile, as it draws it
+    const d = layer.live.getData(cell);
+    return editorTileToGid(d.tile, d.direction, d.mirror);
+}
 
 // each layer a stamp paints with its grid: a stamp of one grid paints the layer being edited, one copied from all
 // layers paints the layers of that layer's map, as many as it has
@@ -2359,8 +2370,10 @@ function editorHint()
 // edits waiting in the panel's box for Apply or Drop: an edit of their level is refused till then, and a press on
 // the level says why, the box flashing and a line at the mouse for a moment; both editors use these
 const EDITOR_PENDING_HINT = 'The level file changed: apply your edits or drop them';
-let editorPendingNudgeTime;
+let editorPendingNudgeTime, editorBusyNudgeTime;
 function editorPendingNudge() { editorPendingNudgeTime = timeReal; }
+// an edit refused while an async onRestart makes a resized map's layers says so at the mouse
+function editorBusyNudge() { editorBusyNudgeTime = timeReal; }
 const editorPendingNudgeAge = ()=> editorPendingNudgeTime === undefined ? Infinity : timeReal - editorPendingNudgeTime;
 
 // the panel's box, flashing brighter after a refused press
@@ -2818,11 +2831,11 @@ function editorOnKeyDown(e)
         e.preventDefault();
 }
 
-// the wheel zooms toward the mouse by how far it moved; a trackpad pinch is a wheel with ctrlKey, which the engine
-// counts in touchPinch while touchPinchWheel is on, and editorUpdate zooms by that, so it is not taken twice
+// the wheel zooms toward the mouse by how far it moved; a trackpad pinch is a wheel with ctrlKey, the game's pinch
+// while touchPinchWheel is on and the browser's zoom while it is off, as the engine takes it
 function editorOnWheel(e)
 {
-    if (!editorIsOpen || editorIsTextField(e.target) || e.ctrlKey && touchPinchWheel) return;
+    if (!editorIsOpen || editorIsTextField(e.target) || e.ctrlKey && !touchPinchWheel) return;
     const pixels = e.deltaY * (e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? 400 : 1);
     editorZoom(Math.exp(-pixels * (e.ctrlKey ? .01 : .002)));
 }
@@ -3064,8 +3077,18 @@ function editorUpdate()
     const space = keyIsDown('Space');
     if (mouseIsDown(1) || space && mouseIsDown(0))
         editorCameraPos = editorCameraPos.subtract(screenToWorldDelta(mouseDeltaScreen));
-    // a pinch zooms toward the middle of the fingers, as far as a trackpad's in the wheel, a unit 50 pixels
-    touchPinch && editorZoom(Math.exp(-touchPinch * .5));
+    // a pinch on a touch screen zooms toward the middle of the fingers, while touchPinchWheel makes two fingers a
+    // pinch; a trackpad's, a wheel with Ctrl, editorOnWheel took
+    const pinch = touchPinchWheel ? touchPinch - inputWheelPinch : 0;
+    pinch && editorZoom(Math.exp(-pinch * .15));
+    // the second finger took the press over: what its first finger began is taken back, no stray tile or move
+    if (inputPinchReleased)
+    {
+        editorStrokeCancel();
+        editorToolHeld = false;
+        editorObjectDrag = editorSelectionDrag = editorObjectBox = undefined;
+        editorLeftSpent = false;
+    }
     editorApplyCamera();
 
     editorMouseOnPanel || (editorMouseScreen = mousePosScreen.copy());
@@ -3269,6 +3292,8 @@ function editorRender()
     }
     if (!editorIsOpen || headlessMode) return;
     editorRecord()?.pending && editorPendingNote();
+    editorBusyNudgeTime !== undefined && timeReal - editorBusyNudgeTime < 2 && drawTextScreen(
+        'Wait for Restart to make the level again', mousePosScreen.add(vec2(0, -30)), 18, hsl(.1, 1, .7), 4, BLACK);
     const layer = editorLayer?.live.destroyed ? undefined : editorLayer;
     if (!layer && !editorObjectLayer) return;
 
@@ -3373,7 +3398,14 @@ function editorGameHelp(element)
 // called by the engine after the plugins draw, so the editor is over the light system's darkening and the post process
 function editorRenderPost() { if (debug) { editorRender(); editorRenderGame(); } }
 
-debug && engineAddPlugin(editorUpdate);
+// the game does not see the editor's wheel and pinch in its gameUpdatePost, as the 3D editor hides them; the
+// editor's own hooks and tools read them in its update
+debug && engineAddPlugin(()=>
+{
+    const open = editorIsOpen;
+    try { editorUpdate(); }
+    finally { open && (mouseWheel = touchPinch = inputWheelPinch = 0); }
+});
 
 // the editor's own listeners for letter shortcuts and the wheel, the engine's input reads keys by position
 if (debug && globalThis.document?.addEventListener)

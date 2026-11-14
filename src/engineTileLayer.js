@@ -117,6 +117,18 @@ function tileCollisionAssertWhole(layer)
 // the object the physics is moving and where it was before this frame's move, for one way tiles
 let tileCollisionFromObject, tileCollisionFromPos;
 
+// the layer the object being moved stood on at the start of its move, see tileCollisionHeld
+let tileCollisionFromOn;
+
+// the bottom and top of each object's box as its last physics left it standing on a tile layer, so a one way
+// platform judges one that grew since by the box it stood there with, see tileCollisionOneWayPass
+const tileCollisionStood = /* @__PURE__ */ new WeakMap;
+
+// for a one way test of the layer for the object being moved, standing on that layer when its move began, the edges
+// of the box it stood there with, undefined otherwise
+const tileCollisionHeld = (layer, object)=> object && object === tileCollisionFromObject &&
+    tileCollisionFromOn === layer ? tileCollisionStood.get(object) : undefined;
+
 // the object whose tiles are asked about where its move put it, for collideWithTile's isHit
 let tileCollisionHitObject;
 
@@ -151,12 +163,12 @@ function tileCollisionInsetsOn(pos, size, object, axis)
     {
         if (!layer.isSolid) continue;
         const test = tileCollisionTester(object), from = layer.oneWayTiles.size && tileCollisionFromObject === object ?
-            tileCollisionFromPos : undefined;
+            tileCollisionFromPos : undefined, held = tileCollisionHeld(layer, object);
         for (let y = max(floor(bottom - layer.pos.y), 0); y < min(top - layer.pos.y, layer.size.y); ++y)
         for (let x = max(floor(left - layer.pos.x), 0); x < min(right - layer.pos.x, layer.size.x); ++x)
         {
             const data = layer.collisionData[y*layer.size.x + x], wx = x + layer.pos.x, wy = y + layer.pos.y;
-            if (!data || from && tileCollisionOneWayPass(layer, x, y, from.x, from.y, size.x, size.y) ||
+            if (!data || from && tileCollisionOneWayPass(layer, x, y, from.x, from.y, size.x, size.y, held) ||
                 !test(data, vec2(wx, wy)))
                 continue;
             const inX = min(wx + 1 - left, right - wx), inY = min(wy + 1 - bottom, top - wy);
@@ -172,8 +184,11 @@ function tileCollisionInsetsOn(pos, size, object, axis)
 
 // a one way tile at a layer's cell lets a box at from pass, when the cell draws a tile set one way and the box was not
 // wholly on its solid side, the side it can be passed through toward; the way is turned and mirrored as the tile's
-// art is, mirror first, then its quarter turns clockwise; a point is a box of no size
-function tileCollisionOneWayPass(layer, x, y, fromX, fromY, sizeX=0, sizeY=0)
+// art is, mirror first, then its quarter turns clockwise; a point is a box of no size; one held, standing on the
+// layer as its move began, is judged by a platform, a way up or down, with the box it stood there with, held its
+// bottom and top, so one that grew since about its center, standing up or powered up, stays on it, as a one way
+// solid holds what stood on it
+function tileCollisionOneWayPass(layer, x, y, fromX, fromY, sizeX=0, sizeY=0, held)
 {
     const oneWayTiles = layer.oneWayTiles;
     if (!oneWayTiles.size) return false;
@@ -185,8 +200,8 @@ function tileCollisionOneWayPass(layer, x, y, fromX, fromY, sizeX=0, sizeY=0)
     const epsilon = 1e-3, cellX = layer.pos.x + x, cellY = layer.pos.y + y;
     return wayX > .5 ? fromX - sizeX/2 < cellX + 1 - epsilon :
         wayX < -.5 ? fromX + sizeX/2 > cellX + epsilon :
-        wayY > .5 ? fromY - sizeY/2 < cellY + 1 - epsilon :
-        fromY + sizeY/2 > cellY + epsilon;
+        wayY > .5 ? (held ? held[0] : fromY - sizeY/2) < cellY + 1 - epsilon :
+        (held ? held[1] : fromY + sizeY/2) > cellY + epsilon;
 }
 
 // the layer whose tile tileCollisionGetDataFrom last found solid, undefined for none, the one a particle bounces off
@@ -1778,6 +1793,7 @@ class TileCollisionLayer extends TileLayer
         // a one way tile goes by where an object was before the physics moved it, or where it is now
         const object = callbackObject instanceof EngineObject && this.oneWayTiles.size ? callbackObject : undefined;
         let from = object && (object === tileCollisionFromObject ? tileCollisionFromPos : object.pos);
+        const held = tileCollisionHeld(this, object);
         // an object stuck in tiles is tested taken in by how far in it was, see tileCollisionInsetsOf, and where it
         // was moved with it, so a one way tile judges the box it tests
         const stuck = callbackObject && callbackObject === tileCollisionStuckObject ? tileCollisionStuckInsets : undefined;
@@ -1807,7 +1823,7 @@ class TileCollisionLayer extends TileLayer
         {
             // check if the object should collide with this tile, the callback gets its own vector, one it can keep
             const tileData = this.collisionData[y*this.size.x+x];
-            if (tileData && !(from && tileCollisionOneWayPass(this, x, y, from.x, from.y, size.x, size.y)) &&
+            if (tileData && !(from && tileCollisionOneWayPass(this, x, y, from.x, from.y, size.x, size.y, held)) &&
                 collisionTest(tileData, vec2(x+this.pos.x, y+this.pos.y)))
                 return true;
         }

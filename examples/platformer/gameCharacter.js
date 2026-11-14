@@ -276,7 +276,7 @@ export class Character extends GameObjects.GameObject
             this.weapon.destroy();
     }
     
-    collideWithTile(data, pos)
+    collideWithTile(data, pos, isHit)
     {
         if (!data)
             return false;
@@ -296,8 +296,9 @@ export class Character extends GameObjects.GameObject
             return !this.climbingLadder;
         }
 
+        // break blocks above, only on a real hit: the physics also asks about places it only tries
         const d = pos.y - this.pos.y;
-        if (!this.climbingLadder && this.velocity.y > .1 && d > 0 && d < this.size.y/2)
+        if (isHit && !this.climbingLadder && this.velocity.y > .1 && d > 0 && d < this.size.y/2)
         if (GameEffects.destroyTile(pos))
         {
             // break blocks above

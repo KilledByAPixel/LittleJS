@@ -82,27 +82,17 @@ function editor3DWithView(fn)
     const r = render3D, camera = r.camera;
     r.camera = editor3DCamera;
     r.updateMatrices();
-    ++editor3DViewDepth;
     try { return fn(); }
     finally
     {
-        --editor3DViewDepth;
         r.camera = camera;
         r.updateMatrices();
     }
 }
 
-// how deep in editor3DWithView, and what leaves the editor from inside it, run once the game has its camera back so
-// the game's onPlayFrom, onClose and onRestart see and move its own camera
-let editor3DViewDepth = 0, editor3DAfterView;
-
-// run fn now, or once the view is handed back when inside it; true when it was put off
-function editor3DOutsideView(fn)
-{
-    if (!editor3DViewDepth) return false;
-    editor3DAfterView = fn;
-    return true;
-}
+// what Escape or 0 leave the editor with, run once the update has handed the game its camera back so the game's
+// onPlayFrom and onClose see and move its own; a game's own close() is at once
+let editor3DAfterView;
 
 // called by the 3D pass before it works out its matrices: the frame is drawn with the editor's camera
 function editor3DCameraBegin()
@@ -1795,7 +1785,6 @@ function editor3DOpen()
 // close the editor and end its session, Escape opens the debug overlay again
 function editor3DClose()
 {
-    if (editor3DOutsideView(editor3DClose)) return;
     editor3DSession = false;
     editor3DSetOpen(false);
 }
@@ -1803,7 +1792,8 @@ function editor3DClose()
 // switch to playing, from a position when Play from mouse is on
 function editor3DPlay(pos)
 {
-    if (editor3DOutsideView(()=> editor3DPlay(pos))) return;
+    // inside Edit prefab a point is in the prefab's own space, not the level's, so it plays from where it is
+    pos = editor3DPrefabStack.length ? undefined : pos;
     editor3DSetOpen(false);
     editor3DPlayFromMouse && pos && editorHas('onPlayFrom') && levelEditor.onPlayFrom(pos.copy());
 }
@@ -1811,7 +1801,7 @@ function editor3DPlay(pos)
 // rebuild the level through the game's hook and play it
 function editor3DRestart()
 {
-    if (!editorHas('onRestart') || editor3DOutsideView(editor3DRestart)) return;
+    if (!editorHas('onRestart')) return;
     editor3DSetOpen(false);
     levelEditor.onRestart();
     debugKey || editor3DSetOpen(true); // with no debug key nothing would come back, so it stays in the editor
@@ -2674,7 +2664,14 @@ function editor3DEditorUpdate(seconds)
             editor3DToolHeld = false;
         }
         else
-            editor3DDrag ? editor3DDragCancel() : editor3DPlay(editor3DMousePoint());
+        {
+            if (editor3DDrag) editor3DDragCancel();
+            else
+            {
+                const pos = editor3DMousePoint();
+                editor3DAfterView = ()=> editor3DPlay(pos); // once the view is handed back, see editor3DUpdate
+            }
+        }
         return;
     }
 
@@ -2689,7 +2686,7 @@ function editor3DEditorUpdate(seconds)
     if (keyWasPressed('Digit0') && !ctrlHeld)
     {
         inputClearKey('Digit0');
-        editor3DClose();
+        editor3DAfterView = editor3DClose; // once the view is handed back, see editor3DUpdate
         return;
     }
 

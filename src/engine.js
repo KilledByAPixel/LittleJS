@@ -100,6 +100,13 @@ function setPaused(isPaused=true) { paused = isPaused; }
 // the update running now is frozen, paused or at a time scale of 0, so what follows game time holds
 let engineFrozenTick = false;
 
+/** Get if the game is held still in this update: paused, at a time scale of 0, or with a level editor open, which
+ *  holds the game whatever it sets paused to; a plugin's update that moves the game, a physics step or a camera,
+ *  returns while it is true
+ *  @return {boolean}
+ *  @memberof Engine */
+function engineIsFrozen() { return paused || engineFrozenTick; }
+
 /** Display frames per second, the browser's animation frames whether or not one drew, smoothed over about a
  *  third of a second, in release builds too
  *  @type {number}
@@ -364,8 +371,8 @@ class EnginePlugin
  */
 
 /** Add a new update function for a plugin
- *  - update runs on every fixed tick, or once a display frame with setEngineVariableStep, paused and timeScale 0
- *    included; a plugin that simulates should skip those
+ *  - update runs on every fixed tick, or once a display frame with setEngineVariableStep, paused, timeScale 0 and
+ *    an open level editor included; a plugin that simulates should skip those, as engineIsFrozen() says
  *  @param {PluginCallback} [update]
  *  @param {PluginCallback} [render]
  *  @param {PluginCallback} [glContextLost]

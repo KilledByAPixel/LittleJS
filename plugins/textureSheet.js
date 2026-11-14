@@ -535,7 +535,11 @@ function parseAtlas(data)
     let bad = 0;
     const frames = entries.map(([name, f])=>
     {
-        if (!f || typeof f.frame != 'object' || !f.frame || (typeof name != 'string' && typeof name != 'number'))
+        // and one whose numbers are not numbers, hand edited, as a NaN would stop the whole atlas in a debug build
+        const finite = (o, keys)=> !o || keys.every((key)=> o[key] === undefined || Number.isFinite(o[key]));
+        if (!f || typeof f.frame != 'object' || !f.frame || (typeof name != 'string' && typeof name != 'number') ||
+            !['x', 'y', 'w', 'h'].every((key)=> Number.isFinite(f.frame[key])) ||
+            !finite(f.spriteSourceSize, ['x', 'y', 'w', 'h']) || !finite(f.sourceSize, ['w', 'h']))
             return ++bad, undefined;
         // a frame rect bigger than its sprite: Aseprite's inner padding puts a border inside the rect on each side,
         // so the sprite is the middle of it, and one a pixel over, a scaled export's rounding, is the sprite's size
@@ -582,9 +586,12 @@ function parseAtlas(data)
         frames.forEach((f, i)=> f && !tagged.has(i) && groups.push({name: f.name, frames: [f]}));
         // a tag numbers frames, and Aseprite exported with split layers has an entry for each layer of each frame,
         // so its tags would take the wrong entries; those entries are named with their layer in brackets, as
-        // "hero (body) 0.aseprite", while a merged export lists its layers too but names no entry by them
-        const layers = (isArray(data.meta?.layers) ? data.meta.layers : []).map((layer)=> '(' + layer?.name + ')');
-        layers.length > 1 && frames.some((f)=> f && layers.some((layer)=> f.name.includes(layer))) &&
+        // "hero (body) 0.aseprite", two layers or more among them, while a merged export names no entry by a layer,
+        // or by one only, a title with a bracket; the layers listed, or with none listed the entries' brackets
+        const listed = isArray(data.meta?.layers) && data.meta.layers.length;
+        const layers = listed ? data.meta.layers.map((layer)=> '(' + layer?.name + ')') : [...new Set(frames.map((f)=>
+            f?.name.match(/\([^()]+\)/)?.[0]).filter(Boolean))];
+        layers.filter((layer)=> frames.some((f)=> f?.name.includes(layer))).length > 1 &&
             console.warn('loadAtlas: the atlas looks exported with split layers, which its frame tags do not ' +
             'number; export it with the layers merged');
         return parseAtlasNamesCheck(groups);

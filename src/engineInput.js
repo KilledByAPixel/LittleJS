@@ -48,6 +48,10 @@ let touchPinch = 0;
 // UI does not take it as a click
 let inputPinchReleased = false;
 
+// the part of touchPinch this frame that came from a trackpad pinch, a wheel with Ctrl, for the 2D editor, which
+// zooms a touch screen's pinch at a rate of its own
+let inputWheelPinch = 0;
+
 /** True if mouse was inside the document window, set to false when mouse leaves
  *  @type {boolean}
  *  @memberof Input */
@@ -680,7 +684,7 @@ function inputInit()
             // a notch of a mouse wheel held with Ctrl is one, as a plain notch is: in lines or pages it is a wheel,
             // since a trackpad sends pixels, and in pixels at most one
             const delta = e.deltaMode ? sign(e.deltaY) : clamp(e.deltaY / 50, -1, 1);
-            touchPinch += delta, mouseWheel += delta;
+            touchPinch += delta, mouseWheel += delta, inputWheelPinch += delta;
         }
         else
             mouseWheel += sign(e.deltaY);
@@ -728,7 +732,9 @@ function inputInit()
                 down.has(id) || inputTouchIds.delete(id);
             if (ending && !known) return true;
 
-            if (!touchInputEnable || touchGamepadEnable && !touchGamepadPassthrough)
+            // the touch gamepad hides under an open level editor, and touch is the editor's mouse then
+            const gamepadOwns = touchGamepadEnable && !touchGamepadPassthrough && !levelEditor.isOpen;
+            if (!touchInputEnable || gamepadOwns)
             {
                 // off, or the touch gamepad owns touch: turned so mid touch, the finger that drove the mouse lets
                 // go of it, and the next touch to drive it presses
@@ -742,7 +748,7 @@ function inputInit()
             // when the touch gamepad is enabled it owns touch input: suppress the
             // touch->mouse passthrough entirely unless touchGamepadPassthrough is set
             // (its own zones drive gameplay via pointer events)
-            if (!touchGamepadEnable || touchGamepadPassthrough)
+            if (!gamepadOwns)
             {
                 // touches that landed on a virtual gamepad zone are owned by the gamepad
                 // (handled by its own pointer listeners) and must not drive the game mouse
@@ -1132,7 +1138,7 @@ function inputUpdatePost()
     for (const deviceInputData of inputData)
     for (const i in deviceInputData)
         deviceInputData[i] &= 1;
-    mouseWheel = touchPinch = 0;
+    mouseWheel = touchPinch = inputWheelPinch = 0;
     inputPinchReleased = false;
     mouseDelta = vec2();
     mouseDeltaScreen = vec2();

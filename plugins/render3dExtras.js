@@ -668,26 +668,32 @@ class HeightMap extends EngineObject3D
         return {distance, normal: this.getNormal(from.x + (to.x - from.x) * distance, from.z + (to.z - from.z) * distance)};
     }
 
-    /** Where a move across the map first rises past a height, when the ground there is steeper than a slope: a quarter
-     *  of a cell at a time, the slope's way across, toward higher ground, and how far along the move it is
+    /** Where a move across the map first meets a riser taller than its step, when the ground there is steeper than a
+     *  slope: a quarter of a cell at a time, each place's height against the ground the look ahead back along the
+     *  move, as a MeshCollider's step ray at its foot sees a riser, so stairs whose steps are each under the step
+     *  climb though they add up past it; the slope's way across, toward higher ground, and how far along the move
      *  @param {Vector3} from
      *  @param {Vector3} to
-     *  @param {number} step - The height it may rise to
+     *  @param {number} foot - The height of its foot at the start, or of the ground under it when that is higher
+     *  @param {number} step - How much it may rise over the look ahead
      *  @param {number} steep - The least normal y that is not a wall
-     *  @param {number} ahead - How far past the end it looks, so a slow walk up a cliff, in rises below the step
-     *  each frame, is a walk into it
+     *  @param {number} ahead - How far back a riser is measured from, and past the end it looks at least, so a slow
+     *  walk up a cliff, in rises below the step each frame, is a walk into it
+     *  @param {number} [side] - Half its width, how far past the end it looks when that is more
      *  @return {{nx: number, nz: number, distance: number}|undefined}
      *  @ignore */
-    wallAhead(from, to, step, steep, ahead)
+    wallAhead(from, to, foot, step, steep, ahead, side=0)
     {
         const dx = to.x - from.x, dz = to.z - from.z, length = hypot(dx, dz);
         if (!length) return;
         const cell = min(this.mapSize.x / (this.columns - 1), this.mapSize.y / (this.rows - 1));
-        const reach = length + ahead, count = min(ceil(reach / cell * 4), 1e3);
+        const reach = length + max(ahead, side), count = min(ceil(reach / cell * 4), 1e3);
         for (let i = 1; i <= count; ++i)
         {
             const distance = reach * i / count, x = from.x + dx * distance / length, z = from.z + dz * distance / length;
-            if (this.getHeight(x, z) > step)
+            const back = distance - ahead, behind = back <= 0 ? foot :
+                max(foot, this.getHeight(from.x + dx * back / length, from.z + dz * back / length));
+            if (this.getHeight(x, z) > behind + step)
             {
                 const n = this.getNormal(x, z), l = hypot(n.x, n.z);
                 return n.y < steep && l ? {nx: n.x / l, nz: n.z / l, distance} : undefined;
@@ -716,9 +722,9 @@ class HeightMap extends EngineObject3D
         // and still rises past the step, into an inside corner, goes only as far as its side reaches the wall
         if (oldPos)
         {
-            const step = max(oldPos.y - half, this.getHeight(oldPos.x, oldPos.z)) + half / 2;
-            const side = min(o.size3D.x * abs(o.scale3D.x), o.size3D.z * abs(o.scale3D.z), half) / 2;
-            const steep = min(cos(o.groundAngle), .7), wall = this.wallAhead(oldPos, p, step, steep, half / 2);
+            const foot = max(oldPos.y - half, this.getHeight(oldPos.x, oldPos.z)), step = half / 2;
+            const side = min(o.size3D.x * abs(o.scale3D.x), o.size3D.z * abs(o.scale3D.z)) / 2;
+            const steep = min(cos(o.groundAngle), .7), wall = this.wallAhead(oldPos, p, foot, step, steep, half / 2, side);
             // the part of the move from oldPos to p before its side meets a wall found along it, none when that is up
             // the steep slope itself, a ramp, which it would creep up a little each frame
             const oldFoot = oldPos.y - half, upTo = (hit)=>
@@ -735,15 +741,14 @@ class HeightMap extends EngineObject3D
                 if (into < 0)
                     rx -= nx * into, rz -= nz * into;
                 p.x = oldPos.x + dx * f + rx, p.z = oldPos.z + dz * f + rz;
-                const corner = this.wallAhead(oldPos, p, step, steep, half / 2);
-                if (corner)
-                {
-                    const g = upTo(corner);
+                const corner = this.wallAhead(oldPos, p, foot, step, steep, half / 2, side), g = corner ? upTo(corner) : 1;
+                if (g < 1)
                     p.x = oldPos.x + (p.x - oldPos.x) * g, p.z = oldPos.z + (p.z - oldPos.z) * g;
-                }
                 ground = this.getHeight(p.x, p.z);
-                const v = o.velocity3D, vInto = v.x * nx + v.z * nz;
-                if (vInto < 0)
+                // the speed into it is taken back once it reached the wall, not while the wall is only ahead of a
+                // move it made whole, as a body coasting toward a cliff does
+                const v = o.velocity3D, vInto = v.x * nx + v.z * nz, cut = f < 1 || into < 0 || g < 1;
+                if (cut && vInto < 0)
                     v.x -= nx * vInto, v.z -= nz * vInto;
             }
         }
@@ -768,10 +773,13 @@ class HeightMap extends EngineObject3D
         // ground steeper than its groundAngle is not ground, as a MeshCollider's steep face is not: it is not stood
         // on, so a jump can not climb it, and it is pushed out along the slope's normal, not straight up, so gravity
         // slides it down whatever speed the game gives it across; one at the foot of a cliff, with gentle ground
-        // within half its width downhill, stands there
+        // within half its width downhill, stands there, looked for along that half width, so on stairs with treads
+        // narrower than it the tread behind it is found and not the riser below that
         const v = o.velocity3D, n = this.getNormal(p.x, p.z), cosGround = cos(o.groundAngle), l = hypot(n.x, n.z);
         const reach = min(o.size3D.x * abs(o.scale3D.x), o.size3D.z * abs(o.scale3D.z)) / 2;
-        if (n.y >= cosGround || l && this.getNormal(p.x + n.x / l * reach, p.z + n.z / l * reach).y >= cosGround)
+        const gentleNear = ()=> [.25, .5, .75, 1].some((k)=>
+            this.getNormal(p.x + n.x / l * reach * k, p.z + n.z / l * reach * k).y >= cosGround);
+        if (n.y >= cosGround || l && gentleNear())
         {
             p.y = ground + half;
             if (v.y < 0)

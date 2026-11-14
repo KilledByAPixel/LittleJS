@@ -653,6 +653,7 @@ function gameUpdate()
 `camera.follow(target, offset, percent)` chases something: it moves the camera toward `target + offset` and then points it at the target. The offset is a position, not a rotation, so `vec3(0, 9, 16)` sits 9 units above the target and 16 behind it, and the camera turns by itself to look at the target from there. What the camera looks at is in the middle of the screen, so to have the player lower on screen, follow a point above the player:
 
 ```javascript
+// in gameUpdatePost, after the player moved this frame, or it aims at where the player was
 const lookPoint = player.pos3D.add(vec3(0, 3, 0)); // raise it to push the player lower
 render3D.camera.follow(lookPoint, vec3(0, 9, 16), .1);
 ```

@@ -279,9 +279,11 @@ class GLTFModel
  * - model.createObject makes one; move, turn and scale it like any EngineObject3D and the parts follow
  * - play starts an animation by name or number, and the object moves its parts each frame as it runs
  * - The parts' meshes stay where they rest, an animation moves the child objects that draw them
- * - Its color multiplies every part's own and transparent makes them all see through, so a hit flash or a fade is
- *   set on the object; the other draw settings it sets away from the default, emissive or shader, take the parts'
- *   place
+ * - Its color multiplies every part's own and transparent makes them all blend, so a hit flash or a fade, by the
+ *   color's alpha, is set on the object; the other draw settings it sets away from the default, emissive or shader,
+ *   take the parts' place
+ * - A see through object casts a shadow only where it is textured, so with transparent set its untextured parts
+ *   cast none, whatever the alpha; set it only while it fades
  * @extends EngineObject3D
  * @memberof GLTF
  * @example

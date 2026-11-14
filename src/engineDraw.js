@@ -567,14 +567,15 @@ class SpriteAnimator
         if (name == this.name)
         {
             // showing and not ended, it plays on, with the onEnd given now when there is one
-            const clip = this.clip;
+            const clip = this.clip, hadEnd = !!clip.onEnd;
             if (!clip.isDone)
             {
                 onEnd && (clip.onEnd = onEnd);
                 return this;
             }
-            // it just ended and its onEnd, called by that check, switched to another clip, which stands
-            if (name != this.name)
+            // it just ended and that check called its onEnd: what the onEnd did stands, a switch to another clip, a
+            // flag the next set reads, or this clip started again with a callback of its own, as a combo's next hit
+            if (hadEnd)
                 return this;
         }
         this.name = name;
