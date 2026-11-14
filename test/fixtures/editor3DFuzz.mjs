@@ -183,6 +183,52 @@ const checkCode = `(function()
         }
         for (const name in own) level3DPrefabs.get(name) || problems.push('level prefab not registered ' + name);
     }
+
+    // pass 11 extra: collision list, object list, maps put away, the game's held maps
+    {
+        const dupes = engineObjects.length - new Set(engineObjects).size;
+        if (dupes) problems.push('engineObjects duplicates ' + dupes);
+        const lv = render3DLevel;
+        if (lv.length !== new Set(lv).size) problems.push('render3DLevel duplicates');
+        for (const o of lv)
+        {
+            if (o.destroyed) problems.push('destroyed in render3DLevel ' + o.constructor.name);
+            if (!engineObjects.includes(o)) problems.push('render3DLevel has one not in engineObjects ' + o.constructor.name);
+        }
+        const away = [...[...editor3DMapsRemoved.values()].flat(), ...editor3DPrefabStack.flatMap((f)=> f.maps)].filter((m)=> m);
+        for (const m of away)
+        {
+            if (engineObjects.includes(m) && !m.destroyed) problems.push('away map in engineObjects ' + m.constructor.name);
+            if (lv.includes(m)) problems.push('away map in render3DLevel ' + m.constructor.name);
+            if (m.children.some((c)=> engineObjects.includes(c))) problems.push('away map child in engineObjects');
+            if (m === level3DVoxelMap || m === level3DTerrainMap) problems.push('away map is the live map');
+        }
+        if (away.length !== new Set(away).size) problems.push('same map away twice');
+        for (const m of [level3DVoxelMap, level3DTerrainMap])
+        {
+            if (!m || m.destroyed) continue;
+            if (!engineObjects.includes(m)) problems.push('live map not in engineObjects ' + m.constructor.name);
+            if (!lv.includes(m)) problems.push('live map not in render3DLevel ' + m.constructor.name);
+            if (m.children.some((c)=> !engineObjects.includes(c) && !c.destroyed)) problems.push('live map child missing');
+        }
+        const allMaps = engineObjects.filter((o)=> !o.destroyed && (o instanceof VoxelMap || o instanceof HeightMap));
+        for (const o of allMaps)
+            if (o !== level3DVoxelMap && o !== level3DTerrainMap && !o.parent) problems.push('stray live map ' + o.constructor.name);
+        // the game's held maps: a destroyed one is replaced by one of another shape only
+        if (!editor3DPrefabStack.length)
+        {
+            const shapeT = (m)=> m && [m.pos3D.x, m.pos3D.y, m.pos3D.z, m.mapSize.x, m.mapSize.y, m.height, m.rows, m.columns].join();
+            const shapeV = (m)=> m && [m.pos3D.x, m.pos3D.y, m.pos3D.z, m.mapSize.x, m.mapSize.y, m.mapSize.z].join();
+            const T = level3DTerrainMap && !level3DTerrainMap.destroyed ? level3DTerrainMap : undefined;
+            const V = level3DVoxelMap && !level3DVoxelMap.destroyed ? level3DVoxelMap : undefined;
+            if (globalThis.heldT && globalThis.heldT.destroyed && T && T !== globalThis.heldT && shapeT(T) === globalThis.heldShapeT)
+                problems.push('held terrain destroyed for one of the same shape');
+            if (globalThis.heldV && globalThis.heldV.destroyed && V && V !== globalThis.heldV && shapeV(V) === globalThis.heldShapeV)
+                problems.push('held voxels destroyed for one of the same shape');
+            if (T) globalThis.heldT = T, globalThis.heldShapeT = shapeT(T);
+            if (V) globalThis.heldV = V, globalThis.heldShapeV = shapeV(V);
+        }
+    }
     return problems;
 })()`;
 
@@ -310,7 +356,7 @@ for (let seed = firstSeed; seed < firstSeed + seeds; ++seed)
                 editor3DTerrainSculpt(vec3(${num(-8, 8)}, 0, ${num(-8, 8)}), 'flatten', .2, ${num(0, 1, 2)});
                 ${end}; })()`,
             // the game restarting the same level, as onRestart does: what it made goes, then the level loads again
-            reload: 'while (editor3DPrefabBack()); engineObjectsDestroy(); level3DLoad(level)',
+            reload: 'while (editor3DPrefabBack()); engineObjectsDestroy(); level3DLoad(level); globalThis.heldT = globalThis.heldV = undefined',
             // Reset to file, which applies the whole scene again, and the editor closed and opened, from full pass 10
             revert: 'while (editor3DPrefabBack()); editor3DRevert()',
             closeOpen: 'editor3DStrokeEnd(); editor3DSetOpen(false); editor3DSetOpen(true)',
@@ -318,7 +364,7 @@ for (let seed = firstSeed; seed < firstSeed + seeds; ++seed)
         // GAME_SCENE=1: the game sets its own fog color and sun in code before loading the level again (finding G1)
         ops.gameSceneReload = `while (editor3DPrefabBack()); render3D.fogColor = hsl(${num(0, 1, 2)}, 1, .5);
             render3D.sunDirection = vec3(${num(-1, 1)}, 1, 0); gameFog = render3D.fogColor.toString();
-            gameSun = render3D.sunDirection.copy(); engineObjectsDestroy(); level3DLoad(level)`;
+            gameSun = render3D.sunDirection.copy(); engineObjectsDestroy(); level3DLoad(level); globalThis.heldT = globalThis.heldV = undefined`;
         const inPlace = INPLACE && random() < .5;
         // the game changes fields no block here sets, mid level, with the editor open or not
         ops.gameMid = inPlace ? `render3D.sunColor.setHSLA(${num(0, 1, 2)}, .5, .7); gameSunColor = render3D.sunColor.toString()` :

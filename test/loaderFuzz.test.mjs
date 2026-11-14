@@ -53,6 +53,11 @@ test(`every loader, given ${cases} mutated files each, answers, in little memory
     const failures = [];
     const run = await loadEngine(file);
     const targets = JSON.parse(run('JSON.stringify(Object.keys(targets).filter((name)=> targets[name].base))'));
+    // no prototype of the engine's realm gains a key, from pass 11
+    const protoKeys = ()=> run(`[Object.prototype, Array.prototype, Function.prototype, String.prototype,
+        Number.prototype, EngineObject.prototype, Vector2.prototype, Color.prototype, TileInfo.prototype]
+        .map((p)=> Object.getOwnPropertyNames(p).length).join()`);
+    const protoBefore = protoKeys();
     assert.ok(targets.length >= 8, 'the targets: ' + targets);
     for (const target of targets)
     for (let i = -1; i < cases; ++i)
@@ -70,11 +75,15 @@ test(`every loader, given ${cases} mutated files each, answers, in little memory
             result === 'no answer' && failures.push(`${target} ${i} ${log}: no answer in 10 s`);
         }
         catch {} // a broken file may throw or assert
+        // a step after it, where a half-made object, as a glTF node of bad numbers was, would throw
+        try { run('engineStep(2)'); }
+        catch (error) { failures.push(`${target} ${i} ${log}: a step after it threw ${error.message}`); }
         try { run('engineObjectsDestroy()'); }
         catch (error) { failures.push(`${target} ${i} ${log}: engineObjectsDestroy then threw ${error.message}`); }
         // memory and not time, which a busy machine makes flaky
         const grew = process.memoryUsage().rss - memory;
         grew > 300e6 && failures.push(`${target} ${i} ${log}: took ${grew / 1e6 | 0} MB`);
     }
+    assert.equal(protoKeys(), protoBefore, 'no prototype gained a key');
     assert.deepEqual(failures, []);
 });
