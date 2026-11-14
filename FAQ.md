@@ -31,6 +31,8 @@ If you don't find an answer here, feel free to ask the community or check the do
 - [How do I control the camera in LittleJS?](#how-do-i-control-the-camera-in-littlejs)
 - [How do I add lights and shadows to a 2D game?](#how-do-i-add-lights-and-shadows-to-a-2d-game)
 - [Can I make a 3D game with LittleJS?](#can-i-make-a-3d-game-with-littlejs)
+- [How do I move the 3D camera myself?](#how-do-i-move-the-3d-camera-myself)
+- [How do I bring a model and its materials in from Blender?](#how-do-i-bring-a-model-and-its-materials-in-from-blender)
 - [How do I use post-processing shaders?](#how-do-i-use-post-processing-shaders)
 - [How do I play sounds in LittleJS?](#how-do-i-play-sounds-in-littlejs)
 - [How do I play music?](#how-do-i-play-music)
@@ -47,6 +49,7 @@ If you don't find an answer here, feel free to ask the community or check the do
 - [How can I load a 2D level map?](#how-can-i-load-a-2d-level-map)
 - [How do I use the level editor?](#how-do-i-use-the-level-editor)
 - [Can I use physics with LittleJS?](#can-i-use-physics-with-littlejs)
+- [How do I make slopes or diagonal tiles?](#how-do-i-make-slopes-or-diagonal-tiles)
 - [How do I add particle effects to my game?](#how-do-i-add-particle-effects-to-my-game)
 - [How do I use timers?](#how-do-i-use-timers)
 - [How do I make a title screen, a menu and game over?](#how-do-i-make-a-title-screen-a-menu-and-game-over)
@@ -68,6 +71,8 @@ LittleJS is a lightweight, high-performance JavaScript game engine designed for 
 It offers a hybrid rendering system that combines the advantages of WebGL and 2D Canvas, and [bench/](bench/) runs the same scenes in it and in three.js, PixiJS and Phaser.
 Unlike those feature-heavy engines, LittleJS keeps to a comprehensive set of simple, easy to use features, for 2D games first, with a 3D renderer of its own as well.
 LittleJS is perfect for developers who want a minimal yet powerful engine to bring their 2D game ideas to life without the complexity of larger frameworks, and it's especially well suited for size-constrained competitions like js13kGames.
+
+It is plain object-oriented, not an entity component system: everything in the world is an `EngineObject`, which you extend, overriding `update()` and `render()`, while the engine keeps the list and handles physics, collision, drawing and parent/child attachment.
 
 ### How do I set up a basic LittleJS project?
 
@@ -430,6 +435,21 @@ LittleJS works best when your tile sheet is broken up into grids of tiles becaus
 drawTile(vec2(21,5), vec2(4.5), tile(3,128));
 ```
 
+An image that fails to load does not stop the game: the engine prints a warning and leaves an empty texture with a size of 0. Every image passed to `engineInit` has loaded or failed before `gameInit` runs, so check there:
+
+```javascript
+const images = ['tiles.png', 'player.png'];
+
+function gameInit()
+{
+    const failed = images.filter((src, i)=> !textureInfos[i].size.x);
+    if (failed.length)
+        showLoadError(failed); // your own handling, with the files that failed
+}
+
+engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost, images);
+```
+
 Once loaded, the underlying images are available via `textureInfos[0].image`, `textureInfos[1].image`, etc. This is useful for tasks like reading pixel data to generate a level — the [Level Editor short](https://killedbyapixel.github.io/LittleJS/examples/?example=Level%20Editor) loads a level from data instead, and [examples/module/game.js](examples/module/game.js) builds one from a string.
 
 ### What is the tile function and how do tile indexes work?
@@ -578,6 +598,58 @@ function gameInit()
 
 Y is up, as in 2D. From there it has shape builders, OBJ and glTF models, terrain, voxels, lights, shadows, particles, custom shaders and a 3D level editor. The examples in the 3D section of the [example browser](https://killedbyapixel.github.io/LittleJS/examples/?example=3D%20Basics) each show one of them, starting with 3D Basics, and [REFERENCE.md](REFERENCE.md) has a "Coming from three.js" section. 2D drawing still works over the 3D scene, for a HUD. If you would rather render with [Three.js](https://threejs.org), the `threejs.js` plugin does that with LittleJS running the game.
 
+Objects are the usual way to draw, but there is a direct way too, like `drawTile` in 2D: an object can override `render3D()` and call `render3D.drawMesh(mesh, matrix)`, `drawBox`, `drawSphere` and the rest there, and with no objects at all the same calls go in a function set as `render3D.onRenderOpaque`, as the [3D Drawing](https://killedbyapixel.github.io/LittleJS/examples/?example=3D%20Drawing) example does.
+
+### How do I move the 3D camera myself?
+
+The 3D camera is `render3D.camera`, a position and a rotation you can set at any time, and wherever they are when the frame draws is the view:
+
+```javascript
+function gameUpdate()
+{
+    // circle a point, always looking at it
+    const camera = render3D.camera;
+    camera.pos = vec3(sin(time)*10, 5, cos(time)*10);
+    camera.lookAt(vec3(0, 1, 0)); // or set camera.rotation = vec3(pitch, yaw, roll), in radians
+}
+```
+
+`camera.follow(target, offset, percent)` chases something: it moves the camera toward `target + offset` and then points it at the target. The offset is a position, not a rotation, so `vec3(0, 9, 16)` sits 9 units above the target and 16 behind it, and the camera turns by itself to look at the target from there. What the camera looks at is in the middle of the screen, so to have the player lower on screen, follow a point above the player:
+
+```javascript
+const lookPoint = player.pos3D.add(vec3(0, 3, 0)); // raise it to push the player lower
+render3D.camera.follow(lookPoint, vec3(0, 9, 16), .1);
+```
+
+`CameraControl3D`, `FirstPersonCamera3D` and `ThirdPersonCamera3D` are ready-made cameras that set `render3D.camera` every frame, after your update. To move the camera yourself, do not make one of them, or destroy it, or it overwrites what you set. The [3D First Person](https://killedbyapixel.github.io/LittleJS/examples/?example=3D%20First%20Person) and [3D Third Person](https://killedbyapixel.github.io/LittleJS/examples/?example=3D%20Third%20Person) examples use them, and the [3D Dodge Game](https://killedbyapixel.github.io/LittleJS/examples/?example=3D%20Dodge%20Game) uses `follow`.
+
+### How do I bring a model and its materials in from Blender?
+
+Export it as glTF, a `.glb` file, and load it with the glTF plugin:
+
+```javascript
+const model = await loadGLTF('ship.glb');          // in an async gameInit
+const ship = model.createObject(vec3(0, 1, 0));    // an object with a child for each part
+ship.play('fly');                                  // its animation, by name or number
+```
+
+The file carries the parts and how they are arranged, the geometry, the animations, skinned characters included, and a description of each material. LittleJS draws that material with its own lit shader, which is much simpler than Blender's Principled BSDF, so only part of a material crosses over.
+
+What comes across:
+- Base color, as a color or an image texture
+- A normal map
+- Emission, as a color or a texture, with its strength
+- Roughness as one number for the whole material, which sets how shiny it is
+- Alpha: opaque, cut out (alpha clip) or blended
+
+What does not:
+- A roughness map, which varies the roughness across the surface, and metallic and ambient occlusion maps; metalness is not read at all
+- Anything procedural: noise, color ramps, math nodes. glTF can not hold a node graph, so bake those to image textures before exporting
+- Subsurface, sheen, clearcoat and the other extras
+- Volumes. For fog use the engine's own, `render3D.setFog(fogStart, fogEnd, fogColor)`
+
+So build a material from a base color texture, a normal map, an emission map and one roughness value, and bake anything fancier into those textures. After loading, each object can still be changed in code, with `color`, `roughness`, `specular`, `reflectivity` and `emissive`, and a `Shader` of your own gives a look the built-in one does not have. The [3D Mesh](https://killedbyapixel.github.io/LittleJS/examples/?example=3D%20Mesh), [3D Materials](https://killedbyapixel.github.io/LittleJS/examples/?example=3D%20Materials) and [3D Shaders](https://killedbyapixel.github.io/LittleJS/examples/?example=3D%20Shaders) examples show these.
+
 ### How do I use post-processing shaders?
 
 LittleJS supports Shadertoy-style fragment shaders as a final pass on the rendered output via the post-process plugin. Create the plugin with your shader source in `gameInit`, once `engineInit` has set up WebGL:
@@ -706,6 +778,18 @@ setTouchGamepadEnable(true);
 ```
 
 Once enabled, an analog stick and face buttons appear on touch devices, and the regular gamepad input functions (`gamepadIsDown`, `gamepadStick`) work normally — so the same code can drive both a physical gamepad and the touch overlay. Customization helpers like `setTouchGamepadSize`, `setTouchGamepadAnalog`, `setTouchGamepadButtonCount`, and `setTouchGamepadAlpha` let you tune the appearance.
+
+To draw an icon of your own on a button, like one that changes with what the button does, `touchGamepadButtonPos(button)` gives the button's center and size in screen pixels and how visible the gamepad is, so the icon stays centered whatever the layout and screen:
+
+```javascript
+// in gameRenderPost
+const b = touchGamepadButtonPos(0); // 0 is the right side's first button
+if (b && b.alpha)
+{
+    const color = hsl(0, 0, 1, b.alpha / touchGamepadAlpha); // fades with the buttons
+    drawTile(b.pos, vec2(b.size * .6), actionIcon, color, 0, false, undefined, glEnable, true);
+}
+```
 
 You can also branch behavior on `isTouchDevice` if you need to detect touch hardware explicitly.
 
@@ -846,6 +930,18 @@ Yes! LittleJS comes with a fast arcade physics system. Call `setCollision()` on 
 Velocity and gravity are in world units per frame, at 60 frames a second, so a velocity of `.1` is 6 units a second. The [Physics](https://killedbyapixel.github.io/LittleJS/examples/?example=Physics) and [Platform Physics](https://killedbyapixel.github.io/LittleJS/examples/?example=Platform%20Physics) examples show these, with one-way platforms and lifts, and the platformer example has a character class to start from.
 
 For realistic physics, with turning bodies, joints and stacks that hold, there is [a plugin using Box2D.](https://killedbyapixel.github.io/LittleJS/examples/box2d/)
+
+### How do I make slopes or diagonal tiles?
+
+The arcade physics is boxes only: every object and every solid tile is an upright box, so it has no slopes. For slopes use the Box2D plugin. Keep tiles for most of the level, where a `Box2dTileLayer` gives the solid tiles their collision, and place a triangle wherever you want a slope:
+
+```javascript
+// a 45 degree slope rising to the right, its corner at pos
+const slope = new Box2dStaticObject(pos);
+slope.addPoly([vec2(0, 0), vec2(1, 0), vec2(1, 1)]);
+```
+
+For ground of any shape, a static object can take a line of points instead, with `addEdgeList`, or `addEdgeLoop` for a closed shape, which traces the surface as one line with no seams between tiles for a player to catch on. The points are in the object's own space. The [Box2D Tile Layer](https://killedbyapixel.github.io/LittleJS/examples/?example=Box2D%20Tile%20Layer) and [Box2D Platformer](https://killedbyapixel.github.io/LittleJS/examples/?example=Box2D%20Platformer) examples are good starting points.
 
 ### How do I add particle effects to my game?
 
