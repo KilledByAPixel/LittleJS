@@ -580,7 +580,10 @@ test('the wheel zooms by how far it moved and toward the mouse, and a pinch zoom
     assert.ok(small > 100 && big / small > small / 100, 'a bigger wheel move zooms more');
     const [scaled, drift] = wheel(100);
     assert.ok(scaled < big && drift < 1e-9, 'the point under the mouse stays put');
-    const [pinched] = wheel(-10, true);
+    // a trackpad pinch, a wheel with Ctrl, is the engine's touchPinch while touchPinchWheel is on, which the update
+    // zooms by, as it does a pinch on a touch screen, so the wheel handler leaves it
+    assert.equal(wheel(-10, true)[0], scaled, 'the handler leaves a pinch to the update');
+    const pinched = run('touchPinch = -.2; editorUpdate(); touchPinch = 0; editorCameraScale');
     assert.ok(pinched > scaled, 'a pinch zooms in');
 });
 

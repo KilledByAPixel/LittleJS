@@ -148,7 +148,8 @@ test('a 3D level object id too big to add one to is given a new one', async ()=>
     assert.ok(ids.every((id)=> id < 2 ** 31), ids.join());
 });
 
-test('a paint while an async onRestart makes the resized layers lands in the cell painted', async ()=>
+test('a paint while an async onRestart makes the layers of a grown map is refused, and lands once they are made',
+    async ()=>
 {
     const { run } = await engine2D();
     run(`var map = {width: 3, height: 2, tilewidth: 16, tileheight: 16,
@@ -161,11 +162,15 @@ test('a paint while an async onRestart makes the resized layers lands in the cel
         };
         levelEditor.open(); editorLayer = front;
         editorResize(front.record, 4, 3);
-        levelEditor.edit2D.paint(vec2(0, 0), 4); editorStrokeEnd();`);
+        var refused = !levelEditor.edit2D.paint(vec2(0, 0), 4); editorStrokeEnd();`);
+    assert.equal(run('refused'), true);
+    assert.deepEqual(JSON.parse(run('JSON.stringify(map.layers[0].data)')), new Array(12).fill(0));
+    run('restartWait()');
+    await new Promise((r)=> setTimeout(r, 0));
     // the bottom left cell of a 4 by 3 map is index 8, Tiled's rows from the top
-    const data = JSON.parse(run('JSON.stringify(map.layers[0].data)'));
-    assert.equal(data.indexOf(5), 8);
-    run('restartWait(); levelEditor.close()');
+    run('editorLayer = editorLayerRecord(layers[0]); levelEditor.edit2D.paint(vec2(0, 0), 4); editorStrokeEnd()');
+    assert.equal(JSON.parse(run('JSON.stringify(map.layers[0].data)')).indexOf(5), 8);
+    run('levelEditor.close()');
 });
 
 test('Reset to file while autosaved edits wait leaves them waiting', async ()=>

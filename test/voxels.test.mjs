@@ -521,7 +521,8 @@ test('an object fast enough to step over a height map ridge in one move meets it
         walker.updatePhysics();
         JSON.stringify({x: o.pos3D.x, y: o.pos3D.y, walked: walker.pos3D.x})`));
     assert.ok(result.x < .1, 'stopped at the ridge, not past it: ' + result.x);
-    assert.ok(result.y > .25, 'and up on its side: ' + result.y);
+    // its sides, 76 degrees, are walls by the slope rule, so it stops at the foot and does not go up them
+    assert.ok(result.y > .25 - 1e-9 && result.y < .5, 'at its foot, not up its side: ' + result.y);
     assert.ok(Math.abs(result.walked + 1.7) < 1e-9, 'a move on the flat goes its whole way: ' + result.walked);
 });
 
