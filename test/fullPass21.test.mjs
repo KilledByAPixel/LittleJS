@@ -139,16 +139,18 @@ function restartingMap(run)
         levelEditor.open();`);
 }
 
-test('the 2D editor\'s Play waits for an async restart, and one that never settles is let go', async ()=>
+test('the 2D editor\'s Play during an async restart plays on with no player put, and one that never settles is let go',
+    async ()=>
 {
     const { run } = await engine();
     restartingMap(run);
     run(`editorPlayFromMouse = true;
         editorResize(editorLayers()[0].record, 5, 3);
         editorPlay(vec2(1, 1));`);
-    assert.deepEqual(JSON.parse(run('JSON.stringify([editorIsOpen, playedFrom.length])')), [true, 0], 'Play waits');
+    assert.deepEqual(JSON.parse(run('JSON.stringify([editorIsOpen, playedFrom.length])')), [false, 0],
+        'Play closes the editor, the player not put at the mouse');
     run('waits.shift()()'); await tick();
-    run('editorPlay(vec2(1, 1))');
+    run('levelEditor.open(); editorPlay(vec2(1, 1))');
     assert.deepEqual(JSON.parse(run('JSON.stringify([editorIsOpen, playedFrom.length])')), [false, 1], 'then plays');
 
     // a restart that never settles: the game loads its map again itself, which ends the wait

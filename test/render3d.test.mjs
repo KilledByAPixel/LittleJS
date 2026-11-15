@@ -2294,8 +2294,10 @@ test('solid objects push apart by mass and bounce off each other', () =>
     a.velocity3D = vec3(1, 0, 0);
     b.updatePhysics(); // b comes after a, so b resolves the pair
     near(a.pos3D.x, -.2); near(b.pos3D.x, .8);
-    nearVec(a.velocity3D, 0, 0, 0); // heading into b with no restitution, the push takes it away
+    // heading into b with no restitution they move on together, sharing its momentum by mass, as in 2D
+    nearVec(a.velocity3D, .5, 0, 0); nearVec(b.velocity3D, .5, 0, 0);
     b.pos3D = vec3(.6, 0, 0); a.pos3D = vec3(); a.mass = 0; // a is static now
+    a.velocity3D = vec3(); b.velocity3D = vec3();
     b.updatePhysics();
     near(a.pos3D.x, 0); near(b.pos3D.x, 1);
     const emitter = new ParticleEmitter3D(vec3());

@@ -42,3 +42,34 @@ test('a Box2D tile layer rebuilt from beginContact keeps its collision', ()=>
     const y = box2d.vec2From(ball.body.GetPosition()).y;
     assert.ok(y > 1.5 && y < 2.2, 'the ball rests on the floor row, not fallen through: ' + y);
 });
+
+test('a Box2D tile layer rebuilt twice in one step, or rebuilt then destroyed in the callback, ends right', ()=>
+{
+    const box2d = LJS.box2d;
+    for (const then of ['twice', 'destroy'])
+    {
+        const layer = new LJS.TileCollisionLayer(vec2(30, 0), vec2(8, 4));
+        for (let x = 8; x--;) layer.setCollisionData(vec2(x, 0), 1);
+        const tiles = new LJS.Box2dTileLayer(layer);
+        const count = tiles.getFixtureList().length;
+        const ball = new Box2dObject(vec2(33.5, 3)); ball.addCircle(1);
+        let calls = 0;
+        ball.beginContact = ()=>
+        {
+            if (calls++) return;
+            tiles.buildCollision();
+            then === 'twice' ? tiles.buildCollision() : tiles.destroy();
+        };
+        for (let i = 120; i--;) box2d.step();
+        assert.ok(calls > 0, then + ': the callback ran');
+        if (then === 'twice')
+        {
+            const y = box2d.vec2From(ball.body.GetPosition()).y;
+            assert.ok(y > .9 && y < 2.2, 'twice: the ball rests on the floor, built once more ' + y);
+            assert.equal(tiles.getFixtureList().length, count, "twice: one set of fixtures, not two");
+        }
+        else
+            assert.ok(!tiles.body, 'destroyed: no body left');
+        LJS.engineObjectsDestroy(); box2d.step();
+    }
+});
