@@ -1114,6 +1114,7 @@ function editorPaintData(record, data, objects, width=record.map.width, height=r
     if (width !== record.map.width || height !== record.map.height)
     {
         if (!editorHas('onRestart')) return;
+        if (editorRestartRunning) return editorBusyNudge(); // the last restart still makes the level
         const before = editorMapSnapshot(record);
         editorSetMapSnapshot(record, {width, height, layers: data, objects}, keepUnknown);
         editorMapChanged(record, before);
@@ -1289,7 +1290,8 @@ function editorResize(record, width, height)
     const map = record?.map;
     if (!map || record.synthetic || record.pending || !editorHas('onRestart')) return false;
     if (width === map.width && height === map.height) return false;
-    if (editorRecordResizing(record)) return editorBusyNudge(), false; // the last resize's restart still makes it
+    if (editorRecordResizing(record) || editorRestartRunning)
+        return editorBusyNudge(), false; // the last restart still makes the level
     editorStrokeEnd();
     const before = editorMapSnapshot(record);
     if (!editorResizeMap(map, width, height)) return false;
@@ -1454,9 +1456,11 @@ function editorUndo(redo=false)
     editorStrokeEnd();
     const list = redo ? editorRedoList : editorUndoList, last = list[list.length - 1];
     // a stroke on a layer an async onRestart is making again waits on its list, as its cells are not the map's
-    // yet; undoing the resize itself goes on, which is how a Restart that never lands is ended
+    // yet; a resize waits while a restart runs, as undoing it calls the game's onRestart again, and goes on once the
+    // restart has settled, which is how one that failed is ended
     if (last?.some((entry)=> entry.layer && editorLayerResizing(entry.layer) ||
-        entry.objectLayer && editorRecordResizing(entry.objectLayer.record))) return editorBusyNudge();
+        entry.objectLayer && editorRecordResizing(entry.objectLayer.record) || entry.resize && editorRestartRunning))
+        return editorBusyNudge();
     const stroke = list.pop();
     if (!stroke) return;
     (redo ? editorUndoList : editorRedoList).push(stroke);
@@ -1483,15 +1487,33 @@ function editorChanged(stroke)
     for (const record of new Set(stroke.map(editorEntryRecord)))
         editorAutosaveSoon(record);
     if (!stroke.some((entry)=> entry.resize) || !editorHas('onRestart')) return;
-    const records = stroke.filter((entry)=> entry.resize).map((entry)=> entry.resize);
-    records.forEach((record)=> record.restarting = true); // till the map loads again, see editorRecordResizing
-    // a restart that throws or rejects ends the wait, or a map of objects alone would refuse every edit for good
-    const ended = ()=> records.forEach((record)=> record.restarting = false);
+    editorCallRestart(stroke.filter((entry)=> entry.resize).map((entry)=> entry.resize));
+}
+
+// an async onRestart still running, its token, undefined when none: Restart, a resize, its undo or redo and the
+// resize path of Apply and Reset wait for it, or a restart that destroys the level first would make it twice
+let editorRestartRunning;
+
+// call the game's onRestart for the maps it makes again: each waits, restarting, till it loads, see
+// editorRecordResizing; a restart that throws or rejects ends their wait, or a map of objects alone would refuse every
+// edit for good, and only its own, by its token, so a late rejection of an older one does not end a newer one's
+function editorCallRestart(records=[])
+{
+    const token = {};
+    records.forEach((record)=> (record.restarting = true, record.restartToken = token));
+    const settled = ()=> editorRestartRunning === token && (editorRestartRunning = undefined);
+    const ended = ()=>
+    {
+        settled();
+        records.forEach((record)=> record.restartToken === token && (record.restarting = false));
+    };
     let result;
     try { result = levelEditor.onRestart(); }
     catch (error) { ended(); throw error; }
-    const promise = /** @type {any} */ (result); // onRestart may be async, a game's own
-    promise instanceof Promise && promise.then(undefined, (error)=> { ended(); throw error; });
+    const promise = /** @type {any} */ (result); // onRestart may be async, a game's own, any thenable
+    if (typeof promise?.then !== 'function') return;
+    editorRestartRunning = token;
+    promise.then(settled, (error)=> { ended(); throw error; });
 }
 
 // the tile layers a stroke touched that need it draw again whole
@@ -3340,10 +3362,10 @@ const editorEdit2D =
 function editorRestart()
 {
     if (!editorHas('onRestart')) return;
-    if (editorMapList.some(editorRecordResizing)) return editorBusyNudge(); // a resize's restart still makes it
+    if (editorRestartRunning) return editorBusyNudge(); // the last restart still makes the level
     const view = editorCameraPos.copy();
     editorSetOpen(false); // ends a held stroke, and hands back the game's pause and camera, Escape comes back
-    levelEditor.onRestart();
+    editorCallRestart();
     // with no debug key nothing would come back, so it stays in the editor, and its view where it was
     debugKey || (editorSetOpen(true), editorCameraPos = view);
 }

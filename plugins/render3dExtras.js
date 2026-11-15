@@ -912,6 +912,11 @@ class HeightMap extends EngineObject3D
  * - A fast object is moved in steps no longer than half its radius, so it does not go through a thin wall, up to 64
  *   steps a frame, so one moving more than 32 radii a frame may
  * - Particles with collideLevel hit it, render3D.pick and the camera's wall test hit its triangles, both sides
+ * - A V between two steep faces, a gully, holds an object standing in it only when both faces are in one
+ *   MeshCollider: a gully made of two, or of a MeshCollider beside a HeightMap, lets it sink into the sides and is
+ *   never ground, so make a gully one collider, or a HeightMap
+ * - A gap that closes on an object, a V floor rising under a ceiling, squeezes it through one or the other, as no
+ *   collider can hold a body in less room than it has; leave a level room for its bodies
  * @extends EngineObject3D
  * @memberof Render3D
  * @example
@@ -1332,7 +1337,8 @@ const meshColliderPushed = [0, 0, 0];
 function meshColliderResolve(collider, center, half, radius, groundAngle, walls, moveX=0, moveZ=0)
 {
     let ground = false, sumX = 0, sumY = 0, sumZ = 0;
-    // the steep faces' pushes: across, their way across, their own normal on the side they push to, their wall entry
+    // the steep faces' pushes: across, their way across, their own normal on the side they push to, their wall
+    // entry, their triangle, and whether the push is on the face, not off an edge
     const steep = [];
     const push = meshColliderPushed, cosGround = cos(groundAngle), n = collider.normals;
     for (let pass = 0; pass < 8; ++pass)
@@ -1378,7 +1384,7 @@ function meshColliderResolve(collider, center, half, radius, groundAngle, walls,
                 const s = depth / level;
                 center.x += px * s, center.z += pz * s;
                 steep.push([px * s, pz * s, px / l, pz / l, n[k] * sign(along), n[k+1] * sign(along),
-                    n[k+2] * sign(along), walls.length, deepest]);
+                    n[k+2] * sign(along), walls.length, deepest, abs(along) > length * .999]);
                 walls.push(vec3(px / l, 0, pz / l));
             }
             else
@@ -1386,7 +1392,7 @@ function meshColliderResolve(collider, center, half, radius, groundAngle, walls,
                 center.x += px, center.y += py, center.z += pz;
                 const l = hypot(px, pz);
                 l && steep.push([px, pz, px / l, pz / l, n[k] * sign(along), n[k+1] * sign(along),
-                    n[k+2] * sign(along), walls.length, deepest]);
+                    n[k+2] * sign(along), walls.length, deepest, abs(along) > length * .999]);
                 walls.push(vec3(px / length, py / length, pz / length));
             }
         }
@@ -1404,11 +1410,13 @@ function meshColliderResolve(collider, center, half, radius, groundAngle, walls,
     for (let j = i + 1; j < steep.length; ++j)
     {
         const A = steep[i], B = steep[j];
-        if (A[2] * B[2] + A[3] * B[3] > -.5) continue;
+        // both facing up: a V of a roof over it, an A-frame, is no ground to stand on
+        if (A[2] * B[2] + A[3] * B[3] > -.5 || !(A[5] > 0) || !(B[5] > 0)) continue;
         const x3 = A[5] * B[6] - A[6] * B[5], y3 = A[6] * B[4] - A[4] * B[6], z3 = A[4] * B[5] - A[5] * B[4];
         const length = hypot(x3, y3, z3);
         if (!(length > 1e-9) || abs(y3) > sin(groundAngle) * length) continue;
-        const holds = (e)=> abs(e[4] * x3 + e[5] * y3 + e[6] * z3) <= .2 * length;
+        // a face holds the crease by a push on the face along it, not off an edge, as a riser across the V's is
+        const holds = (e)=> e[9] && abs(e[4] * x3 + e[5] * y3 + e[6] * z3) <= .2 * length;
         const level = hypot(x3, z3), cx = x3 / level, cz = z3 / level; // the crease's way across, for the pushes
         // the faces that hold the crease hold it as ground does: their pushes to the side are taken back and it is
         // lifted straight up clear of them, so walking up a V whose floor rises it rises with it, not sunk into the
@@ -1417,18 +1425,31 @@ function meshColliderResolve(collider, center, half, radius, groundAngle, walls,
         for (const e of steep)
             holds(e) && (sideX += e[0], sideZ += e[1]);
         center.x -= sideX, center.z -= sideZ;
+        // lifted by each face's own normal, how far in it is over how upright it is, not for a face almost upright,
+        // and no more than its radius all told; a lift that leaves it under something pushing it down, a ceiling,
+        // is undone
+        const fromY = center.y;
         for (let lift = 0; lift < 4; ++lift)
         {
             let up = 0;
             for (const e of steep)
             {
-                if (!holds(e) || !meshColliderPush(collider, e[8], center.x, center.y - half, center.z,
-                    center.x, center.y + half, center.z, radius, push) || !(push[1] > 0)) continue;
-                up = max(up, (push[0]**2 + push[1]**2 + push[2]**2) / push[1]);
+                if (!holds(e) || !(e[5] > .1) || !meshColliderPush(collider, e[8], center.x, center.y - half, center.z,
+                    center.x, center.y + half, center.z, radius, push)) continue;
+                const d = push[0] * e[4] + push[1] * e[5] + push[2] * e[6];
+                d > 0 && (up = max(up, d / e[5]));
             }
             if (!up) break;
-            center.y += up;
+            center.y = min(center.y + up, fromY + radius);
         }
+        for (const i of meshColliderNear(collider, center.x - radius, center.y - half - radius, center.z - radius,
+            center.x + radius, center.y + half + radius, center.z + radius))
+            if (!steep.some((e)=> e[8] === i && holds(e)) && meshColliderPush(collider, i, center.x, center.y - half,
+                center.z, center.x, center.y + half, center.z, radius, push) && push[1] < 0 && center.y > fromY)
+            {
+                center.y = fromY;
+                break;
+            }
         ground = true;
         for (const e of steep)
         {
@@ -1546,7 +1567,7 @@ function render3DReadPixels(textureInfo)
 ///////////////////////////////////////////////////////////////////////////////
 // whether the press held is the UI's, begun on a button, a slider or a plain panel, which the camera controls do
 // not turn by
-const render3DUIHasPress = ()=> !!(uiSystem?.activeObject || uiSystem?.pressOverUI);
+const render3DUIHasPress = (button=0)=> !!(uiSystem?.activeObject || uiSystem?.isPressOverUI(button));
 
 /**
  * CameraControl3D - Drag to turn the camera around a point, roll the wheel to zoom
@@ -1605,7 +1626,7 @@ class CameraControl3D extends EngineObject3D
     /** Read the mouse and turn the orbit, called automatically each frame */
     update()
     {
-        if (mouseIsDown(this.dragButton) && !render3DUIHasPress())
+        if (mouseIsDown(this.dragButton) && !render3DUIHasPress(this.dragButton))
         {
             // the scene follows the drag
             this.yaw -= mouseDeltaScreen.x * this.dragSpeed;
@@ -1757,10 +1778,10 @@ class ThirdPersonCamera3D extends EngineObject3D
         // by hand, the mouse and a stick
         if (this.manualControl)
         {
-            if (this.lockPointer && mouseWasPressed(this.dragButton))
+            if (this.lockPointer && mouseWasPressed(this.dragButton) && !render3DUIHasPress(this.dragButton))
                 pointerLockRequest();
             const d = mouseDeltaScreen, stick = gamepadStick(this.stick);
-            if ((pointerLockIsActive() || mouseIsDown(this.dragButton) && !render3DUIHasPress()) && (d.x || d.y))
+            if ((pointerLockIsActive() || mouseIsDown(this.dragButton) && !render3DUIHasPress(this.dragButton)) && (d.x || d.y))
                 this.turn(-d.x * this.lookSpeed, d.y * this.lookSpeed);
             if (stick.x || stick.y)
                 this.turn(-stick.x * this.stickSpeed * timeDelta, -stick.y * this.stickSpeed * timeDelta);
@@ -1950,9 +1971,9 @@ class FirstPersonCamera3D extends EngineObject3D
         ASSERT(!this.fly || !this.parent, 'a flying FirstPersonCamera3D moves on its own, it cannot be a child');
 
         // a click captures the mouse, then it looks around while captured or while a button is held
-        if (this.lockPointer && mouseWasPressed(this.dragButton))
+        if (this.lockPointer && mouseWasPressed(this.dragButton) && !render3DUIHasPress(this.dragButton))
             pointerLockRequest();
-        if (pointerLockIsActive() || mouseIsDown(this.dragButton) && !render3DUIHasPress())
+        if (pointerLockIsActive() || mouseIsDown(this.dragButton) && !render3DUIHasPress(this.dragButton))
         {
             this.yaw -= mouseDeltaScreen.x * this.lookSpeed;
             this.pitch -= mouseDeltaScreen.y * this.lookSpeed;

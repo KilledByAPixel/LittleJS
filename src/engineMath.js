@@ -395,6 +395,7 @@ function isArray(a) { return Array.isArray(a); }
 
 /**
  * Casts a ray and returns position of the first collision found, or undefined if none are found
+ * - A ray of no length tests the cell it starts in, and a hit there is its start, with a normal of 0
  * @param {Vector2} posStart
  * @param {Vector2} posEnd
  * @param {LineTestFunction} testFunction - Check if colliding
@@ -412,7 +413,14 @@ function lineTest(posStart, posEnd, testFunction, normal)
     const dx = posEnd.x - posStart.x;
     const dy = posEnd.y - posStart.y;
     const totalLength = (dx*dx + dy*dy)**.5;
-    if (!totalLength) return;
+    if (!totalLength)
+    {
+        // a ray of no length is where it starts, a hit in the cell it starts in, with no way it came from, as
+        // engineObjectsRaycast and 3D picking hit what they start in
+        if (!testFunction(posStart.floor())) return;
+        normal && normal.set(0, 0);
+        return posStart.copy();
+    }
 
     // current integer cell we are in, the one below a whole start heading down the grid, which it goes into
     const pos = posStart.floor();
@@ -608,9 +616,12 @@ function randColor(colorA=new Color, colorB=new Color(0,0,0,1), linear=false)
 class RandomGenerator
 {
     /** Create a random number generator with the seed passed in
-     *  @param {number} [seed] - Starting seed, 0 as an integer uses the default seed */
+     *  @param {number} [seed] - Starting seed, a whole number, 0 as an integer uses the default seed; a fraction is
+     *  cut to a whole number, so Math.random() is always 0, the default, use randInt(1e9) for a seed of chance */
     constructor(seed = 123456789)
     {
+        ASSERT(!isNumber(seed) || seed % 1 === 0 || abs(seed) >= 1,
+            'RandomGenerator: a seed is a whole number, a fraction like Math.random() is always the same seed', seed);
         /** @property {number} - random seed, set it to reseed */
         this.seed = seed;
     }

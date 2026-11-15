@@ -356,6 +356,7 @@ class NewgroundsPlugin
             return console.warn('Newgrounds cloudSave: slot ' + slot + ' was given a value JSON can not hold'), false;
         return this.slotInOrder(slot, async ()=>
         {
+            if (!this.session_id) return false; // the session was lost while it waited, as a save before it found
             const response = await this.call('CloudSave.setData', {'id':slot, 'data':text});
             newgroundsSessionLost(response) && this.dropSession();
             return !!response?.result?.data?.['success'];
@@ -363,7 +364,9 @@ class NewgroundsPlugin
     }
 
     /** Run a slot's save or load after the last one of that slot is done, so a save then a load reads what was
-     *  saved, and two saves land in the order they were made, as Newgrounds answers each call in its own time
+     *  saved, and two saves land in the order they were made, as Newgrounds answers each call in its own time; one
+     *  that takes longer than the request timeout lets the next go, a stalled request where the browser has no
+     *  AbortSignal.timeout too, so a save that timed out may still land after a later one
      *  @template T
      *  @param {number} slot
      *  @param {function(): Promise<T>} task
@@ -372,7 +375,11 @@ class NewgroundsPlugin
     slotInOrder(slot, task)
     {
         const key = +slot, run = (this.slotChains.get(key) ?? Promise.resolve()).then(task, task);
-        const done = run.then(()=> {}, ()=> {});
+        let timeUp = ()=> {};
+        const timedOut = new Promise((resolve)=> timeUp = ()=> resolve(undefined));
+        const timer = setTimeout(()=> timeUp(), newgroundsTimeoutMS + 1e3);
+        /** @type {any} */ (timer)?.unref?.(); // a test's process is not kept open by it
+        const done = Promise.race([run, timedOut]).then(()=> clearTimeout(timer), ()=> clearTimeout(timer));
         this.slotChains.set(key, done);
         done.then(()=> this.slotChains.get(key) === done && this.slotChains.delete(key));
         return run;

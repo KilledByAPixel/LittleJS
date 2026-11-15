@@ -149,9 +149,9 @@ class UISystemPlugin
         /** @property {UIObject|undefined} - Hover object at start of update
          *  @type {UIObject|undefined} */
         this.lastHoverObject = undefined;
-        /** @property {boolean} - If the mouse press held now began over the UI, a button or a plain panel, till
-         *  every button is let go, so a game or a camera control does not drag the world under it */
-        this.pressOverUI = false;
+        // for each mouse button, if its press held now began over the UI, see isPressOverUI
+        /** @type {Array<boolean>} */
+        this.pressesOverUI = [false, false, false];
         /** @property {UIObject|undefined} - Current confirm menu being shown
          *  @type {UIObject|undefined} */
         this.confirmDialog = undefined;
@@ -286,11 +286,12 @@ class UISystemPlugin
                 lastHoverObject.onLeave();
             }
 
-            // a press that began over the UI, before anything uses it up, held till every button is up
-            if (!mouseIsDown(0) && !mouseIsDown(1) && !mouseIsDown(2))
-                uiSystem.pressOverUI = false;
-            if (mouseWasPressed(0) || mouseWasPressed(1) || mouseWasPressed(2))
-                uiSystem.pressOverUI = uiSystem.isMouseOverUI();
+            // each button's press that began over the UI, before anything uses it up, till that button is up
+            for (let button = 0; button < 3; ++button)
+            {
+                mouseIsDown(button) || (uiSystem.pressesOverUI[button] = false);
+                mouseWasPressed(button) && (uiSystem.pressesOverUI[button] = uiSystem.isMouseOverUI());
+            }
 
             if (mouseWasPressed(0))
             {
@@ -718,6 +719,14 @@ class UISystemPlugin
         objects.sort((a, b)=> a.navigationIndex - b.navigationIndex);
         return objects;
     }
+
+    /** Check if a mouse button's press held now began over the UI, a button or a plain panel, till that button is
+     *  let go, so a drag begun on the UI does not drag the world under it, as the 3D camera controls check it
+     *  - The UI sets it when it updates, after gameUpdate: on the frame of the press, gameUpdate reads
+     *    isMouseOverUI() instead, and gameUpdatePost and the objects read this
+     *  @param {number} [button] - 0 left, 1 middle, 2 right
+     *  @return {boolean} */
+    isPressOverUI(button=0) { return !!uiSystem.pressesOverUI[button]; }
 
     /** Check if the mouse is over a visible UI object that can be hovered, or anywhere while the
      *  confirm dialog is open, so a game can leave world clicks on the UI alone, on touch too.

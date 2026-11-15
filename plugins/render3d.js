@@ -691,7 +691,9 @@ class Render3DPlugin
         /** @property {Function|undefined} - Draw see through things here, like glows, billboards and soft shadows
          *  @type {Function|undefined} */
         this.onRenderTransparent = undefined;
-        /** @property {Mesh|undefined} - Sky dome from buildSky or setSky, drawn around the camera behind everything
+        /** @property {Mesh|undefined} - Sky dome from buildSky or setSky, drawn around the camera behind everything;
+         *  it sits between the clip planes, so an orthographic view wider than about (near + far) across leaves its
+         *  corners the clear color: a far plane further out, a sky box or a clear color of the sky's suits one
          *  @type {Mesh|undefined} */
         this.sky = undefined;
         /** @property {CubeMap|undefined} - A cube map drawn as the sky, behind everything, in place of the sky dome;

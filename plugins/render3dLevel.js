@@ -24,6 +24,10 @@ const level3DTypes = /* @__PURE__ */ level3DBuiltInTypes();
 // the scale each object had when it was made, the level's scale multiplies it
 const level3DBaseScale = /* @__PURE__ */ new WeakMap;
 
+// how far from the place it was given each object put itself when it was made, as a type that lifts its body to stand
+// on the ground does, so the editor and a prefab move it with that offset kept, as a reload makes it
+const level3DBaseOffset = /* @__PURE__ */ new WeakMap;
+
 /** Add a type of object, so level3DLoad makes one wherever a level has an object of that type
  *  - The name is a string because minified builds rename classes
  *  - A class, or any function with a prototype, is made with new make(pos3D, properties); an arrow function is
@@ -524,13 +528,15 @@ function level3DMakeAt(object, pos, rotation, scale)
     if (result instanceof EngineObject3D)
     {
         level3DBaseScale.set(result, result.scale3D.copy());
+        result instanceof Prefab3D || level3DBaseOffset.set(result, result.pos3D.subtract(pos));
         result.rotation3D = rotation.copy();
         result.scale3D = result.scale3D.multiply(scale);
     }
 
     // the type's own properties are set on it, one the type has no default for could be a field of the engine's
+    // as a 2D level's are, so one named as a method, or a getter with no setter, is left out and not a throw
     for (const key in type.defaults)
-        result[key] = properties[key];
+        objectPropertyAssign(result, key, properties[key], object.type + ' ' + object.id, 'level3DLoad');
     // a prefab's instance makes its parts now that it is where it goes
     result instanceof Prefab3D && result.placeAt(pos);
     return result;
@@ -726,7 +732,7 @@ class Prefab3D extends EngineObject3D
             part.rotation3D = to.rotation;
             part.scale3D = (level3DBaseScale.get(part) ?? vec3(1)).multiply(to.scale);
             // a prefab inside this one goes by its origin, which is not where an attached one's handle is
-            part instanceof Prefab3D ? part.placeAt(to.pos) : part.pos3D = to.pos;
+            part instanceof Prefab3D ? part.placeAt(to.pos) : part.pos3D = to.pos.add(level3DBaseOffset.get(part) ?? vec3());
         });
     }
 

@@ -481,6 +481,7 @@ const gamepadStickData = [], gamepadDpadData = [], gamepadHadInput = [];
 // per gamepad, each button's raw pressed state from the last poll, kept through inputClear and cleared on
 // disconnect, so a button held through a clear is not newly pressed, and reads up until it is let go
 const gamepadButtonsLast = [];
+const gamepadLettingGo = []; // the pads gone this poll whose held buttons read released, cleared on the next
 // per gamepad, how many consecutive frames each axis has rested inside the
 // dead zone, used to tell stick axes from axes that rest at full deflection
 const gamepadAxisCentered = [];
@@ -745,7 +746,10 @@ function inputInit()
 
             // the touch gamepad hides under an open level editor, and touch is the editor's mouse then
             const gamepadOwns = touchGamepadEnable && !touchGamepadPassthrough && !levelEditor.isOpen;
-            inputTouchLast = true; // a finger, whoever takes it
+            // a finger, whoever takes it, and when, so the mouse events a browser makes from a tap are known for
+            // what they are with touch input off too, as Firefox and Safari say nothing of where they came from
+            inputTouchLast = true;
+            inputLastTouchTime = performance.now();
             if (!touchInputEnable || gamepadOwns)
             {
                 // off, or the touch gamepad owns touch: turned so mid touch, the finger that drove the mouse lets
@@ -755,7 +759,6 @@ function inputInit()
                 inputWasTouching = 0;
                 if (!touchInputEnable) return;
             }
-            inputLastTouchTime = performance.now();
 
             // when the touch gamepad is enabled it owns touch input: suppress the
             // touch->mouse passthrough entirely unless touchGamepadPassthrough is set
@@ -1047,8 +1050,16 @@ function inputUpdate()
             const gamepad = gamepads[i];
             if (!gamepad)
             {
-                // clear gamepad data if not connected
-                inputData[i+1] = undefined;
+                // a pad gone with buttons held, unplugged or gamepads turned off, lets them go this poll, so a
+                // release a game waits for comes, and its slot clears on the next
+                const held = inputData[i+1];
+                if (held && !gamepadLettingGo[i] && held.some((v)=> v & 1))
+                {
+                    held.forEach((v, k)=> held[k] = v & 1 ? 4 : 0);
+                    gamepadLettingGo[i] = true;
+                }
+                else
+                    inputData[i+1] = gamepadLettingGo[i] = undefined;
                 gamepadStickData[i] = undefined;
                 gamepadDpadData[i] = undefined;
                 gamepadHadInput[i] = undefined;

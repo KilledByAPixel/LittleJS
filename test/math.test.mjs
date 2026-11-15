@@ -130,11 +130,12 @@ test('lineTest returns undefined when nothing hits', () =>
     assert.equal(hit, undefined);
 });
 
-test('lineTest returns undefined for zero-length line', () =>
+test('lineTest of no length tests the cell it starts in, a hit there its start', () =>
 {
-    // early return: totalLength is 0
-    const hit = lineTest(vec2(5, 5), vec2(5, 5), () => true);
-    assert.equal(hit, undefined);
+    const normal = vec2(1, 1);
+    const hit = lineTest(vec2(5.5, 5.5), vec2(5.5, 5.5), () => true, normal);
+    assert.deepEqual([hit.x, hit.y, normal.x, normal.y], [5.5, 5.5, 0, 0]);
+    assert.equal(lineTest(vec2(5, 5), vec2(5, 5), () => false), undefined);
 });
 
 test('lineTest finds first hit along horizontal ray', () =>

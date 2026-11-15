@@ -126,13 +126,16 @@ let tileCollisionFromOn;
 const tileCollisionStood = /* @__PURE__ */ new WeakMap;
 
 // the box an object stood with, carried with a move up or down the game made, to a door, a checkpoint or a snap to
-// the pixels, so it is judged where it is now and a grown one keeps its edges; a move to the side keeps it as it is
+// the pixels, so it is judged where it is now and a grown one keeps its edges; each end moves only inward of where it
+// stood and stays inside the box the object has now, so one grown with its feet kept, its center raised, keeps its
+// feet; a move to the side keeps it as it is
 const tileCollisionStoodAt = (object, pos)=>
 {
     const stood = tileCollisionStood.get(object);
     if (!stood) return;
-    const dy = pos.y - stood[2];
-    return dy ? [stood[0] + dy, stood[1] + dy, pos.y] : stood;
+    const dy = pos.y - stood[2], half = object.size.y / 2;
+    return dy ? [max(pos.y - half, min(stood[0], stood[0] + dy)), min(pos.y + half, max(stood[1], stood[1] + dy)),
+        pos.y] : stood;
 };
 
 // for a one way test of the layer for the object being moved, standing on that layer when its move began, the edges
@@ -819,16 +822,16 @@ function objectPropertySet(properties, key, value)
 // a property given to an object a type made: assigned, so a setter of the game's class runs; __proto__ made its own,
 // assigned it would set the object's prototype; one named as a method of the object, like update, would take the
 // method's place, and one that can only be read, a getter with no setter, would throw, so both are left out
-function objectPropertyAssign(target, key, value, name)
+function objectPropertyAssign(target, key, value, name, who='objectLayersLoad')
 {
     if (key === '__proto__') return objectPropertySet(target, key, value);
     let found;
     for (let o = target; o && !found; o = Object.getPrototypeOf(o))
         found = Object.getOwnPropertyDescriptor(o, key);
     if (typeof target[key] === 'function' && typeof value !== 'function')
-        debug && console.warn(`objectLayersLoad: ${name} property ${key} has a method's name, left out`);
+        debug && console.warn(`${who}: ${name} property ${key} has a method's name, left out`);
     else if (found && (found.get || found.set ? !found.set : !found.writable))
-        debug && console.warn(`objectLayersLoad: ${name} property ${key} can only be read, left out`);
+        debug && console.warn(`${who}: ${name} property ${key} can only be read, left out`);
     else
         target[key] = value;
 }

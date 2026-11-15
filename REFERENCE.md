@@ -582,7 +582,7 @@ AudioFilter.node, AudioReverb.node, ...           // Each effect's wrapped Web A
 keyIsDown(key, device=0)              // Is key down? device 0 is the keyboard and mouse, 1 on the gamepads
 keyWasPressed(key, device=0)          // Was key pressed this frame?
 keyWasReleased(key, device=0)         // Was key released this frame?
-keyDirection(up, down, left, right)   // Get input vector from arrow keys or wasd
+keyDirection(up='ArrowUp', down='ArrowDown', left='ArrowLeft', right='ArrowRight') // Get input vector from arrow keys or wasd
 inputClear()                          // Clear all input state
 inputClearKey(key, device=0, clearDown=true, clearPressed=true, clearReleased=true) // Clear input state for a key
 
@@ -1139,7 +1139,8 @@ uiSystem.drawSlice(slice, pos, size, color=WHITE) // Draw a TileSlice to the UI 
 uiSystem.nativeHeight                  // If set, UI coords are normalized to this height
 uiSystem.destroyObjects()              // Remove all UI elements
 uiSystem.isMouseOverUI()               // True if the mouse is over a visible hoverable UI object, or a confirm dialog is open
-uiSystem.pressOverUI                   // True while a press that began over the UI is held, a button or a plain panel, for a drag
+uiSystem.isPressOverUI(button=0)       // True while that button's press that began over the UI is held, for a drag; set when
+                                       // the UI updates, after gameUpdate, so read isMouseOverUI() there on the press frame
 uiSetDebug(debugMode)                  // Toggle uiDebug rendering of widget bounds
 
 // Confirm dialog

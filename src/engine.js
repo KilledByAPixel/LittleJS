@@ -837,9 +837,9 @@ function engineUpdateCanvas()
         // set canvas fixed size
         mainCanvasSize.set(canvasFixedSize.x, canvasFixedSize.y);
 
-        // fit to what holds it using css width and height: the root element given to engineInit by its own shape,
-        // the window when it is the page's body, which the percentages fill
-        const parent = mainCanvas.parentElement, own = parent && parent !== document.body &&
+        // fit to what holds it using css width and height: the box its percentages fill, its offset parent, the
+        // root element given to engineInit when that is positioned, by its own shape, the window when it is the body
+        const parent = mainCanvas.offsetParent, own = parent && parent !== document.body &&
             parent.clientWidth > 0 && parent.clientHeight > 0;
         const innerAspect = own ? parent.clientWidth / parent.clientHeight : innerWidth / innerHeight;
         const fixedAspect = canvasFixedSize.x / canvasFixedSize.y;
@@ -1114,8 +1114,12 @@ function engineObjectsUpdate()
 function engineObjectsSort()
 {
     for (let i = engineObjects.length; --i > 0;)
+    {
+        // a renderOrder set to NaN after construction, as renderOrder = -pos.y can be, leaves the list unsorted
+        ASSERT(isNumber(engineObjects[i].renderOrder), 'an object renderOrder is not a number', engineObjects[i]);
         if (engineObjects[i].renderOrder < engineObjects[i-1].renderOrder)
             return void engineObjects.sort((a,b)=> a.renderOrder - b.renderOrder);
+    }
 }
 
 /** Destroy and remove all objects

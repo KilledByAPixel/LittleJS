@@ -32,7 +32,8 @@ test('a RandomGenerator seed that is 0 as an integer uses the default seed', () 
     const expected = sequence(new RandomGenerator);
     assert.ok(expected[0] > 0);
     assert.deepEqual(sequence(new RandomGenerator(0)), expected);
-    assert.deepEqual(sequence(new RandomGenerator(.37)), expected, 'a fraction');
+    // a fraction set as the seed, past the constructor, which asserts on one
+    assert.deepEqual(sequence(Object.assign(new RandomGenerator, {seed: .37})), expected, 'a fraction');
     assert.deepEqual(sequence(new RandomGenerator(2**32)), expected, 'a multiple of 2**32');
 
     // reseeding after the constructor

@@ -247,11 +247,14 @@ class ParticleEmitter extends EngineObject
         }
         if (this.velocityInheritance)
         {
-            // pass emitter velocity to particles
+            // pass emitter velocity to particles; a move further than any object moves in a frame is a teleport,
+            // which passes none, and a turn the short way round, so an angle wrapping past a full turn is no spin
             const p = this.velocityInheritance;
-            this.velocity.x = p * (this.pos.x - this.previousPos.x);
-            this.velocity.y = p * (this.pos.y - this.previousPos.y);
-            this.angleVelocity = p * (this.angle - this.previousAngle);
+            const dx = this.pos.x - this.previousPos.x, dy = this.pos.y - this.previousPos.y;
+            const teleported = hypot(dx, dy) > 2 * objectMaxSpeed;
+            this.velocity.x = teleported ? 0 : p * dx;
+            this.velocity.y = teleported ? 0 : p * dy;
+            this.angleVelocity = p * distanceAngle(this.angle, this.previousAngle); // A minus B, the short way
         }
         // tracked even while velocityInheritance is off, so turning it on does not jump
         this.previousAngle = this.angle;
@@ -462,6 +465,10 @@ function particleTileSet(tileInfo)
 // where the particle being tested was before its move, which one way tiles go by
 let particleCollideFromX = 0, particleCollideFromY = 0;
 
+// the cell of a tile layer the collide callback last answered for in this particle's update, [x, y, data, answer], so
+// the bounce's side tests, which ask the same tile, do not call it again: once a hit, as the 3D emitter's is
+let particleCollideCell;
+
 // tests if a particle collides with tiles at x, y, through its emitter's collide callback if it has one
 function particleCollideTest(particle, collideCallback, x, y)
 {
@@ -469,8 +476,13 @@ function particleCollideTest(particle, collideCallback, x, y)
     if (!collideCallback)
         return data > 0;
 
-    // the callback gets its own vector, made only when there is a tile to decide on
-    return !!data && !!collideCallback(particle, data, vec2(x, y));
+    // the callback gets its own vector, made only when there is a tile to decide on, once a cell
+    if (!data) return false;
+    const cx = floor(x), cy = floor(y), c = particleCollideCell;
+    if (c && c[0] === cx && c[1] === cy && c[2] === data) return c[3];
+    const answer = !!collideCallback(particle, data, vec2(x, y));
+    particleCollideCell = [cx, cy, data, answer];
+    return answer;
 }
 
 /**
@@ -597,9 +609,10 @@ class Particle
 
         // check collision against tiles
         this.groundObject = undefined;
-        particleCollideFromX = oldX, particleCollideFromY = oldY;
+        particleCollideFromX = oldX, particleCollideFromY = oldY, particleCollideCell = undefined;
         if (particleCollideTest(this, collideCallback, this.pos.x, this.pos.y))
         {
+            if (this.destroyed) return; // its callback destroyed it, it has no bounce to make
             // the layer that stopped it, as the test found it, a one way layer it passes is not; if already was stuck
             // in collision, don't do anything
             const hitLayer = tileCollisionDataLayer;

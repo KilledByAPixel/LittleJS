@@ -1081,6 +1081,8 @@ function drawTextureWrapped(pos, size, wrapCount, texture=0, color=WHITE,
 }
 
 /** Draw connected lines between a series of points
+ *  - WebGL draws one batch of at most about 41,000 vertices, so about 20,000 points; a longer list asserts in debug
+ *    builds and draws nothing in release, so draw it in parts, Canvas2D has no such cap
  *  @param {Array<Vector2>} points - In its own space, y up, in screen space too, where drawLine's ends go down
  *  @param {number}  [width]
  *  @param {Color}   [color=WHITE]
@@ -1179,7 +1181,8 @@ function drawLine(posA, posB, width=.1, color=WHITE, pos=vec2(), angle=0, useWeb
 function drawRegularPoly(pos, size=vec2(1), sides=3, color=WHITE, lineWidth=0, lineColor=BLACK, angle=0, useWebGL=glEnable, screenSpace=drawScreenSpace, context)
 {
     ASSERT(isVector2(size), 'size must be a vec2');
-    ASSERT(isNumber(sides), 'sides must be a number');
+    ASSERT(isNumber(sides) && sides < Infinity, 'sides must be a number, and not Infinity');
+    sides = min(sides, 1e4); // more could not be seen, and Infinity would loop until memory ran out
 
     // build regular polygon points, into vectors kept for the next, as drawPoly is done with them when it returns
     const points = drawRegularPolyPoints, pool = drawRegularPolyPool;
@@ -1200,6 +1203,8 @@ const drawRegularPolyPoints = [], drawRegularPolyPool = [];
 /** Draw colored polygon using passed in points
  *  - WebGL fills a polygon whose edges do not cross, concave or not; a self crossing one, like a star through its
  *    outer points, fills wrong there, so draw it as its simple outline or in parts
+ *  - WebGL draws one batch of at most about 41,000 vertices: about 41,000 points convex, 8,000 concave; more asserts
+ *    in debug builds and draws nothing in release, so draw it in parts, Canvas2D has no such cap
  *  @param {Array<Vector2>} points - In its own space, y up, in screen space too, where drawLine's ends go down
  *  @param {Color}   [color=WHITE]
  *  @param {number}  [lineWidth]

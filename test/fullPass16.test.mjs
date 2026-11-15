@@ -115,28 +115,34 @@ test('the game\'s gameUpdatePost does not read the 2D editor\'s wheel, and engin
 test('an undo while an async onRestart makes a resized map\'s layers waits on its list', async ()=>
 {
     const { run } = await engine2D();
-    const result = JSON.parse(run(`(()=>
-    {
-        var map = {width: 4, height: 3, tilewidth: 16, tileheight: 16,
+    run(`var map = {width: 4, height: 3, tilewidth: 16, tileheight: 16,
             layers: [{type: 'tilelayer', name: 'front', width: 4, height: 3, data: new Array(12).fill(0)}]};
-        var layers = tileLayersLoad(map, undefined, 0, 0), front = editorLayerRecord(layers[0]);
-        levelEditor.onRestart = async ()=> { await new Promise(()=> {}); }; // never lands
+        var layers = tileLayersLoad(map, undefined, 0, 0), front = editorLayerRecord(layers[0]), waits = [];
+        // a restart that lands without making the layers again, so the live layer stays the old size
+        levelEditor.onRestart = async ()=> { await new Promise((resolve)=> waits.push(resolve)); };
         levelEditor.open(); editorLayer = front;
         levelEditor.edit2D.paint(vec2(0, 0), 4); editorStrokeEnd();
         editorResize(front.record, 5, 3);
         editorRedoList.length = 0;
-        const resized = editorUndoList.length;
-        // the resize is undone, which is how a Restart that never lands is ended, then the paint while live is 5 wide
-        editorUndo();
-        const afterResizeUndo = [editorUndoList.length, editorRedoList.length];
-        editorResize(front.record, 6, 3); // resizing again, the live layer still the first restart's
+        var resized = editorUndoList.length;
+        editorUndo(); // the resize waits while its restart runs
+        var whileRunning = [editorUndoList.length, editorRedoList.length];`);
+    run('waits.shift()()'); await new Promise((resolve)=> setTimeout(resolve, 10));
+    // once it has settled the resize is undone, which is how a Restart that made nothing is ended; the undo restarts
+    run('editorUndo(); var afterResizeUndo = [editorUndoList.length, editorRedoList.length]; waits.shift()();');
+    await new Promise((resolve)=> setTimeout(resolve, 10));
+    const result = JSON.parse(run(`(()=>
+    {
+        editorResize(front.record, 6, 3); // resizing again, the live layer still the first one
         const before = JSON.stringify(map.layers[0].data);
         editorUndoList.splice(editorUndoList.length - 1, 1); // the paint is the last entry
         editorUndo();
-        return JSON.stringify({resized, afterResizeUndo, kept: editorUndoList.length,
+        return JSON.stringify({resized, whileRunning, afterResizeUndo, kept: editorUndoList.length,
             same: JSON.stringify(map.layers[0].data) === before});
     })()`));
+    run('waits.forEach((resolve)=> resolve())');
     assert.equal(result.resized, 2);
+    assert.deepEqual(result.whileRunning, [2, 0]);
     assert.deepEqual(result.afterResizeUndo, [1, 1]);
     assert.equal(result.kept, 1, 'the paint stroke stays to undo');
     assert.equal(result.same, true);

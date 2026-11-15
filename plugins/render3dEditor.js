@@ -496,9 +496,10 @@ function editor3DLevelLoaded(level)
     editor3DAutosaveFlush(); // what the last level has waiting is written before this one reads the autosaves
     if (editor3DLevel !== level)
     {
-        // another level, the selection and the edit being made were the last one's
+        // another level, the selection, the edit being made and what was said of it were the last one's
         editor3DSelection.clear();
         editor3DStroke = undefined;
+        editor3DPrefabMessage = '';
     }
     if (!editor3DPrefabLevels.has(level) && editor3DPrefabStack.length)
     {
@@ -587,7 +588,7 @@ function editor3DObjectMade(object, made)
 // put what the game made for an object where the level has it, and still
 function editor3DPlaceInstance(made, object)
 {
-    made.pos3D = editor3DPos(object);
+    made.pos3D = editor3DPos(object).add(level3DBaseOffset.get(made) ?? vec3()); // with what its type moved itself by
     made.rotation3D = editor3DRotation(object).scale(PI / 180);
     made.scale3D = (level3DBaseScale.get(made) ?? vec3(1)).multiply(editor3DScale(object));
     made.velocity3D = vec3();
@@ -1092,8 +1093,9 @@ function editor3DVoxelBoxTo(drag, cell)
     drag.last = cell;
 }
 
-// change the size of the level's map in cells, as one undo: it grows and shrinks about its middle across, and at
-// its top, and its blocks stay where they are in the world, the ones outside the new size gone
+// change the size of the level's map in cells, as one undo: it grows and shrinks about its middle across, the odd
+// cell of a change on its +x and +z sides, so one cell at a time changes only those, and at its top, and its blocks
+// stay where they are in the world, the ones outside the new size gone
 function editor3DVoxelResize(size)
 {
     const changed = editor3DChangePart('voxels', (voxels)=>
@@ -1686,10 +1688,11 @@ function editor3DPasteList()
 function editor3DPaste(offset=vec3())
 {
     const copied = editor3DPasteList(), ids = [];
-    // what is left out is said, as a prefab of the level it was copied from, which is no type in this one
+    // what is left out is said, as a prefab of the level it was copied from, which is no type in this one, and a
+    // paste of everything says nothing
     const left = [...new Set(editor3DClipboard?.filter((o)=> !copied.includes(o)).map((o)=> o.type))];
-    left.length && (editor3DPrefabMessage = left.join(', ') + (left.length > 1 ? ' are' : ' is') +
-        ' not a type here, a prefab of the level it was copied from or one that would hold itself');
+    editor3DPrefabMessage = left.length ? left.join(', ') + (left.length > 1 ? ' are' : ' is') +
+        ' not a type here, a prefab of the level it was copied from or one that would hold itself' : '';
     if (!copied?.length) return false;
     editor3DStrokeEnd();
     const pasted = editor3DChange((list)=>
@@ -2293,6 +2296,8 @@ function editor3DHandleAt(screenPos)
         // a ring seen edge on is a line on screen and the mouse's ray runs along its plane, it can not be dragged
         const {points, center} = handle, toward = center.subtract(editor3DCamera.pos).normalize();
         if (handle.kind === 'ring' && abs(handle.axes.axis.dot(toward)) < .15) continue;
+        // so is a Move square, its drag across a plane the ray runs along would run away
+        if (handle.kind === 'plane' && abs(handle.direction.dot(toward)) < .15) continue;
 
         // an arrow or scale handle seen end on is a dot over the object, which is left for the object's body
         if (points.length === 2)
@@ -3585,8 +3590,9 @@ function editor3DSceneUpdate(box)
     // made again while it has the focus, so a field edited right after another must not put the other one back;
     // set is given the setting's value now, or what shows for one the block leaves out
     // a change refused, an autosave waiting, makes the box again with the scene's values once it lets go
-    const change = (name, set)=> editor3DChangeScene((s={})=>
-        ({...s, [name]: typeof set === 'function' ? set(s[name] ?? view[name]) : set})) || (box.dataset.key = '', false);
+    const changeScene = (fn)=> editor3DChangeScene(fn) || (box.dataset.key = '', false);
+    const change = (name, set)=> changeScene((s={})=>
+        ({...s, [name]: typeof set === 'function' ? set(s[name] ?? view[name]) : set}));
     const field = 'background:#222;color:#eee';
     const line = (name, title='')=>
     {
@@ -3644,7 +3650,7 @@ function editor3DSceneUpdate(box)
     // the sky: three colors and how much of them lights the scene, or no sky
     const sky = isArray(scene.sky) && scene.sky.length === 3 ? scene.sky : undefined;
     toggle('Sky', 'A sky dome, and light from it; off leaves the sky to the game', !!sky, (on)=>
-        editor3DChangeScene((s={})=>
+        changeScene((s={})=>
         {
             const {sky, ambient, ...rest} = s;
             return on ? {sky: ['#3d9be9', '#ccebff', '#ccebff'], ambient: .5, ...rest} : rest;
@@ -3692,7 +3698,7 @@ function editor3DSceneUpdate(box)
         list.length === 6 || (list = split(','));
         if (list.length && list.length !== 6)
             skyBox.value = urls(editor3DScene()?.skyBox); // not six, what it has now shows again
-        else editor3DChangeScene((s={})=>
+        else changeScene((s={})=>
         {
             const {skyBox, environment, ...rest} = s, reflected = !!urls(skyBox) && urls(environment) === urls(skyBox);
             return {...rest, ...list.length && {skyBox: list},
@@ -3703,14 +3709,14 @@ function editor3DSceneUpdate(box)
     };
     if (urls(scene.skyBox))
         toggle('Reflect it', 'Shiny things reflect the sky box, as render3D.environment',
-            urls(scene.environment) === urls(scene.skyBox), (on)=> editor3DChangeScene((s={})=>
+            urls(scene.environment) === urls(scene.skyBox), (on)=> changeScene((s={})=>
             {
                 const {environment, ...rest} = s;
                 return on && isArray(s.skyBox) ? {...rest, environment: [...s.skyBox]} : rest;
             }));
     else if (urls(scene.environment)) // one of its own, with no sky box, can still be taken out
         toggle('Environment', 'The level\'s own environment, six images that shiny things reflect; off takes it out',
-            true, (on)=> on || editor3DChangeScene((s={})=> { const {environment, ...rest} = s; return rest; }));
+            true, (on)=> on || changeScene((s={})=> { const {environment, ...rest} = s; return rest; }));
 }
 
 // the properties box: the position, rotation and scale of the one selected object and an input for each default

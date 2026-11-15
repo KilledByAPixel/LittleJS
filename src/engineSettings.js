@@ -729,8 +729,8 @@ function setGLEnable(enable)
  *  @memberof Settings */
 function setGLCircleSides(sides)
 {
-    ASSERT(isNumber(sides) && sides >= 3, 'circles need at least 3 sides');
-    glCircleSides = sides;
+    ASSERT(isNumber(sides) && sides >= 3 && sides < Infinity, 'circles need at least 3 sides, and not Infinity');
+    glCircleSides = min(sides, 1e4); // more could not be seen, and Infinity would never finish
 }
 
 /** Set default size of tiles in pixels

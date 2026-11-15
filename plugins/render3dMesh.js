@@ -202,7 +202,9 @@ function render3DSmoothNormalSums(points, indices)
 {
     const strip = !indices, triangles = strip ? max(points.length - 2, 0) : indices.length / 3 | 0;
     const {groups, count} = render3DPlaceGroups(points);
-    const sums = new Float64Array(count * 3), touched = new Uint8Array(count);
+    // the weights, each place's corner angles added, say when its sum is a cancel: faces back to back leave a few
+    // parts in 1e17 of them, which made unit length would point anywhere
+    const sums = new Float64Array(count * 3), touched = new Uint8Array(count), weights = new Float64Array(count);
     let nx = 0, ny = 0, nz = 0;
     const addCorner = (a, b, c, group)=>
     {
@@ -212,6 +214,7 @@ function render3DSmoothNormalSums(points, indices)
         const angle = Math.acos(clamp(dot / (lengths || 1), -1, 1)), s = group * 3;
         sums[s] += nx * angle, sums[s+1] += ny * angle, sums[s+2] += nz * angle;
         touched[group] = 1;
+        weights[group] += angle;
     };
     for (let t = 0; t < triangles; ++t)
     {
@@ -227,7 +230,13 @@ function render3DSmoothNormalSums(points, indices)
         addCorner(b, c, a, groups[i1]);
         addCorner(c, a, b, groups[i2]);
     }
-    return {groups, sums, touched};
+    // touched and not a cancel: a normal to make unit length
+    const kept = (group)=>
+    {
+        const s = group * 3;
+        return !!touched[group] && (sums[s]**2 + sums[s+1]**2 + sums[s+2]**2)**.5 > weights[group] * 1e-9;
+    };
+    return {groups, sums, touched, kept};
 }
 
 /**
@@ -688,12 +697,12 @@ class Mesh
             // smooth again; flat ones need a vertex per corner, so the vertices are split up first
             if (smooth)
             {
-                const {groups, sums, touched} = render3DSmoothNormalSums(this.points, this.indices);
+                const {groups, sums, kept} = render3DSmoothNormalSums(this.points, this.indices);
                 this.normals = this.points.map((p, i)=>
                 {
                     const s = groups[i] * 3, x = sums[s], y = sums[s+1], z = sums[s+2];
-                    const lengthSquared = x**2 + y**2 + z**2, k = 1 / lengthSquared**.5;
-                    return touched[groups[i]] && lengthSquared ? vec3(x * k, y * k, z * k) : RENDER3D_DEFAULT_NORMAL;
+                    const k = 1 / (x**2 + y**2 + z**2)**.5;
+                    return kept(groups[i]) ? vec3(x * k, y * k, z * k) : RENDER3D_DEFAULT_NORMAL;
                 });
                 this.dirty = true;
                 return this;
@@ -720,12 +729,12 @@ class Mesh
         const points = this.points, n = points.length;
         if (smooth)
         {
-            const {groups, sums, touched} = render3DSmoothNormalSums(points);
+            const {groups, sums, kept} = render3DSmoothNormalSums(points);
             this.normals = points.map((p, i)=>
             {
                 const s = groups[i] * 3, x = sums[s], y = sums[s+1], z = sums[s+2], l = (x**2 + y**2 + z**2)**.5;
                 // straight up too where the faces cancel, two back to back, as the indexed branch gives
-                return touched[groups[i]] && l ? vec3(x * (1/l), y * (1/l), z * (1/l)) : vec3(0, 1, 0);
+                return kept(groups[i]) ? vec3(x * (1/l), y * (1/l), z * (1/l)) : vec3(0, 1, 0);
             });
             this.vertexKeys = undefined;
             this.dirty = true;
