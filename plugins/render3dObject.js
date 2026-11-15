@@ -192,6 +192,7 @@ class EngineObject3D extends EngineObject
         // object's is the 2D physics'
         const ground = this.groundObject;
         this.sync2D || (this.groundObject = undefined);
+        render3DGroundLast.set(this, ground);
         // each axis within objectMaxSpeed, as in 2D, after gravity so no move is past it; with the push back to the
         // side it came from, a move that overlaps a solid at all is stopped on its side, turned or not, so a fast
         // object goes through only one thinner than its move less its own size, as in 2D; only for what collides,
@@ -251,8 +252,8 @@ class EngineObject3D extends EngineObject
      *  - The boxes turn with rotation3D; against height maps and voxel maps an object is still its upright box, and
      *    against a MeshCollider a capsule
      *  - A sync2D object collides in 2D instead, against the 2D size, so set that as well as size3D
-     *  - A stack of objects with mass sinks into itself a few percent a level, as in 2D; the bottom one fixed, mass
-     *    0, or fewer levels keep it tight
+     *  - A stack of objects with mass holds in any list order, as in 2D: one on something that stands meets it as
+     *    fixed, and one pushed up lifts what stands on it; two that both move trade momentum by their masses
      *  @param {boolean} [collideSolidObjects] - Take part in solid collision
      *  @param {boolean} [isSolid] - Block other objects, a pair where neither one blocks passes through;
      *    blocking needs collideSolidObjects, so isSolid on its own is not allowed
@@ -401,6 +402,7 @@ class EngineObject3D extends EngineObject
         if (child instanceof EngineObject3D && child.drawOwner === this)
             child.drawOwner = undefined; // a part taken off draws with its own settings
         super.removeChild(child);
+        render3DGridJoin(child);
     }
 
     /** Draw a different mesh and free the GPU buffer of the one it replaces
@@ -740,6 +742,55 @@ function render3DBounceOff(o, weight, other, normal, restitution)
         o.velocity3D = base ? base.add(v.reflect(normal, restitution)) : v.reflect(normal, restitution);
 }
 
+// what each object stood on last frame, kept at the start of its updatePhysics, for one whose turn has not found
+// its ground yet this frame
+const render3DGroundLast = /* @__PURE__ */ new WeakMap;
+
+// whether o stands on something other than the one above it: what it found this frame, else last frame's
+function render3DStandsOn(o, above)
+{
+    const ground = o.groundObject || render3DGroundLast.get(o);
+    return !!ground && ground !== above && !ground.destroyed;
+}
+
+// the objects standing on each solid this pass, found by the pairs, so one pushed up lifts what stands on it
+const render3DRiders = /* @__PURE__ */ (()=> ({pass: -1, map: new Map}))();
+function render3DRiderAdd(support, rider)
+{
+    const riders = render3DRiders;
+    riders.pass === engineObjectsUpdateCount || (riders.pass = engineObjectsUpdateCount, riders.map.clear());
+    const list = riders.map.get(support);
+    list ? list.includes(rider) || list.push(rider) : riders.map.set(support, [rider]);
+}
+
+// lift what stands on a solid pushed up by an amount, and what stands on those, once each
+function render3DRidersLift(support, amount, grid)
+{
+    if (render3DRiders.pass !== engineObjectsUpdateCount) return;
+    const lifted = new Set([support]), list = [support];
+    for (let i = 0; i < list.length && i < 64; ++i)
+    for (const rider of render3DRiders.map.get(list[i]) ?? [])
+    {
+        if (lifted.has(rider) || rider.groundObject !== list[i] || rider.destroyed || rider.parent) continue;
+        lifted.add(rider), list.push(rider);
+        rider.pos3D = rider.pos3D.add(vec3(0, amount, 0));
+        grid && render3DGridPlace(grid, rider);
+    }
+}
+
+// two movers that meet, a pushed along a normal pointing away from b, when moving toward each other: their speeds
+// along it become the inelastic one, the same for both, lerped toward the elastic ones by restitution, as 2D does
+function render3DTradeMomentum(a, b, normal, restitution)
+{
+    const va = a.velocity3D.dot(normal), vb = b.velocity3D.dot(normal);
+    if (va >= vb) return; // already parting
+    const total = a.mass + b.mass, inelastic = (a.mass * va + b.mass * vb) / total;
+    const elasticA = (va * (a.mass - b.mass) + 2 * b.mass * vb) / total;
+    const elasticB = (vb * (b.mass - a.mass) + 2 * a.mass * va) / total;
+    a.velocity3D = a.velocity3D.add(normal.scale(lerp(inelastic, elasticA, restitution) - va));
+    b.velocity3D = b.velocity3D.add(normal.scale(lerp(inelastic, elasticB, restitution) - vb));
+}
+
 function render3DSettleFixed(o, pusher, from)
 {
     if (o.destroyed || !o.collideSolidObjects) return;
@@ -750,8 +801,8 @@ function render3DSettleFixed(o, pusher, from)
     {
         if (grid && !render3DFixed.set.has(b)) continue; // the fixed solids of the pass, as the list has them
         // a pair where neither is solid passes through, as in the pair loop; a solid against one that is not still meets
-        if (b === o || b === pusher || b.mass || b.destroyed || !o.isSolid && !b.isSolid)
-            continue;
+        if (b === o || b === pusher || b.mass || b.destroyed || b.parent || !o.isSolid && !b.isSolid)
+            continue; // and one a callback attached since the pass's list was made, it rides along with its parent
         const p = shape.pos, q = b.pos3D, reach = reachO + render3DSolidReach(b);
         const dx = p.x - q.x, dy = p.y - q.y, dz = p.z - q.z;
         if (dx*dx + dy*dy + dz*dz > reach*reach) continue;
@@ -875,7 +926,7 @@ function render3DCollideSolid(a)
         const bStands = up < 0 && b.mass && -up >= cos(b.groundAngle) && render3DOnFace(push, shapeA);
         if (aStands || bStands)
         {
-            aStands ? a.groundObject = b : b.groundObject = a;
+            aStands ? (a.groundObject = b, render3DRiderAdd(b, a)) : (b.groundObject = a, render3DRiderAdd(a, b));
             if (push.x || push.z) // one straight up already is used as it is
                 push = vec3(0, lengthSquared / push.y, 0);
         }
@@ -883,20 +934,30 @@ function render3DCollideSolid(a)
         // heavier objects move less, mass 0 stays put, and as in 2D one landing on one that stands on something this
         // frame meets it as fixed, so a stack holds and a heavy box on top does not squeeze it out; then bounce apart
         // when moving toward each other
+        // what it stands on is the one found this frame, or last frame's while its turn has not come to it yet, so a
+        // stack listed top first holds as one listed bottom first does
         const total = a.mass + b.mass;
-        const bHeld = aStands && b.groundObject && b.groundObject !== a;
-        const aHeld = bStands && a.groundObject && a.groundObject !== b;
+        const bHeld = aStands && render3DStandsOn(b, a), aHeld = bStands && render3DStandsOn(a, b);
         const weightA = !a.mass || aHeld ? 0 : !b.mass || bHeld ? 1 : b.mass / total;
         const weightB = !b.mass || bHeld ? 0 : !a.mass || aHeld ? 1 : a.mass / total;
         const fromA = a.pos3D.copy(), fromB = b.pos3D.copy(); // where the push moves them from, for the settles
         a.pos3D = a.pos3D.add(push.scale(weightA));
         b.pos3D = b.pos3D.subtract(push.scale(weightB));
+        // what stands on one pushed up goes up with it, as its turn is over, or it would be left in it till next frame
+        push.y * weightA > 0 && render3DRidersLift(a, push.y * weightA, grid);
+        push.y * weightB < 0 && render3DRidersLift(b, -push.y * weightB, grid);
         // mass 0 keeps its velocity too, so a moving platform keeps moving; what hits one that does not move this
-        // pair bounces off it relative to its velocity, as in 2D, so a body riding a platform down stays on it; the
+        // pair bounces off it relative to its velocity, as in 2D, so a body riding a platform down stays on it; two
+        // that both move trade momentum along the push by their masses, as in 2D, so a kicked ball rolls away; the
         // bounce is by the larger restitution of the two, as 2D and the level shapes take it
         const normal = push.normalize(), restitution = max(a.restitution, b.restitution);
-        render3DBounceOff(a, weightA, weightB ? undefined : b, normal, restitution);
-        render3DBounceOff(b, weightB, weightA ? undefined : a, normal.scale(-1), restitution);
+        if (weightA && weightB)
+            render3DTradeMomentum(a, b, normal, restitution);
+        else
+        {
+            render3DBounceOff(a, weightA, b, normal, restitution);
+            render3DBounceOff(b, weightB, a, normal.scale(-1), restitution);
+        }
 
         // the settles come after the bounce, so a wall's push is the last word on the velocity
         if (weightA && weightB)
@@ -905,7 +966,8 @@ function render3DCollideSolid(a)
             // that moves is settled against those now, and b takes what a could not move, as if a were fixed
             const pushed = a.pos3D.copy();
             render3DSettleFixed(a, b, fromA);
-            b.pos3D = b.pos3D.add(a.pos3D.subtract(pushed));
+            if (a.parent) return; // a callback in the settle attached it, its place is an offset now
+            b.parent || (b.pos3D = b.pos3D.add(a.pos3D.subtract(pushed)));
         }
         if (weightB)
         {
@@ -914,16 +976,19 @@ function render3DCollideSolid(a)
             // move, as a pusher stops against a crate held by a wall, and is settled itself, squeezed at worst
             const pushed = b.pos3D.copy();
             render3DSettleFixed(b, a, fromB);
+            if (a.parent) return; // a callback in the settle attached either one: a child rides along with its parent
             const backX = b.pos3D.x - pushed.x, backY = b.pos3D.y - pushed.y, backZ = b.pos3D.z - pushed.z;
-            if (weightA && (backX || backY || backZ))
+            if (weightA && !b.parent && (backX || backY || backZ))
             {
                 a.pos3D = a.pos3D.add(vec3(backX, backY, backZ));
                 render3DSettleFixed(a, b, fromA);
+                if (a.parent) return;
             }
         }
         if (weightA)
             shapeA = render3DSolidShape(a); // it moved, so the next solid must be tested against where it is now
-        grid && (render3DGridPlace(grid, a), render3DGridPlace(grid, b)); // where the push and the settles left them
+        // where the push and the settles left them
+        grid && (render3DGridPlace(grid, a), b.parent || render3DGridPlace(grid, b));
     }
 }
 
@@ -954,7 +1019,7 @@ function render3DSolidGrid()
     const kept = render3DGrid;
     if (kept.pass === engineObjectsUpdateCount) return kept.grid;
     kept.pass = engineObjectsUpdateCount;
-    const list = engineObjectsCollide.filter((b)=> b instanceof EngineObject3D && !b.parent && !b.sync2D);
+    const list = engineObjectsCollide.filter(render3DGridSolid);
     if (list.length < engineCollideGridMin * 3) return kept.grid = undefined;
     // cells about twice a typical solid across, so most are in one to eight
     let extent = 0;
@@ -963,8 +1028,22 @@ function render3DSolidGrid()
     const index = new Map;
     const grid = kept.grid = {size: max(2 * extent / list.length, .5), cells: new Map, at: new Map, index,
         big: new Set, seen: new Map, stamp: 0, byIndex: (a, b)=> index.get(a) - index.get(b)};
-    list.forEach((o, i)=> { index.set(o, i); render3DGridPlace(grid, o); });
+    // by its place in engineObjectsCollide, so a solid let go of mid pass goes in at its place, see render3DGridJoin
+    engineObjectsCollide.forEach((o, i)=> render3DGridSolid(o) && (index.set(o, i), render3DGridPlace(grid, o)));
     return grid;
+}
+
+// what the grid of a pass holds: the 3D solids that are not children or driven by 2D physics
+const render3DGridSolid = (o)=> o instanceof EngineObject3D && !o.parent && !o.sync2D;
+
+// a child let go of during the pass, by a collision callback, joins that pass's grid where it is in the list, so the
+// solids after it meet it as checking every pair does
+function render3DGridJoin(o)
+{
+    const grid = render3DGrid.pass === engineObjectsUpdateCount && engineObjectsPhysicsRunning && render3DGrid.grid;
+    if (!grid || grid.index.has(o) || !render3DGridSolid(o)) return;
+    const i = engineObjectsCollide.indexOf(o);
+    i < 0 || (grid.index.set(o, i), render3DGridPlace(grid, o));
 }
 
 // the cells of the cube around a place out to a reach, first and last along x, y and z, in one kept array; a solid

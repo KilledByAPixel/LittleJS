@@ -211,7 +211,9 @@ class ParticleEmitter extends EngineObject
          *  as engineObjectsDestroy does, which takes its particles with no particleDestroyCallback either
          *  @type {(function(ParticleEmitter): void)|undefined} */
         this.finishCallback = undefined;
-        /** @property {number} - Percentage of velocity to pass to particles (0-1) */
+        /** @property {number} - Percentage of velocity to pass to particles (0-1), the emitter's move since its last
+         *  update; a move past twice objectMaxSpeed and four times the one before is a teleport, passing none, so a fast
+         *  emitter's first move after standing still, or after a teleport, passes none either */
         this.velocityInheritance = 0;
         /** @property {number} - Particles owed to the emit rate, starts at one so the first comes out at once */
         this.emitTimeBuffer = 1;

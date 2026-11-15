@@ -555,7 +555,7 @@ class SoundInstance
         /** @property {Sound} - The sound object */
         this.sound = sound;
         /** @property {number} - How much to scale volume by */
-        this.volume = audioFinite(volume, 0);
+        this.volume = max(audioFinite(volume, 0), 0);
         /** @property {number} - The playback rate to use */
         this.rate = audioFinite(rate, 1);
         /** @property {number} - How much to apply stereo panning */
@@ -651,7 +651,7 @@ class SoundInstance
     {
         ASSERT(volume >= 0, 'Sound volume must be positive or zero');
         ASSERT(fadeTime >= 0, 'Sound fade time must be positive or zero');
-        this.volume = volume = audioFinite(volume, 0);
+        this.volume = volume = max(audioFinite(volume, 0), 0); // a negative one is silence, not inverted
         this.gainNode && audioParamRamp(this.gainNode.gain, volume, fadeTime);
     }
 
@@ -796,7 +796,7 @@ function speak(text, volume=1, rate=1, pitch=1, language='')
     // build utterance and speak
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = language;
-    utterance.volume = audioFinite(clamp(volume*soundVolume), 0); // not a number is silence, not a throw
+    utterance.volume = audioFinite(clamp(max(volume, 0) * max(soundVolume, 0)), 0); // NaN or below 0 is silence
     utterance.rate = rate;
     utterance.pitch = pitch;
     speechSynthesis.speak(utterance);
@@ -900,7 +900,7 @@ function playAudioBuffer(buffer, volume=1, rate=1, pan=0, loop=false, gainNode, 
         return;
     }
 
-    volume = audioFinite(volume, 0), rate = audioFinite(rate, 1), pan = audioFinite(pan, 0);
+    volume = max(audioFinite(volume, 0), 0), rate = audioFinite(rate, 1), pan = audioFinite(pan, 0);
 
     // setup source, many sources can share one buffer
     const source = audioContext.createBufferSource();

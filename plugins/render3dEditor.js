@@ -496,6 +496,8 @@ function editor3DHash(text)
 // puts in the edits it autosaved for the file, or keeps them waiting when the file changed since
 function editor3DLevelLoaded(level)
 {
+    editor3DRestartRunning = undefined; // a level loaded, a restart made it
+    editor3DPrefabMessage === 'Wait for Restart to make the level again' && (editor3DPrefabMessage = '');
     editor3DAutosaveFlush(); // what the last level has waiting is written before this one reads the autosaves
     if (editor3DLevel !== level)
     {
@@ -592,8 +594,8 @@ function editor3DObjectMade(object, made)
 function editor3DPlaceInstance(made, object)
 {
     made.rotation3D = editor3DRotation(object).scale(PI / 180);
-    made.pos3D = editor3DPos(object).add(level3DOffsetOf(made)); // with what its type moved itself by, turned
     made.scale3D = (level3DBaseScale.get(made) ?? vec3(1)).multiply(editor3DScale(object));
+    made.pos3D = editor3DPos(object).add(level3DOffsetOf(made)); // with what its type moved itself by, scaled, turned
     made.velocity3D = vec3();
     made.angleVelocity3D = vec3();
     made instanceof Prefab3D && made.placeAt(editor3DPos(object)); // by its origin, and its parts go with it
@@ -1178,8 +1180,12 @@ function editor3DStrokeEnd()
     stroke.sculpted && editor3DTerrainStore(); // and the ground sculpted
     const parts = editor3DLevelParts();
     if (editor3DSame(stroke.before, editor3DObjects()) && editor3DSame(stroke.parts, parts)) return;
-    editor3DUndoList.push({before: stroke.before, after: editor3DCopy(editor3DObjects()),
-        partsBefore: stroke.parts, partsAfter: parts});
+    // the list it started from is the last entry's after when nothing came between, kept once for both, so a long
+    // undo list of a big level holds half the copies; neither is ever changed, each set is copied
+    const last = editor3DUndoList[editor3DUndoList.length - 1];
+    const before = last && last.after !== stroke.before && editor3DSame(last.after, stroke.before) ? last.after :
+        stroke.before;
+    editor3DUndoList.push({before, after: editor3DCopy(editor3DObjects()), partsBefore: stroke.parts, partsAfter: parts});
     editor3DUndoList.length > 100 && editor3DUndoList.shift();
     editor3DRedoList.length = 0;
     editor3DAutosaveSoon();
@@ -1831,11 +1837,22 @@ function editor3DPlay(pos)
 }
 
 // rebuild the level through the game's hook and play it
+// an async onRestart still running, so Restart does not call the game's again while it makes the level, which a
+// restart that destroys the level first would make twice; let go when it settles or a level loads
+let editor3DRestartRunning;
 function editor3DRestart()
 {
     if (!editorHas('onRestart')) return;
+    if (editor3DRestartRunning)
+        return void (editor3DPrefabMessage = 'Wait for Restart to make the level again');
     editor3DSetOpen(false);
-    levelEditor.onRestart();
+    const result = /** @type {any} */ (levelEditor.onRestart()); // may be async, any thenable
+    if (typeof result?.then === 'function')
+    {
+        const token = editor3DRestartRunning = {};
+        const settled = ()=> editor3DRestartRunning === token && (editor3DRestartRunning = undefined);
+        result.then(settled, (error)=> { settled(); throw error; });
+    }
     debugKey || editor3DSetOpen(true); // with no debug key nothing would come back, so it stays in the editor
 }
 
@@ -2241,12 +2258,16 @@ let editor3DHover;
 let editor3DOrbitPivot;
 
 // the middle of the selection, where the handles are
-function editor3DSelectionCenter()
+// the middle of the selection's bodies, or with the Rotate tool of the places they turn about
+function editor3DSelectionCenter(pivots=editor3DTool === 'rotate')
 {
-    const selected = editor3DSelected();
+    const selected = editor3DSelected(), at = pivots ? editor3DPos : editor3DBodyPos;
     if (selected.length)
-        return selected.reduce((sum, o)=> sum.add(editor3DPos(o)), vec3()).scale(1 / selected.length);
+        return selected.reduce((sum, o)=> sum.add(at(o)), vec3()).scale(1 / selected.length);
 }
+
+// where an object's body is: its place, with what its type moved it by, the middle of a prefab instance's parts
+const editor3DBodyPos = (object)=> editor3DPos(object).add(editor3DBoxOffset(object));
 
 // the handles of the tool on the selection, each {kind, axis, center, length, direction or axes, points}: Move has
 // an arrow along each world axis and a square between each pair, Rotate a ring for the pitch, yaw and roll of the
@@ -2419,7 +2440,7 @@ function editor3DPress(mouse, ray, shift)
 
     // a drag of its body moves it level, at its height, so it stays under the mouse; seen from the side, where the
     // mouse's ray runs along that plane, it moves across the view instead, in the upright plane facing it
-    const pos = editor3DPos(editor3DObject(id)), forward = editor3DCamera.getForward();
+    const pos = editor3DBodyPos(editor3DObject(id)), forward = editor3DCamera.getForward();
     const side = abs(ray.direction.y) < .2 && vec3(forward.x, 0, forward.z).normalize();
     const normal = side && side.lengthSquared() ? side : EDITOR3D_UP;
     editor3DDrag = {kind: 'body', id, from, moving: false, ignore: editor3DSelectedInstances(), normal,
@@ -2546,7 +2567,7 @@ function editor3DDragEnd(drag, mouse)
     const high = vec2(max(from.x, mouse.x), max(from.y, mouse.y));
     for (const object of editor3DObjects())
     {
-        const at = render3D.worldToScreen(editor3DPos(object));
+        const at = render3D.worldToScreen(editor3DBodyPos(object));
         at && at.x >= low.x && at.x <= high.x && at.y >= low.y && at.y <= high.y &&
             editor3DSelection.add(object.id);
     }
@@ -2572,10 +2593,10 @@ function editor3DViewPoint() { return editor3DScreenPoint(mainCanvasSize.scale(.
 // move the camera back along its view until the selection is in the middle and fits
 function editor3DFrame()
 {
-    const center = editor3DSelectionCenter(), camera = editor3DCamera;
+    const center = editor3DSelectionCenter(false), camera = editor3DCamera;
     if (!center) return false;
     const radius = editor3DSelected().reduce((r, o)=>
-        max(r, editor3DPos(o).distance(center) + editor3DSize(o).length() / 2), 0);
+        max(r, editor3DBodyPos(o).distance(center) + editor3DSize(o).length() / 2), 0);
     camera.pos = center.subtract(camera.getForward().scale(max(radius * 2.5, 3)));
     render3D.updateMatrices();
 }
@@ -2671,7 +2692,7 @@ function editor3DCameraUpdate(seconds, shift, alt)
     else if (alt && mouseIsDown(0))
     {
         if (mouseWasPressed(0) || !editor3DOrbitPivot)
-            editor3DOrbitPivot = editor3DSelectionCenter() ?? editor3DViewPoint() ?? ahead();
+            editor3DOrbitPivot = editor3DSelectionCenter(false) ?? editor3DViewPoint() ?? ahead();
         const pivot = editor3DOrbitPivot, distance = camera.pos.distance(pivot);
         editor3DFly(camera, vec3(), delta, 0);
         camera.pos = pivot.subtract(camera.getForward().scale(distance));

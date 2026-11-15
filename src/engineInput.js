@@ -1044,8 +1044,10 @@ function inputUpdate()
             // the touch gamepad was turned off since the last poll, from a page's own button: slot 0 is the real
             // pads' again from this poll, so what a real pad 0 holds is read, not let go when the overlay hides
             touchGamepadOwning = false;
-            gamepadSlotLetGo(0); // what the touch gamepad held is let go
+            gamepadSlotLetGo(0); // what the touch gamepad held is let go, read by the game this frame
+            gamepadLettingGo[0] && (gamepadLettingGo[0] = 1); // made in this poll, kept through the pad loop below
             gamepadStickData[0] = gamepadDpadData[0] = undefined;
+            touchGamepadButtonsLast.length = 0; // turned on again, it takes over from the real pads afresh
         }
 
         // only poll gamepads when focused or in debug mode;
@@ -1067,6 +1069,7 @@ function inputUpdate()
             {
                 // a pad gone with buttons held, unplugged or gamepads turned off, lets them go this poll, so a
                 // release a game waits for comes, and its slot clears on the next
+                gamepadLettingGo[i] === 1 ? gamepadLettingGo[i] = true : // let go this poll, cleared on the next
                 gamepadLettingGo[i] ? inputData[i+1] = gamepadLettingGo[i] = undefined : gamepadSlotLetGo(i);
                 gamepadStickData[i] = undefined;
                 gamepadDpadData[i] = undefined;
@@ -1076,6 +1079,8 @@ function inputUpdate()
                 continue;
             }
 
+            // what the touch gamepad let go of this poll stays released for the game, a real pad 0 not holding it
+            const letGo = gamepadLettingGo[i] === 1 && inputData[i+1]?.slice();
             gamepadLettingGo[i] = undefined; // here again, a blip, so its next loss lets its buttons go too
             const data = inputData[i+1] ?? (inputData[i+1] = []);
             const buttonsLast = gamepadButtonsLast[i] ?? (gamepadButtonsLast[i] = []);
@@ -1126,6 +1131,7 @@ function inputUpdate()
                     hadInput = true;
             }
 
+            letGo && letGo.forEach((v, j)=> v === 4 && !(data[j] & 1) && (data[j] = 4));
             // a different gamepad in the same slot with fewer buttons or sticks holds none of the last one's
             data.length = buttonsLast.length = gamepad.buttons.length;
             sticks.length = gamepad.axes.length >> 1;
@@ -1463,17 +1469,13 @@ function touchGamepadRender()
             // just disabled: hide the overlay and release any held controls, and the gamepad slot they
             // fed, which nothing else rewrites while real gamepads are off
             touchGamepadOverlay.style.display = 'none';
+            // the fingers let go of it; what they held is released by the next poll, which sees them lifted under
+            // an open editor, and lets go of slot 0 when turned off, a real pad that took slot 0 over keeping its own
             touchGamepadPointerRole.clear();
             touchGamepadButtons.length = 0;
-            touchGamepadButtonsPressed.length = touchGamepadButtonsLast.length = 0;
+            touchGamepadButtonsPressed.length = 0;
             touchGamepadSticks.length = 0;
             touchGamepadStickPointerId.length = 0;
-            if (touchGamepadOwning) // a real pad that took slot 0 over keeps what it holds
-            {
-                gamepadSlotLetGo(0); // what the touch gamepad held is let go
-                gamepadStickData[0] = gamepadDpadData[0] = undefined;
-            }
-            touchGamepadOwning = false; // turned on again, it takes over from the real pads afresh
         }
         return;
     }

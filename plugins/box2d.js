@@ -462,7 +462,9 @@ class Box2dObject extends EngineObject
      *  @param {number}   [renderOrder] */
     constructor(pos=vec2(), size=vec2(), tileInfo, angle=0, color, bodyType=box2d.bodyTypeDynamic, renderOrder=0)
     {
-        ASSERT(!box2d.world.IsLocked(), 'cannot create Box2D bodies during a contact callback');
+        // in every build, a release one too, or the object would be left in engineObjects with no body
+        if (box2d.world.IsLocked())
+            throw new Error('cannot create Box2D bodies during a contact callback, make it after the step');
         super(pos, size, tileInfo, angle, color, renderOrder);
 
         // create physics body, Box2D copies the def

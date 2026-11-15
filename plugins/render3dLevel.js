@@ -28,12 +28,17 @@ const level3DBaseScale = /* @__PURE__ */ new WeakMap;
 // body to stand on the ground does, so the loader, the editor and a prefab keep that offset, turned with the object
 const level3DBaseOffset = /* @__PURE__ */ new WeakMap;
 
-// an object's constructor offset turned as it is turned, so it is the same part of its body whatever its turn: a type
-// that stands by its feet has them under it turned too, and a prefab unpacked moves nothing
+// an object's constructor offset scaled and turned as it is, so it is the same part of its body whatever its turn and
+// size: a type that stands by its feet has them under it turned and scaled too, and a prefab unpacked moves nothing
 function level3DOffsetOf(o, rotation=o.rotation3D)
 {
-    const offset = level3DBaseOffset.get(o);
+    let offset = level3DBaseOffset.get(o);
     if (!offset) return vec3();
+    // by the scale it has over the one it was made with, along its own axes
+    const base = level3DBaseScale.get(o), scale = o.scale3D;
+    const by = (n, b)=> b ? n / b : 1;
+    if (base && (scale.x !== base.x || scale.y !== base.y || scale.z !== base.z))
+        offset = vec3(offset.x * by(scale.x, base.x), offset.y * by(scale.y, base.y), offset.z * by(scale.z, base.z));
     return rotation.x || rotation.y || rotation.z ? buildMatrix(undefined, rotation).transformDirection(offset) :
         offset.copy();
 }
@@ -544,8 +549,9 @@ function level3DMakeAt(object, pos, rotation, scale)
         level3DBaseScale.set(result, result.scale3D.copy());
         result instanceof Prefab3D || level3DBaseOffset.set(result, result.pos3D.subtract(pos));
         result.rotation3D = rotation.copy();
-        result instanceof Prefab3D || (result.pos3D = pos.add(level3DOffsetOf(result))); // its offset turned with it
         result.scale3D = result.scale3D.multiply(scale);
+        // its offset scaled and turned with it
+        result instanceof Prefab3D || (result.pos3D = pos.add(level3DOffsetOf(result)));
     }
 
     // the type's own properties are set on it, one the type has no default for could be a field of the engine's

@@ -67,7 +67,8 @@ steps at once still only multiplies, so the scale can not reach 0.
 - Make more objects: change `i=500` to `i=5000`.
 
 ## See also
-Input shows the rest of the mouse and keyboard. Top Down Game, Platformer
-Game and Space Game set `cameraPos` to follow the player, and Light
-System uses `mouseWheel` to change a light's size.
+Input shows the rest of the mouse and keyboard. Top Down Game follows
+the player with a `FollowCamera`, Platformer Game and Space Game set
+`cameraPos` to follow it, and Light System uses `mouseWheel` to change
+a light's size.
 */

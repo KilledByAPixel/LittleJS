@@ -478,6 +478,14 @@ class EngineObject
                     const collide2 = o.collideWithObject(this);
                     // a callback may have moved either one, the grid follows
                     engineCollideGrid?.built && engineCollideGridPlace(engineCollideGrid.built, o);
+                    // a callback that attached either one, an arrow sticking or a crate picked up, ends the pair: a
+                    // child rides along with its parent, and one that is a child now meets no more solids or tiles
+                    if (this.parent) return;
+                    if (o.parent)
+                    {
+                        engineObjectsCollidePairAdd(this, o);
+                        continue;
+                    }
                     if (!collide1 || !collide2)
                     {
                         engineObjectsCollidePairAdd(this, o);

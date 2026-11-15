@@ -111,8 +111,8 @@ Set the ones you need; each one you leave out does nothing.
 ```javascript
 levelEditor.open();                    // start in the editor; close() plays on with the changes
 levelEditor.isOpen;                    // true while editing
-levelEditor.onRestart = ()=> buildLevel();         // adds a Restart button: load the level again; it may be async,
-                                                   // the editor waits for it, the game held still till it closes
+levelEditor.onRestart = ()=> buildLevel();         // adds a Restart button: load the level again; it may be async:
+                                                   // Restart waits for it, the 2D editor's resizes and Apply too
 levelEditor.onPlayFrom = (pos)=> player.pos = pos; // adds "Play from mouse": put the player at the mouse
 levelEditor.onOpen = ()=> {};          // the editor opened
 levelEditor.onClose = ()=> {};         // it closed, the game plays on
@@ -352,7 +352,7 @@ The rules every customization follows. The headline of each is enough to start w
 | `setProperty(object, name, value)` | Inside `change`, on an object of its list: write a property, left out of the file when it is the type's default |
 | `pos(object)`, `rotation(object)`, `scale(object)` | Read them as vectors, the rotation in degrees |
 | `mousePoint()` | Where the mouse is on the level or the ground, undefined while it is over the panel |
-| `undo(redo)` | Undo, or redo with true |
+| `undo(redo)` | Undo, or redo with true; false when there was nothing to undo |
 | `toJSON()` | The level as the text Save writes |
 
 ### `levelEditor.edit2D`
@@ -369,7 +369,7 @@ The rules every customization follows. The headline of each is enough to start w
 | `strokeEnd()` | End the edit: one undo step, and the autosave |
 | `strokeCancel()` | Take the edit being made back |
 | `bulk(()=> {...})` | Many `paint` calls with one redraw a layer |
-| `undo(redo)` | Undo, or redo with true |
+| `undo(redo)` | Undo, or redo with true; false when there was nothing to undo or it waits for a restart |
 | `toJSON()` | The map as the text Save writes |
 
 ## The files

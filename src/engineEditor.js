@@ -228,9 +228,10 @@ class LevelEditor
 
     /** Rebuild the level from what the editor changed; set it or override it and the editor has a Restart button,
      *  which calls it after switching to play
-     *  - It may be async: while its promise runs, Restart, a resize, its undo and redo, Apply and Play wait, with a
-     *    note at the mouse, till the level loads again, the promise settles or the editor closes; the game is held
-     *    still while the editor is open, so one that waits for its frames, a fade, finishes once the editor closes
+     *  - It may be async: while its promise runs, Restart, a resize, its undo and redo and Apply wait, with a note at
+     *    the mouse, till the level loads again, the promise settles or the editor closes; the game is held still while
+     *    the editor is open, so one that waits for its frames, a fade, finishes once the editor closes, which Play and
+     *    Escape do then with no player put at the mouse; in the 2D editor, the 3D one only refuses a second Restart
      *  @return {void|Promise<void>} */
     onRestart() {}
 
@@ -492,10 +493,11 @@ let editorPlayFromMouse = false, editorAdvanced = false;
 // switch to play in the session, with the player at a position when Play from mouse is on and the game has a hook
 function editorPlay(pos)
 {
-    // not while a restart makes the level again, the player it would be put at may be gone
-    if (editorRestartRunning) return editorBusyNudge();
+    // while a restart makes the level again it plays on with no player put at the mouse, which may be gone, so a
+    // restart that waits for the game's frames, a fade, finishes; closing lets its wait go
+    const restarting = !!editorRestartRunning;
     editorSetOpen(false);
-    editorPlayFromMouse && pos && editorHas('onPlayFrom') && levelEditor.onPlayFrom(pos.copy());
+    restarting || editorPlayFromMouse && pos && editorHas('onPlayFrom') && levelEditor.onPlayFrom(pos.copy());
 }
 
 // the game's pause and camera from before the editor opened, handed back when it closes
@@ -585,7 +587,7 @@ function editorSetOpen(open)
         editorPanelPointers.clear();
         // a restart that has not settled is waited on no more: the game runs now, so one that waits for its frames,
         // a fade, can finish, and the editor opened again takes edits; the way out of one that never settles
-        editorRestartRunning = undefined;
+        editorRestartLetGo();
         const state = editorGameState;
         setPaused(state.paused);
         setCameraPos(state.cameraPos);
@@ -659,8 +661,7 @@ function editorMapRestore(map)
     if (known)
     {
         // loaded again, it has the changes, a restart's wait is over, the editor's wait for it too
-        known.restarting = false;
-        editorRestartRunning?.records?.includes(known) && (editorRestartRunning = undefined);
+        editorRestartLoaded(known);
         return map;
     }
 
@@ -671,6 +672,7 @@ function editorMapRestore(map)
     {
         editorRetire((record)=> record.key === retired.key);
         editorMapList.push(retired);
+        editorRestartLoaded(retired);
         return map;
     }
 
@@ -1510,15 +1512,34 @@ function editorChanged(stroke)
 }
 
 // an async onRestart still running, its token, undefined when none: Restart, a resize, its undo or redo and the
-// resize path of Apply and Reset wait for it, or a restart that destroys the level first would make it twice
-let editorRestartRunning;
+// resize path of Apply and Reset wait for it, or a restart that destroys the level first would make it twice; and the
+// one being called, whose maps may load before it returns its promise
+let editorRestartRunning, editorRestartCalling;
+
+// a map loaded: it is made again, and the restart that made it waits no more, a Restart button's, which names no
+// maps, once any map loads, and one whose map loaded before it returned its promise is not waited on
+function editorRestartLoaded(record)
+{
+    record.restarting = false;
+    for (const token of [editorRestartRunning, editorRestartCalling])
+        if (token && (!token.records?.length || token.records.includes(record)))
+            token.loaded = true, token === editorRestartRunning && (editorRestartRunning = undefined);
+}
+
+// the editor closed: what a restart still running made wait is let go, so the game, running now, can finish it
+function editorRestartLetGo()
+{
+    const token = editorRestartRunning;
+    editorRestartRunning = undefined;
+    token && editorMapList.forEach((record)=> record.restartToken === token && (record.restarting = false));
+}
 
 // call the game's onRestart for the maps it makes again: each waits, restarting, till it loads, see
 // editorRecordResizing; a restart that throws or rejects ends their wait, or a map of objects alone would refuse every
 // edit for good, and only its own, by its token, so a late rejection of an older one does not end a newer one's
 function editorCallRestart(records=[])
 {
-    const token = /** @type {{records?: Array<Object>}} */ ({});
+    const token = /** @type {{records?: Array<Object>, loaded?: boolean}} */ ({records});
     records.forEach((record)=> (record.restarting = true, record.restartToken = token));
     const settled = ()=> editorRestartRunning === token && (editorRestartRunning = undefined);
     const ended = ()=>
@@ -1527,12 +1548,14 @@ function editorCallRestart(records=[])
         records.forEach((record)=> record.restartToken === token && (record.restarting = false));
     };
     let result;
+    const calling = editorRestartCalling;
+    editorRestartCalling = token;
     try { result = levelEditor.onRestart(); }
     catch (error) { ended(); throw error; }
+    finally { editorRestartCalling = calling; }
     const promise = /** @type {any} */ (result); // onRestart may be async, a game's own, any thenable
     if (typeof promise?.then !== 'function') return;
-    token.records = records;
-    editorRestartRunning = token;
+    token.loaded || (editorRestartRunning = token); // its maps loaded already, as one that loads then fades in
     promise.then(settled, (error)=> { ended(); throw error; });
 }
 

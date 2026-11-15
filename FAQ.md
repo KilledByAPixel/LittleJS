@@ -44,6 +44,7 @@ If you don't find an answer here, feel free to ask the community or check the do
 **Gameplay and Programming**
 - [How do I add keyboard or mouse input to my game?](#how-do-i-add-keyboard-or-mouse-input-to-my-game)
 - [How does touch input work on mobile?](#how-does-touch-input-work-on-mobile)
+- [Why does a click on a UI button also act in the game?](#why-does-a-click-on-a-ui-button-also-act-in-the-game)
 - [How do I create and update game objects?](#how-do-i-create-and-update-game-objects)
 - [How do I use parent/child objects?](#how-do-i-use-parentchild-objects)
 - [How do collisions work?](#how-do-collisions-work)
@@ -819,6 +820,8 @@ Keyboard keys are identified by `KeyboardEvent.code` strings (e.g. `'KeyA'`, `'S
 
 Touch input is routed to the mouse functions automatically — `mouseIsDown(0)`, `mouseWasPressed(0)`, and `mousePos` all work with a finger tap on the canvas. Games written for mouse usually work on mobile without code changes.
 
+A second finger is a pinch, not a second press: it turns `mouseWheel` by how far the fingers moved apart or together (`touchPinch` has the amount), the mouse goes between them, and the button the first finger pressed lets go, so a game that zooms with the wheel zooms with a pinch too. A game with its own use for two fingers calls `setTouchPinchWheel(false)`.
+
 For games that need movement and multiple buttons, enable the built-in on-screen gamepad:
 
 ```javascript
@@ -840,6 +843,15 @@ if (b && b.alpha)
 ```
 
 You can also branch behavior on `isTouchDevice` if you need to detect touch hardware explicitly.
+
+### Why does a click on a UI button also act in the game?
+
+The UI system and the game read the same mouse. Before acting on a click in the world, check that it is not one the UI took: `uiSystem.isMouseOverUI()` is true while the mouse is over a UI object, and `uiSystem.isPressOverUI(button)` says a button's press began over the UI, through the frame it is let go, so a press begun on a button and let go off it is not read as a click in the world either.
+
+```javascript
+if (mouseWasPressed(0) && !uiSystem.isPressOverUI(0))
+    shootAt(mousePos);
+```
 
 ### How do I create and update game objects?
 
@@ -981,7 +993,7 @@ For realistic physics, with turning bodies, joints and stacks that hold, there i
 
 ### How do I make slopes or diagonal tiles?
 
-The arcade physics is boxes only: every object and every solid tile is an upright box, so it has no slopes. For slopes use the Box2D plugin. Keep tiles for most of the level, where a `Box2dTileLayer` gives the solid tiles their collision, and place a triangle wherever you want a slope:
+The 2D arcade physics is boxes only: every object and every solid tile is an upright box, so it has no slopes. In 3D, a `HeightMap` and a `MeshCollider` have slopes: a body walks up ground within its `groundAngle` of level and slides down steeper ground, and raises `groundAngle` to walk steeper ramps. For 2D slopes use the Box2D plugin. Keep tiles for most of the level, where a `Box2dTileLayer` gives the solid tiles their collision, and place a triangle wherever you want a slope:
 
 ```javascript
 // a 45 degree slope rising to the right, its corner at pos

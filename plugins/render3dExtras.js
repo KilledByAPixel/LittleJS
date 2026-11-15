@@ -2218,6 +2218,17 @@ class ParticleEmitter3D extends EngineObject3D
         /** @type {Vector3|undefined} */
         this.emitFrom = undefined;
         this.emitBehind = 0;
+        // how far it moved the update before, so a fast emitter moving steadily is told from one that jumped
+        this.previousMove = 0;
+    }
+
+    /** Move by its own velocity, with no damping: damping and angleDamping are its particles', not its own */
+    updatePhysics()
+    {
+        const damping = this.damping, angleDamping = this.angleDamping;
+        this.damping = this.angleDamping = 1;
+        try { super.updatePhysics(); }
+        finally { this.damping = damping, this.angleDamping = angleDamping; }
     }
 
     /** Spawn new particles, move the live ones, and go away when done */
@@ -2227,6 +2238,10 @@ class ParticleEmitter3D extends EngineObject3D
         const matrix = render3DObjectMatrix(this); // the object's own, read only
         this.emitFrom = this.worldPos3D;
         this.worldPos3D = matrix.getTranslation(); // remembered for when the parent is destroyed
+        // a teleport or a respawn, as 2D's: a move past twice objectMaxSpeed and four times its move the update before
+        const move = this.emitFrom ? this.worldPos3D.distance(this.emitFrom) : 0;
+        const jumped = move > 2 * objectMaxSpeed && move > 4 * this.previousMove;
+        this.previousMove = move;
         const scale = render3DMaxScale(matrix.m);
         this.particleView.scale = scale; // the callbacks read it from the view instead of working it out each time
 
@@ -2243,9 +2258,8 @@ class ParticleEmitter3D extends EngineObject3D
             {
                 // the update that ends the emit time adds a hair, as the steps' sum comes out a rounding under it
                 this.emitTimeBuffer += rate * step + (this.emitTime && this.emitElapsed >= this.emitTime ? 1e-6 : 0);
-                // spread along the move since the last update, the last one where it is now; a jump further than
-                // anything travels in an update, twice objectMaxSpeed, a teleport or a respawn, spreads nothing
-                const travelled = this.emitFrom && this.worldPos3D.distance(this.emitFrom) <= 2 * objectMaxSpeed;
+                // spread along the move since the last update, the last one where it is now; a jump spreads nothing
+                const travelled = this.emitFrom && !jumped;
                 const count = floor(this.emitTimeBuffer);
                 try
                 {
@@ -2739,6 +2753,18 @@ function render3DFlareTile(shape)
  * @memberof Render3D
  */
 
+// what can hide a flare, in one pass over the objects: the 3D objects that are not see through, the voxel maps among
+// them, which say block by block what is, and the rest; a flare is none, it has no mesh to hit
+function render3DFlareBlockers()
+{
+    const maps = [], others = [];
+    for (const o of engineObjects)
+        if (o instanceof EngineObject3D && !(o instanceof LensFlare3D) && !o.destroyed &&
+            !render3DSetting(o, 'transparent') && !render3DSetting(o, 'additive'))
+            (typeof VoxelMap != 'undefined' && o instanceof VoxelMap ? maps : others).push(o);
+    return {maps, others};
+}
+
 /**
  * LensFlare3D - The sun's lens flare, the old kind: a glow at the sun and a row of discs and rings of different
  * sizes along the line from the sun through the middle of the screen
@@ -2940,12 +2966,7 @@ class LensFlare3D extends EngineObject3D
         const source = this.flareSource();
         if (!source) return true;
         const ray = new Ray3D(render3D.camera.pos, source.direction), reach = source.distance;
-        const blockers = engineObjects.filter((o)=> o !== this && o instanceof EngineObject3D && !o.destroyed &&
-            !render3DSetting(o, 'transparent') && !render3DSetting(o, 'additive'));
-        // a voxel map says block by block what is see through: glass, water and leaves let the sun by, and the
-        // ray goes on to the blocks behind them
-        const maps = /** @type {Array<VoxelMap>} */ (typeof VoxelMap == 'undefined' ? [] :
-            blockers.filter((o)=> o instanceof VoxelMap));
+        const {maps, others} = render3DFlareBlockers();
         for (const map of maps)
             if (map.raycast(ray, reach, (type)=> !map.blockType(type).seeThrough))
                 return true;
@@ -2964,7 +2985,7 @@ class LensFlare3D extends EngineObject3D
                 p.z >= b.min.z && p.z <= b.max.z;
         };
         const near = this.light && reach < Infinity ? min(2, this.light.radius * .4) : 0;
-        let candidates = blockers.filter((o)=> !maps.some((map)=> map === o));
+        let candidates = others;
         for (let tries = 5; tries--;)
         {
             const hit = render3DPickPart(ray, candidates); // the part, a lamp may be a model's

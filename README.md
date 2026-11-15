@@ -90,7 +90,7 @@ The code is very clean and well documented with many examples to get you started
 
 - Compatible with all modern web browsers and mobile devices
 - Full TypeScript and Module support with example projects for both
-- [Vite](https://vite.dev) starter template for instant dev server with hot reload
+- [Vite](https://vite.dev) starter template for instant dev server that reloads the page when you save
 - Great for size coding competitions like [Js13kGames](https://js13kgames.com/)
 - Open Source and [MIT licensed](https://github.com/KilledByAPixel/LittleJS/blob/main/LICENSE)
 

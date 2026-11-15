@@ -469,8 +469,8 @@ function engineLoadingScreenDraw(elapsed)
 
 /** Startup LittleJS engine with your callback functions
  *  - In a release build an error in a frame is logged, once until another comes, and the next frame goes on, so an
- *    error now and then is passed over; a frame that fails every time draws nothing new, and the screen keeps what
- *    it last showed, or stays blank
+ *    error now and then is passed over; a frame whose update fails draws nothing, its 2D canvas already cleared, so
+ *    the screen blinks, or stays blank when every frame fails, in Canvas2D, and the HUD blinks in WebGL
  *  @param {GameInitCallback} [gameInit] - Called once after the engine starts up, can be async for loading
  *  @param {GameCallback} [gameUpdate] - Called every frame before objects are updated (60fps), use for game logic
  *  @param {GameCallback} [gameUpdatePost] - Called after physics and objects are updated, even when paused, use for UI updates

@@ -1705,7 +1705,8 @@ obj.setCollision(solids, isSolid, level) // the same flags as in 2D, but the col
                                         // both objects of a pair need solids, and a pair where neither one blocks
                                         // passes through, so movers hit the level without shoving each other;
                                         // heavier objects move less, a box on one that stands on something meets it as
-                                        // fixed, so a stack holds; each bounces by the larger restitution; mass 0
+                                        // fixed, so a stack holds in any order; two movers trade momentum by mass,
+                                        // as in 2D; each bounces by the larger restitution; mass 0
                                         // stays put and keeps its velocity, a wall the other bounces off;
                                         // collideLevel is on by default: voxel maps, height maps and mesh
                                         // colliders, which an object with mass is kept out of, or the tile

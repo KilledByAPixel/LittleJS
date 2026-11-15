@@ -845,5 +845,5 @@ function inputCaptureMouse()
     inputCaptureDeltaScreen = mouseDeltaScreen;
     inputCaptureWheel = mouseWheel;
     mouseDeltaScreen = vec2();
-    mouseWheel = touchPinch = 0; // a pinch too, a game that zooms on it does not zoom under the free camera
+    mouseWheel = touchPinch = inputWheelPinch = 0; // a pinch too, a game that zooms on it does not zoom under it
 }

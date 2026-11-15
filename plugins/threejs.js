@@ -108,6 +108,7 @@ class ThreeJSPlugin
      *  called automatically when cameraAlign2D is set */
     alignCamera2D()
     {
+        ASSERT(isNumber(this.camera.fov), 'cameraAlign2D needs a THREE.PerspectiveCamera, it reads its fov');
         const halfHeight = mainCanvasSize.y / 2 / cameraScale; // half visible height in world units
         const distance = halfHeight / tan(this.camera.fov/2 * PI/180);
 
@@ -158,7 +159,8 @@ class ThreeJSPlugin
 ///////////////////////////////////////////////////////////////////////////////
 /**
  * ThreeJS Object - EngineObject that drives a three.js mesh
- * - LittleJS physics moves the object and the mesh follows automatically
+ * - LittleJS physics moves the object and the mesh follows automatically: its position and angle only, the size,
+ *   color, mirror and renderOrder of the object do nothing to the mesh, set those on the mesh itself
  * - Destroying the object removes the mesh from the scene
  * @extends EngineObject
  * @memberof ThreeJS

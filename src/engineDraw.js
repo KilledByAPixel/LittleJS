@@ -1294,7 +1294,7 @@ function drawEllipse(pos, size=vec2(1), color=WHITE, angle=0, lineWidth=0, lineC
 
     if (useWebGL && glEnable)
     {
-        const sides = glCircleSides;
+        const sides = clamp(round(glCircleSides), 3, 1e4); // the global set by hand too
         if (lineWidth > 0)
         {
             // draw as a regular polygon, the outline is made from the points at their size
@@ -1396,7 +1396,7 @@ function drawEllipseGradient(pos, size=vec2(1), colorInner=WHITE, colorOuter=CLE
         // so back-to-back gradients at the same position have their hole
         // (from gpu edge-rule on the boundary line-degen) at different rim
         // verts and don't visibly stack
-        const sides = glCircleSides;
+        const sides = clamp(round(glCircleSides), 3, 1e4);
         const radiusX = size.x/2, radiusY = size.y/2;
         const innerInt = colorInner.rgbaInt();
         const outerInt = colorOuter.rgbaInt();
