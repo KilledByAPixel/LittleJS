@@ -3,8 +3,9 @@ import assert from 'node:assert/strict';
 import { loadEngine } from './vmEngine.mjs';
 
 // The MeshCollider's V rule against the shapes beside the one it was written for, the kit any change to it runs on
-// (review passes 18 to 20 found each fix of it breaking a shape beside it): a corner of walls, a V ending in a wall,
-// a steep chute, a V whose floor rises, a riser across a V, a jump into an A-frame roof, and standing still in a V.
+// (review passes 18 to 21 found each fix of it breaking a shape beside it): a corner of walls, a V ending in a wall,
+// a steep chute, a V whose floor rises, a riser across a V, a ramp in a V's crease, a V of faces almost upright, a jump
+// into an A-frame roof, and standing still in a V.
 // Each scene is quads and triangles of one MeshCollider and a 1 x 2 x 1 body, its velocity set every frame.
 
 const { run } = loadEngine();
@@ -32,6 +33,18 @@ run(`setHeadlessMode(true); new Render3DPlugin; render3D.gravity = vec3(0, -.02,
         for (let x = x0; x < x1 - 1e-9; ++x)
         {
             const xa = x, xb = min(x1, x + 1), ya = base + rise * xa, yb = base + rise * xb;
+            list.push([V(xa, ya, 0), V(xb, yb, 0), V(xb, yb + top, w), V(xa, ya + top, w)]);
+            list.push([V(xa, ya, 0), V(xa, ya + top, -w), V(xb, yb + top, -w), V(xb, yb, 0)]);
+        }
+        return list;
+    };
+    // a V whose crease follows a profile of [x, height] points, its sides rising k a unit across to top above it
+    var vProfile = (points, k=1.8, top=3)=>
+    {
+        const w = top / k, list = [];
+        for (let i = 0; i + 1 < points.length; ++i)
+        {
+            const [xa, ya] = points[i], [xb, yb] = points[i+1];
             list.push([V(xa, ya, 0), V(xb, yb, 0), V(xb, yb + top, w), V(xa, ya + top, w)]);
             list.push([V(xa, ya, 0), V(xa, ya + top, -w), V(xb, yb + top, -w), V(xb, yb, 0)]);
         }
@@ -132,5 +145,33 @@ test('a body that jumps into an A-frame roof is not set on the ground in the air
                 if (o.groundObject && o.pos3D.y > 1.05) { ++result.airOn; o.velocity3D.y = .35; }
             })`);
         assert.equal(r.airOn, 0, 'roof ' + A + ': ' + JSON.stringify(r));
+    }
+});
+
+test('a body walking slowly up a ramp in a V\'s crease goes over its top onto the level V', ()=>
+{
+    for (const angle of [30, 44])
+    for (const speed of [.03, .05, .2])
+    {
+        const height = 1.2, run = height / Math.tan(angle * Math.PI / 180);
+        const r = go(`walk(vProfile([[-8, 0], [0, 0], [${run}, ${height}], [${run + 40}, ${height}]]), V(-3, 1.6, 0),
+            V(${speed}, 0, 0), ${Math.ceil((run + 4) / speed) + 30})`); // frames to walk past its top
+        assert.ok(r.x > run + .3 && r.y > 1 + height - .1, angle + ' at ' + speed + ': ' + JSON.stringify(r));
+    }
+});
+
+test('a body walking along a V of faces almost upright keeps its height, not sunk into them', ()=>
+{
+    for (const k of [11, 20])
+    for (const rise of [0, .1])
+    {
+        // a 1 wide body rests about where the V is 1 wide, half k above the crease
+        const rest = .5 * k, at = (x)=> 1 + rise * x;
+        const still = go(`walk(vProfile([[-10, -10 * ${rise}], [10, 10 * ${rise}]], ${k}, 12), V(-3, ${rest - 3 * rise + 1}, 0),
+            V(0, 0, 0), 60)`);
+        const walked = go(`walk(vProfile([[-10, -10 * ${rise}], [10, 10 * ${rise}]], ${k}, 12), V(-3, ${rest - 3 * rise + 1}, 0),
+            V(.1, 0, 0), 90)`);
+        const held = still.y - at(still.x), kept = walked.y - at(walked.x);
+        assert.ok(Math.abs(kept - held) < .05, 'k ' + k + ' rise ' + rise + ': stood ' + held + ' walked ' + kept);
     }
 });
