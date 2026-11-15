@@ -1526,7 +1526,8 @@ class UITextInput extends UIObject
      *  @param {KeyboardEvent} e */
     onKeyDown(e)
     {
-        // named keys by key, so numpad Enter works as Enter
+        // named keys by key, so numpad Enter works as Enter; a key of an IME composing a character is its, not text
+        if (e.isComposing || e.keyCode === 229) return;
         const code = e.code, key = e.key || ''; // autofill sends a keydown with no key
         if (e.repeat && (key === 'Enter' || code === 'Space'))
             return; // a key held when editing began repeats, it should not type or stop editing
@@ -1900,7 +1901,7 @@ class UIVideo extends UIObject
         /** @property {HTMLVideoElement} - The video player */
         this.video = document.createElement('video');
         this.video.loop = loop;
-        this.video.volume = audioFinite(clamp(volume * soundVolume), 0);
+        this.video.volume = audioFinite(clamp(max(volume, 0) * max(soundVolume, 0)), 0);
         this.video.muted = !soundEnable;
         /** @private */
         this._soundEnabled = soundEnable; // the sound setting the mute last followed
@@ -1958,7 +1959,7 @@ class UIVideo extends UIObject
     setVolume(volume)
     {
         this.volume = volume;
-        this.video.volume = audioFinite(clamp(volume * soundVolume), 0);
+        this.video.volume = audioFinite(clamp(max(volume, 0) * max(soundVolume, 0)), 0);
     }
     
     /** Set playback speed
@@ -1993,7 +1994,7 @@ class UIVideo extends UIObject
 
         // update volume based on global sound volume, and the mute when sound is turned on or off,
         // so a game's own mute stays until then
-        this.video.volume = audioFinite(clamp(this.volume * soundVolume), 0);
+        this.video.volume = audioFinite(clamp(max(this.volume, 0) * max(soundVolume, 0)), 0);
         if (this._soundEnabled !== soundEnable)
             this.video.muted = !(this._soundEnabled = soundEnable);
         // the window's blur read each frame, not only from its events, so a video made while it is blurred and a

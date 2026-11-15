@@ -25,7 +25,8 @@ const level3DTypes = /* @__PURE__ */ level3DBuiltInTypes();
 const level3DBaseScale = /* @__PURE__ */ new WeakMap;
 
 // how far from the place it was given each object put itself when it was made, unturned, as a type that lifts its
-// body to stand on the ground does, so the loader, the editor and a prefab keep that offset, turned with the object
+// body to stand on the ground does, so the loader, the editor and a prefab keep that offset, scaled and turned with
+// the object
 const level3DBaseOffset = /* @__PURE__ */ new WeakMap;
 
 // an object's constructor offset scaled and turned as it is, so it is the same part of its body whatever its turn and
@@ -53,8 +54,8 @@ function level3DOffsetOf(o, rotation=o.rotation3D)
  *    EngineObject3D would hand it the properties as its mesh
  *  - An EngineObject3D then gets the object's rotation, and its scale times the scale it was made with
  *  - A constructor may put the body away from the position it is given, lifted by half its height to stand on its
- *    feet: that offset is kept, turned with the object, through a reload, the 3D editor's moves and landing, and a
- *    prefab; one worked out from where it ends up, as sticking itself to the ground, is kept as the offset it had
+ *    feet: that offset is kept, scaled and turned with the object, through a reload, the 3D editor's moves and
+ *    landing, and a prefab; one worked out from where it ends up, as sticking itself to the ground, is kept as the offset it had
  *    when made, so the editor shows it where a move puts it, not where a reload would
  *  - Adding a name again replaces it, Box, Sphere, Cylinder and Light too
  *  @param {string} name - The type the objects have in the level

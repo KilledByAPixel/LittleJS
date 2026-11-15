@@ -57,6 +57,11 @@ function setScene(scene)
         engineAddPlugin(sceneUpdate, sceneRenderPost, undefined, undefined, sceneRender);
     }
 
+    // one asked for while a switch destroys the old scene's objects, from a destroy or a Box2D endContact, waits for
+    // the switch to end, the last asked for going next, or the old scene would leave twice and the outer switch enter
+    // over the inner one's objects
+    if (sceneSwitching)
+        return void (sceneAfterSwitch = {scene});
     if (sceneCurrent)
     {
         // a leave that throws still lets the next switch through
@@ -65,13 +70,23 @@ function setScene(scene)
         finally { sceneLeaving = false; }
     }
     // an object's destroy that throws still lets the next scene in, its error thrown after
+    sceneSwitching = true;
     try { engineObjectsDestroy(); }
     finally
     {
+        sceneSwitching = false;
         sceneCurrent = scene;
         scene?.enter?.();
+        const next = sceneAfterSwitch;
+        sceneAfterSwitch = undefined;
+        next && setScene(next.scene);
     }
 }
+
+// a switch destroying the old scene's objects, and a scene asked for meanwhile, {scene}, which goes once it is done
+let sceneSwitching = false;
+/** @type {{scene: Scene|undefined}|undefined} */
+let sceneAfterSwitch;
 
 /** Get the current scene
  *  @return {Scene|undefined}

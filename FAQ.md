@@ -846,12 +846,17 @@ You can also branch behavior on `isTouchDevice` if you need to detect touch hard
 
 ### Why does a click on a UI button also act in the game?
 
-The UI system and the game read the same mouse. Before acting on a click in the world, check that it is not one the UI took: `uiSystem.isMouseOverUI()` is true while the mouse is over a UI object, and `uiSystem.isPressOverUI(button)` says a button's press began over the UI, through the frame it is let go, so a press begun on a button and let go off it is not read as a click in the world either.
+The UI system and the game read the same mouse. Before acting on a click in the world, check that it is not one the UI took: in `gameUpdate`, `uiSystem.isMouseOverUI()` is true while the mouse is over a UI object.
 
 ```javascript
-if (mouseWasPressed(0) && !uiSystem.isPressOverUI(0))
-    shootAt(mousePos);
+function gameUpdate()
+{
+    if (mouseWasPressed(0) && !uiSystem.isMouseOverUI())
+        shootAt(mousePos);
+}
 ```
+
+To act when a press is let go, `uiSystem.isPressOverUI(button)` says the press began over the UI, through the frame it is let go, so a press begun on a button and let go off it is not read as a click in the world either. The UI reads the mouse after `gameUpdate`, so on the frame of a press it is set in `gameUpdatePost`, not before.
 
 ### How do I create and update game objects?
 
@@ -988,6 +993,8 @@ Yes! LittleJS comes with a fast arcade physics system. Call `setCollision()` on 
 - `isBullet` — sweeps its move so a small fast object never passes through a wall
 
 Velocity and gravity are in world units per frame, at 60 frames a second, so a velocity of `.1` is 6 units a second. The [Physics](https://killedbyapixel.github.io/LittleJS/examples/?example=Physics) and [Platform Physics](https://killedbyapixel.github.io/LittleJS/examples/?example=Platform%20Physics) examples show these, with one-way platforms and lifts, and the platformer example has a character class to start from.
+
+The arcade physics resolves each object in turn, once a frame, so a stack of more than two or three boxes with mass depends on the order they update in: listed from the top down, a stack can sink into itself a little, or come apart when what it stands on drops away. A floor, a crate on a box, a player on a platform are fine; for a game about stacking, use Box2D.
 
 For realistic physics, with turning bodies, joints and stacks that hold, there is [a plugin using Box2D.](https://killedbyapixel.github.io/LittleJS/examples/box2d/)
 

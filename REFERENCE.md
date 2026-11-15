@@ -1246,8 +1246,8 @@ layer.shadowSolidOnly = true          // a TileCollisionLayer casts only from it
 layer.shadowSquares = false           // casts its cells with collision as squares, set on a hidden layer the
                                       // loader made, which draws no tiles to cast from
 obj.renderShadow()                    // draws the shadow shape, render() by default, screen space draws skipped;
-                                      // a figure draws a blob at its feet
-                                      // to stay lit; additive draws add black so glows cast nothing; WebGL draws only
+                                      // a figure draws a blob at its feet to stay lit; additive draws add black
+                                      // so glows cast nothing; shadows draw only with WebGL
 // Normal maps: once a frame every object draws into a normal buffer, and the lights shade by it
 lightSystem.normalMaps = false        // on to shade objects by their normalMap; every object draws its normal map, or
                                       // flat without one, so what is in front hides it; about doubles the scene's
@@ -1328,6 +1328,10 @@ postProcessBloomShader(threshold, strength, size) // its shader code, to pass to
 postProcess.setShaderCode(shaderCode) // shade with new code from the next frame, to switch effects while running
 postProcess.enabled = true     // false skips the pass, the frame showing as drawn, to turn an effect off and back on
 postProcess.pixelated = false  // true reads the frame hard edged, so blurs and the CRT curve step as pixel art does
+postProcess.includeMainCanvas = false // true combines the 2D canvas into the pass, so the effect shades the HUD too;
+                               // may be changed while it runs
+postProcess.feedback = false   // true passes the shader's own last frame as iChannel1, for trails and echoes;
+                               // may be turned on while it runs, off frees its texture
 
 // Built in effects: each is a piece of shader code with its settings written in, working on c, the pixel's color,
 // and uv, where it is on the screen from 0 to 1; postProcessEffects joins pieces in order into one shader, and your
@@ -1705,7 +1709,8 @@ obj.setCollision(solids, isSolid, level) // the same flags as in 2D, but the col
                                         // both objects of a pair need solids, and a pair where neither one blocks
                                         // passes through, so movers hit the level without shoving each other;
                                         // heavier objects move less, a box on one that stands on something meets it as
-                                        // fixed, so a stack holds in any order; two movers trade momentum by mass,
+                                        // fixed, so a stack at rest holds, more than two or three high one listed
+                                        // top down can sink a little; two movers trade momentum by mass,
                                         // as in 2D; each bounces by the larger restitution; mass 0
                                         // stays put and keeps its velocity, a wall the other bounces off;
                                         // collideLevel is on by default: voxel maps, height maps and mesh
@@ -1782,7 +1787,8 @@ obj.roundLighting = true                // a sprite or particle emitter lit as a
 obj.renderOrder                         // sorts the opaque stage; instanced meshes draw as batches, so set
                                         // mesh.instanced = false on a mesh whose order matters
 obj.renderAfter2D = true // this object on top of the 2D scene, or false for under it; undefined follows
-                         // render3D.renderAfter2D
+                         // render3D.renderAfter2D; one that differs from it draws in a pass of its own, with no
+                         // shadows, not in sceneDepth or cube captures, not depth tested against the main pass
 // the layer under the 2D scene and the layer over it are drawn separately with their own depth, so neither hides the
 // other; the sky, callbacks and debug primitives draw with the default side
 obj.getMatrix() // buildMatrix(pos3D, rotation3D, scale3D), or localMatrix when set, composed with an EngineObject3D

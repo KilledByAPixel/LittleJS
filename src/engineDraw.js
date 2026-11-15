@@ -160,6 +160,7 @@ function tile(index=0, size=tileDefaultSize, texture=0, padding=tileDefaultPaddi
         y = index.y;
     }
     const pos = new Vector2(x*sizePaddedX + padding, y*sizePaddedY + padding);
+    ASSERT(x >= 0 && y >= 0, 'tile: the index must not be negative', index);
     return new TileInfo(pos, size, textureInfo, padding, bleed);
 }
 
@@ -213,7 +214,7 @@ class TileInfo
     */
     frame(frame)
     {
-        ASSERT(typeof frame === 'number', 'TileInfo.frame: frame must be a number', frame);
+        ASSERT(typeof frame === 'number' && frame >= 0, 'TileInfo.frame: frame must be a number, 0 or more', frame);
         const w = this.size.x + this.padding*2;
         const h = this.size.y + this.padding*2;
         let x = (this.columns ? frame % this.columns : frame) * w;

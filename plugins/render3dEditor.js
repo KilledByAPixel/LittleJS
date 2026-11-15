@@ -496,8 +496,6 @@ function editor3DHash(text)
 // puts in the edits it autosaved for the file, or keeps them waiting when the file changed since
 function editor3DLevelLoaded(level)
 {
-    editor3DRestartRunning = undefined; // a level loaded, a restart made it
-    editor3DPrefabMessage === 'Wait for Restart to make the level again' && (editor3DPrefabMessage = '');
     editor3DAutosaveFlush(); // what the last level has waiting is written before this one reads the autosaves
     if (editor3DLevel !== level)
     {
@@ -1832,25 +1830,33 @@ function editor3DPlay(pos)
 {
     // inside Edit prefab a point is in the prefab's own space, not the level's, so it plays from where it is
     pos = editor3DPrefabStack.length ? undefined : pos;
+    // and while a restart makes the level again, with no player put at the mouse, which may be gone
+    const restarting = !!editor3DRestartRunning;
     editor3DSetOpen(false);
-    editor3DPlayFromMouse && pos && editorHas('onPlayFrom') && levelEditor.onPlayFrom(pos.copy());
+    restarting || editor3DPlayFromMouse && pos && editorHas('onPlayFrom') && levelEditor.onPlayFrom(pos.copy());
 }
 
 // rebuild the level through the game's hook and play it
 // an async onRestart still running, so Restart does not call the game's again while it makes the level, which a
-// restart that destroys the level first would make twice; let go when it settles or a level loads
+// restart that destroys the level first would make twice; only its promise settling ends the wait, as in 2D
 let editor3DRestartRunning;
+const EDITOR3D_RESTART_WAIT = 'Wait for Restart, it goes on while playing';
 function editor3DRestart()
 {
     if (!editorHas('onRestart')) return;
     if (editor3DRestartRunning)
-        return void (editor3DPrefabMessage = 'Wait for Restart to make the level again');
+        return void (editor3DPrefabMessage = EDITOR3D_RESTART_WAIT);
     editor3DSetOpen(false);
     const result = /** @type {any} */ (levelEditor.onRestart()); // may be async, any thenable
     if (typeof result?.then === 'function')
     {
         const token = editor3DRestartRunning = {};
-        const settled = ()=> editor3DRestartRunning === token && (editor3DRestartRunning = undefined);
+        const settled = ()=>
+        {
+            if (editor3DRestartRunning !== token) return;
+            editor3DRestartRunning = undefined;
+            editor3DPrefabMessage === EDITOR3D_RESTART_WAIT && (editor3DPrefabMessage = '');
+        };
         result.then(settled, (error)=> { settled(); throw error; });
     }
     debugKey || editor3DSetOpen(true); // with no debug key nothing would come back, so it stays in the editor
@@ -2352,7 +2358,7 @@ function editor3DPickAt(ray)
     for (const object of editor3DObjects())
     {
         const parts = editor3DVisible(object) ? editor3DParts(editor3DInstances.get(object.id)) : [];
-        let distance = parts.length ? undefined : raycastBox(ray, editor3DPos(object), vec3(1));
+        let distance = parts.length ? undefined : raycastBox(ray, editor3DBodyPos(object), vec3(1));
         for (const part of parts)
         {
             const d = render3DRaycastObject(ray, part);
@@ -2626,8 +2632,9 @@ function editor3DPasteAtMouse()
     const copied = editor3DPasteList(), point = !editor3DMouseOnPanel && editor3DMousePoint();
     if (!copied?.length) return editor3DPaste(); // which says what it left out
     if (!point) return editor3DPaste();
-    const center = copied.reduce((sum, o)=> sum.add(editor3DPos(o)), vec3()).scale(1 / copied.length);
     const box = (o)=> editor3DClipboardBoxes.get(o) ?? {size: editor3DSize(o), offset: editor3DBoxOffset(o)};
+    // the middle of their bodies under the mouse, as Place puts a body
+    const center = copied.reduce((sum, o)=> sum.add(editor3DPos(o).add(box(o).offset)), vec3()).scale(1 / copied.length);
     const bottom = copied.reduce((low, o)=> min(low, editor3DPos(o).y + box(o).offset.y - box(o).size.y / 2), Infinity);
     const first = copied[0], size = box(first).size, was = editor3DPos(first).add(box(first).offset); // its box's middle
     const snapped = editor3DSnapPos(was.add(vec3(point.x - center.x, 0, point.z - center.z)), size,
@@ -2976,7 +2983,7 @@ function editor3DBoxMatrix(object)
 {
     const made = editor3DVisible(object), bounds = made?.mesh && (made.mesh.bounds || made.mesh.getBounds());
     if (!made)
-        return buildMatrix(editor3DPos(object));
+        return buildMatrix(editor3DBodyPos(object)); // where its type put it
     const box = editor3DPrefabBox(made);
     if (box)
         return buildMatrix(box.pos, undefined, box.size);
@@ -3322,7 +3329,8 @@ function editor3DPanelUpdate()
         load.onclick = ()=> { editor3DPrefabPickFile(); load.blur(); };
         p.types.replaceChildren(...p.typeButtons.slice(0, plain.length), label, ...p.typeButtons.slice(plain.length), load);
     }
-    p.prefabNote.style.display = editor3DPrefabMessage && !editor3DSelection.size ? '' : 'none';
+    p.prefabNote.style.display = editor3DPrefabMessage &&
+        (!editor3DSelection.size || editor3DPrefabMessage === EDITOR3D_RESTART_WAIT) ? '' : 'none'; // the wait always
     p.prefabNote.textContent = editor3DPrefabMessage;
     names.forEach((name, i)=> p.typeButtons[i].style.outline = name === editor3DBrush ? lit : '');
     editor3DPropertiesUpdate(p.properties);

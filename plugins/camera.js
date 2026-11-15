@@ -41,17 +41,19 @@ function cameraActivate(camera)
 }
 
 // update the camera that drives the view, after the objects moved, called by the engine each update
-// a camera that takes over from another starts from where the view is, one just made from where it snapped
+// a camera that takes over from another starts from where the view is, one just made, or snapped while another
+// drove, from where it snapped
 function cameraUpdatePost()
 {
     for (let i = cameraList.length; i--;)
         cameraList[i].destroyed && cameraList.splice(i, 1);
     if (paused || engineFrozenTick) return; // held while paused or at time scale 0
     const camera = cameraList[cameraList.length - 1];
-    if (camera && camera !== cameraDriving && !camera.cameraNew)
+    if (camera && camera !== cameraDriving && !camera.cameraNew && !camera.cameraSnapped)
         camera.takeView();
     for (const c of cameraList)
         c.cameraNew = false;
+    camera && (camera.cameraSnapped = false); // the one driving goes on from where it is
     cameraDriving = camera;
     camera?.updateCamera();
 }
@@ -124,6 +126,7 @@ class FollowCamera extends EngineObject
         this.scaleSmoothing = .2;
 
         this.cameraNew = true;       // made this update, it starts where it snapped and not from the view
+        this.cameraSnapped = false; // snapped while another drove, see cameraUpdatePost
         this.lookOffset = vec2();    // how far the look moves the view now
         this.lookDirection = vec2(); // which way it looks on each axis, -1, 0 or 1
         this.lookTravel = vec2();    // how far the target has gone back against the look since it last went with it
@@ -145,8 +148,10 @@ class FollowCamera extends EngineObject
      *  this camera is the one driving it */
     snap()
     {
-        // a camera not driving keeps its place for later, and leaves the view and its zoom alone
+        // a camera not driving keeps its place for later, and leaves the view and its zoom alone, and starts from it
+        // when it takes over, so the snap is a cut, not a pan from the view
         const driving = cameraDriver() === this;
+        driving || (this.cameraSnapped = true);
         driving && this.scale !== undefined && setCameraScale(this.scale);
         this.lookFrom = undefined; // a teleport is not a move to look along
         this.updateLook(true);

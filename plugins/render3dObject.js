@@ -150,7 +150,9 @@ class EngineObject3D extends EngineObject
         /** @property {boolean} - A sprite or particle lit as a ball bulging toward the camera, bright on the side
          *  toward each light, in place of the same all over; a normal map takes its place */
         this.roundLighting = false;
-        /** @property {boolean|undefined} - Draw this object over the 2D scene, undefined uses render3D.renderAfter2D
+        /** @property {boolean|undefined} - Draw this object over the 2D scene, undefined uses render3D.renderAfter2D;
+         *  one that differs from render3D.renderAfter2D draws in a pass of its own: it casts and gets no shadows, is not
+         *  in sceneDepth or a cube capture, and is not depth tested against the objects of the main pass
          *  @type {boolean|undefined} */
         this.renderAfter2D = undefined;
         /** @property {Matrix4|undefined} - The transform from its parent, used in place of pos3D, rotation3D and
@@ -193,6 +195,9 @@ class EngineObject3D extends EngineObject
         const ground = this.groundObject;
         this.sync2D || (this.groundObject = undefined);
         render3DGroundLast.set(this, ground);
+        // what stood on what is found again each pass, the last pass's let go, a level gone with it
+        render3DRiders.pass === engineObjectsUpdateCount ||
+            (render3DRiders.pass = engineObjectsUpdateCount, render3DRiders.map.clear());
         // each axis within objectMaxSpeed, as in 2D, after gravity so no move is past it; with the push back to the
         // side it came from, a move that overlaps a solid at all is stopped on its side, turned or not, so a fast
         // object goes through only one thinner than its move less its own size, as in 2D; only for what collides,
@@ -252,8 +257,11 @@ class EngineObject3D extends EngineObject
      *  - The boxes turn with rotation3D; against height maps and voxel maps an object is still its upright box, and
      *    against a MeshCollider a capsule
      *  - A sync2D object collides in 2D instead, against the 2D size, so set that as well as size3D
-     *  - A stack of objects with mass holds in any list order, as in 2D: one on something that stands meets it as
-     *    fixed, and one pushed up lifts what stands on it; two that both move trade momentum by their masses
+     *  - A stack of objects with mass at rest holds in any list order: one on something that stands meets it as
+     *    fixed, and one pushed up lifts what stands on it; but each is resolved in turn, once a frame, so listed from
+     *    the top down a stack's boxes keep a small speed down, and a game that zeroes the speed of what stands sinks
+     *    it a little a level, as can a stack made touching on its first frames; more than two or three high is a job
+     *    for Box2D; two that both move trade momentum by their masses
      *  @param {boolean} [collideSolidObjects] - Take part in solid collision
      *  @param {boolean} [isSolid] - Block other objects, a pair where neither one blocks passes through;
      *    blocking needs collideSolidObjects, so isSolid on its own is not allowed
@@ -363,10 +371,12 @@ class EngineObject3D extends EngineObject
      *  @return {T} The child object attached */
     addChild(child, localPos, localAngle)
     {
+        // a 3D child's offset is its pos3D, rotation3D and scale3D, set after, or attach, which keeps where it is
+        ASSERT(!isVector3(localPos), "addChild takes a 2D offset, set a 3D child's pos3D after, or use attach");
         // addChild brings the child's transform up to date, which is not a step: it already moved this pass as
         // a root, or moves in the next one, so it must not move by its velocity again here
         if (child instanceof EngineObject3D)
-            child.movePass = engineObjectsUpdateCount;
+            child.movePass = engineObjectsUpdateCount, render3DGroundLast.delete(child); // and stood on nothing
         return super.addChild(child, localPos, localAngle);
     }
 
@@ -403,6 +413,8 @@ class EngineObject3D extends EngineObject
             child.drawOwner = undefined; // a part taken off draws with its own settings
         super.removeChild(child);
         render3DGridJoin(child);
+        // a fixed solid let go of mid pass is in the pass's fixed solids from now on, made again when next asked
+        child instanceof EngineObject3D && !child.mass && (render3DFixed.pass = -1);
     }
 
     /** Draw a different mesh and free the GPU buffer of the one it replaces
@@ -746,10 +758,11 @@ function render3DBounceOff(o, weight, other, normal, restitution)
 // its ground yet this frame
 const render3DGroundLast = /* @__PURE__ */ new WeakMap;
 
-// whether o stands on something other than the one above it: what it found this frame, else last frame's
+// whether o stands on something other than the one above it: what it found this frame, else last frame's, but not
+// for one going up, a jumper, which has left it, so a crate on its head is not thrown as if off a fixed floor
 function render3DStandsOn(o, above)
 {
-    const ground = o.groundObject || render3DGroundLast.get(o);
+    const ground = o.groundObject || o.velocity3D.y <= 0 && render3DGroundLast.get(o);
     return !!ground && ground !== above && !ground.destroyed;
 }
 

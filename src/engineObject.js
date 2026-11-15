@@ -823,7 +823,10 @@ class EngineObject
         // disconnect from parent and destroy children
         this.destroyed = true;
         this.parent?.removeChild(this);
-        for (const child of this.children)
+        // the list is let go first, so a child's callbacks this frame see it holds them no more
+        const children = this.children;
+        this.children = [];
+        for (const child of children)
         {
             child.parent = undefined;
             child.destroy(immediate);
@@ -955,6 +958,10 @@ class EngineObject
         child.localPos = localPos.copy();
         child.localAngle = localAngle;
         child.placedTransform = undefined; // where it is now is not kept, it is placed from the local transform given
+        // carried, it stands on nothing, so a jump check fails and one let go starts in the air, its one way
+        // platforms judged afresh
+        child.groundObject = undefined;
+        tileCollisionStood.delete(child);
         child.updateTransforms();
         return child;
     }
@@ -1001,6 +1008,8 @@ class EngineObject
     { return isOverlapping(this.pos, this.size, pos, size); }
 
     /** Set how this object collides
+     *  - Each object is resolved in turn, once a frame, so a stack of more than two or three with mass depends on
+     *    the order they update in, and may sink or come apart when what it stands on drops; Box2D stacks
      *  @param {boolean} [collideSolidObjects] - Does it collide with solid objects?
      *  @param {boolean} [isSolid]             - Does it collide with and block other objects? (expensive in large numbers)
      *  @param {boolean} [collideLevel]        - Does it collide with the level, its tile collision layers?

@@ -556,12 +556,15 @@ async function parseGLTF(data, baseUrl='', files)
         json = JSON.parse(json);
     if (!json.asset || !String(json.asset.version).startsWith('2'))
         throw new Error('only glTF 2.0 is read'); // a file problem, not a code one, so it throws in every build
-    // compressed geometry has no plain accessors to read; the other extensions add to what is here, and can be left out
+    // compressed geometry has no plain accessors to read; a required extension the loader does not read refuses the
+    // file, as the format says, or it would load wrong with nothing said, as one instanced copy for many
     for (const name of json.extensionsRequired || [])
         if (name === 'KHR_draco_mesh_compression' || name === 'EXT_meshopt_compression')
             throw new Error(`glTF with ${name} is not read, export it uncompressed`);
         else if (name === 'KHR_texture_basisu')
             throw new Error('glTF with KHR_texture_basisu textures is not read, export them as png or jpeg');
+        else if (!GLTF_EXTENSIONS_READ.includes(name))
+            throw new Error(`glTF needs ${name}, which is not read, export without it`);
     // each node's place, turn, scale and matrix numbers, the count each takes, or a release build bakes NaN into the
     // pose or throws at every step; a file problem, so it throws in every build
     (isArray(json.nodes) ? json.nodes : []).forEach((node, i)=>
@@ -639,7 +642,7 @@ async function parseGLTF(data, baseUrl='', files)
         if (visited.has(index))
             throw new Error('glTF node ' + index + ' is reached twice, nodes must form trees');
         visited.add(index);
-        const node = json.nodes[index], local = gltfNodeMatrix(node);
+        const node = gltfAt(json.nodes, index, 'node'), local = gltfNodeMatrix(node);
         let matrix = parentMatrix ? parentMatrix.copy().multiply(local) : local;
         let rest = parentRest && parentRest.copy().multiply(local); // where it rests, when that is not where it is baked
         if (!node.matrix && node.scale?.includes(0))
@@ -657,7 +660,7 @@ async function parseGLTF(data, baseUrl='', files)
             restPose[index] = rest.copy().multiply(restInverse[index]); // from where it is baked to where it rests
         if (node.mesh !== undefined)
         {
-            const mesh = json.meshes[node.mesh];
+            const mesh = gltfAt(json.meshes, node.mesh, 'mesh');
             // a skinned mesh is placed by its joints and not by its node, as the format says, so it is read as stored
             const skin = node.skin !== undefined ? json.skins?.[node.skin] : undefined;
             for (const primitive of mesh.primitives)
@@ -698,7 +701,8 @@ async function parseGLTF(data, baseUrl='', files)
             animation.channels.filter(c=> c.target.node !== undefined &&
                 ['translation', 'rotation', 'scale'].includes(c.target.path) && !json.nodes[c.target.node].matrix).map(c=>
             {
-                const sampler = animation.samplers[c.sampler], interpolation = sampler.interpolation || 'LINEAR';
+                const sampler = gltfAt(animation.samplers, c.sampler, 'animation sampler');
+                const interpolation = sampler.interpolation || 'LINEAR';
                 const times = gltfAccessor(json, buffers, sampler.input).data;
                 const values = gltfAccessor(json, buffers, sampler.output).data;
                 const components = c.target.path === 'rotation' ? 4 : 3;
@@ -1104,9 +1108,21 @@ function gltfNodeMatrix(node)
 // by the parse's list of buffers, its own, so parses of one json object at once count apart
 const gltfZeroCounts = /* @__PURE__ */ new WeakMap;
 
+// the extensions it reads, which a file may require
+const GLTF_EXTENSIONS_READ = ['KHR_materials_emissive_strength', 'KHR_materials_unlit', 'KHR_texture_transform',
+    'KHR_materials_transmission', 'EXT_texture_webp', 'EXT_texture_avif'];
+
+// an entry of one of the file's lists by its index, a file problem naming what is missing when there is none
+function gltfAt(list, index, what)
+{
+    const entry = isArray(list) ? list[index] : undefined;
+    if (!entry || typeof entry !== 'object') throw new Error(`glTF ${what} ${index} is not in the file`);
+    return entry;
+}
+
 function gltfAccessor(json, buffers, index)
 {
-    const a = json.accessors[index], view = json.bufferViews?.[a.bufferView];
+    const a = gltfAt(json.accessors, index, 'accessor'), view = json.bufferViews?.[a.bufferView];
     const components = {SCALAR: 1, VEC2: 2, VEC3: 3, VEC4: 4, MAT4: 16}[a.type];
     const types = {5120: Int8Array, 5121: Uint8Array, 5122: Int16Array, 5123: Uint16Array, 5125: Uint32Array, 5126: Float32Array};
     const Type = types[a.componentType];

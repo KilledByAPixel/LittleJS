@@ -654,7 +654,9 @@ class Box2dObject extends EngineObject
         ASSERT(isNumber(density), 'density must be a number');
         ASSERT(isNumber(friction), 'friction must be a number');
         ASSERT(isNumber(restitution), 'restitution must be a number');
-        ASSERT(!box2d.world.IsLocked(), 'cannot create Box2D fixtures during a contact callback');
+        // in every build, as Box2D itself aborts on it
+        if (box2d.world.IsLocked())
+            throw new Error('cannot create Box2D fixtures during a contact callback, make them after the step');
 
         // Box2D copies the def and the shape
         const fd = new box2d.instance.b2FixtureDef();
@@ -1464,7 +1466,12 @@ class Box2dJoint
      *  @param {b2JointDef} jointDef - Freed once the joint is made, Box2D copies it */
     constructor(jointDef)
     {
-        ASSERT(!box2d.world.IsLocked(), 'cannot create Box2D joints during a contact callback');
+        // in every build, as Box2D itself aborts on it, with the def freed
+        if (box2d.world.IsLocked())
+        {
+            box2d.instance.destroy(jointDef);
+            throw new Error('cannot create Box2D joints during a contact callback, make them after the step');
+        }
         const bodyA = jointDef.get_bodyA(), bodyB = jointDef.get_bodyB();
         const bothLive = !box2d.isNull(bodyA) && !box2d.isNull(bodyB);
         ASSERT(bothLive, 'a joint needs two objects that are not destroyed');

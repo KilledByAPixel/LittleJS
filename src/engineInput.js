@@ -976,6 +976,7 @@ function inputUpdate()
             if (!touchGamepadOwning)
             {
                 touchGamepadOwning = true;
+                gamepadLettingGo[0] = undefined; // a let-go of slot 0 from when it was off is over, the slot is its own
                 for (let k = 2; k < inputData.length; ++k)
                 for (const j in inputData[k] ?? [])
                     inputData[k][j] = inputData[k][j] & 1 ? 4 : 0;

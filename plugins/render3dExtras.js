@@ -1615,6 +1615,7 @@ class CameraControl3D extends EngineObject3D
         /** @property {Vector2} - Lowest and highest pitch, so it cannot tip over the top, widened to hold the pitch given */
         this.pitchRange = vec2(min(-.2, pitch), max(1.4, pitch));
         this.cameraNew = true; // made this update, see cameraUpdatePost
+        this.cameraSnapped = false; // snapped while another drove, see cameraUpdatePost
         this.activate();
     }
 
@@ -1727,6 +1728,7 @@ class ThirdPersonCamera3D extends EngineObject3D
         this.wallSmoothing = .2;
 
         this.cameraNew = true;          // made this update, see cameraUpdatePost
+        this.cameraSnapped = false; // snapped while another drove, see cameraUpdatePost
         this.pivot = vec3();            // where the pole starts now, eased toward the target
         this.poleLength = distance;     // how long the pole is now, shorter at a wall
         /** @type {Vector3|undefined} */
@@ -1773,7 +1775,8 @@ class ThirdPersonCamera3D extends EngineObject3D
         this.pivot = pos.add(this.pivotOffset);
         this.targetFrom = pos.copy();
         this.poleLength = this.getPoleLimit();
-        cameraDriver() === this && this.placeCamera(); // a camera not driving keeps its place for later
+        // a camera not driving keeps its place for later, and starts from it when it takes over, a cut
+        cameraDriver() === this ? this.placeCamera() : this.cameraSnapped = true;
     }
 
     /** Turn, swing and pull in, and set the camera, called by the camera plugin after the objects update */
@@ -1936,6 +1939,7 @@ class FirstPersonCamera3D extends EngineObject3D
          *  outside the body and sees through a ceiling it stands under */
         this.eyeHeight = 0;
         this.cameraNew = true; // made this update, see cameraUpdatePost
+        this.cameraSnapped = false; // snapped while another drove, see cameraUpdatePost
         this.activate();
     }
 
@@ -2223,11 +2227,20 @@ class ParticleEmitter3D extends EngineObject3D
     }
 
     /** Move by its own velocity, with no damping: damping and angleDamping are its particles', not its own */
-    updatePhysics()
+    updatePhysics() { this.undamped(()=> super.updatePhysics()); }
+
+    /** Bring its transform up to date, a child moving by its own velocity with no damping as a root does
+     *  @param {boolean} [updateChildren] */
+    updateTransforms(updateChildren=true) { this.undamped(()=> super.updateTransforms(updateChildren)); }
+
+    /** Run a move with its damping set aside, which is its particles'
+     *  @param {function(): void} move
+     *  @ignore */
+    undamped(move)
     {
         const damping = this.damping, angleDamping = this.angleDamping;
         this.damping = this.angleDamping = 1;
-        try { super.updatePhysics(); }
+        try { move(); }
         finally { this.damping = damping, this.angleDamping = angleDamping; }
     }
 

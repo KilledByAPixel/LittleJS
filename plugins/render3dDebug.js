@@ -39,37 +39,48 @@ function render3DDebugPush(duration, draw)
         render3DDebugPrimitives.push({timer: new Timer(duration, true), draw, clearCount: debugClearCount}); // real time, like 2D
 }
 
+// a debug draw's color as it is now: a Color copied, or a hex string, as the 2D debug draws take one
+/** @param {Color|string} color
+ *  @return {Color} */
+function render3DDebugColor(color)
+{
+    if (isColor(color)) return color.copy();
+    const hex = isStringLike(color) && (color + '')[0] === '#';
+    ASSERT(hex, 'a 3D debug color is a Color or a hex string, as #f00', color);
+    return hex ? new Color().setHex(color + '') : WHITE.copy();
+}
+
 /** Draw a debug wireframe box
  *  @param {Vector3} pos - Center
  *  @param {Vector3|number} [size] - Full size, a number for a cube
- *  @param {Color} [color]
+ *  @param {Color|string} [color] - A Color or a hex string, as '#f00'
  *  @param {number} [time] - How long to show it, 0 is one frame
  *  @param {Vector3} [rotation] - vec3(pitch, yaw, roll)
  *  @memberof Render3D */
 function debugBox3D(pos, size=1, color=WHITE, time=0, rotation)
 {
     const matrix = buildMatrix(pos, rotation, render3DSize3(size));
-    color = color.copy(); // as it is now, a timed one keeps it when the caller changes theirs
+    const drawColor = render3DDebugColor(color); // as it is now, a timed one keeps it when the caller changes theirs
     const corner = (i)=> matrix.transformPoint(vec3(i & 1 ? .5 : -.5, i & 2 ? .5 : -.5, i & 4 ? .5 : -.5));
     render3DDebugPush(time, ()=>
     {
         for (let i = 0; i < 8; ++i)
         for (const bit of [1, 2, 4])
             if (!(i & bit))
-                render3D.drawLine(corner(i), corner(i | bit), RENDER3D_DEBUG_WIDTH, color);
+                render3D.drawLine(corner(i), corner(i | bit), RENDER3D_DEBUG_WIDTH, drawColor);
     });
 }
 
 /** Draw a debug wireframe sphere as three rings
  *  @param {Vector3} pos - Center
  *  @param {number} [size] - Diameter
- *  @param {Color} [color]
+ *  @param {Color|string} [color] - A Color or a hex string, as '#f00'
  *  @param {number} [time] - How long to show it, 0 is one frame
  *  @memberof Render3D */
 function debugSphere3D(pos, size=1, color=WHITE, time=0)
 {
-    pos = pos.copy(), color = color.copy(); // as they are now, a timed one stays when the object or color changes
-    const circle = render3DCircle(24), r = size / 2;
+    pos = pos.copy(); // as they are now, a timed one keeps them
+    const drawColor = render3DDebugColor(color), circle = render3DCircle(24), r = size / 2;
     render3DDebugPush(time, ()=>
     {
         for (const ring of [(c, s)=> vec3(c, s, 0), (c, s)=> vec3(c, 0, s), (c, s)=> vec3(0, c, s)])
@@ -77,7 +88,7 @@ function debugSphere3D(pos, size=1, color=WHITE, time=0)
             const points = [];
             for (let i = 0; i <= 24; ++i)
                 points.push(pos.add(ring(circle[i*2], circle[i*2 + 1]).scale(r)));
-            render3D.drawRibbon(points, RENDER3D_DEBUG_WIDTH, undefined, color);
+            render3D.drawRibbon(points, RENDER3D_DEBUG_WIDTH, undefined, drawColor);
         }
     });
 }
@@ -85,29 +96,31 @@ function debugSphere3D(pos, size=1, color=WHITE, time=0)
 /** Draw a debug line
  *  @param {Vector3} posA
  *  @param {Vector3} posB
- *  @param {Color} [color]
+ *  @param {Color|string} [color] - A Color or a hex string, as '#f00'
  *  @param {number} [width]
  *  @param {number} [time] - How long to show it, 0 is one frame
  *  @memberof Render3D */
 function debugLine3D(posA, posB, color=WHITE, width=RENDER3D_DEBUG_WIDTH, time=0)
 {
     // as they are now, a timed one stays put when the ends or the color change
-    posA = posA.copy(), posB = posB.copy(), color = color.copy();
-    render3DDebugPush(time, ()=> render3D.drawLine(posA, posB, width, color));
+    posA = posA.copy(), posB = posB.copy();
+    const drawColor = render3DDebugColor(color);
+    render3DDebugPush(time, ()=> render3D.drawLine(posA, posB, width, drawColor));
 }
 
 /** Draw a debug point as a small cross of three lines
  *  @param {Vector3} pos
- *  @param {Color} [color]
+ *  @param {Color|string} [color] - A Color or a hex string, as '#f00'
  *  @param {number} [time] - How long to show it, 0 is one frame
  *  @param {number} [size] - Length of the cross
  *  @memberof Render3D */
 function debugPoint3D(pos, color=WHITE, time=0, size=.2)
 {
-    pos = pos.copy(), color = color.copy(); // as they are now, a timed one stays when the object or color changes
+    pos = pos.copy(); // as they are now, a timed one keeps them
+    const drawColor = render3DDebugColor(color);
     render3DDebugPush(time, ()=>
     {
         for (const axis of [vec3(size / 2, 0, 0), vec3(0, size / 2, 0), vec3(0, 0, size / 2)])
-            render3D.drawLine(pos.subtract(axis), pos.add(axis), RENDER3D_DEBUG_WIDTH, color);
+            render3D.drawLine(pos.subtract(axis), pos.add(axis), RENDER3D_DEBUG_WIDTH, drawColor);
     });
 }
