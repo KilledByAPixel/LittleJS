@@ -915,6 +915,9 @@ class HeightMap extends EngineObject3D
  * - A V between two steep faces, a gully, holds an object standing in it only when both faces are in one
  *   MeshCollider: a gully made of two, or of a MeshCollider beside a HeightMap, lets it sink into the sides and is
  *   never ground, so make a gully one collider, or a HeightMap
+ * - An object walking across a steep gully, into one of its sides, rides a little up that side and drops back, so it
+ *   is on the ground only part of the time and a jump there may not come; walking along a gully holds it, so make
+ *   one wide enough, or its sides gentle enough, that a body is not pushed into a side to cross it
  * - A gap that closes on an object, a V floor rising under a ceiling, squeezes it through one or the other, as no
  *   collider can hold a body in less room than it has; leave a level room for its bodies
  * @extends EngineObject3D
