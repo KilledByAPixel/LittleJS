@@ -78,7 +78,7 @@ test('a 3D collide callback that attaches one solid to the other ends the pair, 
             const mt = ()=> { target = box(V(0, 0, 0), V(1, 2, 2), 0); };
             ${order === 'arrow first' ? 'ma(); mt();' : 'mt(); ma();'}
             arrow.collideWithObject = (o)=> { if (o !== target) return true;
-                arrow.velocity3D = V(0, 0, 0); target.addChild(arrow, arrow.pos3D.subtract(target.pos3D)); return false; };
+                arrow.velocity3D = V(0, 0, 0); target.attach(arrow); return false; };
             step(40);
             return JSON.stringify({attached: arrow.parent === target, x: arrow.pos3D.x});`);
         assert.equal(r.attached, true, order);
@@ -139,8 +139,8 @@ function restartingMap(run)
         levelEditor.open();`);
 }
 
-test('the 2D editor\'s Play during an async restart plays on with no player put, and one that never settles is let go',
-    async ()=>
+test('the 2D editor\'s Play during an async restart plays on with no player put, and only the promise settling ends ' +
+    'the wait', async ()=>
 {
     const { run } = await engine();
     restartingMap(run);
@@ -153,14 +153,14 @@ test('the 2D editor\'s Play during an async restart plays on with no player put,
     run('levelEditor.open(); editorPlay(vec2(1, 1))');
     assert.deepEqual(JSON.parse(run('JSON.stringify([editorIsOpen, playedFrom.length])')), [false, 1], 'then plays');
 
-    // a restart that never settles: the game loads its map again itself, which ends the wait
-    run(`levelEditor.open(); editorResize(editorLayers()[0].record, 6, 3);
-        var stuck = !!editorRestartRunning; tileLayersLoad(map, undefined, 0, 0);`);
-    assert.deepEqual(JSON.parse(run('JSON.stringify([stuck, !!editorRestartRunning])')), [true, false], 'map loaded');
-
-    // or the editor closes
-    run(`editorResize(editorLayers()[0].record, 7, 3); var stuck2 = !!editorRestartRunning; editorSetOpen(false);`);
-    assert.deepEqual(JSON.parse(run('JSON.stringify([stuck2, !!editorRestartRunning])')), [true, false], 'closed');
+    // a load of its map or a close does not end the wait, so a second restart can not start under the first
+    run(`levelEditor.open(); editorResize(editorLayers()[0].record, 6, 3); tileLayersLoad(map, undefined, 0, 0);
+        var afterLoad = !!editorRestartRunning; editorSetOpen(false); var afterClose = !!editorRestartRunning;
+        levelEditor.open(); var refused = editorResize(editorLayers()[0].record, 7, 3);`);
+    assert.deepEqual(JSON.parse(run('JSON.stringify([afterLoad, afterClose, refused, map.width])')),
+        [true, true, false, 6], 'still waits');
+    run('waits.shift()()'); await tick();
+    assert.equal(run('!!editorRestartRunning'), false, 'its promise settled, the wait is over');
 });
 
 test('edit2D.undo says whether it undid anything', async ()=>

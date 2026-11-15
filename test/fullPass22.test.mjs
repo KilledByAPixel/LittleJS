@@ -129,8 +129,8 @@ test('a 2D collide callback that attaches either one ends the pair, the player n
     }
 });
 
-test('Escape during a fading 2D restart plays on so the fade finishes, and a Restart button restart is let go by ' +
-    'a load', async ()=>
+test('Escape during a fading 2D restart plays on so the fade finishes, and a Restart button restart waits till it ' +
+    'settles', async ()=>
 {
     const { run } = await engine();
     run(`var map = {width: 4, height: 3, tilewidth: 16, tileheight: 16,
@@ -149,12 +149,14 @@ test('Escape during a fading 2D restart plays on so the fade finishes, and a Res
         played: played.length, alive: engineObjects.filter((o)=> o instanceof TileLayer && !o.destroyed).length})`));
     assert.deepEqual(state(), {open: false, running: false, played: 0, alive: 1}, 'the fade finished, no player put');
 
-    // a Restart button restart that loads the level and never settles is let go by the load
-    run(`levelEditor.onRestart = ()=> { ++restarts; tileLayersLoad(map, undefined, 0, 0); return new Promise(()=> {}); };
-        levelEditor.open(); editorRestart(); levelEditor.open();`);
-    assert.equal(state().running, false, 'let go by its load');
+    // a Restart button restart that loads the level waits till its promise settles, the load does not end it
+    run(`var settle; levelEditor.onRestart = ()=> { ++restarts; tileLayersLoad(map, undefined, 0, 0);
+            return new Promise((r)=> settle = r); };
+        levelEditor.open(); editorRestart(); levelEditor.open(); editorRestart();`);
+    assert.deepEqual([state().running, run('restarts')], [true, 2], 'the second Restart waits');
+    run('settle()'); await tick();
     run('editorRestart()');
-    assert.equal(run('restarts'), 3, 'so Restart goes again');
+    assert.equal(run('restarts'), 3, 'settled, Restart goes again');
 });
 
 test('the 3D editor\'s Restart waits for its last async one, and an undo entry shares its list with the one before',
@@ -169,7 +171,7 @@ test('the 3D editor\'s Restart waits for its last async one, and an undo entry s
         levelEditor.onRestart = ()=> { ++restarts; return new Promise(()=> {}); };
         levelEditor.open(); editor3DRestart(); levelEditor.open(); editor3DRestart();
         const waited = restarts;
-        level3DLoad(level); levelEditor.open(); editor3DRestart();
+        level3DLoad(level); levelEditor.open(); editor3DRestart(); // a load does not end it, only its promise
 
         levelEditor.open();
         editor3DSelection.add(1);
@@ -178,7 +180,7 @@ test('the 3D editor\'s Restart waits for its last async one, and an undo entry s
         const list = editor3DUndoList, n = list.length;
         return JSON.stringify({waited, after: restarts, shared: n >= 2 && list[n - 1].before === list[n - 2].after});
     })()`));
-    assert.deepEqual(result, {waited: 1, after: 2, shared: true});
+    assert.deepEqual(result, {waited: 1, after: 1, shared: true});
 });
 
 test('the touch gamepad turned off with a button held gives its release', ()=>
