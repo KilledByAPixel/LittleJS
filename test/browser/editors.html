@@ -1,0 +1,88 @@
+<!DOCTYPE html><meta charset=utf-8>
+<title>LittleJS smoke: the editors</title>
+<!-- the Level Editor short with its editor open: the panel made and its palette drawn from the loaded tile sheet, and
+     a few frames drawn; then the 3D editor opened on a 3D level, its panel made and frames drawn; a throw in either
+     panel or its drawing fails the page, as one in the 2D palette did for ten review passes -->
+<base href=../../examples/shorts/>
+<script src=../../dist/littlejs.js></script>
+<script src=../../test/browser/smoke.js></script>
+<pre id=result>PENDING</pre>
+<script>
+'use strict';
+canvasFixedSize = vec2(480, 270);
+showSplashScreen = false;
+debugWatermark = false;
+showEngineVersion = false;
+// the short overrides the hooks it uses
+function gameInit() {}
+function gameUpdate() {}
+function gameUpdatePost() {}
+function gameRender() {}
+function gameRenderPost() {}
+</script>
+<script src=levelEditor.js></script>
+<script>
+'use strict';
+{
+    const step = async (count)=>
+    {
+        for (let i = 0; i < count; ++i)
+        {
+            engineStep();
+            await new Promise((resolve)=> setTimeout(resolve, 5));
+        }
+    };
+    setEngineManualStep(true);
+    setTimeout(()=> { check('finished', false, 'stuck'); smokeDone(); }, 45e3);
+    engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, gameRenderPost, ['tiles.png']).then(async ()=>
+    {
+        try
+        {
+            // the short opens the editor in gameInit
+            await step(5);
+            check('the 2D editor is open', levelEditor.isOpen);
+            const parts = editorPanelParts;
+            check('its panel is made', !!parts && !!editorPanel?.isConnected);
+            const tiles = editorPaletteTiles(editorLayer);
+            const sheet = textureInfos[0].size;
+            check('its palette has the tile sheet\'s tiles', tiles.length > 1, tiles.length + ' of a ' + sheet);
+            const palette = parts?.palette;
+            check('and draws them', palette && palette.style.display !== 'none' && palette.width > 0 &&
+                palette.height >= editorPaletteCell, palette && palette.width + 'x' + palette.height);
+            // a tile picked in the palette, by its slot, the Erase brush first, is the brush, drawn under the mouse
+            editorPalettePick(2);
+            await step(3);
+            check('a palette tile is the brush', editorBrushTile()?.tile === tiles[1]?.tile, editorBrushTile()?.tile);
+            // with no list of tiles, as the platformer has none, the palette reads the whole sheet as a grid, down to
+            // its last row, where the 2D editor threw for ten passes
+            levelEditor.paletteTiles = undefined;
+            editorLayer.palette = undefined;
+            await step(3);
+            const sheetTiles = editorPaletteTiles(editorLayer);
+            check('the whole sheet\'s tiles, read as a grid', sheetTiles.length > 3, sheetTiles.length);
+            check('and drawn', parts.palette.height > editorPaletteCell, parts.palette.width + 'x' + parts.palette.height);
+            levelEditor.close();
+            await step(2);
+            check('it closes', !levelEditor.isOpen);
+
+            // the 3D editor on a level of boxes
+            engineObjectsDestroy();
+            new Render3DPlugin;
+            level3DLoad({littlejs3D: 1, objects: [{id: 1, type: 'Box', pos: [0, 0, 0]},
+                {id: 2, type: 'Sphere', pos: [3, 0, 0]}]});
+            levelEditor.open();
+            await step(5);
+            check('the 3D editor is open', levelEditor.isOpen && editor3DIsOpen);
+            editor3DSelection.add(1);
+            await step(3);
+            check('it draws with something selected', editor3DSelection.size === 1);
+            levelEditor.close();
+            await step(2);
+            check('it closes', !levelEditor.isOpen);
+            glEnable && checkGLError();
+        }
+        catch (e) { check('no error', false, String(e?.message || e)); }
+        smokeDone();
+    });
+}
+</script>

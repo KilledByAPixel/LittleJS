@@ -91,7 +91,7 @@ test('addChild lets go of what the child stood on, 2D and 3D: a carried crate th
     assert.deepEqual(result, {before: true, carried: false, vx: .3, ground3D: false, last3D: false});
 });
 
-test('a setScene made while a switch destroys the old scene waits for it, the old scene leaves once', ()=>
+test('a setScene made while a switch destroys the old scene is dropped, the old scene leaves once', ()=>
 {
     const { run } = loadEngine();
     const result = JSON.parse(run(`(()=>
@@ -107,11 +107,11 @@ test('a setScene made while a switch destroys the old scene waits for it, the ol
         const title = scene('title');
         setScene(game); log.length = 0;
         setScene(title);
-        return JSON.stringify({log, current: getScene() === gameOver,
+        return JSON.stringify({log, current: getScene() === title,
             alive: engineObjects.filter((o)=> !o.destroyed).length});
     })()`));
-    assert.deepEqual(result, {log: ['game leave', 'title enter', 'title leave', 'gameOver enter'], current: true,
-        alive: 1});
+    // pass 24, owner's call: the ask from the destroy is dropped, the switch's own scene wins
+    assert.deepEqual(result, {log: ['game leave', 'title enter'], current: true, alive: 0});
 });
 
 test('a FollowCamera snapped while another drives cuts there when it takes over', ()=>

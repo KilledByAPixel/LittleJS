@@ -64,6 +64,10 @@ const key = (engine, code, held=[])=>
 {
     for (const h of held) engine.run(`inputData[0].${h} = 1`);
     engine.run(`inputData[0].${code} = 3`);
+    // a Ctrl shortcut goes by the letter the key prints, which the editor's own listener keeps, as a US keyboard has it
+    const ctrl = held.some((h)=> h.startsWith('Control'));
+    ctrl && code.startsWith('Key') && engine.run(`editor3DLetterPressed = {letter: '${code.slice(3).toLowerCase()}',
+        ctrl: true, shift: ${held.some((h)=> h.startsWith('Shift'))}}`);
     step(engine);
     engine.run(`inputData[0].${code} = 0`);
     for (const h of held) engine.run(`inputData[0].${h} = 0`);
