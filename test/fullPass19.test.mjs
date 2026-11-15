@@ -209,18 +209,23 @@ test('a camera control does not turn while a press that began on a plain UI pane
         setHeadlessMode(true); new Render3DPlugin; new UISystemPlugin({});
         const panel = new UIObject(vec2(200, 200), vec2(200, 200)); // not interactive, a background
         const control = new CameraControl3D(vec3(), 10);
-        const turn = (x, y)=>
+        // laid out first, so the press lands where the panel is, the mouse in the window as a mouse event puts it
+        pluginList.forEach((p)=> p.update?.()); mouseInWindow = true;
+        let over = false;
+        const turn = (at)=>
         {
             const yaw = control.yaw;
-            mousePosScreen = vec2(x, y); inputData[0][0] = 3;
+            mousePosScreen = at.copy(); inputData[0][0] = 3;
             pluginList.forEach((p)=> p.update?.());
-            inputData[0][0] = 1; mouseDeltaScreen = vec2(40, 0); mousePosScreen = vec2(x + 40, y);
+            over = uiSystem.isPressOverUI(0);
+            inputData[0][0] = 1; mouseDeltaScreen = vec2(40, 0); mousePosScreen = at.add(vec2(40, 0));
             pluginList.forEach((p)=> p.update?.()); control.update();
             inputData[0][0] = 0; mouseDeltaScreen = vec2(); pluginList.forEach((p)=> p.update?.());
-            return control.yaw - yaw;
+            return [control.yaw - yaw, over];
         };
-        return JSON.stringify({onPanel: turn(200, 200), off: turn(700, 500)});
+        return JSON.stringify({onPanel: turn(panel.nativePos), off: turn(panel.nativePos.add(vec2(400, 0)))});
     })()`));
-    assert.equal(result.onPanel, 0);
-    assert.notEqual(result.off, 0);
+    assert.deepEqual(result.onPanel, [0, true]);
+    assert.notEqual(result.off[0], 0);
+    assert.equal(result.off[1], false);
 });
