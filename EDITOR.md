@@ -28,7 +28,8 @@ run by `test/editorCustom.test.mjs` straight from this file. The full API is in
 2. Press `?` to see every control. Ctrl+Z undoes.
 3. Press `Esc` to switch between editing and playing, and `0` or the panel's Exit button to leave.
 4. Press the panel's Save button to write the level to a file. Edits are also autosaved in the browser, so a
-   reload brings back what was not saved yet.
+   reload brings back what was not saved yet. Edit a level in one tab at a time: two tabs of the same page keep one
+   autosave per level, and the last edit made in either one writes over the other's.
 
 **Hooking up your game.** The editor edits the level data your game loaded, so load the level from data and
 rebuild it in one function. A 2D game:
@@ -338,7 +339,7 @@ The rules every customization follows. The headline of each is enough to start w
 | `selected()` | The selected objects |
 | `made(id)` | What the game made for an object |
 | `change((list)=> {...})` | Edit a copy of the object list; false when nothing changed, or when the level can not be edited while its autosave waits for Apply or Drop |
-| `changePart(name, (part)=> newPart)` | Edit the level's `scene`, `voxels`, `terrain` or `prefabs` block; false as `change` gives it, and for any but `prefabs` inside Edit prefab, where a prefab is objects alone |
+| `changePart(name, (part)=> newPart)` | Edit the level's `scene`, `voxels`, `terrain` or `prefabs` block; false as `change` gives it, and for any part inside Edit prefab, where a prefab is objects alone |
 | `strokeEnd()` | End the edit: one undo step, and the autosave |
 | `strokeCancel()` | Take the edit being made back |
 | `place(type, pos3D)` | Add an object of a type, selected; its id, or undefined when there is no such type, a prefab would hold itself, or the level can not be edited while its autosave waits |

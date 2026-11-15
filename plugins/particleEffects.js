@@ -232,10 +232,10 @@ const particleEffectShapes = ['dot', 'soft', 'glow', 'smoke', 'spark', 'square',
 ///////////////////////////////////////////////////////////////////////////////
 // effects
 
-// a color from an [r,g,b,a] array or a Color, undefined if it is neither
+// a color from an [r,g,b,a] array, a Color, or a Color as JSON writes it, {r,g,b,a}, undefined if it is none of them
 function particleEffectColor(value)
 {
-    if (value instanceof Color)
+    if (value instanceof Color || value && typeof value === 'object' && !isArray(value) && 'r' in value)
         value = [value.r, value.g, value.b, value.a];
     if (isArray(value) && value.length === 4 && value.every(isNumber))
         return value.map(c=> clamp(c));
@@ -368,7 +368,8 @@ function particleEffectsFromData(data)
  *  @param {Array<ParticleEffect>} effects
  *  @return {string}
  *  @memberof ParticleEffects */
-function particleEffectsText(effects) { return JSON.stringify({version:1, effects}, undefined, 1); }
+function particleEffectsText(effects)
+{ return JSON.stringify({version:1, effects: effects.map(particleEffectSanitize)}, undefined, 1); } // colors as lists
 
 /** Load a library file the particle designer saved and add its effects
  *  @param {string} url

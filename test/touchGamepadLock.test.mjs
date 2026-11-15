@@ -17,10 +17,13 @@ test('a press that came from a touch does not ask for the pointer lock, a mouse 
 {
     const { run } = loadEngine();
     run(`var locks = 0; mainCanvas = { requestPointerLock() { ++locks; } };
-        inputLastTouchTime = performance.now(); pointerLockRequest();`);
+        inputLastTouchTime = performance.now(); inputTouchLast = true; pointerLockRequest();`);
     assert.equal(run('locks'), 0, 'not just after a touch');
     run('inputLastTouchTime = -1e9; pointerLockRequest();');
     assert.equal(run('locks'), 1, 'a mouse asks');
+    // a real mouse's click right after a touch, on a touch screen laptop, the last pointer used a mouse
+    run('inputLastTouchTime = performance.now(); inputTouchLast = false; pointerLockRequest();');
+    assert.equal(run('locks'), 2, 'a mouse right after a touch asks');
 });
 
 test('a FirstPersonCamera3D looks with the right stick and moves with the left', () =>

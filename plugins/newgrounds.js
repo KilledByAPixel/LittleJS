@@ -166,6 +166,9 @@ class NewgroundsPlugin
         this.scoreboards = [];
         /** @type {Map<number, 'failed'|'notSave'>} */
         this.loadFailures = new Map; // why each slot's last load gave undefined, see loadFailure
+        /** @type {Map<number, Promise<void>>} - each slot's last save or load, the next waits for it, so they land in
+         *  order */
+        this.slotChains = new Map;
         /** @property {{id: number, name: string, url: string, supporter: boolean}|null} - The logged in player once ready, null when not logged in
          *  @type {{id: number, name: string, url: string, supporter: boolean}|null} */
         this.user = null;
@@ -351,9 +354,28 @@ class NewgroundsPlugin
         try { text = JSON.stringify(data); } catch (error) {}
         if (text === undefined)
             return console.warn('Newgrounds cloudSave: slot ' + slot + ' was given a value JSON can not hold'), false;
-        const response = await this.call('CloudSave.setData', {'id':slot, 'data':text});
-        newgroundsSessionLost(response) && this.dropSession();
-        return !!response?.result?.data?.['success'];
+        return this.slotInOrder(slot, async ()=>
+        {
+            const response = await this.call('CloudSave.setData', {'id':slot, 'data':text});
+            newgroundsSessionLost(response) && this.dropSession();
+            return !!response?.result?.data?.['success'];
+        });
+    }
+
+    /** Run a slot's save or load after the last one of that slot is done, so a save then a load reads what was
+     *  saved, and two saves land in the order they were made, as Newgrounds answers each call in its own time
+     *  @template T
+     *  @param {number} slot
+     *  @param {function(): Promise<T>} task
+     *  @return {Promise<T>}
+     *  @ignore */
+    slotInOrder(slot, task)
+    {
+        const key = +slot, run = (this.slotChains.get(key) ?? Promise.resolve()).then(task, task);
+        const done = run.then(()=> {}, ()=> {});
+        this.slotChains.set(key, done);
+        done.then(()=> this.slotChains.get(key) === done && this.slotChains.delete(key));
+        return run;
     }
 
     /** Load the value a cloud save slot holds: null when Newgrounds says it holds none, undefined when it could not be
@@ -368,7 +390,7 @@ class NewgroundsPlugin
     async cloudLoad(slot)
     {
         ASSERT(isNumber(slot), 'Newgrounds cloudLoad: slot must be a number', slot);
-        const {value, failure} = await this.loadSlot(slot);
+        const {value, failure} = await this.slotInOrder(slot, ()=> this.loadSlot(slot));
         failure ? this.loadFailures.set(+slot, failure) : this.loadFailures.delete(+slot);
         return value;
     }

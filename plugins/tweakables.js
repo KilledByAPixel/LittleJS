@@ -301,10 +301,12 @@ function tweakPanelInit()
     button('Copy', (e)=>
     {
         // lines for the changed values, to paste over the values in the code
+        // with no clipboard, a page on plain http, or one that refuses, the lines go to the console, as it says
         const code = tweakChangedCode(), target = /** @type {HTMLElement} */ (e.target);
-        code && navigator.clipboard?.writeText(code).catch(()=> console.log(code));
-        target.textContent = code ? 'Copied' : 'No changes';
-        setTimeout(()=> target.textContent = 'Copy', 1e3);
+        const show = (text)=> { target.textContent = text; setTimeout(()=> target.textContent = 'Copy', 1e3); };
+        if (!code) return show('No changes');
+        const logged = ()=> { console.log(code); show('In console'); };
+        navigator.clipboard ? navigator.clipboard.writeText(code).then(()=> show('Copied'), logged) : logged();
     });
     button('Reset', tweakReset);
 }

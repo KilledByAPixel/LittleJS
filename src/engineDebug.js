@@ -682,7 +682,7 @@ function debugRender()
             debugContext.fillText('Primitives: ' + primitiveCount, x, y += h);
             debugContext.fillText('---------', x, y += h);
             debugContext.fillStyle = '#f00';
-            debugContext.fillText('ESC: Debug Overlay', x, y += h);
+            debugContext.fillText((debugKey === 'Escape' ? 'ESC' : debugKey) + ': Debug Overlay', x, y += h);
             debugContext.fillStyle = debugPhysics ? '#f00' : '#fff';
             debugContext.fillText('1: Debug Physics', x, y += h);
             debugContext.fillStyle = debugTiles ? '#f00' : '#fff';

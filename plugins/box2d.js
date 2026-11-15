@@ -502,7 +502,8 @@ class Box2dObject extends EngineObject
     }
 
     /** Destroy this object and its physics body
-     *  @param {boolean} [immediate] - Remove it now, as EngineObject.destroy does, children included */
+     *  @param {boolean} [immediate] - true removes attached effects like particle emitters at once, false lets
+     *  them finish first, as EngineObject.destroy does, children included */
     destroy(immediate=false)
     {
         if (this.destroyed) return;

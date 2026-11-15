@@ -724,7 +724,8 @@ class Mesh
             this.normals = points.map((p, i)=>
             {
                 const s = groups[i] * 3, x = sums[s], y = sums[s+1], z = sums[s+2], l = (x**2 + y**2 + z**2)**.5;
-                return !touched[groups[i]] ? vec3(0, 1, 0) : l ? vec3(x * (1/l), y * (1/l), z * (1/l)) : vec3();
+                // straight up too where the faces cancel, two back to back, as the indexed branch gives
+                return touched[groups[i]] && l ? vec3(x * (1/l), y * (1/l), z * (1/l)) : vec3(0, 1, 0);
             });
             this.vertexKeys = undefined;
             this.dirty = true;

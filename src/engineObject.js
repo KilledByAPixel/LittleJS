@@ -225,7 +225,7 @@ class EngineObject
         ASSERT(!tileInfo || tileInfo instanceof TileInfo, 'object tileInfo should be a TileInfo or undefined');
         ASSERT(typeof angle === 'number' && isFinite(angle), 'object angle should be a number');
         ASSERT(isColor(color), 'object color should be a valid rgba color');
-        ASSERT(typeof renderOrder === 'number', 'object renderOrder should be a number');
+        ASSERT(isNumber(renderOrder), 'object renderOrder should be a number, not NaN, which leaves the list unsorted');
 
         /** @property {Vector2} - World space position of the object, on a child too, where setting it moves the
          *  child there and its localPos follows */
@@ -278,7 +278,8 @@ class EngineObject
         this.damping = objectDefaultDamping;
         /** @property {number} - Fraction of angular velocity kept each frame, 1 keeps all of it, 0 stops at once */
         this.angleDamping = objectDefaultAngleDamping;
-        /** @property {number} - How bouncy the object is when colliding (0-1) */
+        /** @property {number} - How bouncy the object is when colliding, 0 to 1; above 1 adds speed off tiles and
+         *  static solids, a bumper or a bounce pad, while between two moving bodies it is held to 1 */
         this.restitution = objectDefaultRestitution;
         /** @property {number} - Fraction of sliding speed kept each frame on the ground, 1 is no friction, 0 stops at
          *  once, the more slippery of the object and its ground is used */

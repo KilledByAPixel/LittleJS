@@ -78,9 +78,10 @@ square's color is `hsl(saveData.hue,.5,.5)`, so the hue is the only
 part of the color that needs saving.
 
 Only plain data survives the trip through JSON: numbers, strings, true
-and false, arrays and objects of those. A `Vector2` or a `Color` comes
-back as a plain object without its methods, so save its numbers and
-build it again after loading, as the hue is here.
+and false, arrays and objects of those. A `Vector2` or a `Color` whose
+default is one comes back as one, made again from its numbers; with no
+default to go by it comes back as a plain object without its methods,
+so a single number is the simplest thing to save, as the hue is here.
 
 ## Try it
 - Change anything in the code. The example starts again and the count

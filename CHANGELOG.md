@@ -19,7 +19,7 @@ What changed in each release, newest first. Releases before 1.20.0 are on the
 - A `MeshCollider` raycast, as picking, the third person camera's wall test and a lens flare's check send, walks the collider's grid and tests only the triangles along the ray; a CSG cut places each point once, about twice as fast
 - `distanceAngle` and `distanceWrap` say they give A minus B, and REFERENCE that an `InstancedMesh3D` is never hit by pick, raycasts or collect
 - `levelEditor.addKey` takes key codes, as `'KeyE'` or `'Numpad1'`, in both editors, warns when one is a key the 2D editor has, and refuses `'Digit0'` as it refuses `'0'`
-- `engineObjectsCollect3D` with no position collects every 3D object, and with no size the ones at a point, as `engineObjectsCollect` does
+- `engineObjectsCollect3D` with no position collects every 3D object with a body, leaving out lights, emitters and instanced meshes, and with no size the ones at a point, as `engineObjectsCollect` does
 - `loadSprite` packs the whole frames of an image its frame size does not divide in every build, where a debug build asserted, says so in debug builds, and warns when the image is smaller than one frame
 - `loadAtlas` says which file failed and why when its json can not be loaded
 - With no debug key (`setDebugKey('')`) the editors have no Play button and their help leaves out what needs the key; another key is named in place of Esc
@@ -58,7 +58,7 @@ What changed in each release, newest first. Releases before 1.20.0 are on the
 - `box2dInit` tries again after a load that failed; `getNearestClearNode` from far outside its grid starts at the first ring that reaches it
 - The engine's font draws nothing in headless mode, with no error; `PostProcessPlugin.feedback` can be turned on while it runs; a `Render3DPlugin` made again frees the sky box and capture objects and keeps pending captures
 - In the level editor a digit or 0 waits while a game's tool is held, so the tool gets its release
-- `soundPauseWhenBlurred` pauses a `UIVideo` too, and speech pauses on a hidden page with no running audio context
+- Speech pauses on a hidden page with no running audio context, as sound does
 - `objectLayersLoad` warns of an object placed from a Tiled template, which it can not read; `addChild` in a release build leaves out a destroyed child
 - Docs: `level3DSpawn` copies its properties, `engineInit` says what a release build does with an error in every frame, the FAQ's copy of the empty example, `iTime`, music pausing and its contents order
 - An error thrown from a Box2D contact callback comes out after the physics step, where it left Box2D's world locked and every body made after it failed, and one thrown from an `endContact` as an object is destroyed still takes its body out of the world; `setScene` from a contact callback, as a restart on touching spikes, happens once the step is done
@@ -103,19 +103,19 @@ What changed in each release, newest first. Releases before 1.20.0 are on the
 - Tiled object properties written as an object, as Tiled before 1.2 wrote them, are read, typed by its `propertytypes`, where `objectLayersLoad` threw part way; the game's map is left as it is, and in debug builds it is made the list form so the 2D editor edits it and keeps its autosave; a null property entry or a color that is not a hex string is left out with a warning, before the object is made
 - Two `setScene` calls in one Box2D step, as a body and its foot sensor touching spikes make, enter the scene once
 - A bullet destroyed by its own hit is no longer asked about tiles it never touched, which broke a second tile in the platformer
-- The Shader uniform check refuses a wrapper's short names only in a stage whose snippet uses them, and `tint`, `uvRect` and `cut` in vertex code, where pass 10 refused every one letter name
+- The Shader uniform check refuses a wrapper's short names only in a stage whose snippet uses them, and `tint`, `uvRect` and `cut` in vertex code
 - With no debug key the editors' Restart stays in the editor, Play shows or hides as the key changes, and the free camera and console notes name the key or `levelEditor.open()`
-- The touch gamepad taking over no longer zeroes a stick vector the game kept; `engineObjectsCollect3D()` with no position leaves out lights, emitters and instanced meshes; Ctrl or Cmd with a digit no longer closes the 2D editor or picks a layer
+- The touch gamepad taking over no longer zeroes a stick vector the game kept; Ctrl or Cmd with a digit no longer closes the 2D editor or picks a layer
 - glTF node positions, turns, scales and matrices that are not numbers are a file error in every build; `readSaveData` gives the default where a vec2 or Color was saved as another kind; a particle effect name of megabytes is cut first; `loadAtlas` leaves out frames outside its image and makes 8 new sheets at most
 - The 3D editor brings back the map a game holds when a block map resize or a terrain change is undone; examples/3d looks its terrain up again after the editor takes it out; a shallow MeshCollider pick stops near where it leaves the collider
-- `loadAtlas` frames that are trimmed, stored turned, or more than 8 sheets' worth load again (a regression of the last fixes); EDITOR.md's Water tool and a game tool's `onDraw` that throws no longer stop the frame, the tool is put down
+- EDITOR.md's Water tool and a game tool's `onDraw` that throws no longer stop the frame, the tool is put down
 - A fast body following a MeshCollider slope down is no longer pushed through a thin floor or off the ground; a box snapped against a wall no longer ends a hair inside a one way tile; a rider of a plain moving solid sits on it whatever the update order
 - Old Tiled properties keep their `propertytypes`, so a color is a Color; release builds leave the game's map as it is; a null or text `properties` is cleaned up so the 2D editor keeps its autosave
 - Editors: a game tool's `lastCell` clears off the map and at each press; Ctrl with a digit is left to the browser under `setDebugKeysAlways` and in the 3D editor; the map a game holds is never thrown out past four resizes; with no debug key Restart keeps the view and picks a layer an async `onRestart` makes
 - UI: a slider held when a confirm dialog opens lets go; an object its callback destroyed is called no more; a second `UISystemPlugin` in a release build ends the first's edit
 - A HeightMap with heights outside 0 to 1 is hit by raycasts where it goes past them; `Box2dObject.setTransform(pos)` from a contact keeps the angle the body has when it moves; glTF node numbers that are Infinity are a file error
 - REFERENCE says `randInt(a, b)` leaves out the top, `setUseRealTime` is for an unset timer, how UI navigation keys work, what `engineObjectsCollect3D()` takes, and lists `engineImageFont`
-- 3D: a body in a V between two steep MeshCollider faces no longer falls through the world, nor does one slide down a steep face at free fall pace (a regression of the last fixes); with a small `groundAngle` a HeightMap no longer stops a body at the foot of a gentle hill
+- 3D: with a small `groundAngle` a HeightMap no longer stops a body at the foot of a gentle hill
 - A plain object stood up under a low ceiling, or grown or spawned into the floor, lands and walks out instead of sinking or falling out of the level; a box resting in a one way tile's margin no longer passes through it; a stack of crates on a rising lift stays stacked
 - `loadAtlas` keeps every frame of big and trimmed atlases again, counts only what it packed, leaves out a group too big for a sheet without stopping the rest, and leaves out frames with no size, which could make hundreds of sheets in release
 - Editors: a game tool put down while its press is held ends its stroke, and the 2D brush does not paint the rest; an undo of a resize brings back the map a game holds in more cases; with no debug key, Restart picks the edited layer again by its name
@@ -124,22 +124,19 @@ What changed in each release, newest first. Releases before 1.20.0 are on the
 - A CanvasLayer drawn into outside `redrawStart` in Canvas2D draws pixel art hard edged; a grid tile layer's tile past its image draws nothing; a remade light system frees the sun's programs; a 3D camera shake keeps a move the game made during the render; 3D debug draws are not fogged; `InstancedMesh3D` clamps its draws to the count it was made with; the 3D editor's scale input keeps at least .01; a 3D Save whose remembered file can not ask permission shows the picker
 - REFERENCE lists the Box2D joints' motor and limit methods; the MeshCollider step height and the moving solids' order are documented
 - A level editor holds the game still while it is open, so a game that unpauses itself on a key does not move under it; the game's confirm dialog takes no keys or pads then
-- 3D: a body never ends under a HeightMap with sharp pits or posts, and one held in a V of steep MeshCollider faces stands, so a jump takes it out (regressions of the last fixes)
-- 2D: a player standing on a crate no longer walks through a crate stack beside it (a regression of the last fixes)
-- Touch: a tap on an editor's palette or block swatches picks again, and a finger resting on a debug panel is not taken as a second game finger (regressions of the last fixes); a pinch whose fingers land together does not click a UI button; a Ctrl wheel notch counts as one
-- A UI text field's edit no longer ends when a page slider or checkbox has the focus (a regression of the last fixes); the 3D orbit camera and the examples zoom by how far the wheel or a pinch turned
+- Touch: a pinch whose fingers land together does not click a UI button; a Ctrl wheel notch counts as one
+- The 3D orbit camera and the examples zoom by how far the wheel or a pinch turned
 - 2D editor: a paint while an async `onRestart` makes the resized layers lands in its cell; Reset to file leaves waiting autosaved edits waiting; a layer is not picked by a name several share; it opens on a visible layer; a property kind warning is said once; a game tool switched mid press ends the first one's stroke, in both editors
 - 3D editor: an object id too big to add one to is given a new one
 - `loadAtlas` counts the sheets it makes, keeps a trimmed frame inside its own cell, rounds untrimmed sizes to whole pixels, leaves out an entry with no frame or name instead of loading nothing, and warns of an Aseprite export with split layers; 3D debug draws no longer take away the fog of the see-through draw before them; an `InstancedMesh3D` with a negative count draws nothing
-- Box2D holds still under an open level editor, as every other object does, when the game unpauses itself; the touch gamepad hides under an open editor (gaps in the last fixes)
-- An Aseprite sheet exported with Inner Padding loads its sprites again, from inside the padding, and a frame a pixel over its size loads; the split layers warning is no longer given for a merged export that lists its layers (a regression of the last fixes)
+- Box2D holds still under an open level editor, as every other object does, when the game unpauses itself; the touch gamepad hides under an open editor
+- An Aseprite sheet exported with Inner Padding loads its sprites from inside the padding, and a frame a pixel over its size loads
 - 2D editor: an edit while an async `onRestart` makes the layers of a shrunk map is refused, not put in the wrong cell (the last fix was for a grown map); a tool switched in the frame its press is let go is released and its stroke ends, in both editors; it opens on a layer shown, not one hidden by its group; a property kind warning is said again for another level; Reset to file with autosaved edits waiting flashes the note saying why
 - 3D editor: Escape and 0 close the editor before the game's `onPlayFrom` and `onClose`, so they move the game's camera, not the editor's; a level's own ids, negatives and big ones too, are kept, so links by id hold after a Save
 - `SpriteAnimator.set` called each update no longer undoes a switch the ended clip's onEnd made, and takes a new onEnd for the clip showing
 - A UI slider held when a second finger lands stays where it was; a Ctrl wheel notch in lines counts as one
 - A lens flare handed to another light is that light's child, and destroying the first light leaves it; a single color, normal or uv given to `drawStrip` in the transparent stage is copied
 - 3D: a body walking into a HeightMap cliff at an angle, into its corner, slowly or fast, is stopped at its foot, its side at the cliff as a MeshCollider stops it, where it could pop up to two units in a frame or walk up a sheer face in steps; a slide never carries it onto a ledge
-- 3D: a HeightMap's stairs, each riser lower than the body's step, are climbed again at any speed, where the last fixes stopped a body on a riser; a body coasting toward a cliff keeps its speed till it gets there, and stops with its side at the face whatever its size
 - Editors on touch: with the touch gamepad on, both editors take touches again; a pinch in the 2D editor no longer paints a tile with its first finger, zooms as far as the fingers move, and only while `touchPinchWheel` is on; the game does not read the 2D editor's wheel and pinch
 - 2D editor: an undo, redo or Reset to file while an async `onRestart` makes a resized map's layers waits, with a note at the mouse, where it was dropped; a pick reads the tile the layer shows
 - A body standing on one way tiles that grows about its center, standing up from a crouch or powered up, stays on them, as on a one way solid, where it fell through
@@ -156,14 +153,22 @@ What changed in each release, newest first. Releases before 1.20.0 are on the
 - `loadAtlas` warns of split layers only when one name is under two brackets, not on a merged sheet of files with brackets in their titles, and names a field that is not a number
 - `SpriteAnimator.set` says what it does on the update a play ends, and how to start the clip again then
 - HeightMap: a body walking up a V valley keeps its speed, where it lost most of each move at speed, its side samples are spaced by distance, so a thin post can not slip under a big body, and a post holds it on either side alike; the side check costs a few times less
-- MeshCollider: a body in a V between two steep faces whose floor slopes stands still and walks up and down the crease, where it crept down it and walked up it backward
-- Editors on touch: a tap on the panel no longer leaves the editor thinking the mouse is over it, so taps and pinches on the level work after it (check on a phone); a pinch takes back an object its first finger placed on a 2D object layer, and in either editor a quick tap before a pinch keeps what it placed
+- MeshCollider: a body in a V between two steep faces whose floor slopes stands still and walks up and down the crease, rising with its floor, where it crept down it, walked up it backward and sank into its sides
+- Editors on touch: a tap on the panel no longer leaves the editor thinking the mouse is over it, so taps and pinches on the level work after it; a pinch takes back an object its first finger placed on a 2D object layer, and in either editor a quick tap before a pinch keeps what it placed
 - The UI reads a gamepad stick by its main axis, past half, so a push to the side on a slider turns it and does not move the selection; it goes by the last pointer used, so a touch screen laptop shows mouse hover after the mouse moves
 - A real mouse on a touch screen laptop is no longer dropped after a touch, where its release could be lost and the button stay held; a pinch lets go of its first finger's press where that finger is
 - A body on one way tiles that the game moves to the side, or snaps to pixels, keeps standing on them
 - 2D editor: a map of objects alone resized with an async `onRestart` waits for it as a tile map does, a second resize waits too, the status line and ghost tiles read the right cells meanwhile, and a property refused puts its input back
 - 3D editor: a game tool whose `onPress` closes the editor is not left held for the next open
 - The 3D camera controls do not turn while a press that began on a UI button or slider is dragged
+- A real mouse's click right after a touch locks the pointer; the UI goes by a finger with touch input off too; `uiSystem.pressOverUI` says a press began over the UI, a button or a plain panel, and the 3D camera controls do not turn by it
+- 2D editor: a pinch after a refused object placement undoes nothing, the Restart button waits for a resize's restart, a map of objects alone whose restart throws or rejects takes edits again, an emptied number field shows its value again, a finger lifting off the panel leaves a mouse over it on it, and the help names Shift and Ctrl with the right button on an object layer
+- 3D editor: a property, transform, scene or terrain value the editor refuses goes back in the panel, `edit3D.changePart` refuses every part inside Edit prefab, as EDITOR.md says now, a paste says what it left out, and a block map made smaller and back by an odd amount stays where it was
+- A body on one way tiles that the game moves up or down, or snaps to the pixels, keeps standing on them, judged where it is now
+- `Mesh.computeNormals(true)` on a strip gives straight up where faces cancel, as the indexed branch does, where it gave a zero normal; `particleEffectsText` writes colors as lists, and a Color written as an object loads, where it loaded white
+- A fixed size canvas in a smaller root element is fitted by the element's shape; the debug overlay names the debug key set; `setDebugKey` asserts on a key that is not a code; a `renderOrder` of NaN asserts; restitution says it adds speed above 1 off tiles and static solids
+- The tweakables Copy button says when the lines went to the console, with no clipboard; Newgrounds cloud saves and loads of one slot run in order, as Wavedash's do
+- Docs: `render3D.pick` gives `{object, distance, part}`, mesh colliders are level collision, the Save short says how a Color comes back, EDITOR.md says to edit in one tab at a time
 - `box2dInit` in a page fetches the wasm itself, so a failed fetch, offline or blocked, rejects with a message, where it waited for ever; `loadAtlas` reads the last bracket of a split export's names; the FAQ's Electron script streams video and audio
 
 ## 1.30.1 - 2026-11-12

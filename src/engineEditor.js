@@ -515,6 +515,8 @@ let editorSelectionDrag;
 // if the mouse is over the panel, and where it was last on the level, which is where the editor reads it while it is
 // over the panel, so a drag held across it stops at its edge and paints nothing behind it
 let editorMouseOnPanel = false, editorMouseScreen = vec2();
+// the pointers over an editor's panel, by id, a mouse and fingers each their own, see editorPanelInit
+const editorPanelPointers = /* @__PURE__ */ new Set;
 
 // if selection edits, Delete, Ctrl+C and Ctrl+X, act on every tile layer of the edited layer's map
 let editorAllLayers = false;
@@ -573,6 +575,7 @@ function editorSetOpen(open)
         editorSelection = editorSelectionDrag = editorRightPress = editorObjectDrag = editorObjectBox = undefined;
         editorObjectSelection.clear();
         editorMouseOnPanel = false; // the panel hides, with no pointerleave
+        editorPanelPointers.clear();
         const state = editorGameState;
         setPaused(state.paused);
         setCameraPos(state.cameraPos);
@@ -1480,9 +1483,15 @@ function editorChanged(stroke)
     for (const record of new Set(stroke.map(editorEntryRecord)))
         editorAutosaveSoon(record);
     if (!stroke.some((entry)=> entry.resize) || !editorHas('onRestart')) return;
-    for (const entry of stroke)
-        entry.resize && (entry.resize.restarting = true); // till the map loads again, see editorRecordResizing
-    levelEditor.onRestart();
+    const records = stroke.filter((entry)=> entry.resize).map((entry)=> entry.resize);
+    records.forEach((record)=> record.restarting = true); // till the map loads again, see editorRecordResizing
+    // a restart that throws or rejects ends the wait, or a map of objects alone would refuse every edit for good
+    const ended = ()=> records.forEach((record)=> record.restarting = false);
+    let result;
+    try { result = levelEditor.onRestart(); }
+    catch (error) { ended(); throw error; }
+    const promise = /** @type {any} */ (result); // onRestart may be async, a game's own
+    promise instanceof Promise && promise.then(undefined, (error)=> { ended(); throw error; });
 }
 
 // the tile layers a stroke touched that need it draw again whole
@@ -1766,12 +1775,13 @@ function editorNewObject(record, {type, properties, object}, pos)
 // place an object brush's objects at a position plus each one's offset, as one undo
 function editorPlaceObjects(layer, pos, brush)
 {
-    editorChangeObjects(layer, (list)=>
+    const placed = editorChangeObjects(layer, (list)=>
     {
         for (const object of brush)
             list.push(editorNewObject(layer.record, object, pos.add(object.offset)));
     });
     editorStrokeEnd();
+    return placed; // false when it was refused, waiting edits or a restart
 }
 
 // objects placed by the press still held, the undo count after them, see the pinch in editorUpdate
@@ -1880,8 +1890,8 @@ function editorUpdateObjects(space)
         else if (editorObjectBrush)
         {
             // kept while the button is down, so a pinch can take it back, as the 3D editor does
-            editorPlaceObjects(layer, snap(mouse), editorObjectBrush);
-            mouseIsDown(0) && (editorPlacedHeld = {undo: editorUndoList.length});
+            editorPlaceObjects(layer, snap(mouse), editorObjectBrush) && mouseIsDown(0) &&
+                (editorPlacedHeld = {undo: editorUndoList.length}); // only one placed, a refused one undoes nothing
         }
     }
     const drag = editorObjectDrag;
@@ -2383,6 +2393,7 @@ const editorHelpLines =
     'Ctrl+C / X / V: copy, cut, paste · Ctrl+Z / Y: undo, redo',
     'R, Shift+R: turn · M: mirror · E: erase · G: grid · ?: keys',
     'Objects layer: left places or selects, drag moves, right picks or box-selects, Delete removes, Ctrl+C / X / V',
+    'Objects layer: Shift+right adds to the selection, Ctrl+right takes away, a click or a box',
 ];
 
 // the hint line, for what is held and whether there is a selection
@@ -2391,6 +2402,10 @@ function editorHint()
     if (editorRecord()?.pending) return EDITOR_PENDING_HINT;
     if (keyIsDown('Space')) return 'Drag to pan';
     if (editorGameTool()) return editorGameTool().hint || levelEditor.tool;
+    if (editorObjectLayer && (keyIsDown('ShiftLeft') || keyIsDown('ShiftRight')))
+        return 'Shift+right: add to the selection, a click or a box';
+    if (editorObjectLayer && (keyIsDown('ControlLeft') || keyIsDown('ControlRight')))
+        return 'Ctrl+right: take away from the selection, a click or a box';
     if (editorObjectLayer)
         return editorObjectSelection.size ? 'Selection: drag moves · Delete removes · Ctrl+C copy · Ctrl+X cut · click to clear' :
             'Left place / select · drag moves · Right pick / drag select · Delete removes';
@@ -2462,8 +2477,11 @@ function editorPanelInit()
     for (const type of ['mousedown','wheel','touchstart','touchmove'])
         editorPanel.addEventListener(type, (e)=> e.stopPropagation());
     // pointer events, as a finger lifted leaves the panel; a tap's mouse events entered it and never left
-    editorPanel.addEventListener('pointerenter', ()=> editorMouseOnPanel = true);
-    editorPanel.addEventListener('pointerleave', ()=> editorMouseOnPanel = false);
+    // each pointer over it by its id, so a finger lifting off it leaves a mouse still over it on it
+    editorPanel.addEventListener('pointerenter', (e)=>
+        (editorPanelPointers.add(e.pointerId), editorMouseOnPanel = true));
+    editorPanel.addEventListener('pointerleave', (e)=>
+        (editorPanelPointers.delete(e.pointerId), editorMouseOnPanel = editorPanelPointers.size > 0));
 
     const row = ()=> editorElement('div', editorPanel, 'display:flex;gap:4px;margin:4px 0');
     const button = (parent, text, onclick, title='')=>
@@ -3004,7 +3022,12 @@ function editorPropertiesUpdate(box)
             input.type = 'number';
             input.step = 'any'; // any number, the arrows still step by 1
             input.value = String(value);
-            input.onchange = ()=> { const v = parseFloat(input.value); isFinite(v) && set(v); }; // 1e999 is not one
+            // an emptied field, or one that is not a number, 1e999 included, shows the object's value again
+            input.onchange = ()=>
+            {
+                const v = parseFloat(input.value);
+                isFinite(v) ? set(v) : (input.value = String(value), input.blur());
+            };
         }
         else if (typeof defaultValue === 'string')
         {
@@ -3317,6 +3340,7 @@ const editorEdit2D =
 function editorRestart()
 {
     if (!editorHas('onRestart')) return;
+    if (editorMapList.some(editorRecordResizing)) return editorBusyNudge(); // a resize's restart still makes it
     const view = editorCameraPos.copy();
     editorSetOpen(false); // ends a held stroke, and hands back the game's pause and camera, Escape comes back
     levelEditor.onRestart();

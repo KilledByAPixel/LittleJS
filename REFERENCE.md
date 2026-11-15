@@ -106,7 +106,7 @@ let remaining = 36000;
 ## What functions give back
 - **Raycasts:** where the ray hits, a Vector2: `tileCollisionRaycast`, `lineTest`; how far along the ray, a number:
   `raycastBox`, `raycastSphere`, `raycastPlane`, `HeightMap.raycast`; a record of the hit: `VoxelMap.raycast` (a
-  `VoxelHit`), `render3D.pick` (`{object, distance}`), `box2d.raycast` (a `Box2dRaycastResult`); every object
+  `VoxelHit`), `render3D.pick` (`{object, distance, part}`), `box2d.raycast` (a `Box2dRaycastResult`); every object
   hit, a list: `engineObjectsRaycast`; nothing hit is `undefined`, or an empty list
 - **Overlaps:** `isOverlapping` and `isIntersecting` say whether, a boolean, as does a layer's `collisionTest`;
   `tileCollisionTest` gives the layer hit; the collide helpers (`collideCircleBox`, `collideSphereBox` and the rest)
@@ -1139,6 +1139,7 @@ uiSystem.drawSlice(slice, pos, size, color=WHITE) // Draw a TileSlice to the UI 
 uiSystem.nativeHeight                  // If set, UI coords are normalized to this height
 uiSystem.destroyObjects()              // Remove all UI elements
 uiSystem.isMouseOverUI()               // True if the mouse is over a visible hoverable UI object, or a confirm dialog is open
+uiSystem.pressOverUI                   // True while a press that began over the UI is held, a button or a plain panel, for a drag
 uiSetDebug(debugMode)                  // Toggle uiDebug rendering of widget bounds
 
 // Confirm dialog
@@ -1512,7 +1513,7 @@ render3D.screenToRay(screenPos, canvasSize)  // Ray3D under a screen point, alwa
                                      // date for it, so worldToScreen keeps agreeing with them
 render3D.screenToGround(screenPos, groundHeight=0, canvasSize) // where that ray meets a flat ground plane, or
                                                    // undefined; terrain has HeightMap.raycast
-render3D.pick(screenPos or ray, objects)           // {object, distance} of the nearest object hit, on its mesh's
+render3D.pick(screenPos or ray, objects)           // {object, distance, part} of the nearest object hit, on its mesh's
                                                    // triangles, the faces that show, both sides when doubleSided,
                                                    // or a sprite's quad; a screen position goes through screenToRay;
                                                    // a glTF model or attached prefab is hit through its parts and
@@ -1704,8 +1705,9 @@ obj.setCollision(solids, isSolid, level) // the same flags as in 2D, but the col
                                         // passes through, so movers hit the level without shoving each other;
                                         // heavier objects move less and each bounces by its own restitution; mass 0
                                         // stays put and keeps its velocity, a wall the other bounces off;
-                                        // collideLevel is on by default: voxel maps and height maps, which an
-                                        // object with mass is kept out of, or the tile layers for a sync2D object;
+                                        // collideLevel is on by default: voxel maps, height maps and mesh
+                                        // colliders, which an object with mass is kept out of, or the tile
+                                        // layers for a sync2D object;
                                         // the raycast half is 2D only and defaults off here;
                                         // a sync2D object collides in 2D instead, against the 2D size, so set that
                                         // as well as size3D; a child rides with its parent so it sits solid collision

@@ -149,6 +149,9 @@ class UISystemPlugin
         /** @property {UIObject|undefined} - Hover object at start of update
          *  @type {UIObject|undefined} */
         this.lastHoverObject = undefined;
+        /** @property {boolean} - If the mouse press held now began over the UI, a button or a plain panel, till
+         *  every button is let go, so a game or a camera control does not drag the world under it */
+        this.pressOverUI = false;
         /** @property {UIObject|undefined} - Current confirm menu being shown
          *  @type {UIObject|undefined} */
         this.confirmDialog = undefined;
@@ -282,6 +285,12 @@ class UISystemPlugin
                 uiSystem.lastHoverObject = undefined;
                 lastHoverObject.onLeave();
             }
+
+            // a press that began over the UI, before anything uses it up, held till every button is up
+            if (!mouseIsDown(0) && !mouseIsDown(1) && !mouseIsDown(2))
+                uiSystem.pressOverUI = false;
+            if (mouseWasPressed(0) || mouseWasPressed(1) || mouseWasPressed(2))
+                uiSystem.pressOverUI = uiSystem.isMouseOverUI();
 
             if (mouseWasPressed(0))
             {
@@ -738,7 +747,7 @@ class UISystemPlugin
         return uiSystem.uiObjects.some(o=> !o.parent && isOverRecursive(o));
     }
 
-    /** Get navigation direction from gamepad or keyboard, a stick by its main axis only, see uiNavigationStick
+    /** Get navigation direction from gamepad or keyboard, a stick by its main axis only, once pushed past half
      *  @return {number} */
     getNavigationDirection()
     {

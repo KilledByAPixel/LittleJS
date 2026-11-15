@@ -1015,9 +1015,15 @@ function setDebugWatermark(show) { debugWatermark = show; }
 function setDebugLineWidth(width) { debugLineWidth = width; }
 
 /** Set key code used to toggle debug mode, Esc by default, '' for none
- *  @param {string} key
+ *  @param {string} key - A key code like 'Escape' or 'Backquote', with a capital, not a character like '`'
  *  @memberof Debug */
-function setDebugKey(key) { debugKey = key; }
+function setDebugKey(key)
+{
+    // asked here, where a game sets it, not at every frame's keyWasPressed, an engine line far from the mistake
+    ASSERT(key === '' || typeof key === 'string' && key.length > 1 && key[0] >= 'A' && key[0] <= 'Z',
+        "setDebugKey: a key code like 'Escape' or 'Backquote', with a capital, or '' for none", key);
+    debugKey = key;
+}
 
 /** Set if the debug keys work while the overlay is closed, the number keys and the +/- time keys
  *  @param {boolean} [enable]

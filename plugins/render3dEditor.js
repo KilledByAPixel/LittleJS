@@ -724,8 +724,9 @@ function editor3DStrokeBegin()
 function editor3DChangePart(name, change)
 {
     if (!editor3DLevel || editor3DRecords.get(editor3DLevel)?.pending) return false; // its autosave waits first
-    // a prefab is objects alone, Back keeps only those: blocks, terrain and the scene are the level's
-    if (editor3DPrefabStack.length && name !== 'prefabs') return false;
+    // a prefab is objects alone, Back keeps only those: blocks, terrain, the scene and the prefabs are the level's,
+    // a prefab's change would be lost on Back
+    if (editor3DPrefabStack.length) return false;
     const parts = editor3DLevelParts(), after = change(parts[name] && editor3DCopy(parts[name]));
     if (editor3DSame(parts[name], after)) return false;
     editor3DStrokeBegin();
@@ -1103,7 +1104,8 @@ function editor3DVoxelResize(size)
         const from = shape.size, old = new Uint8Array(from.x * from.y * from.z);
         level3DVoxelsDecode(voxels.blocks, old);
         // how far each block moves in cells, so the corner moves the other way and the blocks stay put
-        const dx = floor((to.x - from.x) / 2), dz = floor((to.z - from.z) / 2);
+        // toward 0, so a shrink by an odd amount and the grow back cancel
+        const dx = Math.trunc((to.x - from.x) / 2), dz = Math.trunc((to.z - from.z) / 2);
         const data = new Uint8Array(to.x * to.y * to.z);
         for (let z = 0; z < from.z; ++z)
         for (let y = 0; y < min(from.y, to.y); ++y)
@@ -1684,6 +1686,10 @@ function editor3DPasteList()
 function editor3DPaste(offset=vec3())
 {
     const copied = editor3DPasteList(), ids = [];
+    // what is left out is said, as a prefab of the level it was copied from, which is no type in this one
+    const left = [...new Set(editor3DClipboard?.filter((o)=> !copied.includes(o)).map((o)=> o.type))];
+    left.length && (editor3DPrefabMessage = left.join(', ') + (left.length > 1 ? ' are' : ' is') +
+        ' not a type here, a prefab of the level it was copied from or one that would hold itself');
     if (!copied?.length) return false;
     editor3DStrokeEnd();
     const pasted = editor3DChange((list)=>
@@ -1775,6 +1781,7 @@ function editor3DSetOpen(open)
         }
         editor3DDrag = editor3DHover = undefined;
         editor3DMouseOnPanel = false; // the panel hides, with no pointerleave
+        editorPanelPointers.clear();
         editor3DStrokeEnd();
         while (editor3DPrefabBack()); // the game plays the level, not a prefab that was open
         editor3DAutosaveFlush(); // the game plays on with what the editor has kept
@@ -2872,10 +2879,11 @@ function editor3DSetSelectedTransform(field, value)
     const least = (n)=> abs(n) < .01 ? (n < 0 ? -.01 : .01) : n;
     field === 'scale' && (value = vec3(least(value.x), least(value.y), least(value.z)));
     editor3DStrokeEnd();
-    editor3DChange((list)=> editor3DSetTransform(list.find((o)=> o.id === id), field === 'pos' ? value : undefined,
-        field === 'rotation' ? value : undefined, field === 'scale' ? value : undefined));
+    const changed = editor3DChange((list)=> editor3DSetTransform(list.find((o)=> o.id === id),
+        field === 'pos' ? value : undefined, field === 'rotation' ? value : undefined,
+        field === 'scale' ? value : undefined));
     editor3DStrokeEnd();
-    return true;
+    return changed; // false when refused, an autosave waiting, or when nothing changed
 }
 
 // set a property of the one selected object, from the panel, as one undo; the value has the type of its default
@@ -2888,9 +2896,9 @@ function editor3DSetSelectedProperty(name, value)
         isVector2(d) ? isVector2(value) : typeof value === typeof d;
     if (selected.length !== 1 || !editor3DPropertyEditable(d) || !sameType) return false;
     editor3DStrokeEnd();
-    editor3DChange((list)=> editor3DSetProperty(list.find((o)=> o.id === id), name, value, d));
+    const changed = editor3DChange((list)=> editor3DSetProperty(list.find((o)=> o.id === id), name, value, d));
     editor3DStrokeEnd();
-    return true;
+    return changed; // false when refused, an autosave waiting, or when nothing changed
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -3098,8 +3106,10 @@ function editor3DPanelInit()
     for (const type of ['mousedown','wheel','touchstart','touchmove'])
         panel.addEventListener(type, (e)=> e.stopPropagation());
     // pointer events, as a finger lifted leaves the panel; a tap's mouse events entered it and never left
-    panel.addEventListener('pointerenter', ()=> editor3DMouseOnPanel = true);
-    panel.addEventListener('pointerleave', ()=> editor3DMouseOnPanel = false);
+    // each pointer over it by its id, so a finger lifting off it leaves a mouse still over it on it
+    panel.addEventListener('pointerenter', (e)=> (editorPanelPointers.add(e.pointerId), editor3DMouseOnPanel = true));
+    panel.addEventListener('pointerleave', (e)=>
+        (editorPanelPointers.delete(e.pointerId), editor3DMouseOnPanel = editorPanelPointers.size > 0));
 
     const box = 'margin:4px 0;padding:4px;background:#222;border-radius:3px';
     const row = (parent=panel)=> editorElement('div', parent, 'display:flex;gap:4px;margin:4px 0;flex-wrap:wrap');
@@ -3436,7 +3446,7 @@ function editor3DTerrainBoxUpdate(box)
         field + ';width:60px');
     color.type = 'color';
     color.value = editor3DInputColor(terrain.color);
-    color.oninput = ()=> editor3DChangePart('terrain', (t)=> ({...t, color: color.value}));
+    color.oninput = ()=> editor3DChangePart('terrain', (t)=> ({...t, color: color.value})) || (box.dataset.key = '');
     color.onchange = ()=> { color.oninput(); editor3DStrokeEnd(); color.blur(); };
     const remove = editorElement('button', box, 'margin-top:4px;padding:2px 6px;cursor:pointer', 'Remove terrain');
     remove.title = 'Take the terrain out of the level, Undo brings it back';
@@ -3574,8 +3584,9 @@ function editor3DSceneUpdate(box)
     // an input changes the scene as it is when it is used, not as it was when the box was made: the box is not
     // made again while it has the focus, so a field edited right after another must not put the other one back;
     // set is given the setting's value now, or what shows for one the block leaves out
+    // a change refused, an autosave waiting, makes the box again with the scene's values once it lets go
     const change = (name, set)=> editor3DChangeScene((s={})=>
-        ({...s, [name]: typeof set === 'function' ? set(s[name] ?? view[name]) : set}));
+        ({...s, [name]: typeof set === 'function' ? set(s[name] ?? view[name]) : set})) || (box.dataset.key = '', false);
     const field = 'background:#222;color:#eee';
     const line = (name, title='')=>
     {
@@ -3749,9 +3760,11 @@ function editor3DPropertiesUpdate(box)
             inputs.push(input);
         }
     };
-    numbers('pos', editor3DPos(object), (v)=> editor3DSetSelectedTransform('pos', v));
-    numbers('rotation', editor3DRotation(object), (v)=> editor3DSetSelectedTransform('rotation', v));
-    numbers('scale', editor3DScale(object), (v)=> editor3DSetSelectedTransform('scale', v));
+    // a set refused, or one that changed nothing, makes the box again with the values the object has
+    const again = (changed)=> changed || (box.dataset.key = '');
+    numbers('pos', editor3DPos(object), (v)=> again(editor3DSetSelectedTransform('pos', v)));
+    numbers('rotation', editor3DRotation(object), (v)=> again(editor3DSetSelectedTransform('rotation', v)));
+    numbers('scale', editor3DScale(object), (v)=> again(editor3DSetSelectedTransform('scale', v)));
     if (!type) return;
 
     const values = level3DProperties(type, object);
@@ -3760,11 +3773,11 @@ function editor3DPropertiesUpdate(box)
         const value = values[name];
         if (isVector3(defaultValue) || isVector2(defaultValue))
         {
-            numbers(name, value, (v)=> editor3DSetSelectedProperty(name, v));
+            numbers(name, value, (v)=> again(editor3DSetSelectedProperty(name, v)));
             continue;
         }
         const input = editorElement('input', line(name), field + ';width:110px');
-        const set = (v)=> { editor3DSetSelectedProperty(name, v); input.blur(); };
+        const set = (v)=> { again(editor3DSetSelectedProperty(name, v)); input.blur(); };
         if (typeof defaultValue === 'boolean')
         {
             input.type = 'checkbox';
@@ -3782,7 +3795,12 @@ function editor3DPropertiesUpdate(box)
             input.type = 'number';
             input.step = 'any';
             input.value = value + '';
-            input.onchange = ()=> { const v = parseFloat(input.value); isFinite(v) && set(v); };
+            // one that is not a number, emptied or 1e999, shows the object's value again
+            input.onchange = ()=>
+            {
+                const v = parseFloat(input.value);
+                isFinite(v) ? set(v) : (input.value = value + '', input.blur());
+            };
         }
         else if (typeof defaultValue === 'string')
         {

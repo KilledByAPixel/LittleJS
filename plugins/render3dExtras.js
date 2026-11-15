@@ -1332,7 +1332,8 @@ const meshColliderPushed = [0, 0, 0];
 function meshColliderResolve(collider, center, half, radius, groundAngle, walls, moveX=0, moveZ=0)
 {
     let ground = false, sumX = 0, sumY = 0, sumZ = 0;
-    const firstWall = walls.length, steep = []; // the steep faces' pushes across, each with its face's way across
+    // the steep faces' pushes: across, their way across, their own normal on the side they push to, their wall entry
+    const steep = [];
     const push = meshColliderPushed, cosGround = cos(groundAngle), n = collider.normals;
     for (let pass = 0; pass < 8; ++pass)
     {
@@ -1376,14 +1377,16 @@ function meshColliderResolve(collider, center, half, radius, groundAngle, walls,
             {
                 const s = depth / level;
                 center.x += px * s, center.z += pz * s;
-                steep.push([px * s, pz * s, px / l, pz / l]);
+                steep.push([px * s, pz * s, px / l, pz / l, n[k] * sign(along), n[k+1] * sign(along),
+                    n[k+2] * sign(along), walls.length, deepest]);
                 walls.push(vec3(px / l, 0, pz / l));
             }
             else
             {
                 center.x += px, center.y += py, center.z += pz;
                 const l = hypot(px, pz);
-                l && steep.push([px, pz, px / l, pz / l]);
+                l && steep.push([px, pz, px / l, pz / l, n[k] * sign(along), n[k+1] * sign(along),
+                    n[k+2] * sign(along), walls.length, deepest]);
                 walls.push(vec3(px / length, py / length, pz / length));
             }
         }
@@ -1391,25 +1394,49 @@ function meshColliderResolve(collider, center, half, radius, groundAngle, walls,
     // held by faces whose pushes add up to within groundAngle of up, as a V between two steep faces is, it stands
     // there, so a game's jump takes it out; one steep face alone still slides
     if (!ground && sumY > 0 && sumY >= cosGround * hypot(sumX, sumY, sumZ)) ground = true;
-    // in a V, two steep faces facing each other across it, their pushes along the crease are taken back, of its
-    // place and of the speed the walls take, so a V whose floor slopes does not carry it down the crease, standing
-    // or walking up it, as a ground face's push is straight up; across the crease they hold it between the faces
+    // in a V, two steep faces facing each other across it whose crease, the line along both, is no steeper than
+    // groundAngle: the pushes along the crease of the faces that hold it are taken back, of its place and of the
+    // speed the walls take, so a V whose floor slopes does not carry it down the crease, standing or walking up it,
+    // as a ground face's push is straight up; across the crease they hold it between the faces; a steeper crease is
+    // a chute, which it slides down, or a corner of walls, which holds it, and a face across the crease, an end wall,
+    // keeps its push
     for (let i = 0; i < steep.length; ++i)
     for (let j = i + 1; j < steep.length; ++j)
     {
-        const [, , ax, az] = steep[i], [, , bx, bz] = steep[j];
-        if (ax * bx + az * bz > -.5) continue;
-        // the crease runs across the two faces' ways
-        const dx = ax - bx, dz = az - bz, l = hypot(dx, dz), cx = -dz / l, cz = dx / l;
-        let along = 0;
-        for (const [px, pz] of steep) along += px * cx + pz * cz;
-        center.x -= cx * along, center.z -= cz * along;
-        for (let k = firstWall; k < walls.length; ++k)
+        const A = steep[i], B = steep[j];
+        if (A[2] * B[2] + A[3] * B[3] > -.5) continue;
+        const x3 = A[5] * B[6] - A[6] * B[5], y3 = A[6] * B[4] - A[4] * B[6], z3 = A[4] * B[5] - A[5] * B[4];
+        const length = hypot(x3, y3, z3);
+        if (!(length > 1e-9) || abs(y3) > sin(groundAngle) * length) continue;
+        const holds = (e)=> abs(e[4] * x3 + e[5] * y3 + e[6] * z3) <= .2 * length;
+        const level = hypot(x3, z3), cx = x3 / level, cz = z3 / level; // the crease's way across, for the pushes
+        // the faces that hold the crease hold it as ground does: their pushes to the side are taken back and it is
+        // lifted straight up clear of them, so walking up a V whose floor rises it rises with it, not sunk into the
+        // sides by two level pushes that cancel; a face across the crease, an end wall, keeps its push
+        let sideX = 0, sideZ = 0;
+        for (const e of steep)
+            holds(e) && (sideX += e[0], sideZ += e[1]);
+        center.x -= sideX, center.z -= sideZ;
+        for (let lift = 0; lift < 4; ++lift)
         {
-            const w = walls[k], into = w.x * cx + w.z * cz;
+            let up = 0;
+            for (const e of steep)
+            {
+                if (!holds(e) || !meshColliderPush(collider, e[8], center.x, center.y - half, center.z,
+                    center.x, center.y + half, center.z, radius, push) || !(push[1] > 0)) continue;
+                up = max(up, (push[0]**2 + push[1]**2 + push[2]**2) / push[1]);
+            }
+            if (!up) break;
+            center.y += up;
+        }
+        ground = true;
+        for (const e of steep)
+        {
+            if (!holds(e)) continue;
+            const w = walls[e[7]], into = w.x * cx + w.z * cz;
             w.x -= cx * into, w.z -= cz * into;
-            const length = w.length();
-            length && w.scale(1 / length);
+            const wl = w.length();
+            wl && w.scale(1 / wl);
         }
         i = steep.length; // once
         break;
@@ -1517,8 +1544,9 @@ function render3DReadPixels(textureInfo)
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-// whether the press held is the UI's, begun on a button or a slider, which the camera controls do not turn by
-const render3DUIHasPress = ()=> !!uiSystem?.activeObject;
+// whether the press held is the UI's, begun on a button, a slider or a plain panel, which the camera controls do
+// not turn by
+const render3DUIHasPress = ()=> !!(uiSystem?.activeObject || uiSystem?.pressOverUI);
 
 /**
  * CameraControl3D - Drag to turn the camera around a point, roll the wheel to zoom

@@ -837,8 +837,11 @@ function engineUpdateCanvas()
         // set canvas fixed size
         mainCanvasSize.set(canvasFixedSize.x, canvasFixedSize.y);
 
-        // fit to window using css width and height
-        const innerAspect = innerWidth / innerHeight;
+        // fit to what holds it using css width and height: the root element given to engineInit by its own shape,
+        // the window when it is the page's body, which the percentages fill
+        const parent = mainCanvas.parentElement, own = parent && parent !== document.body &&
+            parent.clientWidth > 0 && parent.clientHeight > 0;
+        const innerAspect = own ? parent.clientWidth / parent.clientHeight : innerWidth / innerHeight;
         const fixedAspect = canvasFixedSize.x / canvasFixedSize.y;
         const w = innerAspect < fixedAspect ? '100%' : '';
         const h = innerAspect < fixedAspect ? '' : '100%';

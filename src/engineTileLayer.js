@@ -125,12 +125,14 @@ let tileCollisionFromOn;
 // there with, see tileCollisionOneWayPass
 const tileCollisionStood = /* @__PURE__ */ new WeakMap;
 
-// the box an object stood with, while it is still at the height it stood: the game moving it up or down, to a door
-// or a checkpoint, leaves it, a move to the side or a snap of x to the pixels keeps it
+// the box an object stood with, carried with a move up or down the game made, to a door, a checkpoint or a snap to
+// the pixels, so it is judged where it is now and a grown one keeps its edges; a move to the side keeps it as it is
 const tileCollisionStoodAt = (object, pos)=>
 {
     const stood = tileCollisionStood.get(object);
-    return stood && stood[2] === pos.y ? stood : undefined;
+    if (!stood) return;
+    const dy = pos.y - stood[2];
+    return dy ? [stood[0] + dy, stood[1] + dy, pos.y] : stood;
 };
 
 // for a one way test of the layer for the object being moved, standing on that layer when its move began, the edges
@@ -1021,7 +1023,8 @@ class CanvasLayer extends EngineObject
     }
 
     /** Destroy this canvas layer
-     *  @param {boolean} [immediate] - Remove it now, as EngineObject.destroy does, children included */
+     *  @param {boolean} [immediate] - true removes attached effects like particle emitters at once, false lets
+     *  them finish first, as EngineObject.destroy does, children included */
     destroy(immediate=false)
     {
         if (this.destroyed) return;
@@ -1741,7 +1744,8 @@ class TileCollisionLayer extends TileLayer
     }
 
     /** Destroy this tile layer
-     *  @param {boolean} [immediate] - Remove it now, as EngineObject.destroy does, children included */
+     *  @param {boolean} [immediate] - true removes attached effects like particle emitters at once, false lets
+     *  them finish first, as EngineObject.destroy does, children included */
     destroy(immediate=false)
     {
         if (this.destroyed) return;

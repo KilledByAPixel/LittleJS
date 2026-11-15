@@ -445,7 +445,8 @@ function vibrateStop() { vibrate(0); }
  *  @memberof Input */
 function pointerLockRequest()
 {
-    if (performance.now() - inputLastTouchTime < 500)
+    // a press a finger made, judged by the last pointer used too, so a real mouse's click right after a touch locks
+    if (inputTouchLast && performance.now() - inputLastTouchTime < 500)
         return;
 
     // newer browsers return a promise that rejects when the lock is refused, like just after Esc left it,
@@ -621,8 +622,9 @@ function inputInit()
     function onMouseDown(e)
     {
         // a mouse on a touchscreen laptop works, only the mouse events a tap makes are left to the touch input
-        if (touchInputEnable && inputIsTouchMouseEvent(e)) return;
-        inputTouchLast = false;
+        const fromTouch = inputIsTouchMouseEvent(e);
+        if (touchInputEnable && fromTouch) return;
+        fromTouch || (inputTouchLast = false); // a tap's mouse event, with touch input off, is still a finger
 
         // fix stalled audio requiring user interaction
         if (soundEnable && !headlessMode && audioContext && !audioIsRunning())
@@ -743,6 +745,7 @@ function inputInit()
 
             // the touch gamepad hides under an open level editor, and touch is the editor's mouse then
             const gamepadOwns = touchGamepadEnable && !touchGamepadPassthrough && !levelEditor.isOpen;
+            inputTouchLast = true; // a finger, whoever takes it
             if (!touchInputEnable || gamepadOwns)
             {
                 // off, or the touch gamepad owns touch: turned so mid touch, the finger that drove the mouse lets
@@ -753,7 +756,6 @@ function inputInit()
                 if (!touchInputEnable) return;
             }
             inputLastTouchTime = performance.now();
-            inputTouchLast = true;
 
             // when the touch gamepad is enabled it owns touch input: suppress the
             // touch->mouse passthrough entirely unless touchGamepadPassthrough is set
