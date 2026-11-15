@@ -287,6 +287,8 @@ let editor3DLevel;
 
 // what the game made for each object of the level, by the object's id
 const editor3DInstances = new Map;
+// the ones the editor made itself, placed or made again, not by a level3DLoad of the game's
+const editor3DMadeHere = /* @__PURE__ */ new WeakSet;
 
 // what the editor keeps for each level: {fileName, key, original, originalParts, hash, savedHash,
 // pending, fileHandle, saving, undo, redo}, the file it came from, the file's objects and parts and their hash for
@@ -517,6 +519,10 @@ function editor3DLevelLoaded(level)
     // the maps an undo could have put back are the last load's
     editor3DPrefabLevels.has(level) || editor3DMapsRemovedClear();
     editor3DLevel = level;
+    // what the editor made for the last load is the editor's, a game that destroys only the list level3DLoad gave it
+    // would keep it, twice once its level loads again
+    for (const made of editor3DInstances.values())
+        editor3DMadeHere.has(made) && !made.destroyed && made.destroy?.();
     editor3DInstances.clear();
     if (isArray(level.objects))
     {
@@ -605,6 +611,7 @@ function editor3DMakeInstance(object)
     editor3DInstances.get(object.id)?.destroy?.();
     const made = level3DMake(object);
     made ? editor3DInstances.set(object.id, made) : editor3DInstances.delete(object.id);
+    made && typeof made === 'object' && editor3DMadeHere.add(made);
 }
 
 // set the level's objects to a list and bring the game's objects in line: one gone is destroyed, a new one made,
@@ -1747,7 +1754,8 @@ function editor3DRestore()
         const broken = (p)=> p instanceof Prefab3D && p.parts.some((part)=> part?.destroyed || broken(part));
         if (made instanceof EngineObject3D && !made.destroyed && !broken(made))
             editor3DPlaceInstance(made, object);
-        else if (type.make.prototype && (!made || made.destroyed || broken(made)))
+        // not while a restart makes the level again, whose load would make it a second time
+        else if (type.make.prototype && (!made || made.destroyed || broken(made)) && !editor3DRestartRunning)
             editor3DMakeInstance(object);
     }
     // the blocks and the terrain as the level has them: what play dug, raised or destroyed is not the level's,
@@ -1857,7 +1865,8 @@ function editor3DRestart()
             editor3DRestartRunning = undefined;
             editor3DPrefabMessage === EDITOR3D_RESTART_WAIT && (editor3DPrefabMessage = '');
         };
-        result.then(settled, (error)=> { settled(); throw error; });
+        try { result.then(settled, (error)=> { settled(); throw error; }); }
+        catch (error) { settled(); throw error; } // a thenable whose then throws is taken as a reject
     }
     debugKey || editor3DSetOpen(true); // with no debug key nothing would come back, so it stays in the editor
 }
@@ -1901,7 +1910,9 @@ const editor3DEdit =
 if (debug)
     editorOther = {wanted: editor3DWanted, isOpen: ()=> editor3DIsOpen, active: ()=> editor3DIsOpen || editor3DSession,
         open: editor3DOpen, close: editor3DClose, edit: editor3DEdit,
-        hasKey: (name, ctrl)=> !!(ctrl ? editor3DCtrlKeys : editor3DKeys)[editor3DKeyCode(name)]};
+        hasKey: (name, ctrl)=> ctrl ? !!editor3DCtrlKeys[name.toLowerCase()] || !!editor3DCtrlKeys[
+            editor3DKeyCode(name).replace(/^Key/, '').toLowerCase()] : !!editor3DKeys[editor3DKeyCode(name)] ||
+            name === '?' || editor3DKeyCode(name) === 'Slash'};
 
 // pick a tool of the editor's own, which puts a tool of the game's down
 function editor3DPickTool(tool)
@@ -2664,19 +2675,26 @@ const editor3DKeys =
     Delete: ()=> editor3DDelete(),
     Backspace: ()=> editor3DSelection.size ? editor3DDelete() : editor3DPrefabBack(),
     Enter: ()=> editor3DPrefabEnter(),
-    Slash: ()=> { editor3DHelp = !editor3DHelp; },
+
 };
 /** @type {Object<string, function(boolean=): any>} */
+// with Ctrl or Cmd, by the letter printed on the key, so undo is Z on every layout, AZERTY and QWERTZ too, where by
+// position it was W or Y; read by the editor's own listener, see editor3DLetterPressed
 const editor3DCtrlKeys =
 {
-    KeyZ: (shift)=> editor3DUndo(shift),
-    KeyY: ()=> editor3DUndo(true),
-    KeyC: ()=> editor3DCopySelection(),
-    KeyX: ()=> editor3DCut(),
-    KeyV: ()=> editor3DPasteAtMouse(),
-    KeyD: ()=> editor3DDuplicate(),
-    KeyG: (shift)=> shift ? editor3DUnpack() : editor3DMakePrefab() === true,
+    z: (shift)=> editor3DUndo(shift),
+    y: ()=> editor3DUndo(true),
+    c: ()=> editor3DCopySelection(),
+    x: ()=> editor3DCut(),
+    v: ()=> editor3DPasteAtMouse(),
+    d: ()=> editor3DDuplicate(),
+    g: (shift)=> shift ? editor3DUnpack() : editor3DMakePrefab() === true,
 };
+
+// a key pressed with Ctrl or Cmd since the last update, by its printed letter, and ? for help, by what it types,
+// which the update acts on; the engine's input keeps codes, the position of a key, which the fly and tool keys use
+/** @type {{letter: string, ctrl: boolean, shift: boolean}|undefined} */
+let editor3DLetterPressed;
 
 // the camera: the right button looks and the keys fly while it is held, the middle button or Space and the left
 // pans, Alt and the left orbits the selection, and the wheel zooms toward what is under the mouse
@@ -2778,9 +2796,18 @@ function editor3DEditorUpdate(seconds)
             keyWasPressed(code) && key.action.call(levelEditor, shift);
             if (!editor3DIsOpen) return; // the game's key closed it, the rest of the update is not for a closed editor
         }
-        for (const [code, action] of Object.entries(ctrl ? editor3DCtrlKeys : editor3DKeys))
-            taken.has(code) || keyWasPressed(code) && action(shift);
+        if (!ctrl)
+            for (const [code, action] of Object.entries(editor3DKeys))
+                taken.has(code) || keyWasPressed(code) && action(shift);
+        // the letters, by what the key prints: a game's key of the same spelling takes its place
+        const pressed = editor3DLetterPressed;
+        editor3DLetterPressed = undefined;
+        if (pressed && pressed.ctrl === ctrl && !taken.has(editor3DKeyCode(pressed.letter)))
+            pressed.letter === '?' ? editor3DHelp = !editor3DHelp :
+                pressed.ctrl && editor3DCtrlKeys[pressed.letter]?.(pressed.shift);
     }
+    else
+        editor3DLetterPressed = undefined; // a key pressed during a drag is not kept for after it
 
     // the second finger of a pinch took the press over, as in the 2D editor: what its first finger began is taken
     // back, a drag, a block or a terrain stroke, a held tool's press with no release, a type it placed, and the press
@@ -2844,7 +2871,11 @@ if (debug && globalThis.document?.addEventListener)
         // a key of the game's own, Ctrl+S or F5, is the game's: its action runs in the update, after this
         const own = Object.keys(levelEditor.keys).some((spelled)=> spelled.startsWith('ctrl+') === ctrl &&
             editor3DKeyCode(spelled.slice(spelled.startsWith('ctrl+') ? 5 : 0)) === e.code);
-        if (own || ctrl && /^Key[ZYCXVDG]$/.test(e.code))
+        // the Ctrl shortcuts and ? by the letter the key prints, kept for the update
+        const letter = typeof e.key === 'string' && e.key.length === 1 ? e.key.toLowerCase() : '';
+        const shortcut = ctrl ? !!editor3DCtrlKeys[letter] : letter === '?';
+        shortcut && !e.repeat && !e.altKey && (editor3DLetterPressed = {letter, ctrl, shift: e.shiftKey});
+        if (own || ctrl && shortcut)
             e.preventDefault();
     });
     // a page going away writes what is waiting, the last event it is sure to get
@@ -3114,7 +3145,7 @@ function editor3DDrawLabels()
     for (const object of editor3DObjects())
     {
         if (editor3DVisible(object)) continue;
-        const at = render3D.worldToScreen(editor3DPos(object));
+        const at = render3D.worldToScreen(editor3DBodyPos(object)); // where its box is drawn
         at && drawTextScreen(object.type + '', at, 14, WHITE, 3, BLACK);
     }
     const drag = editor3DDrag;

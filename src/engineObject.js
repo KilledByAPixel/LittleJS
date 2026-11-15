@@ -823,14 +823,14 @@ class EngineObject
         // disconnect from parent and destroy children
         this.destroyed = true;
         this.parent?.removeChild(this);
-        // the list is let go first, so a child's callbacks this frame see it holds them no more
+        // the list is let go first, and every child's parent, so a child's callbacks this frame see it holds them no
+        // more, one that destroys a sibling too
         const children = this.children;
         this.children = [];
         for (const child of children)
-        {
             child.parent = undefined;
+        for (const child of children)
             child.destroy(immediate);
-        }
     }
 
     /** Convert from local space to world space
@@ -986,8 +986,9 @@ class EngineObject
      *  @param {EngineObject} child */
     removeChild(child)
     {
-        ASSERT(child.parent === this && this.children.includes(child), 'removeChild: that object is not a child of this one',
-            child);
+        // a parent being destroyed let go of its children already, so a child's callback dropping a sibling is fine
+        ASSERT(this.destroyed && !child.parent || child.parent === this && this.children.includes(child),
+            'removeChild: that object is not a child of this one', child);
         const i = this.children.indexOf(child);
         if (i < 0) return; // not a child of this one, release has no assert
         this.children.splice(i, 1);

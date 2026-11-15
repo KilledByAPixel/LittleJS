@@ -890,7 +890,9 @@ class UISystemPlugin
                 uiSystem.navigationDirection = savedNavigationDirection;
             }
             destroy(); // its buttons go, and the one selected clears the selection
-            if (closing && savedNavigationObject && !savedNavigationObject.destroyed)
+            // only while the keys or a pad are still in use: answered with the mouse, it gives no selection back,
+            // or the next Space or A would press the item that opened it again
+            if (closing && savedNavigationObject && !savedNavigationObject.destroyed && uiSystem.navigationMode)
                 uiSystem.navigationObject = savedNavigationObject;
         };
 
@@ -1788,13 +1790,24 @@ class UISlider extends UIObject
             const centerPos = isHorizontal ? this.nativePos.x : this.nativePos.y;
 
             // check if value changed
-            const handleWidth = barSize - handleSize;
-            const p1 = centerPos - handleWidth/2;
-            const p2 = centerPos + handleWidth/2;
             const p = uiSystem.screenToNative(mousePosScreen);
-            this.value = isHorizontal ? 
-                percent(p.x, p1, p2) :
-                percent(p.y, p2, p1);
+            if (this.fillMode)
+            {
+                // the fill's edge is under the mouse: it grows from the bar's start, left or bottom, from the
+                // narrowest it draws to the whole bar, as render draws it
+                const minWidth = min(handleSize, this.cornerRadius * 2);
+                const along = isHorizontal ? p.x - (centerPos - barSize/2) : centerPos + barSize/2 - p.y;
+                this.value = percent(along, minWidth, barSize);
+            }
+            else
+            {
+                const handleWidth = barSize - handleSize;
+                const p1 = centerPos - handleWidth/2;
+                const p2 = centerPos + handleWidth/2;
+                this.value = isHorizontal ?
+                    percent(p.x, p1, p2) :
+                    percent(p.y, p2, p1);
+            }
         }
         else if (this.isNavigationObject())
         {

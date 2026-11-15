@@ -229,7 +229,8 @@ class LevelEditor
     /** Rebuild the level from what the editor changed; set it or override it and the editor has a Restart button,
      *  which calls it after switching to play
      *  - It may be async: till its promise settles, every action that starts a restart waits, with a note at the
-     *    mouse: Restart, and in the 2D editor a resize, its undo and redo, and Apply or Reset of another size; the
+     *    mouse: Restart, and in the 2D editor a resize, its undo and redo, and Apply or Reset of another size, an
+     *    Apply of the same size going in as any edit; the
      *    game is held still while the editor is open, so one that waits for its frames, a fade, finishes once the editor
      *    closes, which Play and Escape do then with no player put at the mouse; a promise that never settles makes
      *    restarts wait till the page reloads
@@ -495,7 +496,7 @@ let editorPlayFromMouse = false, editorAdvanced = false;
 function editorPlay(pos)
 {
     // while a restart makes the level again it plays on with no player put at the mouse, which may be gone, so a
-    // restart that waits for the game's frames, a fade, finishes; closing lets its wait go
+    // restart that waits for the game's frames, a fade, finishes; the wait goes on till its promise settles
     const restarting = !!editorRestartRunning;
     editorSetOpen(false);
     restarting || editorPlayFromMouse && pos && editorHas('onPlayFrom') && levelEditor.onPlayFrom(pos.copy());
@@ -1161,8 +1162,11 @@ function editorApplyPending(record)
 {
     const saved = record?.pending;
     if (!saved) return false;
-    // a restart still making the level waits, with the edits kept waiting, as an edit of another size needs one
-    if (editorRestartRunning) return editorBusyNudge(), false;
+    // edits of another size need a restart, which waits while one still makes the level, the edits kept waiting;
+    // edits of the same size are painted in as any are
+    const resized = (saved.width ?? record.map.width) !== record.map.width ||
+        (saved.height ?? record.map.height) !== record.map.height;
+    if (resized && editorRestartRunning) return editorBusyNudge(), false;
     if (!editorPendingFits(record, saved))
     {
         record.pendingUnfit = true;
@@ -1540,7 +1544,9 @@ function editorCallRestart(records=[])
     const promise = /** @type {any} */ (result); // onRestart may be async, a game's own, any thenable
     if (typeof promise?.then !== 'function') return;
     editorRestartRunning = token;
-    promise.then(ended, (error)=> { ended(); throw error; });
+    // a thenable whose then throws is taken as a reject, or the wait would never end
+    try { promise.then(ended, (error)=> { ended(); throw error; }); }
+    catch (error) { ended(); throw error; }
 }
 
 // the tile layers a stroke touched that need it draw again whole
@@ -2686,7 +2692,8 @@ function editorPaletteTiles(layer)
         if (columns && base.pos.y + (i / columns | 0) * (base.size.y + base.padding*2) + base.size.y > image.height)
             break;
         const t = editorTileInfo(live, i);
-        if (t.pos.x + t.size.x > image.width || t.pos.y + t.size.y > image.height) break;
+        // a grid tile below the image is no tile at all, the end of the sheet
+        if (!t || t.pos.x + t.size.x > image.width || t.pos.y + t.size.y > image.height) break;
         tiles.push({tile: i, tileInfo: t});
     }
     try
@@ -2848,13 +2855,18 @@ function editorPanelUpdate()
     p.pendingUnfit.style.display = record?.pendingUnfit ? '' : 'none';
     p.reset.style.display = record?.synthetic ? 'none' : ''; // a layer made in code has no file
 
-    // the palette, drawn again when the layer or the brush changed, a change makes a new brush
+    // the palette, drawn again when the layer or the brush changed, a change makes a new brush, or its tiles did,
+    // a tile set still loading as the editor opens, so what is shown is what a click picks
     const live = editorLayer?.live;
     const paletteLayer = editorObjectLayer ?? editorLayer, paletteBrush = editorObjectLayer ? editorObjectBrush : editorBrush;
-    if (p.paletteLayer !== paletteLayer || p.paletteBrush !== paletteBrush)
+    const paletteTiles = editorObjectLayer ? undefined : editorPaletteTiles(editorLayer);
+    const paletteLoaded = paletteTiles?.reduce((n, t)=> n + (t.tileInfo?.textureInfo?.image ? 1 : 0), 0);
+    if (p.paletteLayer !== paletteLayer || p.paletteBrush !== paletteBrush || p.paletteTiles !== paletteTiles ||
+        p.paletteCount !== paletteTiles?.length || p.paletteLoaded !== paletteLoaded)
     {
         p.paletteLayer = paletteLayer;
         p.paletteBrush = paletteBrush;
+        p.paletteTiles = paletteTiles, p.paletteCount = paletteTiles?.length, p.paletteLoaded = paletteLoaded;
         editorObjectLayer ? editorPaletteDrawObjects(p.palette) : editorPaletteDraw(p.palette, editorLayer);
     }
     editorPropertiesUpdate(p.properties);

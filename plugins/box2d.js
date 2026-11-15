@@ -433,6 +433,13 @@ function box2dCheckUnusedFields(o)
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+// in every build, as Box2D itself aborts on it: no fixture is made in a contact callback, make it after the step
+function box2dFixturesAllowed()
+{
+    if (box2d.world.IsLocked())
+        throw new Error('cannot create Box2D fixtures during a contact callback, make them after the step');
+}
+
 /** 
  * Box2D Object - extend with your own custom physics objects
  * - A LittleJS object with Box2D physics, dynamic by default
@@ -654,9 +661,7 @@ class Box2dObject extends EngineObject
         ASSERT(isNumber(density), 'density must be a number');
         ASSERT(isNumber(friction), 'friction must be a number');
         ASSERT(isNumber(restitution), 'restitution must be a number');
-        // in every build, as Box2D itself aborts on it
-        if (box2d.world.IsLocked())
-            throw new Error('cannot create Box2D fixtures during a contact callback, make them after the step');
+        box2dFixturesAllowed();
 
         // Box2D copies the def and the shape
         const fd = new box2d.instance.b2FixtureDef();
@@ -691,6 +696,8 @@ class Box2dObject extends EngineObject
         // Box2D stops for good on a box with almost no area, like addPoly no fixture is made from one
         ASSERT(size.x * size.y > 1e-6 && isFinite(size.x * size.y), 'box is too small or too big for Box2D');
         if (!(size.x * size.y > 1e-6) || !isFinite(size.x * size.y)) return;
+
+        box2dFixturesAllowed(); // before the shape is made, so a refused one leaves none in the heap
 
         const shape = new box2d.instance.b2PolygonShape();
         shape.SetAsBox(size.x/2, size.y/2, box2dTemp(offset), -angle);
@@ -734,6 +741,7 @@ class Box2dObject extends EngineObject
                 offset += 4;
             }
             const box2dPoints = box2d.instance.wrapPointer(buffer, box2d.instance.b2Vec2);
+            box2dFixturesAllowed(); // before the shape is made, so a refused one leaves none in the heap
             const shape = new box2d.instance.b2PolygonShape();
             shape.Set(box2dPoints, points.length);
             box2d.instance._free(buffer);
@@ -802,6 +810,8 @@ class Box2dObject extends EngineObject
         ASSERT(isVector2(offset), 'offset must be a Vector2');
         if (!isFinite(diameter)) return; // Box2D stops for good on it, no fixture is made
 
+        box2dFixturesAllowed(); // before the shape is made, so a refused one leaves none in the heap
+
         const shape = new box2d.instance.b2CircleShape();
         shape.set_m_p(box2dTemp(offset));
         shape.set_m_radius(diameter/2);
@@ -822,6 +832,8 @@ class Box2dObject extends EngineObject
     {
         ASSERT(isVector2(point1), 'point1 must be a Vector2');
         ASSERT(isVector2(point2), 'point2 must be a Vector2');
+
+        box2dFixturesAllowed(); // before the shape is made, so a refused one leaves none in the heap
 
         const shape = new box2d.instance.b2EdgeShape();
         shape.Set(box2dTemp(point1), box2dTemp(point2, 1));
@@ -846,6 +858,7 @@ class Box2dObject extends EngineObject
         for (let i=0; i<points.length-1; ++i)
         {
             // the ghost vertices, where there is a neighbor, make the edges one smooth surface
+            box2dFixturesAllowed(); // before the shape is made, so a refused one leaves none in the heap
             const shape = new box2d.instance.b2EdgeShape();
             points[i-1] && shape.set_m_vertex0(box2dTemp(points[i-1]));
             points[i+0] && shape.set_m_vertex1(box2dTemp(points[i+0]));
@@ -880,6 +893,7 @@ class Box2dObject extends EngineObject
         const getPoint = i=> points[mod(i,points.length)];
         for (let i=0; i<points.length; ++i)
         {
+            box2dFixturesAllowed(); // before the shape is made, so a refused one leaves none in the heap
             const shape = new box2d.instance.b2EdgeShape();
             shape.set_m_vertex0(box2dTemp(getPoint(i-1)));
             shape.set_m_vertex1(box2dTemp(getPoint(i+0)));

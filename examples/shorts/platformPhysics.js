@@ -18,11 +18,13 @@ class Player extends EngineObject
             this.velocity.y = .5;
     }
 
-    // asked about a one way tile only when it would land on it
+    // asked about a one way tile only when it would land on it; dropping
+    // passes one under the feet, not the turned door beside it
     collideWithTile(data, pos)
     {
         const tile = layer.getData(pos)?.tile;
-        return !(this.dropping && layer.oneWayTiles.has(tile));
+        const below = pos.y + 1 <= this.pos.y - this.size.y / 2 + .1;
+        return !(this.dropping && below && layer.oneWayTiles.has(tile));
     }
 
     // and the same for a one way object
@@ -148,7 +150,8 @@ lift are the way back over it.
 For a one way tile it is asked only when the tile would stop it, when
 it lands, so returning `false` there drops it through. The player does
 that while Down is held, for the tiles in `layer.oneWayTiles`, the
-tiles made one way. `collideWithObject` does the same for the lift.
+tiles made one way, and only for one under its feet, so the door is
+still a door. `collideWithObject` does the same for the lift.
 
 ### The lift
 A solid object can be one way too, with `oneWay = vec2(0, 1)`. The lift

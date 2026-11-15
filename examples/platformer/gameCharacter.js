@@ -66,9 +66,11 @@ export class Character extends GameObjects.GameObject
             this.pressedJumpTimer.set(.3);
         this.wasHoldingJump = this.holdingJump;
 
-        // wall climb
+        // wall climb, falling against a wall in the way it is pushing, a solid tile beside it, not only stopped
+        // sideways, as falling straight down in open air is too
         this.climbingWall = 0;
-        if (moveInput.x && !this.velocity.x && this.velocity.y < 0)
+        const wallSide = this.pos.add(vec2(Math.sign(moveInput.x) * (this.size.x / 2 + .1), 0));
+        if (moveInput.x && !this.velocity.x && this.velocity.y < 0 && LJS.tileCollisionGetData(wallSide) > 0)
         {
             this.velocity.y *=.8;
             this.climbingWall = 1;
@@ -158,7 +160,11 @@ export class Character extends GameObjects.GameObject
                 {
                     // start jump
                     if (this.climbingWall)
+                    {
+                        // off the wall, or the ground time it gave would make a ground jump of it the next frame
                         this.velocity.y = .25;
+                        this.groundTimer.unset();
+                    }
                     else
                     {
                         this.velocity.y = .15;

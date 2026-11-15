@@ -93,6 +93,10 @@ class Coin extends EngineObject
 objectLayersAddType('Coin', Coin, {value: 1});
 ```
 
+- **In 2D, a type is made with `new make(pos)`, and its Tiled properties are set on it after the constructor**,
+  so a constructor reads none of them; one that needs them reads them in its first `update`. In 3D they are
+  handed to the constructor, `new make(pos3D, properties)`, so copying a 3D type's constructor into 2D finds
+  no properties.
 - **In 3D, a class needs its own constructor that takes the position.** One that passes every argument on to
   `EngineObject3D` would pass the properties as its mesh.
 - **A 3D prop with no class:** `level3DAddMesh('Tree', mesh, tileInfo)` makes a static prop. Its properties are:
@@ -112,8 +116,10 @@ Set the ones you need; each one you leave out does nothing.
 levelEditor.open();                    // start in the editor; close() plays on with the changes
 levelEditor.isOpen;                    // true while editing
 levelEditor.onRestart = ()=> buildLevel();         // adds a Restart button: load the level again; it may be async:
-                                                   // till it settles Restart waits, the 2D editor's resizes
-                                                   // and Apply too, and Escape plays on so a fade can finish
+                                                   // till it settles Restart waits, in the 2D editor a resize,
+                                                   // its undo and redo and Apply or Reset of another size too,
+                                                   // and Escape and Play play on, with no onPlayFrom, so a fade
+                                                   // can finish
 levelEditor.onPlayFrom = (pos)=> player.pos = pos; // adds "Play from mouse": put the player at the mouse
 levelEditor.onOpen = ()=> {};          // the editor opened
 levelEditor.onClose = ()=> {};         // it closed, the game plays on
@@ -138,6 +144,8 @@ The key can be written any of these ways:
 | A key's name, in any case | `'Delete'`, `'F2'`, `'Enter'`, `'Space'` |
 | A key code with its capital, which both editors read | `'ShiftLeft'`, `'Numpad1'`, `'KeyE'` |
 | Any of them with Ctrl | `'ctrl+k'` |
+
+The 2D editor reads a letter by what the key prints. The 3D editor reads its fly and tool keys (WASD, Q, E, R and the rest of its row) and a game's keys by position, so they sit under the hand on any layout, and its Ctrl shortcuts (Z, Y, C, X, V, D, G) and `?` by what the key prints, so undo is Ctrl+Z on AZERTY and QWERTZ too.
 
 - **The action is called with whether Shift is held.** Return `false` when it did nothing.
 - **Ctrl is the one modifier.** For Shift, read the argument the action is given.

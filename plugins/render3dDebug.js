@@ -39,21 +39,37 @@ function render3DDebugPush(duration, draw)
         render3DDebugPrimitives.push({timer: new Timer(duration, true), draw, clearCount: debugClearCount}); // real time, like 2D
 }
 
-// a debug draw's color as it is now: a Color copied, or a hex string, as the 2D debug draws take one
+// a debug draw's color as it is now: a Color copied, or a CSS color string, as the 2D debug draws take one, read
+// by a canvas, which gives a name or rgb() back as hex or rgba()
+/** @type {CanvasRenderingContext2D|undefined} */
+let render3DDebugColorContext;
 /** @param {Color|string} color
  *  @return {Color} */
 function render3DDebugColor(color)
 {
     if (isColor(color)) return color.copy();
-    const hex = isStringLike(color) && (color + '')[0] === '#';
-    ASSERT(hex, 'a 3D debug color is a Color or a hex string, as #f00', color);
-    return hex ? new Color().setHex(color + '') : WHITE.copy();
+    ASSERT(isStringLike(color), 'a 3D debug color is a Color or a CSS color string', color);
+    let text = color + '';
+    if (text[0] !== '#' && typeof document != 'undefined')
+    {
+        const context = render3DDebugColorContext ||= document.createElement('canvas').getContext('2d') ?? undefined;
+        if (context)
+        {
+            context.fillStyle = '#fff';
+            context.fillStyle = text;
+            text = String(context.fillStyle);
+        }
+    }
+    if (text[0] === '#')
+        return new Color().setHex(text);
+    const rgba = text.match(/rgba?\(([^)]*)\)/)?.[1].split(',').map(Number);
+    return rgba && rgba.length >= 3 ? rgb(rgba[0] / 255, rgba[1] / 255, rgba[2] / 255, rgba[3] ?? 1) : WHITE.copy();
 }
 
 /** Draw a debug wireframe box
  *  @param {Vector3} pos - Center
  *  @param {Vector3|number} [size] - Full size, a number for a cube
- *  @param {Color|string} [color] - A Color or a hex string, as '#f00'
+ *  @param {Color|string} [color] - A Color or a CSS color, as '#f00' or 'red'
  *  @param {number} [time] - How long to show it, 0 is one frame
  *  @param {Vector3} [rotation] - vec3(pitch, yaw, roll)
  *  @memberof Render3D */
@@ -74,7 +90,7 @@ function debugBox3D(pos, size=1, color=WHITE, time=0, rotation)
 /** Draw a debug wireframe sphere as three rings
  *  @param {Vector3} pos - Center
  *  @param {number} [size] - Diameter
- *  @param {Color|string} [color] - A Color or a hex string, as '#f00'
+ *  @param {Color|string} [color] - A Color or a CSS color, as '#f00' or 'red'
  *  @param {number} [time] - How long to show it, 0 is one frame
  *  @memberof Render3D */
 function debugSphere3D(pos, size=1, color=WHITE, time=0)
@@ -96,7 +112,7 @@ function debugSphere3D(pos, size=1, color=WHITE, time=0)
 /** Draw a debug line
  *  @param {Vector3} posA
  *  @param {Vector3} posB
- *  @param {Color|string} [color] - A Color or a hex string, as '#f00'
+ *  @param {Color|string} [color] - A Color or a CSS color, as '#f00' or 'red'
  *  @param {number} [width]
  *  @param {number} [time] - How long to show it, 0 is one frame
  *  @memberof Render3D */
@@ -110,7 +126,7 @@ function debugLine3D(posA, posB, color=WHITE, width=RENDER3D_DEBUG_WIDTH, time=0
 
 /** Draw a debug point as a small cross of three lines
  *  @param {Vector3} pos
- *  @param {Color|string} [color] - A Color or a hex string, as '#f00'
+ *  @param {Color|string} [color] - A Color or a CSS color, as '#f00' or 'red'
  *  @param {number} [time] - How long to show it, 0 is one frame
  *  @param {number} [size] - Length of the cross
  *  @memberof Render3D */

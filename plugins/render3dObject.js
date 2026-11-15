@@ -260,8 +260,8 @@ class EngineObject3D extends EngineObject
      *  - A stack of objects with mass at rest holds in any list order: one on something that stands meets it as
      *    fixed, and one pushed up lifts what stands on it; but each is resolved in turn, once a frame, so listed from
      *    the top down a stack's boxes keep a small speed down, and a game that zeroes the speed of what stands sinks
-     *    it a little a level, as can a stack made touching on its first frames; more than two or three high is a job
-     *    for Box2D; two that both move trade momentum by their masses
+     *    it a little a level, as can a stack made touching on its first frames; more than two or three high wants
+     *    a full physics engine, as Box2D is in 2D; two that both move trade momentum by their masses
      *  @param {boolean} [collideSolidObjects] - Take part in solid collision
      *  @param {boolean} [isSolid] - Block other objects, a pair where neither one blocks passes through;
      *    blocking needs collideSolidObjects, so isSolid on its own is not allowed
@@ -670,6 +670,10 @@ function render3DCollideAsk(a, b, push, useKept=true)
     if (kept !== undefined) return kept;
     const resolveA = a.collideWithObject(b, push), resolveB = b.collideWithObject(a, push.scale(-1));
     const resolve = !!(resolveA && resolveB);
+    // one a callback set to mass 0 is fixed from now on, the pass's fixed solids made again when next asked for
+    const fixed = render3DFixed;
+    fixed.pass === engineObjectsUpdateCount && (!a.mass && !fixed.set.has(a) || !b.mass && !fixed.set.has(b)) &&
+        (fixed.pass = -1);
     engineObjectsCollidePairAdd(a, b, resolve);
     engineObjectsCollidePairAdd(b, a, resolve);
     useKept && render3DSettleAsked(a, b, true);
@@ -973,6 +977,14 @@ function render3DCollideSolid(a)
         }
 
         // the settles come after the bounce, so a wall's push is the last word on the velocity
+        if (weightA && !weightB)
+        {
+            // pushed whole by one that does not move in the pair, a door or a lift squeezing it against a wall: it
+            // met the level before, from where it was, so it is settled now, or it would end in the level or go
+            // through a thin wall, as the other list order never lets it
+            render3DSettleFixed(a, b, fromA);
+            if (a.parent) return; // a callback in the settle attached it
+        }
         if (weightA && weightB)
         {
             // a met the solids before it in the list already, the fixed ones among them, so a push from something
@@ -1039,7 +1051,7 @@ function render3DSolidGrid()
     for (const o of list)
         extent += min(2 * render3DSolidReach(o), 16) || 0;
     const index = new Map;
-    const grid = kept.grid = {size: max(2 * extent / list.length, .5), cells: new Map, at: new Map, index,
+    const grid = kept.grid = {size: max(2 * extent / list.length, .5), cells: new Map, at: new Map, index, joins: 0,
         big: new Set, seen: new Map, stamp: 0, byIndex: (a, b)=> index.get(a) - index.get(b)};
     // by its place in engineObjectsCollide, so a solid let go of mid pass goes in at its place, see render3DGridJoin
     engineObjectsCollide.forEach((o, i)=> render3DGridSolid(o) && (index.set(o, i), render3DGridPlace(grid, o)));
@@ -1054,9 +1066,16 @@ const render3DGridSolid = (o)=> o instanceof EngineObject3D && !o.parent && !o.s
 function render3DGridJoin(o)
 {
     const grid = render3DGrid.pass === engineObjectsUpdateCount && engineObjectsPhysicsRunning && render3DGrid.grid;
-    if (!grid || grid.index.has(o) || !render3DGridSolid(o)) return;
-    const i = engineObjectsCollide.indexOf(o);
-    i < 0 || (grid.index.set(o, i), render3DGridPlace(grid, o));
+    if (!grid || !render3DGridSolid(o)) return;
+    // one attached and let go of in the same pass is in the grid already, at the cells it had before it was attached
+    if (!grid.index.has(o))
+    {
+        const i = engineObjectsCollide.indexOf(o);
+        if (i < 0) return;
+        grid.index.set(o, i);
+    }
+    render3DGridPlace(grid, o);
+    ++grid.joins;
 }
 
 // the cells of the cube around a place out to a reach, first and last along x, y and z, in one kept array; a solid
@@ -1151,14 +1170,15 @@ function render3DGridAdd(grid, other, after, before, stamp, near)
 // found again from where it is whenever the place its center gives has moved, as a push does, or its reach changed
 function* render3DGridWalk(grid, reach, center, before)
 {
-    let after = -1, x, y, z, r, k = 0;
+    let after = -1, x, y, z, r, k = 0, joins = grid.joins;
     const near = [];
     for (;;)
     {
+        // asked again when it moved, or when a solid joined the grid since, let go of by a callback mid pass
         const p = center(), size = reach();
-        if (p.x !== x || p.y !== y || p.z !== z || size !== r)
+        if (p.x !== x || p.y !== y || p.z !== z || size !== r || joins !== grid.joins)
         {
-            x = p.x, y = p.y, z = p.z, r = size;
+            x = p.x, y = p.y, z = p.z, r = size, joins = grid.joins;
             render3DGridNear(grid, p, size, after, before, near);
             k = 0;
         }

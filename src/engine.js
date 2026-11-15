@@ -551,8 +551,8 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
         audioUpdateVolume();
         // the time keys work as the other debug keys do, see debugKeysActive
         const debugKeys = debug && debugKeysActive();
-        const debugSpeedUp   = debugKeys && keyIsDown('Equal'); // +
-        const debugSpeedDown = debugKeys && keyIsDown('Minus'); // -
+        const debugSpeedUp   = debugKeys && (keyIsDown('Equal') || keyIsDown('NumpadAdd')); // +, the numpad's too
+        const debugSpeedDown = debugKeys && (keyIsDown('Minus') || keyIsDown('NumpadSubtract')); // -
         const debugScale = debugSpeedUp ? 10 : debugSpeedDown ? .1 : 1;
 
         // apply time deltas
@@ -1126,7 +1126,8 @@ function engineObjectsSort()
 
 /** Destroy and remove all objects
  *  - This can be used to clear out all objects when restarting a level
- *  - Objects with the persistent flag set are left alone, for things that outlive a level
+ *  - Objects with the persistent flag set are left alone, for things that outlive a level, but a child goes with a
+ *    parent that is not persistent, persistent or not: let go of it first to keep it
  *  - Objects can override their destroy function to do cleanup or stick around
  *  - UI objects and tweens are not engine objects and stay; uiSystem.destroyObjects() and tweenStopAll() end them
  *  @param {boolean} [immediate] - true removes attached effects like particle emitters at once, false lets them finish first

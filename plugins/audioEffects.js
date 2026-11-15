@@ -72,7 +72,8 @@ class AudioEffect
     rampParam(param, value, fadeTime=0)
     {
         audioParamRamp(param, value, fadeTime);
-        if (!fadeTime) return;
+        fadeTime = audioFinite(fadeTime, 0); // not a number or endless is at once, as the ramp takes it
+        if (!(fadeTime > 0)) return;
         const keepAlive = new ConstantSourceNode(audioContext, { offset: 0 });
         keepAlive.connect(this.input);
         keepAlive.onended = ()=> keepAlive.disconnect();
@@ -198,6 +199,8 @@ class AudioReverb extends AudioEffect
         ASSERT(isNumber(duration) && duration > 0, 'duration must be positive');
         ASSERT(isNumber(decay) && decay > 0, 'decay must be positive');
         if (!audioContext) return;
+        // a release build, past the asserts, builds a room of a second rather than one of NaN
+        duration = audioFinite(duration, 1) > 0 ? duration : 1, decay = audioFinite(decay, 2) > 0 ? decay : 2;
         this.node.buffer = this.createImpulse(duration, decay);
     }
 
@@ -306,7 +309,7 @@ class AudioDistortion extends AudioEffect
     setAmount(amount)
     {
         ASSERT(isNumber(amount), 'amount must be a number');
-        this.amount = amount = clamp(amount);
+        this.amount = amount = clamp(audioFinite(amount, 0)); // not a number is clean, not a curve of NaN
         if (!audioContext) return;
 
         // soft clip curve, drive grows with the square of amount so low values stay subtle

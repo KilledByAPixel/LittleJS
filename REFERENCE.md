@@ -707,7 +707,8 @@ EngineObject.setCollision(solids=true, isSolid=true, level=true, raycast=true) /
                                                    // the tile collision layers; raycast=false
                                                    // leaves it out of engineObjectsRaycast; an object with no width
                                                    // or height is not a solid obstacle, so it blocks nothing and
-                                                   // nothing blocks it
+                                                   // nothing blocks it; each object is resolved in turn, so a
+                                                   // stack more than two or three high depends on update order
 EngineObject.persistent = false                    // true skips it in engineObjectsDestroy, for things that outlive
                                                    // a level like a camera; destroy() still destroys it
 
@@ -764,7 +765,8 @@ engineObjectsCallback(pos, size, callbackFunction, objects=engineObjects, testCe
                                                            // left out
 engineObjectsRaycast(start, end, objects=engineObjects)    // only objects with collideRaycast set, which
                                                            // setCollision turns on; in list order, not by distance
-engineObjectsDestroy(immediate=true) // destroy every object except the persistent ones
+engineObjectsDestroy(immediate=true) // destroy every object except the persistent ones; a persistent child of a
+                                     // parent that is not goes with it, let go of it first
 ```
 
 ## LittleJS Tile Layer System
@@ -1020,7 +1022,8 @@ tweenStopAll()                 // Stop every active tween (e.g. on level reset)
 - See the Scenes short and the Box2D example
 
 ```javascript
-setScene(scene)      // Leave the current scene, clear objects, enter scene; the current one restarts it
+setScene(scene)      // Leave the current scene, clear objects, enter scene; the current one restarts it; one
+                     // called from a destroy during a switch is dropped, the switch's scene wins
 getScene()           // The current scene, or undefined
 
 // A scene is any object, every hook is optional
@@ -1308,7 +1311,7 @@ class LavaTile extends EngineObject {
 ## LittleJS Post Processing
 - Optional plugin that applies a full screen WebGL shader to the rendered output
 - Shadertoy style uniforms: iTime, iResolution, iChannel0 (the frame just drawn), and iChannel1 (the previous
-  frame's output) when feedbackTexture is set, for trails and echoes
+  frame's output) when feedbackTexture or `postProcess.feedback` is set, for trails and echoes
 - With render3D.depthTexture on, iChannel2 is the 3D depth, and sceneDepth(uv) gives the distance from the camera
   along its view in world units, uv 0 to 1 across the screen, for ambient occlusion, fog and outlines; only the solid
   objects of the default 3D layer are in it

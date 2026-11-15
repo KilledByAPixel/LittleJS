@@ -32,6 +32,8 @@ let sceneQueued, sceneIsQueued = false;
  *  - The switch happens at once, it can be called from anywhere but a scene's leave; from a Box2D contact callback it
  *    happens once the physics step is done, since Box2D can not make bodies during one, and several calls in one
  *    step, as two fixtures touching spikes make, switch once, to the scene the last one asked for
+ *  - Called while a switch destroys the old scene's objects, from an object's destroy or a Box2D endContact, it is
+ *    dropped with a warning in debug builds, so the scene the switch was asked for wins
  *  - UI objects and tweens are not objects of the scene and stay, uiSystem.destroyObjects() and tweenStopAll() end them
  *  @param {Scene} [scene] - The scene to enter
  *  @memberof SceneSystem */
@@ -57,11 +59,14 @@ function setScene(scene)
         engineAddPlugin(sceneUpdate, sceneRenderPost, undefined, undefined, sceneRender);
     }
 
-    // one asked for while a switch destroys the old scene's objects, from a destroy or a Box2D endContact, waits for
-    // the switch to end, the last asked for going next, or the old scene would leave twice and the outer switch enter
-    // over the inner one's objects
+    // one asked for while a switch destroys the old scene's objects, from a destroy or a Box2D endContact, is dropped:
+    // the scene the switch was asked for wins, or a player whose destroy starts game over would take over every
+    // level change; a game that wants game over there asks for it from its update
     if (sceneSwitching)
-        return void (sceneAfterSwitch = {scene});
+    {
+        debug && console.warn('setScene during a scene switch, from an object destroyed by it, is dropped');
+        return;
+    }
     if (sceneCurrent)
     {
         // a leave that throws still lets the next switch through
@@ -77,16 +82,11 @@ function setScene(scene)
         sceneSwitching = false;
         sceneCurrent = scene;
         scene?.enter?.();
-        const next = sceneAfterSwitch;
-        sceneAfterSwitch = undefined;
-        next && setScene(next.scene);
     }
 }
 
-// a switch destroying the old scene's objects, and a scene asked for meanwhile, {scene}, which goes once it is done
+// a switch destroying the old scene's objects, during which a setScene is dropped
 let sceneSwitching = false;
-/** @type {{scene: Scene|undefined}|undefined} */
-let sceneAfterSwitch;
 
 /** Get the current scene
  *  @return {Scene|undefined}

@@ -558,7 +558,7 @@ async function parseGLTF(data, baseUrl='', files)
         throw new Error('only glTF 2.0 is read'); // a file problem, not a code one, so it throws in every build
     // compressed geometry has no plain accessors to read; a required extension the loader does not read refuses the
     // file, as the format says, or it would load wrong with nothing said, as one instanced copy for many
-    for (const name of json.extensionsRequired || [])
+    for (const name of isArray(json.extensionsRequired) ? json.extensionsRequired : [])
         if (name === 'KHR_draco_mesh_compression' || name === 'EXT_meshopt_compression')
             throw new Error(`glTF with ${name} is not read, export it uncompressed`);
         else if (name === 'KHR_texture_basisu')
@@ -663,6 +663,7 @@ async function parseGLTF(data, baseUrl='', files)
             const mesh = gltfAt(json.meshes, node.mesh, 'mesh');
             // a skinned mesh is placed by its joints and not by its node, as the format says, so it is read as stored
             const skin = node.skin !== undefined ? json.skins?.[node.skin] : undefined;
+            if (!isArray(mesh.primitives)) throw new Error('glTF mesh ' + node.mesh + ' has no primitives');
             for (const primitive of mesh.primitives)
             {
                 const skinned = skin?.joints?.length && primitive.attributes.JOINTS_0 !== undefined &&
@@ -699,7 +700,8 @@ async function parseGLTF(data, baseUrl='', files)
         // weights are not read, and a node given as a matrix cannot be animated, the format says
         const animations = (json.animations || []).map((animation, i)=> new GLTFAnimation(animation.name || 'animation ' + i,
             animation.channels.filter(c=> c.target.node !== undefined &&
-                ['translation', 'rotation', 'scale'].includes(c.target.path) && !json.nodes[c.target.node].matrix).map(c=>
+                ['translation', 'rotation', 'scale'].includes(c.target.path) &&
+                !gltfAt(json.nodes, c.target.node, 'animation target node').matrix).map(c=>
             {
                 const sampler = gltfAt(animation.samplers, c.sampler, 'animation sampler');
                 const interpolation = sampler.interpolation || 'LINEAR';
@@ -1109,8 +1111,9 @@ function gltfNodeMatrix(node)
 const gltfZeroCounts = /* @__PURE__ */ new WeakMap;
 
 // the extensions it reads, which a file may require
-const GLTF_EXTENSIONS_READ = ['KHR_materials_emissive_strength', 'KHR_materials_unlit', 'KHR_texture_transform',
-    'KHR_materials_transmission', 'EXT_texture_webp', 'EXT_texture_avif'];
+// KHR_mesh_quantization is the small integer accessors gltfpack writes, which it lists as required
+const GLTF_EXTENSIONS_READ = ['KHR_mesh_quantization', 'KHR_materials_emissive_strength', 'KHR_materials_unlit',
+    'KHR_texture_transform', 'KHR_materials_transmission', 'EXT_texture_webp', 'EXT_texture_avif'];
 
 // an entry of one of the file's lists by its index, a file problem naming what is missing when there is none
 function gltfAt(list, index, what)
