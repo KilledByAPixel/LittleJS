@@ -453,12 +453,15 @@ function editor3DPrefabBox(made)
     return low.x <= high.x ? {pos: tidy(low.add(high).scale(.5)), size: tidy(high.subtract(low))} : undefined;
 }
 
-// from an object's place to the middle of its box: nothing for a plain object, whose place is its middle, and for
-// a prefab's instance how far its origin is from the middle of its parts, as it is turned and sized now
+// from an object's place to the middle of its box: for a plain object where its type put its body, nothing for one
+// at the place it was given, and for a prefab's instance how far its origin is from the middle of its parts, as
+// turned now
 function editor3DBoxOffset(object)
 {
-    const box = editor3DPrefabBox(editor3DInstances.get(object.id));
-    return box ? box.pos.subtract(editor3DPos(object)) : vec3();
+    // a prefab by the box around its parts, any other object by where its type put its body from the place given,
+    // so one that stands by its feet lands on them
+    const made = editor3DInstances.get(object.id), box = editor3DPrefabBox(made);
+    return box ? box.pos.subtract(editor3DPos(object)) : made instanceof EngineObject3D ? level3DOffsetOf(made) : vec3();
 }
 
 // every object gets an id of its own, a whole number: one without, with one already used, or with one so big that
@@ -588,8 +591,8 @@ function editor3DObjectMade(object, made)
 // put what the game made for an object where the level has it, and still
 function editor3DPlaceInstance(made, object)
 {
-    made.pos3D = editor3DPos(object).add(level3DBaseOffset.get(made) ?? vec3()); // with what its type moved itself by
     made.rotation3D = editor3DRotation(object).scale(PI / 180);
+    made.pos3D = editor3DPos(object).add(level3DOffsetOf(made)); // with what its type moved itself by, turned
     made.scale3D = (level3DBaseScale.get(made) ?? vec3(1)).multiply(editor3DScale(object));
     made.velocity3D = vec3();
     made.angleVelocity3D = vec3();
@@ -2600,7 +2603,7 @@ function editor3DDropSelection()
 function editor3DPasteAtMouse()
 {
     const copied = editor3DPasteList(), point = !editor3DMouseOnPanel && editor3DMousePoint();
-    if (!copied?.length) return false;
+    if (!copied?.length) return editor3DPaste(); // which says what it left out
     if (!point) return editor3DPaste();
     const center = copied.reduce((sum, o)=> sum.add(editor3DPos(o)), vec3()).scale(1 / copied.length);
     const box = (o)=> editor3DClipboardBoxes.get(o) ?? {size: editor3DSize(o), offset: editor3DBoxOffset(o)};

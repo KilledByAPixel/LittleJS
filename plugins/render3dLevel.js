@@ -24,9 +24,19 @@ const level3DTypes = /* @__PURE__ */ level3DBuiltInTypes();
 // the scale each object had when it was made, the level's scale multiplies it
 const level3DBaseScale = /* @__PURE__ */ new WeakMap;
 
-// how far from the place it was given each object put itself when it was made, as a type that lifts its body to stand
-// on the ground does, so the editor and a prefab move it with that offset kept, as a reload makes it
+// how far from the place it was given each object put itself when it was made, unturned, as a type that lifts its
+// body to stand on the ground does, so the loader, the editor and a prefab keep that offset, turned with the object
 const level3DBaseOffset = /* @__PURE__ */ new WeakMap;
+
+// an object's constructor offset turned as it is turned, so it is the same part of its body whatever its turn: a type
+// that stands by its feet has them under it turned too, and a prefab unpacked moves nothing
+function level3DOffsetOf(o, rotation=o.rotation3D)
+{
+    const offset = level3DBaseOffset.get(o);
+    if (!offset) return vec3();
+    return rotation.x || rotation.y || rotation.z ? buildMatrix(undefined, rotation).transformDirection(offset) :
+        offset.copy();
+}
 
 /** Add a type of object, so level3DLoad makes one wherever a level has an object of that type
  *  - The name is a string because minified builds rename classes
@@ -37,6 +47,10 @@ const level3DBaseOffset = /* @__PURE__ */ new WeakMap;
  *  - Give a class a constructor of its own that takes the position: one that hands every argument on to
  *    EngineObject3D would hand it the properties as its mesh
  *  - An EngineObject3D then gets the object's rotation, and its scale times the scale it was made with
+ *  - A constructor may put the body away from the position it is given, lifted by half its height to stand on its
+ *    feet: that offset is kept, turned with the object, through a reload, the 3D editor's moves and landing, and a
+ *    prefab; one worked out from where it ends up, as sticking itself to the ground, is kept as the offset it had
+ *    when made, so the editor shows it where a move puts it, not where a reload would
  *  - Adding a name again replaces it, Box, Sphere, Cylinder and Light too
  *  @param {string} name - The type the objects have in the level
  *  @param {(function(Vector3, ObjectProperties): unknown)|(function(new: unknown, Vector3, ObjectProperties))} make - A
@@ -530,6 +544,7 @@ function level3DMakeAt(object, pos, rotation, scale)
         level3DBaseScale.set(result, result.scale3D.copy());
         result instanceof Prefab3D || level3DBaseOffset.set(result, result.pos3D.subtract(pos));
         result.rotation3D = rotation.copy();
+        result instanceof Prefab3D || (result.pos3D = pos.add(level3DOffsetOf(result))); // its offset turned with it
         result.scale3D = result.scale3D.multiply(scale);
     }
 
@@ -732,7 +747,7 @@ class Prefab3D extends EngineObject3D
             part.rotation3D = to.rotation;
             part.scale3D = (level3DBaseScale.get(part) ?? vec3(1)).multiply(to.scale);
             // a prefab inside this one goes by its origin, which is not where an attached one's handle is
-            part instanceof Prefab3D ? part.placeAt(to.pos) : part.pos3D = to.pos.add(level3DBaseOffset.get(part) ?? vec3());
+            part instanceof Prefab3D ? part.placeAt(to.pos) : part.pos3D = to.pos.add(level3DOffsetOf(part));
         });
     }
 

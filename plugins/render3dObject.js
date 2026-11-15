@@ -729,6 +729,17 @@ function render3DFixedSolids()
 // they take the touch as any pair does, so a one way platform still lets it through; not the one that pushed it, which
 // already did, and a push of a rounding error is none, or a box on a turned ramp would be pushed along its slant;
 // from is where it was before the push
+// bounce an object a pair pushed, by its weight in the pair, off the other one along a normal pointing away from it,
+// when moving into it: relative to the other's velocity when that one does not move in the pair, a fixed solid or a
+// platform, so it keeps the platform's speed, as 2D does, or by its own velocity otherwise
+function render3DBounceOff(o, weight, other, normal, restitution)
+{
+    if (!weight) return;
+    const base = other ? other.velocity3D : undefined, v = base ? o.velocity3D.subtract(base) : o.velocity3D;
+    if (v.dot(normal) < 0)
+        o.velocity3D = base ? base.add(v.reflect(normal, restitution)) : v.reflect(normal, restitution);
+}
+
 function render3DSettleFixed(o, pusher, from)
 {
     if (o.destroyed || !o.collideSolidObjects) return;
@@ -749,9 +760,10 @@ function render3DSettleFixed(o, pusher, from)
         if (!push || push.lengthSquared() < 1e-12) continue;
         push = render3DPushFrom(shape, shapeB, o, b, push);
         const resolve = render3DCollideAsk(o, b, push);
-        grid && (render3DGridPlace(grid, o), render3DGridPlace(grid, b)); // a callback may have moved either
+        if (o.parent) return; // attached in the callback, it rides along with its parent
+        grid && (render3DGridPlace(grid, o), b.parent || render3DGridPlace(grid, b)); // a callback may have moved either
         shape = render3DSolidShape(o), reachO = render3DSolidReach(o); // or moved or resized this one
-        if (!resolve) continue;
+        if (!resolve || b.parent) continue;
         // standing as in a pair: a push off a face within its groundAngle of up holds it there, turned straight up
         const lengthSquared = push.lengthSquared(), up = push.y / lengthSquared ** .5;
         if (up > 0 && o.mass && up >= cos(o.groundAngle) && render3DOnFace(push, shapeB))
@@ -762,9 +774,7 @@ function render3DSettleFixed(o, pusher, from)
         }
         o.pos3D = o.pos3D.add(push);
         shape = render3DSolidShape(o);
-        const normal = push.normalize();
-        if (o.velocity3D.dot(normal) < 0)
-            o.velocity3D = o.velocity3D.reflect(normal, o.restitution);
+        render3DBounceOff(o, 1, b, push.normalize(), max(o.restitution, b.restitution));
     }
     // and out of the level, the voxel and height maps, from where it was before the push, so a move of the game's own,
     // as a collision callback that sends it away, is not swept back across the level
@@ -849,10 +859,13 @@ function render3DCollideSolid(a)
 
         // both objects hear about it, and either one can take the touch over
         const resolve = render3DCollideAsk(a, b, push, false);
-        grid && (render3DGridPlace(grid, a), render3DGridPlace(grid, b)); // a callback may have moved either
+        // a callback that attached either one, an arrow sticking or a crate picked up, ends the pair: a child rides
+        // along with its parent, and one that is a child now meets no more solids
+        if (a.parent) return;
+        grid && (render3DGridPlace(grid, a), b.parent || render3DGridPlace(grid, b)); // a callback may have moved either
         // so the next solid is tested where a callback put it and at the size it gave it, a teleport too
         shapeA = render3DSolidShape(a), reachA = render3DSolidReach(a);
-        if (!resolve) continue;
+        if (!resolve || b.parent) continue;
 
         // standing: resting on a box's face within the upper one's groundAngle of level holds it there, the push
         // turned straight up, as far as it takes to leave the surface, so it does not creep down a ramp; only what
@@ -867,20 +880,23 @@ function render3DCollideSolid(a)
                 push = vec3(0, lengthSquared / push.y, 0);
         }
 
-        // heavier objects move less, mass 0 stays put; then bounce apart when moving toward each other
+        // heavier objects move less, mass 0 stays put, and as in 2D one landing on one that stands on something this
+        // frame meets it as fixed, so a stack holds and a heavy box on top does not squeeze it out; then bounce apart
+        // when moving toward each other
         const total = a.mass + b.mass;
-        const weightA = !a.mass ? 0 : !b.mass ? 1 : b.mass / total;
-        const weightB = !b.mass ? 0 : !a.mass ? 1 : a.mass / total;
+        const bHeld = aStands && b.groundObject && b.groundObject !== a;
+        const aHeld = bStands && a.groundObject && a.groundObject !== b;
+        const weightA = !a.mass || aHeld ? 0 : !b.mass || bHeld ? 1 : b.mass / total;
+        const weightB = !b.mass || bHeld ? 0 : !a.mass || aHeld ? 1 : a.mass / total;
         const fromA = a.pos3D.copy(), fromB = b.pos3D.copy(); // where the push moves them from, for the settles
         a.pos3D = a.pos3D.add(push.scale(weightA));
         b.pos3D = b.pos3D.subtract(push.scale(weightB));
-        // mass 0 keeps its velocity too, so a moving platform keeps moving, and what hits it bounces by its own
-        // restitution as it would off a static wall
-        const normal = push.normalize();
-        if (weightA && a.velocity3D.dot(normal) < 0)
-            a.velocity3D = a.velocity3D.reflect(normal, a.restitution);
-        if (weightB && b.velocity3D.dot(normal) > 0)
-            b.velocity3D = b.velocity3D.reflect(normal, b.restitution);
+        // mass 0 keeps its velocity too, so a moving platform keeps moving; what hits one that does not move this
+        // pair bounces off it relative to its velocity, as in 2D, so a body riding a platform down stays on it; the
+        // bounce is by the larger restitution of the two, as 2D and the level shapes take it
+        const normal = push.normalize(), restitution = max(a.restitution, b.restitution);
+        render3DBounceOff(a, weightA, weightB ? undefined : b, normal, restitution);
+        render3DBounceOff(b, weightB, weightA ? undefined : a, normal.scale(-1), restitution);
 
         // the settles come after the bounce, so a wall's push is the last word on the velocity
         if (weightA && weightB)

@@ -482,6 +482,20 @@ const gamepadStickData = [], gamepadDpadData = [], gamepadHadInput = [];
 // disconnect, so a button held through a clear is not newly pressed, and reads up until it is let go
 const gamepadButtonsLast = [];
 const gamepadLettingGo = []; // the pads gone this poll whose held buttons read released, cleared on the next
+
+// let go of a gamepad slot's held buttons this poll, so a game waiting for their release gets it, the slot cleared on
+// the next poll with no pad there; one holding nothing clears now
+function gamepadSlotLetGo(i)
+{
+    const held = inputData[i+1];
+    if (held && held.some((v)=> v & 1))
+    {
+        held.forEach((v, k)=> held[k] = v & 1 ? 4 : 0);
+        gamepadLettingGo[i] = true;
+    }
+    else
+        inputData[i+1] = gamepadLettingGo[i] = undefined;
+}
 // per gamepad, how many consecutive frames each axis has rested inside the
 // dead zone, used to tell stick axes from axes that rest at full deflection
 const gamepadAxisCentered = [];
@@ -1030,7 +1044,7 @@ function inputUpdate()
             // the touch gamepad was turned off since the last poll, from a page's own button: slot 0 is the real
             // pads' again from this poll, so what a real pad 0 holds is read, not let go when the overlay hides
             touchGamepadOwning = false;
-            inputData[1] = undefined;
+            gamepadSlotLetGo(0); // what the touch gamepad held is let go
             gamepadStickData[0] = gamepadDpadData[0] = undefined;
         }
 
@@ -1044,6 +1058,7 @@ function inputUpdate()
         // like the one Firefox returns after the highest numbered gamepad disconnects
         const maxGamepads = 8;
         const gamepads = gamepadsEnable ? inputGetGamepads() : []; // disabled lets go of them like unplugged
+        const primaryBefore = gamepadPrimary;
         for (let i=0; i<maxGamepads; ++i)
         {
             // get or create gamepad data
@@ -1052,14 +1067,7 @@ function inputUpdate()
             {
                 // a pad gone with buttons held, unplugged or gamepads turned off, lets them go this poll, so a
                 // release a game waits for comes, and its slot clears on the next
-                const held = inputData[i+1];
-                if (held && !gamepadLettingGo[i] && held.some((v)=> v & 1))
-                {
-                    held.forEach((v, k)=> held[k] = v & 1 ? 4 : 0);
-                    gamepadLettingGo[i] = true;
-                }
-                else
-                    inputData[i+1] = gamepadLettingGo[i] = undefined;
+                gamepadLettingGo[i] ? inputData[i+1] = gamepadLettingGo[i] = undefined : gamepadSlotLetGo(i);
                 gamepadStickData[i] = undefined;
                 gamepadDpadData[i] = undefined;
                 gamepadHadInput[i] = undefined;
@@ -1068,6 +1076,7 @@ function inputUpdate()
                 continue;
             }
 
+            gamepadLettingGo[i] = undefined; // here again, a blip, so its next loss lets its buttons go too
             const data = inputData[i+1] ?? (inputData[i+1] = []);
             const buttonsLast = gamepadButtonsLast[i] ?? (gamepadButtonsLast[i] = []);
             const sticks = gamepadStickData[i] ?? (gamepadStickData[i] = []);
@@ -1143,6 +1152,11 @@ function inputUpdate()
             else if (gamepadDirectionEmulateStick && !sticks.length)
                 sticks[0] = vec2();
         }
+
+        // a primary pad lost as another took over in the same poll lets its held buttons go on the one the game
+        // reads now, as the touch gamepad's are
+        if (gamepadPrimary !== primaryBefore && gamepadLettingGo[primaryBefore])
+            inputData[primaryBefore + 1].forEach((v, k)=> v === 4 && touchGamepadHeldAtHandover.push(k));
 
         // the touch buttons held when a real gamepad took over are released on the pad the game reads now, which
         // may be in another slot or have fewer buttons, unless that pad holds the button itself
@@ -1456,7 +1470,7 @@ function touchGamepadRender()
             touchGamepadStickPointerId.length = 0;
             if (touchGamepadOwning) // a real pad that took slot 0 over keeps what it holds
             {
-                inputData[1] = undefined;
+                gamepadSlotLetGo(0); // what the touch gamepad held is let go
                 gamepadStickData[0] = gamepadDpadData[0] = undefined;
             }
             touchGamepadOwning = false; // turned on again, it takes over from the real pads afresh

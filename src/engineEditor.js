@@ -77,7 +77,8 @@
  *  @property {function(): void} strokeEnd - End the edit: one undo step, and the autosave
  *  @property {function(): void} strokeCancel - Take the edit being made back
  *  @property {function(function(): void): void} bulk - Many paints with one redraw a layer
- *  @property {(redo?: boolean) => void} undo - Undo, or redo with true
+ *  @property {(redo?: boolean) => boolean} undo - Undo, or redo with true; false when there was nothing to undo or
+ *    it waits for a restart
  *  @property {function(): string} toJSON - The map as the text Save writes
  *  @memberof Editor
  */
@@ -226,7 +227,11 @@ class LevelEditor
     onTile(layer, pos, tile) {}
 
     /** Rebuild the level from what the editor changed; set it or override it and the editor has a Restart button,
-     *  which calls it after switching to play */
+     *  which calls it after switching to play
+     *  - It may be async: while its promise runs, Restart, a resize, its undo and redo, Apply and Play wait, with a
+     *    note at the mouse, till the level loads again, the promise settles or the editor closes; the game is held
+     *    still while the editor is open, so one that waits for its frames, a fade, finishes once the editor closes
+     *  @return {void|Promise<void>} */
     onRestart() {}
 
     /** Put the player at a position, a Vector2 in the 2D editor and a Vector3 in the 3D one; set it or override it
@@ -487,6 +492,8 @@ let editorPlayFromMouse = false, editorAdvanced = false;
 // switch to play in the session, with the player at a position when Play from mouse is on and the game has a hook
 function editorPlay(pos)
 {
+    // not while a restart makes the level again, the player it would be put at may be gone
+    if (editorRestartRunning) return editorBusyNudge();
     editorSetOpen(false);
     editorPlayFromMouse && pos && editorHas('onPlayFrom') && levelEditor.onPlayFrom(pos.copy());
 }
@@ -576,6 +583,9 @@ function editorSetOpen(open)
         editorObjectSelection.clear();
         editorMouseOnPanel = false; // the panel hides, with no pointerleave
         editorPanelPointers.clear();
+        // a restart that has not settled is waited on no more: the game runs now, so one that waits for its frames,
+        // a fade, can finish, and the editor opened again takes edits; the way out of one that never settles
+        editorRestartRunning = undefined;
         const state = editorGameState;
         setPaused(state.paused);
         setCameraPos(state.cameraPos);
@@ -646,7 +656,13 @@ function editorMapRestore(map)
 {
     editorAutosaveFlush(); // what an earlier map has waiting is written before this one reads the autosaves
     const known = editorMapList.find((record)=> record.map === map);
-    if (known) return known.restarting = false, map; // loaded again, it has the changes, a restart's wait is over
+    if (known)
+    {
+        // loaded again, it has the changes, a restart's wait is over, the editor's wait for it too
+        known.restarting = false;
+        editorRestartRunning?.records?.includes(known) && (editorRestartRunning = undefined);
+        return map;
+    }
 
     // a map object seen before, its record retired when its layers went, gets it back as it was, its data has the
     // changes already
@@ -1143,6 +1159,8 @@ function editorApplyPending(record)
 {
     const saved = record?.pending;
     if (!saved) return false;
+    // a restart still making the level waits, with the edits kept waiting, as an edit of another size needs one
+    if (editorRestartRunning) return editorBusyNudge(), false;
     if (!editorPendingFits(record, saved))
     {
         record.pendingUnfit = true;
@@ -1450,7 +1468,7 @@ function editorStrokeCancel()
     editorRedraw(stroke);
 }
 
-// undo the last stroke, or redo the last one undone
+// undo the last stroke, or redo the last one undone, false when there was none or it waits
 function editorUndo(redo=false)
 {
     editorStrokeEnd();
@@ -1460,9 +1478,9 @@ function editorUndo(redo=false)
     // restart has settled, which is how one that failed is ended
     if (last?.some((entry)=> entry.layer && editorLayerResizing(entry.layer) ||
         entry.objectLayer && editorRecordResizing(entry.objectLayer.record) || entry.resize && editorRestartRunning))
-        return editorBusyNudge();
+        return editorBusyNudge(), false;
     const stroke = list.pop();
-    if (!stroke) return;
+    if (!stroke) return false;
     (redo ? editorUndoList : editorRedoList).push(stroke);
     editorBulkEdit(()=>
     {
@@ -1477,6 +1495,7 @@ function editorUndo(redo=false)
         }
     });
     editorChanged(stroke);
+    return true;
 }
 
 // after a change the tile layers it touched that need it draw again whole, and the maps it touched are autosaved;
@@ -1499,7 +1518,7 @@ let editorRestartRunning;
 // edit for good, and only its own, by its token, so a late rejection of an older one does not end a newer one's
 function editorCallRestart(records=[])
 {
-    const token = {};
+    const token = /** @type {{records?: Array<Object>}} */ ({});
     records.forEach((record)=> (record.restarting = true, record.restartToken = token));
     const settled = ()=> editorRestartRunning === token && (editorRestartRunning = undefined);
     const ended = ()=>
@@ -1512,6 +1531,7 @@ function editorCallRestart(records=[])
     catch (error) { ended(); throw error; }
     const promise = /** @type {any} */ (result); // onRestart may be async, a game's own, any thenable
     if (typeof promise?.then !== 'function') return;
+    token.records = records;
     editorRestartRunning = token;
     promise.then(settled, (error)=> { ended(); throw error; });
 }
@@ -2856,8 +2876,8 @@ const editorKeys =
 };
 const editorCtrlKeys =
 {
-    z: (shift)=> editorUndo(shift),
-    y: ()=> editorUndo(true),
+    z: (shift)=> void editorUndo(shift),
+    y: ()=> void editorUndo(true),
     c: ()=> editorObjectLayer ? editorCopyObjects() : editorCopy(),
     x: ()=> editorObjectLayer ? editorCutObjects() : editorCut(),
     v: ()=> editorObjectLayer ? editorPasteObjects() : editorPaste(),

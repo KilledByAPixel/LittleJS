@@ -730,7 +730,8 @@ function setGLEnable(enable)
 function setGLCircleSides(sides)
 {
     ASSERT(isNumber(sides) && sides >= 3 && sides < Infinity, 'circles need at least 3 sides, and not Infinity');
-    glCircleSides = min(sides, 1e4); // more could not be seen, and Infinity would never finish
+    // whole, as the rings are kept by their count, and more could not be seen, and Infinity would never finish
+    glCircleSides = clamp(round(sides), 3, 1e4);
 }
 
 /** Set default size of tiles in pixels
@@ -979,7 +980,8 @@ function setSoundIgnoreSilentSwitch(ignore)
  *  @memberof Settings */
 function setSoundVolume(volume)
 {
-    ASSERT(isNumber(volume) && abs(volume) < Infinity, 'setSoundVolume: volume must be a finite number, 1 is full', volume);
+    ASSERT(isNumber(volume) && volume >= 0 && volume < Infinity,
+        'setSoundVolume: volume must be a finite number, 0 or more, 1 is full', volume);
     soundVolume = volume;
     audioUpdateVolume(); // update gain immediately, sound off or not
 }

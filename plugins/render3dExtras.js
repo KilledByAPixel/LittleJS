@@ -1338,7 +1338,8 @@ function meshColliderResolve(collider, center, half, radius, groundAngle, walls,
 {
     let ground = false, sumX = 0, sumY = 0, sumZ = 0;
     // the steep faces' pushes: across, their way across, their own normal on the side they push to, their wall
-    // entry, their triangle, and whether the push is on the face, not off an edge
+    // entry, their triangle, and whether the push is on the face, within about 26 degrees of its normal, not off an
+    // edge, so the bend where a ramp in the crease meets the level V still holds it
     const steep = [];
     const push = meshColliderPushed, cosGround = cos(groundAngle), n = collider.normals;
     for (let pass = 0; pass < 8; ++pass)
@@ -1384,7 +1385,7 @@ function meshColliderResolve(collider, center, half, radius, groundAngle, walls,
                 const s = depth / level;
                 center.x += px * s, center.z += pz * s;
                 steep.push([px * s, pz * s, px / l, pz / l, n[k] * sign(along), n[k+1] * sign(along),
-                    n[k+2] * sign(along), walls.length, deepest, abs(along) > length * .999]);
+                    n[k+2] * sign(along), walls.length, deepest, abs(along) > length * .9]);
                 walls.push(vec3(px / l, 0, pz / l));
             }
             else
@@ -1392,7 +1393,7 @@ function meshColliderResolve(collider, center, half, radius, groundAngle, walls,
                 center.x += px, center.y += py, center.z += pz;
                 const l = hypot(px, pz);
                 l && steep.push([px, pz, px / l, pz / l, n[k] * sign(along), n[k+1] * sign(along),
-                    n[k+2] * sign(along), walls.length, deepest, abs(along) > length * .999]);
+                    n[k+2] * sign(along), walls.length, deepest, abs(along) > length * .9]);
                 walls.push(vec3(px / length, py / length, pz / length));
             }
         }
@@ -1425,8 +1426,8 @@ function meshColliderResolve(collider, center, half, radius, groundAngle, walls,
         for (const e of steep)
             holds(e) && (sideX += e[0], sideZ += e[1]);
         center.x -= sideX, center.z -= sideZ;
-        // lifted by each face's own normal, how far in it is over how upright it is, not for a face almost upright,
-        // and no more than its radius all told; a lift that leaves it under something pushing it down, a ceiling,
+        // lifted by each face's own normal, how far in it is over how upright it is, a face almost upright too, no
+        // more than its radius all told; a lift that leaves it under something pushing it down, a ceiling,
         // is undone
         const fromY = center.y;
         for (let lift = 0; lift < 4; ++lift)
@@ -1434,7 +1435,7 @@ function meshColliderResolve(collider, center, half, radius, groundAngle, walls,
             let up = 0;
             for (const e of steep)
             {
-                if (!holds(e) || !(e[5] > .1) || !meshColliderPush(collider, e[8], center.x, center.y - half, center.z,
+                if (!holds(e) || !(e[5] > 0) || !meshColliderPush(collider, e[8], center.x, center.y - half, center.z,
                     center.x, center.y + half, center.z, radius, push)) continue;
                 const d = push[0] * e[4] + push[1] * e[5] + push[2] * e[6];
                 d > 0 && (up = max(up, d / e[5]));
@@ -1566,8 +1567,8 @@ function render3DReadPixels(textureInfo)
 
 ///////////////////////////////////////////////////////////////////////////////
 // whether the press held is the UI's, begun on a button, a slider or a plain panel, which the camera controls do
-// not turn by
-const render3DUIHasPress = (button=0)=> !!(uiSystem?.activeObject || uiSystem?.isPressOverUI(button));
+// not turn by: a button's own press over it, and for the left button, the one the UI takes, a UI object held
+const render3DUIHasPress = (button=0)=> !!(button === 0 && uiSystem?.activeObject || uiSystem?.isPressOverUI(button));
 
 /**
  * CameraControl3D - Drag to turn the camera around a point, roll the wheel to zoom

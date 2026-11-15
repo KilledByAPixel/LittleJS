@@ -1943,7 +1943,8 @@ const RENDER3D_SNIPPET_NAMES =
 //   emissive map is on), skyTop, skyHorizon, skyBottom (what a reflection shows), normalTex, emissiveTex
 function render3DFragmentSource(fragmentCode, declarations='')
 {
-    const hasNormal = /\bmainNormal\s*\(/.test(fragmentCode || '');
+    // named in code, not in a comment, or it would be declared and called with nothing to link
+    const hasNormal = /\bmainNormal\s*\(/.test((fragmentCode || '').replace(/\/\*[\s\S]*?\*\/|\/\/.*/g, ''));
     return '#version 300 es\n' +
         'precision highp float;' +
         'uniform vec4 lightDir,lightColor,ambientFog,ambientGround,fogColor,shadowParams,fogFade;' +

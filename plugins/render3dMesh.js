@@ -685,7 +685,8 @@ class Mesh
     /** Derive normals from the triangles, of the strip or of the index list
      *  @param {boolean} [smooth] - Round the lighting across faces instead of giving each face a hard edge; flat
      *    normals on an indexed mesh give every corner its own vertex, and a strip that folds, where neighbors share
-     *    vertices that can hold only one normal, is made indexed first
+     *    vertices that can hold only one normal, is made indexed first; smooth normals join points on a grid of
+     *    1e-5 world units, so a mesh much smaller than that is merged, made larger and scaled down by its object
      *  @return {Mesh} */
     computeNormals(smooth=false)
     {

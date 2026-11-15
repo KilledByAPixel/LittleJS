@@ -145,8 +145,9 @@ push: the box passes through. The sensor only notes the time, and its
 ### gameInit
 The walls are objects with `mass = 0`: static, so gravity leaves them
 and the moving boxes land on them. `gravity.y = -.02` is in units per
-frame, added every frame, so a box that fell for a second is moving
-1.2 units a frame.
+frame, added every frame, so a box that fell for a second would move
+1.2 units a frame, but a box that collides is held to `objectMaxSpeed`,
+1 unit a frame.
 
 ## Try it
 - Change `gravity.y = -.02` to `-.005` for a slow fall.

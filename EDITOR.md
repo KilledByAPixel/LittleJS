@@ -78,6 +78,10 @@ level3DAddType('Spawner', Spawner, {rate: 2, enemy: 'bat', color: hsl(0, 1, .5),
 level3DAddType('PlayerStart', (pos)=> playerStart = pos); // a function, for what is not an object
 ```
 
+A constructor may put its body away from the place it is given, `super(pos.add(vec3(0, height / 2, 0)), ...)` to stand
+on its feet: the editor keeps that offset, turned with the object, as it moves and lands it, as a reload does. An
+offset the constructor works out from where it is, sticking itself to the ground, is kept as it was when made.
+
 2D, tested:
 
 <!-- test:type2d -->
@@ -107,7 +111,8 @@ Set the ones you need; each one you leave out does nothing.
 ```javascript
 levelEditor.open();                    // start in the editor; close() plays on with the changes
 levelEditor.isOpen;                    // true while editing
-levelEditor.onRestart = ()=> buildLevel();         // adds a Restart button: load the level again
+levelEditor.onRestart = ()=> buildLevel();         // adds a Restart button: load the level again; it may be async,
+                                                   // the editor waits for it, the game held still till it closes
 levelEditor.onPlayFrom = (pos)=> player.pos = pos; // adds "Play from mouse": put the player at the mouse
 levelEditor.onOpen = ()=> {};          // the editor opened
 levelEditor.onClose = ()=> {};         // it closed, the game plays on

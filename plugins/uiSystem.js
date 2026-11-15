@@ -286,10 +286,11 @@ class UISystemPlugin
                 lastHoverObject.onLeave();
             }
 
-            // each button's press that began over the UI, before anything uses it up, till that button is up
+            // each button's press that began over the UI, before anything uses it up, till that button is up, the
+            // frame it is let go included, so a game acting on its release knows it began on the UI
             for (let button = 0; button < 3; ++button)
             {
-                mouseIsDown(button) || (uiSystem.pressesOverUI[button] = false);
+                mouseIsDown(button) || mouseWasReleased(button) || (uiSystem.pressesOverUI[button] = false);
                 mouseWasPressed(button) && (uiSystem.pressesOverUI[button] = uiSystem.isMouseOverUI());
             }
 
@@ -721,7 +722,7 @@ class UISystemPlugin
     }
 
     /** Check if a mouse button's press held now began over the UI, a button or a plain panel, till that button is
-     *  let go, so a drag begun on the UI does not drag the world under it, as the 3D camera controls check it
+     *  let go, the frame of the release included, so a drag begun on the UI does not drag the world under it, as the 3D camera controls check it
      *  - The UI sets it when it updates, after gameUpdate: on the frame of the press, gameUpdate reads
      *    isMouseOverUI() instead, and gameUpdatePost and the objects read this
      *  @param {number} [button] - 0 left, 1 middle, 2 right

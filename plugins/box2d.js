@@ -1354,10 +1354,15 @@ class Box2dTileLayer extends Box2dStaticObject
     }
     
     /** Create box2d collision fixtures for solid tiles
+    *  - Called from a contact callback, a tile that breaks when hit, it is done once the step is done, as Box2D
+    *    makes no fixtures inside its step
     *  @param {number} [friction]
     *  @param {number} [restitution] */
     buildCollision(friction=.2, restitution=0)
     {
+        if (box2d.world.IsLocked())
+            return void box2dWhenUnlocked(()=> this.destroyed || this.buildCollision(friction, restitution));
+
         // destroy all fixtures and create new ones
         this.destroyAllFixtures();
 

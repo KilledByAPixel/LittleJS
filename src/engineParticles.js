@@ -230,6 +230,8 @@ class ParticleEmitter extends EngineObject
         // emitter spreads an update's particles along its move, where they came out in a clump where it is
         this.emitFrom = vec2();
         this.emitBehind = 0;
+        // how far it moved the update before, so a fast emitter moving steadily is told from one that jumped
+        this.previousMove = 0;
     }
 
     /** Update the emitter to spawn particles, called automatically by engine once each frame */
@@ -245,15 +247,18 @@ class ParticleEmitter extends EngineObject
             this.previousPos = this.pos.copy();
             this.previousAngle = this.angle;
         }
+        // a teleport or a respawn: a move further than objects move in a frame, twice objectMaxSpeed, and four
+        // times its move the update before, so a fast emitter moving steadily, a bullet's, is not one
+        const dx = this.pos.x - this.previousPos.x, dy = this.pos.y - this.previousPos.y, move = hypot(dx, dy);
+        const jumped = move > 2 * objectMaxSpeed && move > 4 * this.previousMove;
+        this.previousMove = move;
         if (this.velocityInheritance)
         {
-            // pass emitter velocity to particles; a move further than any object moves in a frame is a teleport,
-            // which passes none, and a turn the short way round, so an angle wrapping past a full turn is no spin
+            // pass emitter velocity to particles, none on a jump, and a turn the short way round, so an angle
+            // wrapping past a full turn is no spin
             const p = this.velocityInheritance;
-            const dx = this.pos.x - this.previousPos.x, dy = this.pos.y - this.previousPos.y;
-            const teleported = hypot(dx, dy) > 2 * objectMaxSpeed;
-            this.velocity.x = teleported ? 0 : p * dx;
-            this.velocity.y = teleported ? 0 : p * dy;
+            this.velocity.x = jumped ? 0 : p * dx;
+            this.velocity.y = jumped ? 0 : p * dy;
             this.angleVelocity = p * distanceAngle(this.angle, this.previousAngle); // A minus B, the short way
         }
         // tracked even while velocityInheritance is off, so turning it on does not jump
@@ -276,9 +281,8 @@ class ParticleEmitter extends EngineObject
                 // counted in particles, so a new rate applies at once; the update that ends the emit time adds a
                 // hair, as the steps' sum comes out a rounding under it and lost the last particle
                 this.emitTimeBuffer += rate * step + (this.emitTime && this.emitElapsed >= this.emitTime ? 1e-6 : 0);
-                // spread along the move since the last update, the last one where it is now; a jump further than
-                // anything travels in an update, twice objectMaxSpeed, a teleport or a respawn, spreads nothing
-                const travelled = this.emitFrom && this.pos.distance(this.emitFrom) <= 2 * objectMaxSpeed;
+                // spread along the move since the last update, the last one where it is now; a jump spreads nothing
+                const travelled = !jumped;
                 const count = floor(this.emitTimeBuffer);
                 try
                 {
@@ -466,7 +470,9 @@ function particleTileSet(tileInfo)
 let particleCollideFromX = 0, particleCollideFromY = 0;
 
 // the cell of a tile layer the collide callback last answered for in this particle's update, [x, y, data, answer], so
-// the bounce's side tests, which ask the same tile, do not call it again: once a hit, as the 3D emitter's is
+// the bounce's side tests, which ask the same tile, do not call it again: once a hit, as the 3D emitter's is; never
+// the cell the particle was in, where a callback that decides by place (a half tile, a slope) can answer each test
+// its own way
 let particleCollideCell;
 
 // tests if a particle collides with tiles at x, y, through its emitter's collide callback if it has one
@@ -479,7 +485,8 @@ function particleCollideTest(particle, collideCallback, x, y)
     // the callback gets its own vector, made only when there is a tile to decide on, once a cell
     if (!data) return false;
     const cx = floor(x), cy = floor(y), c = particleCollideCell;
-    if (c && c[0] === cx && c[1] === cy && c[2] === data) return c[3];
+    const inOld = cx === floor(particleCollideFromX) && cy === floor(particleCollideFromY);
+    if (!inOld && c && c[0] === cx && c[1] === cy && c[2] === data) return c[3];
     const answer = !!collideCallback(particle, data, vec2(x, y));
     particleCollideCell = [cx, cy, data, answer];
     return answer;

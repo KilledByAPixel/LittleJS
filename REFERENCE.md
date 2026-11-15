@@ -1704,7 +1704,8 @@ obj.setCollision(solids, isSolid, level) // the same flags as in 2D, but the col
                                         // a 3D object has no 2D size, so it is never an obstacle in a 2D scene;
                                         // both objects of a pair need solids, and a pair where neither one blocks
                                         // passes through, so movers hit the level without shoving each other;
-                                        // heavier objects move less and each bounces by its own restitution; mass 0
+                                        // heavier objects move less, a box on one that stands on something meets it as
+                                        // fixed, so a stack holds; each bounces by the larger restitution; mass 0
                                         // stays put and keeps its velocity, a wall the other bounces off;
                                         // collideLevel is on by default: voxel maps, height maps and mesh
                                         // colliders, which an object with mass is kept out of, or the tile
@@ -2356,7 +2357,8 @@ new Box2dObject(pos, size, tileInfo, angle, color, bodyType, renderOrder) // Dyn
 new Box2dStaticObject(pos, size, tileInfo, angle, color, renderOrder)     // Immovable
 new Box2dKinematicObject(pos, size, tileInfo, angle, color, renderOrder)  // Moves but ignores forces
 new Box2dTileLayer(tileLayer)                                  // Static collision from a TileCollisionLayer, built now
-b.buildCollision(friction=.2, restitution=0)                   // Build it again after changing the collision data
+b.buildCollision(friction=.2, restitution=0)                   // Build it again after changing the collision data; from a
+                                                               // contact callback, once the step is done
 obj.beginContact(otherObject, fixture, otherFixture, impactSpeed, contact) // override; fixture is which of this
 obj.endContact(otherObject, fixture, otherFixture)   // object's shapes touched, as addBox and the others returned it,
 // like a foot sensor; impactSpeed is how fast they closed along the normal as they hit, spin included, 0 for a sensor

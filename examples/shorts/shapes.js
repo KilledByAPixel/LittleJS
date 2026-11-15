@@ -40,7 +40,7 @@ radius.
   radians.
 - `drawCircle(pos, size, color, lineWidth, lineColor)` takes one number,
   the diameter. It has no angle.
-- The third ellipse has `CLEAR_BLACK` as its color, which is fully see
+- The second ellipse has `CLEAR_BLACK` as its color, which is fully see
   through, so only its outline shows: a line `.5` units wide in `CYAN`.
 
 `oscillate(.5)` is a sine wave that goes from 0 to 1 and back, here at
@@ -75,7 +75,7 @@ pointing up, turned clockwise by the angle.
 - Change the `3` before `PURPLE` to `6` for a hexagon.
 - In the star, change `.4` to `.8` for short points, or `.1` for thin
   ones.
-- Fill the third ellipse: change its `CLEAR_BLACK` to `BLUE`.
+- Fill the second ellipse: change its `CLEAR_BLACK` to `BLUE`.
 - Add `, true` after `MAGENTA`. That is the `wrap` argument, and it
   joins the last point of the Z back to the first.
 

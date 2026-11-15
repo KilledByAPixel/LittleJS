@@ -370,16 +370,22 @@ class NewgroundsPlugin
      *  @template T
      *  @param {number} slot
      *  @param {function(): Promise<T>} task
+     *  @param {number} [bound] - How long it may take once sent before the next goes, in ms: a load makes two
+     *  requests, so it waits twice the request timeout
      *  @return {Promise<T>}
      *  @ignore */
-    slotInOrder(slot, task)
+    slotInOrder(slot, task, bound=newgroundsTimeoutMS + 1e3)
     {
-        const key = +slot, run = (this.slotChains.get(key) ?? Promise.resolve()).then(task, task);
-        let timeUp = ()=> {};
-        const timedOut = new Promise((resolve)=> timeUp = ()=> resolve(undefined));
-        const timer = setTimeout(()=> timeUp(), newgroundsTimeoutMS + 1e3);
-        /** @type {any} */ (timer)?.unref?.(); // a test's process is not kept open by it
-        const done = Promise.race([run, timedOut]).then(()=> clearTimeout(timer), ()=> clearTimeout(timer));
+        const key = +slot, previous = this.slotChains.get(key) ?? Promise.resolve();
+        const run = previous.then(task, task);
+        // its time starts when it is sent, once the one before it settled, not when it is queued, or a call behind
+        // a slow one would be let go while the slow one is still out and land before it
+        const done = previous.then(()=> new Promise((resolve)=>
+        {
+            const timer = setTimeout(resolve, bound);
+            /** @type {any} */ (timer)?.unref?.(); // a test's process is not kept open by it
+            run.then(resolve, resolve).finally(()=> clearTimeout(timer));
+        }));
         this.slotChains.set(key, done);
         done.then(()=> this.slotChains.get(key) === done && this.slotChains.delete(key));
         return run;
@@ -397,7 +403,7 @@ class NewgroundsPlugin
     async cloudLoad(slot)
     {
         ASSERT(isNumber(slot), 'Newgrounds cloudLoad: slot must be a number', slot);
-        const {value, failure} = await this.slotInOrder(slot, ()=> this.loadSlot(slot));
+        const {value, failure} = await this.slotInOrder(slot, ()=> this.loadSlot(slot), 2 * newgroundsTimeoutMS + 1e3);
         failure ? this.loadFailures.set(+slot, failure) : this.loadFailures.delete(+slot);
         return value;
     }

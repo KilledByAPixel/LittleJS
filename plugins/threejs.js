@@ -137,11 +137,13 @@ class ThreeJSPlugin
         const dpr = getCanvasPixelRatio();
         const bufferSizeX = mainCanvasSize.x * dpr | 0;
         const bufferSizeY = mainCanvasSize.y * dpr | 0;
-        if (threeCanvas.width != bufferSizeX || threeCanvas.height != bufferSizeY)
+        // the camera too, as a canvas already three's default 300 by 150 has the right buffer and an aspect of 1
+        const aspect = mainCanvasSize.x / mainCanvasSize.y;
+        if (threeCanvas.width != bufferSizeX || threeCanvas.height != bufferSizeY || this.camera.aspect != aspect)
         {
             this.renderer.setPixelRatio(dpr);
             this.renderer.setSize(mainCanvasSize.x, mainCanvasSize.y, false);
-            this.camera.aspect = mainCanvasSize.x / mainCanvasSize.y;
+            this.camera.aspect = aspect;
             this.camera.updateProjectionMatrix();
         }
         if (threeCanvas.style.cssText != mainCanvas.style.cssText)

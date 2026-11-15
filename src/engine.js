@@ -1113,9 +1113,11 @@ function engineObjectsUpdate()
 // sorted and most frames change none
 function engineObjectsSort()
 {
+    // a renderOrder set to NaN after construction, as renderOrder = -pos.y can be, leaves the list unsorted
+    ASSERT(!engineObjects.length || isNumber(engineObjects[0].renderOrder), 'an object renderOrder is not a number',
+        engineObjects[0]);
     for (let i = engineObjects.length; --i > 0;)
     {
-        // a renderOrder set to NaN after construction, as renderOrder = -pos.y can be, leaves the list unsorted
         ASSERT(isNumber(engineObjects[i].renderOrder), 'an object renderOrder is not a number', engineObjects[i]);
         if (engineObjects[i].renderOrder < engineObjects[i-1].renderOrder)
             return void engineObjects.sort((a,b)=> a.renderOrder - b.renderOrder);

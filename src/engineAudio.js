@@ -34,7 +34,7 @@ let audioMasterVolume; // the soundVolume the master gain was last set to
 if (audioMasterGain)
 {
     audioMasterGain.connect(audioContext.destination);
-    audioMasterGain.gain.value = audioMasterVolume = soundVolume; // set starting value
+    audioMasterGain.gain.value = max(audioMasterVolume = soundVolume, 0); // set starting value, a negative is silence
     audioContext.addEventListener?.('statechange', audioStateChange);
 }
 
@@ -43,7 +43,7 @@ function audioUpdateVolume()
 {
     // a volume that is not a number, from a slider's text say, is not handed on, where every frame it would throw
     if (audioMasterGain && soundVolume !== audioMasterVolume && isFinite(soundVolume))
-        audioMasterGain.gain.value = audioMasterVolume = soundVolume;
+        audioMasterGain.gain.value = max(audioMasterVolume = soundVolume, 0); // a negative set directly is silence
 }
 
 // the current master effect, kept so setAudioMasterEffect can undo the route it made,
