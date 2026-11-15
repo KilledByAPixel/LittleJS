@@ -1070,21 +1070,26 @@ class Render3DPlugin
     /** Find the nearest object under a screen position or along a ray, for clicking on things
      *  - A mesh is hit on its triangles, the ones that face the ray as they are drawn, both sides of a doubleSided
      *    mesh; a sprite is hit as the quad it draws, and a height map, voxel map or mesh collider on its surface
-     *  - A glTF model or an attached prefab is hit through its parts and is what is returned, not the part
+     *  - A glTF model or an attached prefab in the list is hit through its parts and is the object given back, with
+     *    the part hit as part; a part is hit only through its owner, so a list that leaves a player out never hits
+     *    its model
      *  - engineObjectsRaycast3D is the other half of this, every object along a ray instead of the nearest
      *  @param {Vector2|Ray3D} from - A screen position like mousePosScreen, or a ray to look along
      *  @param {Array<EngineObject>} [objects] - Defaults to every object; only those with a mesh or a sprite count,
      *    and the height maps, voxel maps and mesh colliders, on their surfaces
-     *  @return {{object: EngineObject3D, distance: number}|undefined} */
+     *  @return {{object: EngineObject3D, distance: number, part: EngineObject3D}|undefined} - part is what was hit,
+     *    the object or a part of it */
     pick(from, objects=engineObjects)
     {
         const ray = from instanceof Ray3D ? from : this.screenToRay(from);
         let nearest;
         for (const o of objects)
         {
-            const distance = render3DRaycastOwned(ray, o);
-            if (distance !== undefined && (!nearest || distance < nearest.distance)) // only a 3D object has a distance
-                nearest = {object: render3DHitOwner(/** @type {EngineObject3D} */ (o)), distance};
+            if (/** @type {EngineObject3D} */ (o).drawOwner)
+                continue; // a model's part, hit through its model
+            const hit = render3DRaycastOwned(ray, o);
+            if (hit && (!nearest || hit.distance < nearest.distance)) // only a 3D object is hit
+                nearest = {object: /** @type {EngineObject3D} */ (o), distance: hit.distance, part: hit.part};
         }
         return nearest;
     }

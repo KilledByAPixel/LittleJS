@@ -121,16 +121,16 @@ let tileCollisionFromObject, tileCollisionFromPos;
 let tileCollisionFromOn;
 
 // the bottom and top of each object's box as its last physics left it standing on a tile layer with one way tiles,
-// and where it was, [bottom, top, x, y], so a one way platform judges one that grew since by the box it stood there
-// with, see tileCollisionOneWayPass
+// and the height it was at, [bottom, top, y], so a one way platform judges one that grew since by the box it stood
+// there with, see tileCollisionOneWayPass
 const tileCollisionStood = /* @__PURE__ */ new WeakMap;
 
-// the box an object stood with, while it is still where it stood: the game moving it, to a door or a checkpoint,
-// leaves it
+// the box an object stood with, while it is still at the height it stood: the game moving it up or down, to a door
+// or a checkpoint, leaves it, a move to the side or a snap of x to the pixels keeps it
 const tileCollisionStoodAt = (object, pos)=>
 {
     const stood = tileCollisionStood.get(object);
-    return stood && stood[2] === pos.x && stood[3] === pos.y ? stood : undefined;
+    return stood && stood[2] === pos.y ? stood : undefined;
 };
 
 // for a one way test of the layer for the object being moved, standing on that layer when its move began, the edges

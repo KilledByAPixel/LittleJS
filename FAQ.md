@@ -425,7 +425,7 @@ const { pathToFileURL } = require('node:url');
 
 // the game's files, served to the window as app://game/...
 protocol.registerSchemesAsPrivileged([{scheme: 'app',
-    privileges: {standard: true, secure: true, supportFetchAPI: true}}]);
+    privileges: {standard: true, secure: true, supportFetchAPI: true, stream: true}}]); // stream, for video and audio
 
 app.whenReady().then(()=>
 {

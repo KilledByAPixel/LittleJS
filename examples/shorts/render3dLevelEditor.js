@@ -171,7 +171,7 @@ since the editor opens with the game's view.
   on them.
 - Add an object in the code: after the `PlayerStart` line add
   `{id: 9, type: 'Sphere', pos: [2, 1, 2], scale: [2, 2, 2]},`.
-- Jump higher: `player.jumpSpeed = .35;`.
+- Jump higher: `player.jumpSpeed = .2;` to `player.jumpSpeed = .35;`.
 - Select the ramp, untick `meshCollision` and tick `solid` in the
   panel, then play: it collides as its box, too tall to walk onto.
 - Change `shadows: true` to `shadows: false` in the scene block.

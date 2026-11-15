@@ -676,8 +676,16 @@ class HeightMap extends EngineObject3D
      *  @ignore */
     faceNormal(x, z)
     {
-        const e = min(this.mapSize.x / (this.columns - 1), this.mapSize.y / (this.rows - 1)) * 1e-3;
-        const h = this.getHeight(x, z), gx = (this.getHeight(x + e, z) - h) / e, gz = (this.getHeight(x, z + e) - h) / e;
+        // the slope of the triangle getHeight reads there, from its corners, flat off the map's edges
+        const p = this.pos3D, columns = this.columns, rows = this.rows, h = this.heights, size = this.mapSize;
+        if (columns < 2 || rows < 2) return vec3(0, 1, 0);
+        const u = (x - p.x) / size.x + .5, v = (z - p.z) / size.y + .5;
+        const cu = clamp(u * (columns - 1), 0, columns - 1), cv = clamp(v * (rows - 1), 0, rows - 1);
+        const i = min(floor(cu), columns - 2), j = min(floor(cv), rows - 2), fu = cu - i, fv = cv - j;
+        const a = h[j][i], b = h[j+1][i], c = h[j+1][i+1], d = h[j][i+1];
+        let du = fu + fv <= 1 ? d - a : c - b, dv = fu + fv <= 1 ? b - a : c - d;
+        (u < 0 || u > 1) && (du = 0), (v < 0 || v > 1) && (dv = 0);
+        const gx = du * (columns - 1) / size.x * this.height, gz = dv * (rows - 1) / size.y * this.height;
         return vec3(-gx, 1, -gz).normalize();
     }
 
@@ -775,9 +783,10 @@ class HeightMap extends EngineObject3D
             // a gentle rise along the move, does not climb it, and its side stops at the face; looked at along the
             // move in steps of half a cell, as a MeshCollider cuts its move, so a fast one does not step over a face
             // one cell wide; at the first place a face stops it the rest of the move goes on across the face, looked
-            // at the same way from there, three times at most, then it stays where the last face stopped it
+            // at the same way from there, fifteen times at most, then it stays where the last face stopped it
             let startX = oldPos.x, startZ = oldPos.z;
-            for (let pass = 0; pass < 4; ++pass)
+            const ring = 4 * max(2, ceil(PI * side / 2 / max(.5, cell * 2)));
+            for (let pass = 0; pass < 16; ++pass)
             {
                 const moveX = p.x - startX, moveZ = p.z - startZ;
                 const steps = min(ceil(hypot(moveX, moveZ) / cell * 2), 64);
@@ -785,9 +794,11 @@ class HeightMap extends EngineObject3D
                 for (let k = 1; k <= steps && !hit; ++k)
                 {
                     const t = k / steps, qx = startX + moveX * t, qz = startZ + moveZ * t;
-                    for (let i = 0; i < 9 && !hit; ++i)
+                    for (let i = 0; i <= ring && !hit; ++i)
                     {
-                        const a = i * PI / 4, r = i < 8 ? side : 0, sx = qx + cos(a) * r, sz = qz + sin(a) * r;
+                        // round its side no further apart than half a unit or two cells, and its middle last
+                        const a = i * 2 * PI / ring, r = i < ring ? side : 0, ca = cos(a), sa = sin(a);
+                        const sx = qx + (abs(ca) < 1e-9 ? 0 : ca) * r, sz = qz + (abs(sa) < 1e-9 ? 0 : sa) * r;
                         const n = this.faceNormal(sx, sz), l = hypot(n.x, n.z);
                         if (n.y >= steep || !l) continue;
                         const ux = -n.x / l, uz = -n.z / l, into = (moveX * ux + moveZ * uz) * t;
@@ -808,9 +819,9 @@ class HeightMap extends EngineObject3D
                 if (!hit) break;
                 // the rest of the move from there, but the part of it into the face, and the speed into it
                 const {ux, uz} = hit, restX = p.x - hit.x, restZ = p.z - hit.z;
-                const restInto = pass < 3 ? max(0, restX * ux + restZ * uz) : 0;
-                p.x = pass < 3 ? hit.x + restX - ux * restInto : hit.x;
-                p.z = pass < 3 ? hit.z + restZ - uz * restInto : hit.z;
+                const restInto = pass < 15 ? max(0, restX * ux + restZ * uz) : 0;
+                p.x = pass < 15 ? hit.x + restX - ux * restInto : hit.x;
+                p.z = pass < 15 ? hit.z + restZ - uz * restInto : hit.z;
                 const v = o.velocity3D, vInto = v.x * ux + v.z * uz;
                 vInto > 0 && (v.x -= ux * vInto, v.z -= uz * vInto);
                 startX = hit.x, startZ = hit.z;
@@ -1321,6 +1332,7 @@ const meshColliderPushed = [0, 0, 0];
 function meshColliderResolve(collider, center, half, radius, groundAngle, walls, moveX=0, moveZ=0)
 {
     let ground = false, sumX = 0, sumY = 0, sumZ = 0;
+    const firstWall = walls.length, steep = []; // the steep faces' pushes across, each with its face's way across
     const push = meshColliderPushed, cosGround = cos(groundAngle), n = collider.normals;
     for (let pass = 0; pass < 8; ++pass)
     {
@@ -1364,11 +1376,14 @@ function meshColliderResolve(collider, center, half, radius, groundAngle, walls,
             {
                 const s = depth / level;
                 center.x += px * s, center.z += pz * s;
+                steep.push([px * s, pz * s, px / l, pz / l]);
                 walls.push(vec3(px / l, 0, pz / l));
             }
             else
             {
                 center.x += px, center.y += py, center.z += pz;
+                const l = hypot(px, pz);
+                l && steep.push([px, pz, px / l, pz / l]);
                 walls.push(vec3(px / length, py / length, pz / length));
             }
         }
@@ -1376,6 +1391,29 @@ function meshColliderResolve(collider, center, half, radius, groundAngle, walls,
     // held by faces whose pushes add up to within groundAngle of up, as a V between two steep faces is, it stands
     // there, so a game's jump takes it out; one steep face alone still slides
     if (!ground && sumY > 0 && sumY >= cosGround * hypot(sumX, sumY, sumZ)) ground = true;
+    // in a V, two steep faces facing each other across it, their pushes along the crease are taken back, of its
+    // place and of the speed the walls take, so a V whose floor slopes does not carry it down the crease, standing
+    // or walking up it, as a ground face's push is straight up; across the crease they hold it between the faces
+    for (let i = 0; i < steep.length; ++i)
+    for (let j = i + 1; j < steep.length; ++j)
+    {
+        const [, , ax, az] = steep[i], [, , bx, bz] = steep[j];
+        if (ax * bx + az * bz > -.5) continue;
+        // the crease runs across the two faces' ways
+        const dx = ax - bx, dz = az - bz, l = hypot(dx, dz), cx = -dz / l, cz = dx / l;
+        let along = 0;
+        for (const [px, pz] of steep) along += px * cx + pz * cz;
+        center.x -= cx * along, center.z -= cz * along;
+        for (let k = firstWall; k < walls.length; ++k)
+        {
+            const w = walls[k], into = w.x * cx + w.z * cz;
+            w.x -= cx * into, w.z -= cz * into;
+            const length = w.length();
+            length && w.scale(1 / length);
+        }
+        i = steep.length; // once
+        break;
+    }
     return ground;
 }
 
@@ -1423,6 +1461,9 @@ function meshColliderCollide(collider, o, oldPos, wasOn)
     }
     p.set(center.x, center.y, center.z);
     const v = o.velocity3D, restitution = max(o.restitution, collider.restitution);
+    // standing, its fall is stopped first, so the steep faces of a V take back only speed across, and its fall
+    // taken back along them does not leave it a speed down the crease
+    ground && v.y < 0 && (v.y *= -restitution);
     for (const n of walls)
     {
         const into = v.dot(n);
@@ -1430,11 +1471,7 @@ function meshColliderCollide(collider, o, oldPos, wasOn)
             v.set(v.x - n.x * into * (1 + restitution), v.y - n.y * into * (1 + restitution), v.z - n.z * into * (1 + restitution));
     }
     if (ground)
-    {
-        if (v.y < 0)
-            v.y *= -restitution;
         o.groundObject = collider;
-    }
 }
 
 // read an image's pixel bytes through the engine's work canvas, as {data, width, height}
@@ -1480,6 +1517,9 @@ function render3DReadPixels(textureInfo)
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+// whether the press held is the UI's, begun on a button or a slider, which the camera controls do not turn by
+const render3DUIHasPress = ()=> !!uiSystem?.activeObject;
+
 /**
  * CameraControl3D - Drag to turn the camera around a point, roll the wheel to zoom
  * - An EngineObject3D, so move its pos3D to follow something, or parent it to an object
@@ -1537,7 +1577,7 @@ class CameraControl3D extends EngineObject3D
     /** Read the mouse and turn the orbit, called automatically each frame */
     update()
     {
-        if (mouseIsDown(this.dragButton))
+        if (mouseIsDown(this.dragButton) && !render3DUIHasPress())
         {
             // the scene follows the drag
             this.yaw -= mouseDeltaScreen.x * this.dragSpeed;
@@ -1692,7 +1732,7 @@ class ThirdPersonCamera3D extends EngineObject3D
             if (this.lockPointer && mouseWasPressed(this.dragButton))
                 pointerLockRequest();
             const d = mouseDeltaScreen, stick = gamepadStick(this.stick);
-            if ((pointerLockIsActive() || mouseIsDown(this.dragButton)) && (d.x || d.y))
+            if ((pointerLockIsActive() || mouseIsDown(this.dragButton) && !render3DUIHasPress()) && (d.x || d.y))
                 this.turn(-d.x * this.lookSpeed, d.y * this.lookSpeed);
             if (stick.x || stick.y)
                 this.turn(-stick.x * this.stickSpeed * timeDelta, -stick.y * this.stickSpeed * timeDelta);
@@ -1884,7 +1924,7 @@ class FirstPersonCamera3D extends EngineObject3D
         // a click captures the mouse, then it looks around while captured or while a button is held
         if (this.lockPointer && mouseWasPressed(this.dragButton))
             pointerLockRequest();
-        if (pointerLockIsActive() || mouseIsDown(this.dragButton))
+        if (pointerLockIsActive() || mouseIsDown(this.dragButton) && !render3DUIHasPress())
         {
             this.yaw -= mouseDeltaScreen.x * this.lookSpeed;
             this.pitch -= mouseDeltaScreen.y * this.lookSpeed;

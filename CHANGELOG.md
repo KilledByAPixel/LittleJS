@@ -39,7 +39,7 @@ What changed in each release, newest first. Releases before 1.20.0 are on the
 - The FAQ's Electron recipe serves the game's folder to its window, so a Box2D game runs, and says what to change in a Vite project
 
 ### Breaking Changes
-- 3D: `render3D.pick` and `engineObjectsRaycast3D` hit a glTF model or an attached prefab through its parts and give back the model or the prefab, not the part, and find it in a list of models
+- 3D: `render3D.pick` and `engineObjectsRaycast3D` hit a glTF model or an attached prefab through its parts and give back the model or the prefab, not the part, and find it in a list of models; a part is hit only through its owner, so a list that leaves a player out never hits its model, and `pick` says which part was hit, `hit.part`
 - 3D: MeshCollider and HeightMap follow one slope rule. A face or ground steeper than both the object's `groundAngle` and 45 degrees stops a move into it, when it rises past the body's step, so a curb lower than the step is still walked over; ground steeper than `groundAngle` is not ground, so it is not stood or jumped on, and the body slides down it. Before, a HeightMap let a body walk up any slope and MeshCollider faces up to about 80 degrees were climbed. A game whose levels have steep ramps meant to be walked raises the walker's `groundAngle`, up to just under PI/2
 
 ### Fixes
@@ -155,6 +155,16 @@ What changed in each release, newest first. Releases before 1.20.0 are on the
 - A model's draw setting set to `null`, or a color equal to the default, leaves its parts their own, where it took a glTF's shaders or maps away
 - `loadAtlas` warns of split layers only when one name is under two brackets, not on a merged sheet of files with brackets in their titles, and names a field that is not a number
 - `SpriteAnimator.set` says what it does on the update a play ends, and how to start the clip again then
+- HeightMap: a body walking up a V valley keeps its speed, where it lost most of each move at speed, its side samples are spaced by distance, so a thin post can not slip under a big body, and a post holds it on either side alike; the side check costs a few times less
+- MeshCollider: a body in a V between two steep faces whose floor slopes stands still and walks up and down the crease, where it crept down it and walked up it backward
+- Editors on touch: a tap on the panel no longer leaves the editor thinking the mouse is over it, so taps and pinches on the level work after it (check on a phone); a pinch takes back an object its first finger placed on a 2D object layer, and in either editor a quick tap before a pinch keeps what it placed
+- The UI reads a gamepad stick by its main axis, past half, so a push to the side on a slider turns it and does not move the selection; it goes by the last pointer used, so a touch screen laptop shows mouse hover after the mouse moves
+- A real mouse on a touch screen laptop is no longer dropped after a touch, where its release could be lost and the button stay held; a pinch lets go of its first finger's press where that finger is
+- A body on one way tiles that the game moves to the side, or snaps to pixels, keeps standing on them
+- 2D editor: a map of objects alone resized with an async `onRestart` waits for it as a tile map does, a second resize waits too, the status line and ghost tiles read the right cells meanwhile, and a property refused puts its input back
+- 3D editor: a game tool whose `onPress` closes the editor is not left held for the next open
+- The 3D camera controls do not turn while a press that began on a UI button or slider is dragged
+- `box2dInit` in a page fetches the wasm itself, so a failed fetch, offline or blocked, rejects with a message, where it waited for ever; `loadAtlas` reads the last bracket of a split export's names; the FAQ's Electron script streams video and audio
 
 ## 1.30.1 - 2026-11-12
 

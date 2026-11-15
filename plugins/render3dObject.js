@@ -1158,19 +1158,23 @@ function render3DRaycastObject(ray, o)
     return render3DRaycastMesh(local, mesh);
 }
 
-// how far along a ray an object is hit, through the parts it draws with when it has nothing of its own to hit, a glTF
-// model's or an attached prefab's: the nearest of them
+// how far along a ray an object is hit and what of it was hit: itself, or for one with nothing of its own to hit, a
+// glTF model or an attached prefab, the nearest of the parts it draws with; undefined for a miss
 function render3DRaycastOwned(ray, o)
 {
-    let distance = render3DRaycastObject(ray, o);
-    if (distance === undefined && o instanceof EngineObject3D && !o.destroyed && !(o.mesh || o.tileInfo))
+    const distance = render3DRaycastObject(ray, o);
+    if (distance !== undefined) return {distance, part: /** @type {EngineObject3D} */ (o)};
+    let nearest;
+    if (o instanceof EngineObject3D && !o.destroyed && !(o.mesh || o.tileInfo))
         for (const child of o.children)
         {
-            const d = /** @type {EngineObject3D} */ (child).drawOwner === o ? render3DRaycastOwned(ray, child) : undefined;
-            d !== undefined && (distance === undefined || d < distance) && (distance = d);
+            const hit = /** @type {EngineObject3D} */ (child).drawOwner === o ? render3DRaycastOwned(ray, child) : undefined;
+            hit && (!nearest || hit.distance < nearest.distance) && (nearest = hit);
         }
-    return distance;
+    return nearest;
 }
+
+
 
 // the nearest of a list of objects a ray hits, the part itself, which pick hands on as its owner
 function render3DPickPart(ray, objects)
@@ -1183,13 +1187,6 @@ function render3DPickPart(ray, objects)
             nearest = {object: /** @type {EngineObject3D} */ (o), distance};
     }
     return nearest;
-}
-
-// the object a hit is for: a part's owner, the model or prefab handle it is part of, up to the top
-function render3DHitOwner(o)
-{
-    while (o.drawOwner) o = o.drawOwner;
-    return o;
 }
 
 // how far along a ray, in the mesh's own space, its nearest triangle is hit, or undefined: the triangles that face
@@ -1278,8 +1275,9 @@ function render3DRaycastDisc(ray, center, radius)
  * Collect every EngineObject3D a ray passes through, nearest first, the 3D twin of engineObjectsRaycast
  * - The ray has no end, so everything along it counts however far away it is
  * - Use render3D.pick for the nearest one on its own, with the distance to it
+ * - A glTF model or an attached prefab in the list is hit through its parts and is what is given back; a part is
+ *   hit only through its owner, so a list that leaves a model out never hits it
  * @param {Ray3D} ray - From render3D.screenToRay, or any ray
- * - A glTF model or an attached prefab is hit through its parts and is in the list once, not its parts
  * @param {Array<EngineObject>} [objects] - Defaults to every object; only those with a mesh or a sprite count, and
  *   the height maps, voxel maps and mesh colliders, on their surfaces
  * @return {Array<EngineObject3D>}
@@ -1287,16 +1285,15 @@ function render3DRaycastDisc(ray, center, radius)
  */
 function engineObjectsRaycast3D(ray, objects=engineObjects)
 {
-    // a model or attached prefab once, at its nearest part, whether the list has it, its parts or both
-    const nearest = new Map;
+    const hits = [];
     for (const o of objects)
     {
-        const distance = render3DRaycastOwned(ray, o);
-        if (distance === undefined) continue;
-        const owner = render3DHitOwner(/** @type {EngineObject3D} */ (o)); // only a 3D object has a distance
-        nearest.has(owner) && nearest.get(owner) <= distance || nearest.set(owner, distance);
+        if (/** @type {EngineObject3D} */ (o).drawOwner)
+            continue; // a model's part, hit through its model
+        const hit = render3DRaycastOwned(ray, o);
+        hit && hits.push({o: /** @type {EngineObject3D} */ (o), distance: hit.distance}); // only a 3D object is hit
     }
-    return [...nearest].sort((a, b)=> a[1] - b[1]).map(([o])=> o);
+    return hits.sort((a, b)=> a.distance - b.distance).map((hit)=> hit.o);
 }
 
 /**

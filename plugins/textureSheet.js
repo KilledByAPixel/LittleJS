@@ -595,9 +595,12 @@ function parseAtlas(data)
         const bracketsOf = new Map;
         for (const f of frames)
         {
-            const bracket = f?.name.match(/\([^()]+\)/)?.[0];
+            // the last bracket, the layer's, Aseprite names a split entry "title (layer) frame", so a title with a
+            // bracket of its own, "hero (v2)", keeps it in the rest
+            const bracket = f?.name.match(/\([^()]+\)/g)?.pop();
             if (!bracket) continue;
-            const rest = f.name.replace(bracket, ''), set = bracketsOf.get(rest) ?? new Set;
+            const at = f.name.lastIndexOf(bracket);
+            const rest = f.name.slice(0, at) + f.name.slice(at + bracket.length), set = bracketsOf.get(rest) ?? new Set;
             bracketsOf.set(rest, set.add(bracket));
         }
         const split = listed ? data.meta.layers.map((layer)=> '(' + layer?.name + ')')

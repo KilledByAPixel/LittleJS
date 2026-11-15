@@ -145,10 +145,18 @@ let inputWasTouching = 0, inputTouchIdentifier; // the touch driving the mouse, 
 // the touches the game saw start, so one that began on a debug panel, which keeps its touchstart, is no game finger
 const inputTouchIds = /* @__PURE__ */ new Set;
 let inputLastTouchTime = -1e9; // when a touch event last came, the mouse events a browser makes from a tap follow it
+// if the last pointer used was a finger, not a mouse, for a touch screen laptop, where both are; a touch device starts
+// with it, and the UI goes by it for hover and touch sizes
+let inputTouchLast = isTouchDevice;
 
-// is this mouse event one the browser made from a touch, which the touch input already handled
+// is this mouse event one the browser made from a touch, which the touch input already handled: what the browser
+// says when it says, as Chrome does, so a real mouse on a touch screen laptop is never taken for one, and otherwise
+// one that came within half a second of a touch
 function inputIsTouchMouseEvent(e)
-{ return e.sourceCapabilities?.firesTouchEvents || performance.now() - inputLastTouchTime < 500; }
+{
+    const caps = e.sourceCapabilities;
+    return caps ? !!caps.firesTouchEvents : performance.now() - inputLastTouchTime < 500;
+}
 
 // is a real gamepad being used, a button down or a standard stick pushed, only read to hand over from the touch
 // gamepad, a non standard pad's axes may rest at full deflection so they are not trusted here
@@ -614,6 +622,7 @@ function inputInit()
     {
         // a mouse on a touchscreen laptop works, only the mouse events a tap makes are left to the touch input
         if (touchInputEnable && inputIsTouchMouseEvent(e)) return;
+        inputTouchLast = false;
 
         // fix stalled audio requiring user interaction
         if (soundEnable && !headlessMode && audioContext && !audioIsRunning())
@@ -640,9 +649,8 @@ function inputInit()
     }
     function onMouseUp(e)
     {
-        if (touchInputEnable && inputIsTouchMouseEvent(e)) return;
-
-        // released only if it was pressed, like a key or a touch
+        // released only if it was pressed, like a key or a touch, so a release the browser made from a tap, which
+        // the touch let go already, does nothing, and a real mouse's is never lost to a touch just before it
         if (inputData[0][e.button] & 1)
             inputData[0][e.button] = (inputData[0][e.button]&2) | 4;
 
@@ -653,6 +661,7 @@ function inputInit()
     function onMouseMove(e)
     {
         mouseInWindow = true;
+        inputIsTouchMouseEvent(e) || (inputTouchLast = false);
         const mousePosScreenLast = mousePosScreen;
         mousePosScreen = mouseEventToScreen(vec2(e.x,e.y));
 
@@ -744,6 +753,7 @@ function inputInit()
                 if (!touchInputEnable) return;
             }
             inputLastTouchTime = performance.now();
+            inputTouchLast = true;
 
             // when the touch gamepad is enabled it owns touch input: suppress the
             // touch->mouse passthrough entirely unless touchGamepadPassthrough is set
@@ -777,7 +787,8 @@ function inputInit()
                     {
                         const [a, b] = gameTouches, key = a.identifier + ' ' + b.identifier;
                         const distance = hypot(a.clientX - b.clientX, a.clientY - b.clientY);
-                        if (inputPinch && inputPinch.key === key)
+                        const going = inputPinch && inputPinch.key === key;
+                        if (going)
                         {
                             const delta = (inputPinch.distance - distance) / 50;
                             touchPinch += delta;
@@ -785,7 +796,9 @@ function inputInit()
                                 mouseWheel += delta;
                         }
                         inputPinch = {key, distance}; // other fingers start it over, with no jump
-                        if (pinching)
+                        // between the fingers from the pinch's next event on, so the press its second finger lets
+                        // go of is let go where the first finger was, and a piece dragged drops there
+                        if (pinching && going)
                             pos = vec2((a.clientX + b.clientX) / 2, (a.clientY + b.clientY) / 2);
                     }
                     else

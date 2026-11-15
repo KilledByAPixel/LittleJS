@@ -307,7 +307,7 @@ class UISystemPlugin
                 if (!navigableObjects.includes(uiSystem.navigationObject))
                     uiSystem.navigationObject = undefined;
 
-                if (!isTouchDevice)
+                if (!inputTouchLast)
                 if (uiSystem.navigationMode && !uiSystem.navigationObject)
                 {
                     // select first auto focus object
@@ -738,7 +738,7 @@ class UISystemPlugin
         return uiSystem.uiObjects.some(o=> !o.parent && isOverRecursive(o));
     }
 
-    /** Get navigation direction from gamepad or keyboard
+    /** Get navigation direction from gamepad or keyboard, a stick by its main axis only, see uiNavigationStick
      *  @return {number} */
     getNavigationDirection()
     {
@@ -746,7 +746,7 @@ class UISystemPlugin
         const both = uiSystem.navigationDirection === 2;
         if (isUsingGamepad)
         {
-            const stick = gamepadStick(0, gamepadPrimary);
+            const stick = uiNavigationStick();
             const dpad = gamepadDpad(gamepadPrimary);
             if (both)
                 return -(stick.y || dpad.y) || (stick.x || dpad.x);
@@ -773,7 +773,7 @@ class UISystemPlugin
         const vertical = uiSystem.navigationDirection === 1;
         if (isUsingGamepad)
         {
-            const stick = gamepadStick(0, gamepadPrimary);
+            const stick = uiNavigationStick();
             const dpad = gamepadDpad(gamepadPrimary);
             return !vertical ? (stick.y || dpad.y) : (stick.x || dpad.x);
         }
@@ -884,6 +884,14 @@ class UISystemPlugin
         }
         return confirmMenu;
     }
+}
+
+// the primary gamepad's left stick as the UI reads it: its main axis alone, past half, so a push to the side with a
+// little up or down in it is a push to the side, as the round dead zone lets the wobble through
+function uiNavigationStick()
+{
+    const stick = gamepadStick(0, gamepadPrimary), x = abs(stick.x), y = abs(stick.y);
+    return max(x, y) < .5 ? vec2() : x >= y ? vec2(stick.x, 0) : vec2(0, stick.y);
 }
 
 // whether a UI object can still be used: it and every parent visible, enabled and not destroyed
@@ -1120,7 +1128,7 @@ class UIObject
     {
         if (!mouseInWindow) return false;
 
-        const size = !isTouchDevice ? this.size :
+        const size = !inputTouchLast ? this.size :
                 this.size.add(vec2(this.extraTouchSize || 0));
         const pos = uiSystem.screenToNative(mousePosScreen);
         return isOverlapping(this.nativePos, size, pos);
@@ -1175,7 +1183,7 @@ class UIObject
         }
         if (this.canBeHover)
         if (!uiSystem.navigationMode) // no mouse hover in navigation mode
-        if (mousePress || isActive || (!mouseDown && !isTouchDevice))
+        if (mousePress || isActive || (!mouseDown && !inputTouchLast))
         if (!uiSystem.hoverObject && this.isMouseOverlapping())
             uiSystem.hoverObject = this;
         if (this.isHoverObject())

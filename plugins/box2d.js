@@ -2884,8 +2884,23 @@ async function box2dInit()
             const onAbort = (what)=> reject(new Error('box2dInit: could not load box2d.wasm.wasm, ' + what +
                 (globalThis.location?.protocol === 'file:' ?
                 ', the page was opened from a file, serve it from a local web server' : '')));
+            // in a page the wasm is fetched here, where any failure, offline, blocked or a 404, rejects the load:
+            // the glue's own streaming fetch has no catch, and a request that fails before an answer never settled
+            let url = 'box2d.wasm.wasm';
+            const options = {onAbort, locateFile: (path, folder)=> url = folder + path};
+            globalThis.process?.versions?.node || Object.assign(options, {instantiateWasm: (imports, receive)=>
+            {
+                (async ()=>
+                {
+                    const response = await fetch(url);
+                    if (!response.ok) throw new Error(url + ' answered ' + response.status);
+                    const {instance} = await WebAssembly.instantiate(await response.arrayBuffer(), imports);
+                    receive(instance);
+                })().catch((error)=> onAbort(error.message));
+                return {}; // made later, by receive
+            }});
             // @ts-ignore - Box2D is the global that box2d.wasm.js defines
-            Box2D({onAbort}).then(resolve, reject);
+            Box2D(options).then(resolve, reject);
         });
         new Box2dPlugin(module);
         setupDebugDraw();

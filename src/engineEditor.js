@@ -572,7 +572,7 @@ function editorSetOpen(open)
         editorAutosaveFlush(); // the game plays on with what the editor has kept, the stroke just ended too
         editorSelection = editorSelectionDrag = editorRightPress = editorObjectDrag = editorObjectBox = undefined;
         editorObjectSelection.clear();
-        editorMouseOnPanel = false; // the panel hides, with no mouseleave
+        editorMouseOnPanel = false; // the panel hides, with no pointerleave
         const state = editorGameState;
         setPaused(state.paused);
         setCameraPos(state.cameraPos);
@@ -642,7 +642,8 @@ const editorTileLayerData = (layers)=> editorTileLayers(layers).map((layer)=> la
 function editorMapRestore(map)
 {
     editorAutosaveFlush(); // what an earlier map has waiting is written before this one reads the autosaves
-    if (editorMapList.some((record)=> record.map === map)) return map; // loaded again, it has the changes
+    const known = editorMapList.find((record)=> record.map === map);
+    if (known) return known.restarting = false, map; // loaded again, it has the changes, a restart's wait is over
 
     // a map object seen before, its record retired when its layers went, gets it back as it was, its data has the
     // changes already
@@ -1285,6 +1286,7 @@ function editorResize(record, width, height)
     const map = record?.map;
     if (!map || record.synthetic || record.pending || !editorHas('onRestart')) return false;
     if (width === map.width && height === map.height) return false;
+    if (editorRecordResizing(record)) return editorBusyNudge(), false; // the last resize's restart still makes it
     editorStrokeEnd();
     const before = editorMapSnapshot(record);
     if (!editorResizeMap(map, width, height)) return false;
@@ -1385,7 +1387,9 @@ const editorLayerResizing = (layer)=> !layer.live.destroyed && editorLayerSizeDi
 
 // a map an async onRestart has not made again since it was resized, its old layers alive or destroyed: its objects
 // wait, or one made now would be made again when the game loads the map
-const editorRecordResizing = (record)=> !!record?.layers.some(editorLayerSizeDiffers);
+// a map of objects alone has no layer to go by, it waits from its resize's onRestart till the game loads it again
+const editorRecordResizing = (record)=> !!record &&
+    (record.layers.some(editorLayerSizeDiffers) || !!record.restarting && !record.layers.length);
 
 function editorPaint(layer, pos, gid)
 {
@@ -1475,7 +1479,10 @@ function editorChanged(stroke)
     editorRedraw(stroke);
     for (const record of new Set(stroke.map(editorEntryRecord)))
         editorAutosaveSoon(record);
-    stroke.some((entry)=> entry.resize) && editorHas('onRestart') && levelEditor.onRestart();
+    if (!stroke.some((entry)=> entry.resize) || !editorHas('onRestart')) return;
+    for (const entry of stroke)
+        entry.resize && (entry.resize.restarting = true); // till the map loads again, see editorRecordResizing
+    levelEditor.onRestart();
 }
 
 // the tile layers a stroke touched that need it draw again whole
@@ -1767,6 +1774,9 @@ function editorPlaceObjects(layer, pos, brush)
     editorStrokeEnd();
 }
 
+// objects placed by the press still held, the undo count after them, see the pinch in editorUpdate
+let editorPlacedHeld;
+
 // the selected objects of the object layer being edited
 function editorSelectedObjects()
 { return (editorObjectLayer?.group?.objects ?? []).filter((object)=> editorObjectSelection.has(object.id)); }
@@ -1868,7 +1878,11 @@ function editorUpdateObjects(space)
         else if (editorObjectSelection.size)
             editorObjectSelection.clear();
         else if (editorObjectBrush)
+        {
+            // kept while the button is down, so a pinch can take it back, as the 3D editor does
             editorPlaceObjects(layer, snap(mouse), editorObjectBrush);
+            mouseIsDown(0) && (editorPlacedHeld = {undo: editorUndoList.length});
+        }
     }
     const drag = editorObjectDrag;
     if (drag && mouseIsDown(0))
@@ -2447,8 +2461,9 @@ function editorPanelInit()
     // a click or touch on the panel is not the game's, a mouse up and a touch end still go on so a drag can let go
     for (const type of ['mousedown','wheel','touchstart','touchmove'])
         editorPanel.addEventListener(type, (e)=> e.stopPropagation());
-    editorPanel.addEventListener('mouseenter', ()=> editorMouseOnPanel = true);
-    editorPanel.addEventListener('mouseleave', ()=> editorMouseOnPanel = false);
+    // pointer events, as a finger lifted leaves the panel; a tap's mouse events entered it and never left
+    editorPanel.addEventListener('pointerenter', ()=> editorMouseOnPanel = true);
+    editorPanel.addEventListener('pointerleave', ()=> editorMouseOnPanel = false);
 
     const row = ()=> editorElement('div', editorPanel, 'display:flex;gap:4px;margin:4px 0');
     const button = (parent, text, onclick, title='')=>
@@ -2777,8 +2792,8 @@ function editorPanelUpdate()
     }
     editorPropertiesUpdate(p.properties);
 
-    const t = editorHover && editorGidToTile(editorLayer.source.data[editorHover.x +
-        (live.size.y - 1 - editorHover.y) * live.size.x]); // the live layer's own tiles, as it draws them
+    const t = editorHover && editorGidToTile(editorGidAt(editorLayer, editorHover)); // the map's, or the live
+    // layer's own while a restart makes a resized map's layers
     p.status.textContent = editorHover ? `cell ${editorHover.x}, ${editorHover.y}` +
         (t ? `  tile ${t.tile}` : '') : '';
 }
@@ -2890,10 +2905,10 @@ function editorSetSelectedProperty(name, value)
         (isColor(defaultValue) ? !isColor(value) : isVector2(defaultValue) ? !isVector2(value) :
         typeof value !== typeof defaultValue)) return false;
     editorStrokeEnd();
-    editorChangeObjects(editorObjectLayer, (list)=>
+    const changed = editorChangeObjects(editorObjectLayer, (list)=>
         editorObjectSetProperty(list.find((o)=> o.id === object.id), name, value, type.defaults[name]));
     editorStrokeEnd();
-    return true;
+    return changed; // false when it was refused, waiting edits or a restart, or changed nothing
 }
 
 // if the game has nothing where the level puts an object: gone in play, moved in play, or not a game object, like a
@@ -2970,7 +2985,8 @@ function editorPropertiesUpdate(box)
         const row = editorElement('label', box, 'display:flex;gap:6px;align-items:center;margin:2px 0');
         editorElement('span', row, 'flex:1', name);
         const value = values[name], input = editorElement('input', row, 'width:110px;background:#222;color:#eee');
-        const set = (v)=> { editorSetSelectedProperty(name, v); input.blur(); };
+        // an edit refused, or one that changed nothing, makes the box again with the value the object has
+        const set = (v)=> { editorSetSelectedProperty(name, v) || (box.dataset.key = ''); input.blur(); };
         if (typeof defaultValue === 'boolean')
         {
             input.type = 'checkbox';
@@ -3109,9 +3125,18 @@ function editorUpdate()
         editorSelectionDrag ? editorSelectionDragCancel() : editorStrokeCancel();
         editorToolHeld = false;
         editorObjectDrag = editorObjectBox = undefined;
+        // objects the first finger placed are a finished undo entry, taken back with no redo
+        const placed = editorPlacedHeld;
+        if (placed && editorUndoList.length === placed.undo)
+        {
+            const redo = editorRedoList.length;
+            editorUndo();
+            editorRedoList.length > redo && editorRedoList.pop();
+        }
         editorLeftSpent = false;
         inputClearKey(0);
     }
+    mouseIsDown(0) || (editorPlacedHeld = undefined);
     editorApplyCamera();
 
     editorMouseOnPanel || (editorMouseScreen = mousePosScreen.copy());
@@ -3245,7 +3270,7 @@ function editorToolUpdate(space)
         editorToolHeld = false;
     }
     else if (mouseWasPressed(0) && !space && !editorMouseOnPanel)
-        editorToolHeld = tool.onPress?.(at) !== false;
+        editorToolHeld = tool.onPress?.(at) !== false && editorIsOpen; // not held by a press that closed it
     else if (editorToolHeld && mouseIsDown(0))
         tool.onDrag?.(at);
     // the cell under the mouse at the last callback, given to the next as lastCell, so a quick drag can fill between
@@ -3331,9 +3356,10 @@ function editorRender()
     const x0 = max(0, floor(low.x)), y0 = max(0, floor(low.y));
     const x1 = min(width, ceil(high.x)), y1 = min(height, ceil(high.y));
 
-    // ghosts, cells the map has that the layer does not show: markers a game made objects of, tiles broken in play
+    // ghosts, cells the map has that the layer does not show: markers a game made objects of, tiles broken in play;
+    // none while a restart makes a resized map's layers, the live layer is all there is to show then
     const ghost = hsl(0, 0, 1, .4);
-    for (let x = x0; live && !editorObjectLayer && x < x1; ++x)
+    for (let x = x0; live && !editorObjectLayer && !editorLayerResizing(layer) && x < x1; ++x)
     for (let y = y0; y < y1; ++y)
     {
         const t = editorGidToTile(source.data[x + (height - 1 - y) * width]);

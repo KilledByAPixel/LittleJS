@@ -1516,7 +1516,8 @@ render3D.pick(screenPos or ray, objects)           // {object, distance} of the 
                                                    // triangles, the faces that show, both sides when doubleSided,
                                                    // or a sprite's quad; a screen position goes through screenToRay;
                                                    // a glTF model or attached prefab is hit through its parts and
-                                                   // is the object given back, the part's owner
+                                                   // is the object given back, with the part hit as hit.part; a
+                                                   // part is hit only through its owner
 render3D.soundDefaultRange = 100      // how far a sound with no range of its own is heard in 3D, the 2D
                                       // soundDefaultRange is 40; a Sound made with a range keeps it
 render3D.playSound(sound, pos3D, volume, pitch, randomnessScale, loop, paused) // like sound.play(pos): quieter with
@@ -1796,7 +1797,8 @@ engineObjectsCollect3D(pos, size, objects, testCenters) // the EngineObject3D ob
                                            // emitters or instanced meshes); testCenters as in 2D
 engineObjectsCallback3D(pos, size, callback, objects, testCenters)
 engineObjectsRaycast3D(ray, objects)       // every object along the ray, nearest first, like engineObjectsRaycast in
-                                           // 2D; the ray has no end, use render3D.pick for just the nearest one
+                                           // 2D; the ray has no end, use render3D.pick for just the nearest one;
+                                           // a model or attached prefab in the list is given back for its parts
 obj.lookAt(target)                      // turn -Z toward a world space point: sets pitch and yaw, clears roll;
                                         // a child aims through its parent, since its rotation3D is local
 obj.render3D() // override for custom drawing, the draw state is already set from the flags; render() is empty

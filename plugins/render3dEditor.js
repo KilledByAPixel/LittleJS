@@ -1774,7 +1774,7 @@ function editor3DSetOpen(open)
             finally { editor3DClosing = false, editor3DStrokeEnd(); }
         }
         editor3DDrag = editor3DHover = undefined;
-        editor3DMouseOnPanel = false; // the panel hides, with no mouseleave
+        editor3DMouseOnPanel = false; // the panel hides, with no pointerleave
         editor3DStrokeEnd();
         while (editor3DPrefabBack()); // the game plays the level, not a prefab that was open
         editor3DAutosaveFlush(); // the game plays on with what the editor has kept
@@ -1922,7 +1922,7 @@ function editor3DToolUpdate(ray, idle, shift, ctrl)
         editor3DToolHeld = false;
     }
     else if (idle && mouseWasPressed(0))
-        editor3DToolHeld = tool.onPress?.(at) !== false;
+        editor3DToolHeld = tool.onPress?.(at) !== false && editor3DIsOpen; // not held by a press that closed it
     else if (editor3DToolHeld && mouseIsDown(0))
         tool.onDrag?.(at);
     if (editor3DToolHeld && !mouseIsDown(0))
@@ -2379,7 +2379,8 @@ function editor3DPress(mouse, ray, shift)
         // kept while the press is held, so a pinch can take it back
         const brush = editor3DBrush, tool = editor3DTool;
         if (!editor3DPlaceAt(editor3DBrush, ray)) return;
-        editor3DPlacedHeld = {undo: editor3DUndoList.length, brush, tool};
+        // only while the button is down, a quick tap let go before this step is done with
+        mouseIsDown(0) && (editor3DPlacedHeld = {undo: editor3DUndoList.length, brush, tool});
         shift || (editor3DBrush = undefined);
         editor3DTool = 'move';
         return;
@@ -3096,8 +3097,9 @@ function editor3DPanelInit()
     // a click or touch on the panel is not the level's, a mouse up still goes on so a drag can let go
     for (const type of ['mousedown','wheel','touchstart','touchmove'])
         panel.addEventListener(type, (e)=> e.stopPropagation());
-    panel.addEventListener('mouseenter', ()=> editor3DMouseOnPanel = true);
-    panel.addEventListener('mouseleave', ()=> editor3DMouseOnPanel = false);
+    // pointer events, as a finger lifted leaves the panel; a tap's mouse events entered it and never left
+    panel.addEventListener('pointerenter', ()=> editor3DMouseOnPanel = true);
+    panel.addEventListener('pointerleave', ()=> editor3DMouseOnPanel = false);
 
     const box = 'margin:4px 0;padding:4px;background:#222;border-radius:3px';
     const row = (parent=panel)=> editorElement('div', parent, 'display:flex;gap:4px;margin:4px 0;flex-wrap:wrap');

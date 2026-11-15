@@ -624,13 +624,13 @@ class EngineObject
                 tileCollisionFromObject = fromObject, tileCollisionFromPos = fromPos, tileCollisionFromOn = fromOn;
                 tileCollisionHitObject = hitObject;
             }
-            // the box it stands on a tile layer with one way tiles with, and where it stood, for its one way
-            // platforms next frame; standing on the same layer and starting from where it stood, a grown one sunk
-            // into the platform it stood on keeps the edges it stood there with, one the game moved does not
+            // the box it stands on a tile layer with one way tiles with, and the height it stood at, for its one way
+            // platforms next frame; standing on the same layer and starting at that height, a grown one sunk into
+            // the platform it stood on keeps the edges it stood there with, one the game moved up or down does not
             const ground = this.groundObject, stood = wasOn === ground && tileCollisionStoodAt(this, oldPos);
-            const bottom = this.pos.y - this.size.y/2, top = this.pos.y + this.size.y/2, {x, y} = this.pos;
+            const bottom = this.pos.y - this.size.y/2, top = this.pos.y + this.size.y/2, y = this.pos.y;
             ground instanceof TileCollisionLayer && ground.oneWayTiles.size ? tileCollisionStood.set(this,
-                stood ? [max(bottom, stood[0]), min(top, stood[1]), x, y] : [bottom, top, x, y]) :
+                stood ? [max(bottom, stood[0]), min(top, stood[1]), y] : [bottom, top, y]) :
                 tileCollisionStood.delete(this);
         }
     }
