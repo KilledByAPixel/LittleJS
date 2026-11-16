@@ -148,7 +148,7 @@ test('an orthographic ray starts on the near plane, so what is drawn behind the 
     const box = new EngineObject3D(vec3(0, 5, 0), LJS.buildBox());
     try
     {
-        const ray = r.screenToRay(vec2(50), vec2(100)); // the middle of a canvas, headless has none
+        const ray = r.screenToRay(vec2(49.5), vec2(100)); // the middle of a canvas, headless has none
         assert.ok(near(ray.origin.y, 50), 'on the near plane, 50 behind the camera: ' + ray.origin);
         assert.equal(r.pick(ray, [box])?.object, box);
     }

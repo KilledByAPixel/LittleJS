@@ -137,7 +137,8 @@ test('a Tiled class property\'s __proto__, constructor and prototype members are
         named: 'named', inner: {a: 1}, proto: true, warned: 3});
 });
 
-test('hsl given a whole hue past 1, likely degrees, warns once, and a fraction or a hue a little past 1 does not',
+// pass 28 K2 took the degree warning out, since an animated hue, hsl(time/9, ...), passes every whole number
+test('hsl says nothing of its hue, a whole one past 1 and an animated one alike, the docs carry the 0 to 1 range',
     async ()=>
 {
     const { run } = await engine();
@@ -151,7 +152,7 @@ test('hsl given a whole hue past 1, likely degrees, warns once, and a fraction o
         console.warn = warn;
         return JSON.stringify([before, warned.length]);
     })()`));
-    assert.deepEqual(warned, [0, 1]);
+    assert.deepEqual(warned, [0, 0]);
 });
 
 test('with the WebGL buffer clamped by the browser, combineCanvases draws it at the canvas\'s size', ()=>
@@ -199,7 +200,9 @@ test('a tap on the touch gamepad with passthrough on leaves the mouse out of the
     const { run, handlers, context } = loadEngine({ window: { ontouchstart: null } });
     const zone = { tagName: 'DIV', closest: ()=> null };
     context.zone = zone;
+    // the tap is on the left stick, which pass 28 I1 asks for: one beside it, in the zone's box, is the game's
     run('touchGamepadEnable = true; touchGamepadPassthrough = true; touchGamepadSideZones[0] = globalThis.zone;' +
+        'touchGamepadStage = {getBoundingClientRect: ()=> ({left: 0, top: 0, width: 1000, height: 1000})};' +
         'mouseInWindow = false');
     const touch = { identifier: 3, clientX: 100, clientY: 900, target: zone };
     handlers.touchstart({ type: 'touchstart', touches: [touch], changedTouches: [touch], target: zone,

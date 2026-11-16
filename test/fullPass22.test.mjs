@@ -167,18 +167,20 @@ test('the 3D editor\'s Restart waits for its last async one, and an undo entry s
     {
         const level = {littlejs3D: 1, objects: [{id: 1, type: 'Box', pos: [0, 0, 0]}]};
         level3DLoad(level);
-        let restarts = 0;
-        levelEditor.onRestart = ()=> { ++restarts; return new Promise(()=> {}); };
-        levelEditor.open(); editor3DRestart(); levelEditor.open(); editor3DRestart();
-        const waited = restarts;
-        level3DLoad(level); levelEditor.open(); editor3DRestart(); // a load does not end it, only its promise
-
+        // the edits first, since the editor refuses them while a restart waits (pass 28 D1)
         levelEditor.open();
         editor3DSelection.add(1);
         editor3DSetSelectedTransform('pos', vec3(1, 0, 0)); editor3DStrokeEnd();
         editor3DSetSelectedTransform('pos', vec3(2, 0, 0)); editor3DStrokeEnd();
         const list = editor3DUndoList, n = list.length;
-        return JSON.stringify({waited, after: restarts, shared: n >= 2 && list[n - 1].before === list[n - 2].after});
+        const shared = n >= 2 && list[n - 1].before === list[n - 2].after;
+
+        let restarts = 0;
+        levelEditor.onRestart = ()=> { ++restarts; return new Promise(()=> {}); };
+        levelEditor.open(); editor3DRestart(); levelEditor.open(); editor3DRestart();
+        const waited = restarts;
+        level3DLoad(level); levelEditor.open(); editor3DRestart(); // a load does not end it, only its promise
+        return JSON.stringify({waited, after: restarts, shared});
     })()`));
     assert.deepEqual(result, {waited: 1, after: 1, shared: true});
 });
