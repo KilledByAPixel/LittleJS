@@ -254,7 +254,8 @@ class PostProcessPlugin
             glContext.uniform1i(uniformLocation('iChannel1'), 1);
             glContext.uniform1i(uniformLocation('iChannel2'), 2);
             glContext.uniform1f(uniformLocation('iTime'), time);
-            glContext.uniform3f(uniformLocation('iResolution'), mainCanvas.width, mainCanvas.height, 1);
+            // the buffer's size, which a browser that clamped it made smaller than the main canvas
+            glContext.uniform3f(uniformLocation('iResolution'), glCanvas.width, glCanvas.height, 1);
             for (const name in postProcess.values)
             {
                 const value = postProcessValueList(postProcess.values[name]), location = uniformLocation(name);

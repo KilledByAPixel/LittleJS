@@ -347,12 +347,12 @@ new Shader(fragmentCode, vertexCode, uniforms) // uniforms: values the snippets 
 shader.setUniform(name, value)    // change one, no recompile; in 2D the draws before keep the old value, in 3D set it
                                   // outside the 3D pass and it holds for the frame
 new Shader(fragmentCode, vertexCode) // 3D: vertexCode defines void mainVertex(inout vec3 pos, inout vec3 normal),
-                                  // culled and picked by the mesh's own bounds, so one that moves vertices far, a
-                                  // wave or wind, may be culled at the screen's edge: scale the object's size up
                                   // world space, to move vertices (wind, waves), in the shadow map and depth too;
-                                  // names: iTime, iResolution, cameraPos, iChannel0, localUV, modelMatrix,
-                                  // instanceData (an InstancedMesh3D's setDataAt) and vertexColor, which it may
-                                  // change; new Shader('', vertexCode) keeps the 3D look
+                                  // culled and picked by the mesh's own bounds, so one that moves vertices far may
+                                  // be culled at the screen's edge: set mesh.radius larger after its first draw,
+                                  // or turn off render3D.frustumCulling; names: iTime, iResolution, cameraPos,
+                                  // iChannel0, localUV, modelMatrix, instanceData (an InstancedMesh3D's setDataAt)
+                                  // and vertexColor, which it may change; new Shader('', vertexCode) keeps the 3D look
 obj.shader = shader               // any EngineObject or EngineObject3D; draws that share a Shader share a batch
 shader.noTint = false             // 2D: write mainImage's color as it is with the draw's alpha, no tint, for data
                                   // like normals; set before it first draws
@@ -2209,7 +2209,8 @@ level3DAddType(name, make, defaults={}, tileInfo) // A type by name: a class mad
 level3DAddMesh(name, mesh, tileInfo, color=WHITE, meshCollision=false) // A static prop type of a mesh, with color,
                                                   // solid (its box) and meshCollision (its triangles) properties
 level3DLoad(level)                                // Make every object of a level, returns what was made; the 3D
-                                                  // editor keeps what it places or makes again in that list
+                                                  // editor keeps what it places or makes again in that list,
+                                                  // so keep the array itself, not a copy, and not its indices
 level3DVoxelSetup(tileInfo, (map)=> {})           // The sheet a level's block map uses, and a function to set each
                                                   // map up, its block types' faces; texture 0 without it
 

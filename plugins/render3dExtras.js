@@ -2912,11 +2912,12 @@ class LensFlare3D extends EngineObject3D
      *  @ignore */
     flareLook()
     {
-        const source = this.flareSource(), center = mainCanvasSize.scale(.5);
+        // the screen's middle in the pixel convention worldToScreen gives, half a pixel back from half its size
+        const source = this.flareSource(), half = mainCanvasSize.scale(.5), center = half.subtract(vec2(.5));
         const sun = source && render3D.worldToScreen(source.pos);
-        if (!sun || !center.x || !center.y) return;
+        if (!sun || !half.x || !half.y) return;
         // it fades as the sun leaves the screen, gone .3 of half the screen past the edge
-        const off = max(abs(sun.x - center.x) / center.x, abs(sun.y - center.y) / center.y);
+        const off = max(abs(sun.x - center.x) / half.x, abs(sun.y - center.y) / half.y);
         const strength = clamp((1.3 - off) / .5) * this.intensity;
         if (!(strength > 0)) return;
         let tint = this.color.multiply(render3D.sunColor), height = mainCanvasSize.y * this.flareSize;

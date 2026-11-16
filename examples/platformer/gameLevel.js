@@ -80,13 +80,15 @@ function loadLevelData()
     levelSize = tileLayers[0].size;
     playerStartPos = vec2(0, levelSize.y); // default player start
 
-    // walls past the level's left and right edges, solid and not drawn, so nothing walks out of view
+    // walls past the level's left and right edges, solid and not drawn, so nothing walks out of view, and
+    // marked so they can not be wall climbed
     for (const x of [-.5, levelSize.x + .5])
     {
         const wall = new LJS.EngineObject(vec2(x, levelSize.y), vec2(1, levelSize.y * 4));
         wall.setCollision();
         wall.mass = 0;
         wall.render = ()=> {};
+        wall.isLevelEdge = true;
     }
     foregroundTileLayer = tileLayers[0];
 

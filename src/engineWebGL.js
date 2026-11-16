@@ -887,7 +887,8 @@ function glCopyToContext(context)
     if (!glEnable || !glContext) return;
 
     glFlush();
-    context.drawImage(glCanvas, 0, 0);
+    // at the main canvas's size, which a buffer the browser clamped is smaller than
+    context.drawImage(glCanvas, 0, 0, mainCanvas.width, mainCanvas.height);
 }
 
 /** Set anti-aliasing for WebGL canvas

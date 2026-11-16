@@ -673,8 +673,9 @@ const SHADER_VERTEX_NAMES = /* @__PURE__ */ new Set(['p', 'n', 't', 'c', 'm0', '
  *   wobble; it runs in the shadow map and the camera's depth too, so a moved vertex casts and hides where it is
  *   drawn. Its names: iTime, iResolution, cameraPos, iChannel0 (texture or texelFetch in the vertex stage), localUV,
  *   modelMatrix, instanceData (the four numbers an InstancedMesh3D's setDataAt gives, the fragment code may read it
- *   too) and vertexColor, the vertex color times the tint, which it may change. The object's bounds are not
- *   moved with it, so one that moves vertices far needs room to be culled by, like a bigger radius
+ *   too) and vertexColor, the vertex color times the tint, which it may change. The culling sphere is the mesh's
+ *   own, so one that moves vertices far may be culled at the screen's edge: set mesh.radius larger after its first
+ *   draw, which measures it (kept until the mesh changes), or turn off render3D.frustumCulling
  * - A Shader of vertex code alone, new Shader('', vertexCode), keeps the 3D plugin's own look; in 2D a Shader's
  *   vertex code is not used
  * - Values of the game's own, uniforms, are given by name when it is made and read by name in the snippets, which

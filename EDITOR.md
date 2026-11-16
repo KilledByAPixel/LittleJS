@@ -397,7 +397,9 @@ The rules every customization follows. The headline of each is enough to start w
 ## The files
 
 - **3D:** plain JSON, `{littlejs3D: 1, scene, voxels, terrain, prefabs, objects: [{id, type, pos, rotation, scale,
-  properties}]}`. Load it with `level3DLoad(await fetchJSON('level.json'))`.
+  properties}]}`. Load it with `level3DLoad(await fetchJSON('level.json'))`. What the 3D editor places or makes
+  again joins the array `level3DLoad` gave back, and leaves it when taken out, so keep that array itself, not a
+  filtered copy, to unload the level by it, and look an object up again rather than keep its index.
 - **2D:** Tiled JSON. Load it with `tileLayersLoad(map)` and `objectLayersLoad(map)`. Tiled itself can open the
   file.
 - **Loading again keeps the edits:** a game that loads the same level object again, as a restart does, gets them.

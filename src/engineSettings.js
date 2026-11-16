@@ -351,6 +351,8 @@ let mouseScreenTransform;
 
 /**
  * @callback MouseScreenTransform - Where on the screen the picture shown at a screen position is drawn
+ *  - It works in canvas pixels from the canvas's top left corner, before the half pixel mousePosScreen takes off
+ *    to be the pixel's number, so a pixel's middle is at its number plus .5
  * @param {Vector2} pos - The mouse or touch position on the screen
  * @return {Vector2}
  * @memberof Settings

@@ -1030,7 +1030,8 @@ class Render3DPlugin
         const clip = this.worldToClip(pos);
         if (!clip)
             return;
-        return vec2((clip.x + 1) / 2 * canvasSize.x, (1 - clip.y) / 2 * canvasSize.y);
+        // in the pixel convention mousePosScreen has, a pixel's middle at its whole number
+        return vec2((clip.x + 1) / 2 * canvasSize.x - .5, (1 - clip.y) / 2 * canvasSize.y - .5);
     }
 
     /** Get the world ray under a screen position, for clicking on things in 3D
@@ -1046,8 +1047,9 @@ class Render3DPlugin
         const aspect = width / height, camera = this.camera;
         // bring the matrices up to date for this canvas, so worldToScreen and this agree on where things are
         this.updateMatrices(aspect);
-        const clipX = screenPos.x / width * 2 - 1;
-        const clipY = 1 - screenPos.y / height * 2;
+        // through the middle of the pixel, which mousePosScreen gives as a whole number
+        const clipX = (screenPos.x + .5) / width * 2 - 1;
+        const clipY = 1 - (screenPos.y + .5) / height * 2;
         // the screen offset moves a parallel ray's origin, or bends a perspective ray's direction
         const h = camera.orthographic ? camera.orthographic / 2 : tan(camera.fov / 2);
         const offset = this.cameraRight.scale(clipX * h * aspect).add(this.cameraUp.scale(clipY * h));

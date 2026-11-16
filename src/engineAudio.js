@@ -70,6 +70,7 @@ function audioInit()
     document.addEventListener('visibilitychange', audioPageChange);
     addEventListener('blur', audioPageChange); // the window's, focus moving to another window or the page's frame
     addEventListener('focus', audioPageChange);
+    audioPageChange(); // a page that starts hidden, opened in a background tab, starts paused
 }
 
 // on an iPhone the silent switch mutes the page's sound, unless soundIgnoreSilentSwitch has it play as media,

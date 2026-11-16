@@ -1037,7 +1037,7 @@ class LightSystemPlugin
             const cs = lightSystem.compositeShader;
             glContext.uniform1i(glUniformLocation(cs, 's'), 0);
             glContext.uniform3f(glUniformLocation(cs, 'iResolution'),
-                mainCanvas.width, mainCanvas.height, 1);
+                glCanvas.width, glCanvas.height, 1); // the buffer's size, smaller when the browser clamped it
             glContext.blendFunc(glContext.DST_COLOR, glContext.ZERO);
             glContext.drawArrays(glContext.TRIANGLE_STRIP, 0, 4);
 

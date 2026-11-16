@@ -1010,6 +1010,7 @@ class Vector2
 
 /**
  * Create a color object with RGBA values, white by default
+ *  - Each value is 0 to 1, not 0 to 255: rgb(1, .5, 0) is orange; above 1 is brighter, for additive and emissive
  * @param {number} [r=1] - red
  * @param {number} [g=1] - green
  * @param {number} [b=1] - blue
@@ -1025,7 +1026,7 @@ function rgb(r, g, b, a)
 
 // a color given as 0 to 255 or as percents, as other tools take them, said once in a debug build; a value a little
 // past 1 is a bright color, which is why only past 2 counts
-let colorRangeWarned = false;
+let colorRangeWarned = false, colorHueWarned = false;
 function colorRangeWarn(example)
 {
     if (colorRangeWarned) return;
@@ -1035,15 +1036,20 @@ function colorRangeWarn(example)
 
 /**
  * Create a color object with HSLA values, white by default
- * @param {number} [h=0] - hue
- * @param {number} [s=0] - saturation
- * @param {number} [l=1] - lightness
- * @param {number} [a=1] - alpha
+ *  - Each value is 0 to 1, the hue too, not degrees or percents: hsl(1/3, 1, .5) is green, which CSS writes
+ *    hsl(120deg 100% 50%); the hue wraps around, so 1 is red again and 1.25 the same as .25
+ * @param {number} [h=0] - hue, 0 to 1 around the color wheel from red
+ * @param {number} [s=0] - saturation, 0 to 1
+ * @param {number} [l=1] - lightness, 0 to 1
+ * @param {number} [a=1] - alpha, 0 to 1
  * @return {Color}
  * @memberof Math */
 function hsl(h, s, l, a)
 {
     debug && (s > 2 || l > 2) && colorRangeWarn('hsl(.5, 100, 50) is hsl(.5, 1, .5)');
+    // a whole hue past 1 is red, so it was most likely meant as degrees, said once
+    debug && !colorHueWarned && h > 1 && h % 1 === 0 && (colorHueWarned = true) &&
+        console.warn(`hsl hue is 0 to 1, not degrees: hsl(${h}, ...) wraps to red, ${h} degrees is hsl(${h}/360, ...)`);
     return new Color().setHSLA(h, s, l, a);
 }
 
@@ -1071,7 +1077,7 @@ function ASSERT_COLOR_VALID(c) { ASSERT(isColor(c), 'expected a color', c); }
  */
 class Color
 {
-    /** Create a color with the rgba components passed in, white by default
+    /** Create a color with the rgba components passed in, white by default, each 0 to 1, as rgb takes them
      *  @param {number} [r] - red
      *  @param {number} [g] - green
      *  @param {number} [b] - blue

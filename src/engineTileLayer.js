@@ -712,6 +712,9 @@ function objectLayersAddType(name, make, defaults={}, tileInfo)
  *  - Group layers are flattened in order, as tileLayersLoad does
  *  - The object's properties in Tiled are set over the type's defaults: numbers, booleans, strings, and colors,
  *    and for a Vector2 default the string x,y
+ *  - A class property, a custom type in Tiled, is merged over its default member by member, since Tiled writes only
+ *    the members set on that object; a value or member of another kind than its default keeps the default, with a
+ *    warning in debug builds, and members named __proto__, constructor or prototype are left out
  *  - An object whose type was not added is skipped, with a warning in debug builds
  *  - Tiled templates are not read: an object placed from one has its type only in the template's file, so export
  *    the map with Tiled's Detach templates option
@@ -845,14 +848,31 @@ const objectPropertyDefault = (defaults, key)=>
     Object.prototype.hasOwnProperty.call(defaults, key) ? defaults[key] : undefined;
 
 // a Tiled class property's value over its default, each plain object member by member, so a member Tiled left out,
-// as it leaves out the ones not set, keeps the default's
-function objectLayersMergeClass(fallback, value)
+// as it leaves out the ones not set, keeps the default's; a member of another kind than its default keeps the
+// default, said through warn with its path, as a property does; a member named __proto__, constructor or prototype
+// is left out, so a level a player made can not reach what every object shares
+function objectLayersMergeClass(fallback, value, warn, path='')
 {
     const plain = (o)=> !!o && typeof o === 'object' && !isArray(o);
     if (!plain(fallback) || !plain(value)) return objectPropertyCopy(value);
     const merged = objectPropertyCopy(fallback);
-    for (const key in value)
-        objectPropertyAssign(merged, key, objectLayersMergeClass(fallback[key], value[key]), 'class', 'objectLayersLoad');
+    const kind = (v)=> isArray(v) ? 'array' : v === null ? 'null' : typeof v;
+    for (const key of Object.keys(value))
+    {
+        const name = path + '.' + key;
+        if (key === '__proto__' || key === 'constructor' || key === 'prototype')
+        {
+            warn?.(`${name} is a name every object has, left out`);
+            continue;
+        }
+        const before = objectPropertyDefault(fallback, key), member = value[key];
+        if (before !== undefined && kind(before) !== kind(member))
+        {
+            warn?.(`${name} is a ${kind(member)}, its default a ${kind(before)}, the default is kept`);
+            continue;
+        }
+        objectPropertySet(merged, key, objectLayersMergeClass(before, member, warn, name));
+    }
     return merged;
 }
 
@@ -902,7 +922,14 @@ function objectLayersProperties(type, object, tileMapData)
             }
             // a class property is the map's object over the type's default, member by member: Tiled writes only the
             // members set on that object, the rest are the class's defaults
-            set(name, objectLayersMergeClass(fallback, value));
+            set(name, objectLayersMergeClass(fallback, value, (text)=>
+            {
+                const said = object.id + ' ' + name + text, map = tileMapData ?? objectLayersKindSaid;
+                objectLayersKindSaid.has(map) || objectLayersKindSaid.set(map, new Set);
+                const saidSet = objectLayersKindSaid.get(map);
+                debug && !saidSet.has(said) && saidSet.add(said) &&
+                    console.warn(`objectLayersLoad: object ${object.id}'s ${name}${text}`);
+            }));
         }
     }
     return properties;
@@ -1664,8 +1691,9 @@ class TileLayer extends CanvasLayer
  * Tile Collision Layer - a tile layer with collision
  * - adds collision data and functions to TileLayer
  * - there can be multiple tile collision layers
- * - it is an object, placed by its corner, its box the whole layer, and isSolid says its tiles block objects, so an
- *   area query, engineObjectsCollect, finds it wherever it covers: leave it out of a test for solid objects
+ * - it is an object placed by its corner, and isSolid says its tiles block objects, so an area query,
+ *   engineObjectsCollect, tests a box of its size centered on that corner, not where it covers: leave it out of a
+ *   test for solid objects
  * - its pos must be whole numbers, so its cells line up with the world grid objects land on
  * @extends TileLayer
  * @memberof TileLayers

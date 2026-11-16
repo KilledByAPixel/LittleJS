@@ -79,9 +79,10 @@ export class Character extends GameObjects.GameObject
         const wallAt = (side)=>
         {
             const pos = this.pos.add(vec2(side * (this.size.x / 2 + .1), 0));
-            // a solid object, not the tile layer, an object too, placed by its corner, whose box covers the level
+            // a solid object, not the tile layer, an object too, placed by its corner, whose box covers the level,
+            // nor the level's edge walls
             return LJS.tileCollisionGetData(pos) > 0 || LJS.engineObjectsCollect(pos, vec2(.1)).some((o)=>
-                o !== this && o.isSolid && !(o instanceof LJS.TileCollisionLayer));
+                o !== this && o.isSolid && !o.isLevelEdge && !(o instanceof LJS.TileCollisionLayer));
         };
         if (moveInput.x && !this.velocity.x && this.velocity.y < 0 && (wallAt(1) || wallAt(-1)))
         {

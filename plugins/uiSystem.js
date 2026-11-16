@@ -209,7 +209,7 @@ class UISystemPlugin
                 // anchor to canvas in native coords (handles nativeHeight if set)
                 targetPos = uiSystem.screenToNative(mainCanvasSize.scale(.5));
                 targetSize = uiSystem.nativeHeight
-                    ? vec2(mainCanvasSize.x * uiSystem.nativeHeight / mainCanvasSize.y,
+                    ? vec2(mainCanvasSize.x * uiSystem.nativeHeight / max(mainCanvasSize.y, 1),
                            uiSystem.nativeHeight)
                     : mainCanvasSize;
             }
@@ -423,7 +423,7 @@ class UISystemPlugin
                 if (uiSystem.nativeHeight)
                 {
                     // convert to native height
-                    const s = mainCanvasSize.y / uiSystem.nativeHeight;
+                    const s = max(mainCanvasSize.y, 1) / uiSystem.nativeHeight; // a canvas with no height yet
                     context.translate(-s*mainCanvasSize.x/2,0);
                     context.scale(s,s);
                     context.translate(mainCanvasSize.x/2/s,0);
@@ -485,6 +485,7 @@ class UISystemPlugin
         ASSERT(isNumber(lineWidth), 'lineWidth must be a number');
         ASSERT(isColor(lineColor), 'lineColor must be a color');
         ASSERT(isNumber(cornerRadius), 'cornerRadius must be a number');
+        cornerRadius = max(0, cornerRadius); // a tween that overshoots past 0, which the canvas would throw on
         
         const context = uiSystem.uiContext;
         if (gradientColor)
@@ -636,7 +637,7 @@ class UISystemPlugin
         if (!uiSystem.nativeHeight)
             return pos;
     
-        const s = mainCanvasSize.y / uiSystem.nativeHeight;
+        const s = max(mainCanvasSize.y, 1) / uiSystem.nativeHeight; // a canvas with no height yet
         const sInv = 1/s;
         const p = pos.copy();
         p.x += s*mainCanvasSize.x/2;
@@ -1151,7 +1152,8 @@ class UIObject
 
         const size = !inputTouchLast ? this.size :
                 this.size.add(vec2(this.extraTouchSize || 0));
-        const pos = uiSystem.screenToNative(mousePosScreen);
+        // the middle of the pixel under the mouse, as mousePosScreen is the pixel and the rects draw on their edges
+        const pos = uiSystem.screenToNative(mousePosScreen.add(vec2(.5)));
         return isOverlapping(this.nativePos, size, pos);
     }
 
@@ -1790,7 +1792,7 @@ class UISlider extends UIObject
             const centerPos = isHorizontal ? this.nativePos.x : this.nativePos.y;
 
             // check if value changed
-            const p = uiSystem.screenToNative(mousePosScreen);
+            const p = uiSystem.screenToNative(mousePosScreen.add(vec2(.5))); // the pixel's middle, as above
             if (this.fillMode)
             {
                 // the fill's edge is under the mouse: it grows from the bar's start, left or bottom, from the

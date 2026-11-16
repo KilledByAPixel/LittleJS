@@ -781,6 +781,13 @@ function editor3DVoxelMap()
 // else a new one made
 function editor3DVoxelShow()
 {
+    // the map the level had, in the game's list, gives its place there to the one it has after
+    const before = level3DVoxelMap;
+    editor3DVoxelShowMap();
+    before !== level3DVoxelMap && editor3DListSwap(before, level3DVoxelMap);
+}
+function editor3DVoxelShowMap()
+{
     const voxels = editor3DLevelPart('voxels'), shape = level3DVoxelsShape(voxels);
     let map = level3DVoxelMap && !level3DVoxelMap.destroyed ? level3DVoxelMap : undefined;
     const sameVector = (a, b)=> a.x === b.x && a.y === b.y && a.z === b.z;
@@ -953,6 +960,12 @@ function editor3DTerrainMap()
 // bring the game's map in line with the level's terrain block: made, made again when its place or shape changed,
 // its heights and color set, or put away with the block gone, and the same one back when an undo brings it back
 function editor3DTerrainShow()
+{
+    const before = level3DTerrainMap;
+    editor3DTerrainShowMap();
+    before !== level3DTerrainMap && editor3DListSwap(before, level3DTerrainMap);
+}
+function editor3DTerrainShowMap()
 {
     const terrain = editor3DLevelPart('terrain'), shape = level3DTerrainShape(terrain);
     let map = level3DTerrainMap && !level3DTerrainMap.destroyed ? level3DTerrainMap : undefined;
@@ -1596,7 +1609,7 @@ function editor3DMapsBring(maps)
 function editor3DPrefabClear()
 {
     for (const made of editor3DInstances.values())
-        made?.destroy?.();
+        made?.destroy?.(), editor3DListSwap(made, undefined);
     editor3DInstances.clear();
     for (const map of [level3DVoxelMap, level3DTerrainMap])
         map && !map.destroyed && map.destroy();

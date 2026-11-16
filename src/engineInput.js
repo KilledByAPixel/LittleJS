@@ -768,9 +768,6 @@ function inputInit()
             // what they are with touch input off too, as Firefox and Safari say nothing of where they came from
             inputTouchLast = true;
             inputLastTouchTime = performance.now();
-            // a finger that drives the mouse puts it on the page, though the mouse left it, so a tap reaches the UI;
-            // one the touch gamepad takes moves no mouse, which stays where it was
-            touchInputEnable && !gamepadOwns && (mouseInWindow = true);
             if (!touchInputEnable || gamepadOwns)
             {
                 // off, or the touch gamepad owns touch: turned so mid touch, the finger that drove the mouse lets
@@ -833,6 +830,9 @@ function inputInit()
                     // set event pos and pass it along
                     const mousePosScreenLast = mousePosScreen;
                     mousePosScreen = mouseEventToScreen(pos);
+                    // a finger that drives the mouse puts it on the page, though the mouse left it, so a tap reaches
+                    // the UI; one the touch gamepad takes, its zones with passthrough on too, moves no mouse
+                    mouseInWindow = true;
                     if (pinching)
                     {
                         // a pinch is not a press or a drag, the finger that pressed lets go

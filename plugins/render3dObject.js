@@ -265,6 +265,8 @@ class EngineObject3D extends EngineObject
      *  - A door or a lift that closes a gap on a body, against a fixed solid or the level, can not hold it in less room
      *    than it has: it stays in the one it is in, the door, and is not handed on into the wall, but a gap closed
      *    all the way, or a lift into a ceiling, can squeeze it into the floor or through; leave a body room
+     *  - A body made inside fixed solids is pushed out of each in turn, so one made deep inside a wall of two boxes
+     *    side by side can stay inside one of them; place bodies clear of the level's solids
      *  @param {boolean} [collideSolidObjects] - Take part in solid collision
      *  @param {boolean} [isSolid] - Block other objects, a pair where neither one blocks passes through;
      *    blocking needs collideSolidObjects, so isSolid on its own is not allowed
@@ -822,11 +824,21 @@ function render3DInAtStart(a, b)
     return !!push && push.lengthSquared() > 1e-6;
 }
 
+// whether a solid moved this pass: it has a velocity, or it is not where its turn began
+function render3DMovedThisPass(o)
+{
+    const v = o.velocity3D, p = o.pos3D, f = render3DCollideFrom(o);
+    return !!(v.x || v.y || v.z || p.x !== f.x || p.y !== f.y || p.z !== f.z);
+}
+
 // whether moving o by a push would put it deeper into one of the fixed solids near it, other than the one it is pushed
 // out of and the one that pushed it, than it is now: handed from a door into a wall, where a corner of two walls it is
-// in already is no deeper
+// in already is no deeper; a solid whose pair does not resolve, a trigger volume, does not count. And a still wall's
+// push makes no push out of a door that moves: the door's own pair settles the body against the wall
 function render3DSettleInto(o, push, from, pusher, grid, fixed, reach)
 {
+    if (pusher && !pusher.mass && from && !from.mass && !render3DMovedThisPass(pusher) && render3DMovedThisPass(from))
+        return true;
     const was = o.pos3D, now = render3DSolidShape(o);
     o.pos3D = was.add(push);
     const moved = render3DSolidShape(o);
@@ -838,7 +850,14 @@ function render3DSettleInto(o, push, from, pusher, grid, fixed, reach)
         if (c === o || c === from || c === pusher || c.mass || c.destroyed || c.parent || !o.isSolid && !c.isSolid ||
             grid && !render3DFixed.set.has(c))
             continue;
-        if (depth(moved, c) > depth(now, c) + 1e-3) return true;
+        // a quick reject by distance before the exact tests
+        const p = center, q = c.pos3D, r = size + render3DSolidReach(c);
+        const dx = p.x - q.x, dy = p.y - q.y, dz = p.z - q.z;
+        if (dx*dx + dy*dy + dz*dz > r*r) continue;
+        if (depth(moved, c) <= depth(now, c) + 1e-3) continue;
+        // deeper into it: it counts only when the pair resolves, asked as the pair loop would
+        const into = render3DSolidPush(moved, render3DSolidShape(c));
+        if (into && render3DCollideAsk(o, c, into)) return true;
     }
     return false;
 }
