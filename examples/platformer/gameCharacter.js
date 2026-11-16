@@ -66,11 +66,17 @@ export class Character extends GameObjects.GameObject
             this.pressedJumpTimer.set(.3);
         this.wasHoldingJump = this.holdingJump;
 
-        // wall climb, falling against a wall in the way it is pushing, a solid tile beside it, not only stopped
-        // sideways, as falling straight down in open air is too
+        // wall climb, falling with a wall beside it, a solid tile or a solid object like a crate, on either side so
+        // a jump pressed away from it is a wall jump, not only stopped sideways, as falling straight down in open
+        // air is too
         this.climbingWall = 0;
-        const wallSide = this.pos.add(vec2(Math.sign(moveInput.x) * (this.size.x / 2 + .1), 0));
-        if (moveInput.x && !this.velocity.x && this.velocity.y < 0 && LJS.tileCollisionGetData(wallSide) > 0)
+        const wallAt = (side)=>
+        {
+            const pos = this.pos.add(vec2(side * (this.size.x / 2 + .1), 0));
+            return LJS.tileCollisionGetData(pos) > 0 ||
+                LJS.engineObjectsCollect(pos, vec2(.1)).some((o)=> o !== this && o.isSolid);
+        };
+        if (moveInput.x && !this.velocity.x && this.velocity.y < 0 && (wallAt(1) || wallAt(-1)))
         {
             this.velocity.y *=.8;
             this.climbingWall = 1;

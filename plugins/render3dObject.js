@@ -262,6 +262,9 @@ class EngineObject3D extends EngineObject
      *    the top down a stack's boxes keep a small speed down, and a game that zeroes the speed of what stands sinks
      *    it a little a level, as can a stack made touching on its first frames; more than two or three high wants
      *    a full physics engine, as Box2D is in 2D; two that both move trade momentum by their masses
+     *  - A door or a lift that closes a gap on a body, against a fixed solid or the level, can not hold it in less room
+     *    than it has: it stays in the one it is in, the door, and is not handed on into the wall, but a gap closed
+     *    all the way, or a lift into a ceiling, can squeeze it into the floor or through; leave a body room
      *  @param {boolean} [collideSolidObjects] - Take part in solid collision
      *  @param {boolean} [isSolid] - Block other objects, a pair where neither one blocks passes through;
      *    blocking needs collideSolidObjects, so isSolid on its own is not allowed
@@ -808,6 +811,38 @@ function render3DTradeMomentum(a, b, normal, restitution)
     b.velocity3D = b.velocity3D.add(normal.scale(lerp(inelastic, elasticB, restitution) - vb));
 }
 
+// whether a mover was in a solid where it began its turn, before its own move
+function render3DInAtStart(a, b)
+{
+    const was = a.pos3D;
+    a.pos3D = render3DCollideFrom(a).copy();
+    const shape = render3DSolidShape(a);
+    a.pos3D = was;
+    const push = render3DSolidPush(shape, render3DSolidShape(b));
+    return !!push && push.lengthSquared() > 1e-6;
+}
+
+// whether moving o by a push would put it deeper into one of the fixed solids near it, other than the one it is pushed
+// out of and the one that pushed it, than it is now: handed from a door into a wall, where a corner of two walls it is
+// in already is no deeper
+function render3DSettleInto(o, push, from, pusher, grid, fixed, reach)
+{
+    const was = o.pos3D, now = render3DSolidShape(o);
+    o.pos3D = was.add(push);
+    const moved = render3DSolidShape(o);
+    o.pos3D = was;
+    const depth = (shape, c)=> render3DSolidPush(shape, render3DSolidShape(c))?.length() ?? 0;
+    const center = moved.pos, size = reach + push.length();
+    for (const c of grid ? render3DGridWalk(grid, ()=> size, ()=> center, Infinity) : fixed)
+    {
+        if (c === o || c === from || c === pusher || c.mass || c.destroyed || c.parent || !o.isSolid && !c.isSolid ||
+            grid && !render3DFixed.set.has(c))
+            continue;
+        if (depth(moved, c) > depth(now, c) + 1e-3) return true;
+    }
+    return false;
+}
+
 function render3DSettleFixed(o, pusher, from)
 {
     if (o.destroyed || !o.collideSolidObjects) return;
@@ -840,6 +875,10 @@ function render3DSettleFixed(o, pusher, from)
             if (push.x || push.z)
                 push = vec3(0, lengthSquared / push.y, 0);
         }
+        // a push that would put it into another fixed solid is not made: a body with less room than it has, a door
+        // closing on it against a wall, stays in the one it is in, whatever the list order, and is not handed on
+        // into the wall and through it; the one that pushed it is not counted, it goes back toward that one
+        if (render3DSettleInto(o, push, b, pusher, grid, fixed, reachO)) continue;
         o.pos3D = o.pos3D.add(push);
         shape = render3DSolidShape(o);
         render3DBounceOff(o, 1, b, push.normalize(), max(o.restitution, b.restitution));
@@ -977,11 +1016,14 @@ function render3DCollideSolid(a)
         }
 
         // the settles come after the bounce, so a wall's push is the last word on the velocity
-        if (weightA && !weightB)
+        if (weightA && !weightB && (b.mass || b.velocity3D.x || b.velocity3D.y || b.velocity3D.z ||
+            render3DInAtStart(a, b)))
         {
             // pushed whole by one that does not move in the pair, a door or a lift squeezing it against a wall: it
             // met the level before, from where it was, so it is settled now, or it would end in the level or go
-            // through a thin wall, as the other list order never lets it
+            // through a thin wall, as the other list order never lets it; only when that one moves or the body began
+            // its turn in it, a squeeze a door that stopped holds, since a still floor or wall a body only fell onto
+            // pushes it back where it came from, the most common pair of all, which needs no settle
             render3DSettleFixed(a, b, fromA);
             if (a.parent) return; // a callback in the settle attached it
         }

@@ -207,7 +207,7 @@ const audioFinite = (/** @type {number} */ value, /** @type {number} */ otherwis
 function audioParamRamp(param, value, fadeTime=0)
 {
     ASSERT(fadeTime >= 0, 'fadeTime must be positive or zero');
-    value = audioFinite(value, 0), fadeTime = audioFinite(fadeTime, 0);
+    value = audioFinite(value, 0), fadeTime = max(audioFinite(fadeTime, 0), 0); // a negative time is at once
     const startTime = audioContext.currentTime;
     param.cancelScheduledValues(startTime);
     if (fadeTime)

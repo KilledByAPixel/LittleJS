@@ -830,7 +830,7 @@ class EngineObject
         for (const child of children)
             child.parent = undefined;
         for (const child of children)
-            child.destroy(immediate);
+            child.parent || child.destroy(immediate); // one a sibling handed to another parent meanwhile stays
     }
 
     /** Convert from local space to world space

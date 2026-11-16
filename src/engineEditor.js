@@ -2662,6 +2662,7 @@ const editorPaletteCell = 30, editorPaletteColumns = 8;
 // the tiles a layer's palette shows, each its index and the tile info it draws with: the game's
 // levelEditor.paletteTiles, or every tile up to the image's edge without the blank ones at the end, a tile of one
 // flat color; found once for each layer and list
+const editorPaletteNone = Object.freeze([]);
 function editorPaletteTiles(layer)
 {
     const live = layer?.live, image = live?.tileInfo?.textureInfo?.image, list = levelEditor.paletteTiles;
@@ -2681,7 +2682,7 @@ function editorPaletteTiles(layer)
             layer.palette = {set, tiles: set.map((tileInfo, tile)=> ({tile, tileInfo}))};
         return layer.palette.tiles;
     }
-    if (!image) return [];
+    if (!image) return editorPaletteNone; // the same empty list each time, so the panel does not redraw it
     if (layer.palette?.image === image) return layer.palette.tiles;
 
     // a sheet read by its columns, a tileset with a margin or a spacing, is read with frame(), which asserts the
@@ -2716,6 +2717,9 @@ function editorPaletteTiles(layer)
 }
 
 // draw the palette of object types, each its icon or the start of its name, the brush's type outlined
+// an image a palette can draw: one that failed to load, or has not, throws in drawImage, which stops a debug build
+const editorImageReady = (image)=> !!image && (image.naturalWidth ?? image.width) > 0;
+
 function editorPaletteDrawObjects(canvas)
 {
     const cell = editorPaletteCell, columns = editorPaletteColumns, types = [...objectLayersTypes];
@@ -2730,7 +2734,7 @@ function editorPaletteDrawObjects(canvas)
     types.forEach(([name, {tileInfo}], i)=>
     {
         const x = i % columns * cell, y = (i / columns | 0) * cell, image = tileInfo?.textureInfo?.image;
-        if (image)
+        if (editorImageReady(image))
             context.drawImage(image, tileInfo.pos.x, tileInfo.pos.y, tileInfo.size.x, tileInfo.size.y,
                 x + 2, y + 2, cell - 4, cell - 4);
         else
@@ -2771,7 +2775,7 @@ function editorPaletteDraw(canvas, layer)
         const {pos, size, textureInfo} = tileInfo;
         // each from its own sheet, a tile set's may be on several
         const slot = i + 1, x = slot % columns * cell, y = (slot / columns | 0) * cell, image = textureInfo?.image;
-        image && context.drawImage(image, pos.x, pos.y, size.x, size.y, x + 2, y + 2, cell - 4, cell - 4);
+        editorImageReady(image) && context.drawImage(image, pos.x, pos.y, size.x, size.y, x + 2, y + 2, cell - 4, cell - 4);
     });
 
     // the brush's slot outlined, when it is one tile the palette shows or Erase
@@ -2860,7 +2864,11 @@ function editorPanelUpdate()
     const live = editorLayer?.live;
     const paletteLayer = editorObjectLayer ?? editorLayer, paletteBrush = editorObjectLayer ? editorObjectBrush : editorBrush;
     const paletteTiles = editorObjectLayer ? undefined : editorPaletteTiles(editorLayer);
-    const paletteLoaded = paletteTiles?.reduce((n, t)=> n + (t.tileInfo?.textureInfo?.image ? 1 : 0), 0);
+    // for objects, the types the game added and the icons loaded, a type added while open or an icon packed late
+    const paletteLoaded = editorObjectLayer ?
+        [...objectLayersTypes.values()].reduce((n, t)=> n + (editorImageReady(t.tileInfo?.textureInfo?.image) ? 1 :
+            0), objectLayersTypes.size * 1e4) :
+        paletteTiles?.reduce((n, t)=> n + (t.tileInfo?.textureInfo?.image ? 1 : 0), 0);
     if (p.paletteLayer !== paletteLayer || p.paletteBrush !== paletteBrush || p.paletteTiles !== paletteTiles ||
         p.paletteCount !== paletteTiles?.length || p.paletteLoaded !== paletteLoaded)
     {

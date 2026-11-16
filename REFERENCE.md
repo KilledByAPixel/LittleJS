@@ -35,7 +35,7 @@ engineIsFrozen()      // Is the game held still this update: paused, timeScale 0
                       // update that moves the game returns while it is true
 headlessMode = false  // Run without rendering for testing/servers (set before engineInit)
 engineManualStep      // Advance only via engineStep, default false; can be turned on and off while running
-engineStep(frames=1)  // Advance the engine manually, needs engineManualStep
+engineStep(frames=1)  // Advance the engine manually, needs engineManualStep; not from inside an update
 engineVariableStep    // One update per display frame, default false; velocity, gravity and other per-frame values are not scaled
 ```
 
@@ -474,7 +474,7 @@ backgroundCanvas             // Extra canvas composited behind the engine canvas
 setBackgroundCanvas(canvas)  // Set a plugin canvas to include when combining
 setCursor(cursorStyle)       // Set the CSS cursor style
 isOnScreen(pos, size)        // Is a world space area visible on screen?
-combineCanvases()            // Combine all canvases onto mainCanvas (for screenshots)
+combineCanvases()            // Combine all canvases onto mainCanvas (for screenshots), right after a frame is drawn
 
 // Very many sprites: drawTile works out the tile's uvs and packs the color on every call, so a game drawing
 // thousands a frame can work those out once and write each sprite into the WebGL batch itself (glEnable only)

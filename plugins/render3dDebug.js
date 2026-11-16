@@ -55,9 +55,12 @@ function render3DDebugColor(color)
         const context = render3DDebugColorContext ||= document.createElement('canvas').getContext('2d') ?? undefined;
         if (context)
         {
-            context.fillStyle = '#fff';
+            // a color it does not know leaves the one before, a value no name gives, so a misspelt one is said
+            context.fillStyle = '#010203';
             context.fillStyle = text;
-            text = String(context.fillStyle);
+            const known = String(context.fillStyle) !== '#010203';
+            ASSERT(known, 'a 3D debug color the browser does not know', color);
+            text = known ? String(context.fillStyle) : '#fff';
         }
     }
     if (text[0] === '#')

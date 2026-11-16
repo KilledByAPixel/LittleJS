@@ -2118,6 +2118,9 @@ function setBackgroundCanvas(canvas) { backgroundCanvas = canvas; }
 
 /** Combines LittleJS canvases onto the main canvas
  *  This is necessary for things like screenshots and video
+ *  - Call it right after a frame is drawn, after engineStep or from a plugin's render added last: from gameUpdate or
+ *    a UI onClick the canvas is already cleared for the next frame, and from gameRenderPost the post process, the
+ *    lights and the UI are not drawn yet
  *  @memberof Draw */
 function combineCanvases()
 {
@@ -2486,7 +2489,7 @@ async function imageFontInit()
     });
     
     const tilePos=vec2(), tileSize=vec2(8), padding=1, bleed=0;
-    const textureInfo = new TextureInfo(image);
+    const textureInfo = new TextureInfo(image, true, false, true); // pixel art, hard edged in a smooth game too
     const tileInfo = new TileInfo(tilePos, tileSize, textureInfo, padding, bleed);
     engineImageFont = new ImageFont(tileInfo);
 }

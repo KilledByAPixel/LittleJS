@@ -186,6 +186,7 @@ function engineFrameFit(unitMS)
 let timeFixedStart = 0, frameFixedStart = 0;
 let windowWidthLast = 0, windowHeightLast = 0, windowPixelRatioLast = 0;
 let engineUpdateInternal; // assigned by engineInit so engineStep can drive it
+let engineUpdating = false; // an update is running, engineStep is refused inside one
 let engineFrameScheduled = false; // a frame of the loop is asked for and has not run yet
 let engineFrameErrorLast; // the last error a release build's loop went on past, as text
 
@@ -813,10 +814,17 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
         await engineWaitForLoads();
         engineLoads = undefined;
         await init;
-        engineUpdateInternal = engineUpdate; // engineStep only runs once the game is set up
+        // engineStep only runs once the game is set up, and not from inside an update, which would run the engine
+        // inside itself, a key held down calling it again each time till the stack runs out
+        engineUpdateInternal = (frameTimeMS)=>
+        {
+            engineUpdating = true;
+            try { engineUpdate(frameTimeMS); }
+            finally { engineUpdating = false; }
+        };
         if (engineManualStep) return;
-        if (debug) return engineUpdate(); // a debug build stops at an error, the first frame's as any
-        try { engineUpdate(); }
+        if (debug) return engineUpdateInternal(); // a debug build stops at an error, the first frame's as any
+        try { engineUpdateInternal(); }
         catch (error) { engineFrameFailed(error); } // a release build goes on past it, as on any later frame
     }
 }
@@ -986,9 +994,10 @@ function engineStep(frames=1)
     ASSERT(engineManualStep,
         'engineStep requires setEngineManualStep(true)');
     ASSERT(engineUpdateInternal, 'engineStep requires engineInit to complete');
+    ASSERT(!engineUpdating, 'engineStep can not be called from inside an update, call it after, as from a timer');
     // runtime guard so release builds (where the asserts are stripped) can't
-    // start a second requestAnimationFrame chain or call an undefined update
-    if (!engineManualStep || !engineUpdateInternal) return;
+    // start a second requestAnimationFrame chain, call an undefined update, or run one inside another
+    if (!engineManualStep || !engineUpdateInternal || engineUpdating) return;
     ASSERT(Number.isInteger(frames) && frames >= 0 && frames <= engineStepMaxFrames,
         'engineStep requires a whole frame count from 0 to ' + engineStepMaxFrames);
     frames = min(frames, engineStepMaxFrames); // release has no asserts, don't freeze

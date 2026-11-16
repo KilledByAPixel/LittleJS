@@ -2462,7 +2462,15 @@ function render3DCubeTexture(cube)
                 gl.UNSIGNED_BYTE, null);
         cube.capturePos && render3D.cubeCaptures.add(cube);
     }
-    else cube.faces.forEach((face, i)=> face instanceof Uint8Array ?
+    else
+    {
+        // a face past the GPU's cube size, or faces of different sizes, sample black with nothing said, so it is said
+        const sizes = cube.faces.map((face)=> face instanceof Uint8Array ? cube.size : face?.width);
+        const limit = gl.getParameter(gl.MAX_CUBE_MAP_TEXTURE_SIZE);
+        (sizes.some((size)=> size !== sizes[0]) || sizes[0] > limit) && console.warn('LittleJS: a cube map needs ' +
+            'six square faces of one size, at most ' + limit + ' here, and has ' + sizes.join(', '));
+    }
+    cube.faces && cube.faces.forEach((face, i)=> face instanceof Uint8Array ?
         gl.texImage2D(gl.TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, gl.RGBA, cube.size, cube.size, 0, gl.RGBA,
             gl.UNSIGNED_BYTE, face) :
         gl.texImage2D(gl.TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, face));
@@ -2733,8 +2741,11 @@ function render3DBindTexture(tileInfo, state=render3D, unit=0)
     unit && gl.activeTexture(gl.TEXTURE0 + unit);
     gl.bindTexture(gl.TEXTURE_2D, texture);
     if (texture === r.whiteTexture || !r.mipmaps && !state.pixelated)
+    {
         gl.bindSampler(unit, null); // the texture's own filtering, as in 2D; the white texel needs no mipmaps
                                     // or anisotropy, and filtering it that way costs every untextured fragment
+        texture === r.whiteTexture || glUpdateMipmaps(texture); // a smooth one's own, drawn into since, as 2D does
+    }
     else
     {
         gl.bindSampler(unit, render3DSampler(textureInfo?.wrap, state.pixelated, textureInfo?.pixelated ?? tilesPixelated));

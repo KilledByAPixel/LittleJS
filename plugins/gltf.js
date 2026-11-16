@@ -577,7 +577,8 @@ async function parseGLTF(data, baseUrl='', files)
         }
     });
     // one that only may use them has other images to fall back on, or none: said, since it loads with them left out
-    if (json.extensionsUsed?.includes('KHR_texture_basisu') && !json.extensionsRequired?.includes('KHR_texture_basisu'))
+    const listed = (list)=> isArray(list) && list.includes('KHR_texture_basisu'); // a list, not an object
+    if (listed(json.extensionsUsed) && !listed(json.extensionsRequired))
         console.warn('glTF: KHR_texture_basisu textures are not read and are left out, export them as png or jpeg');
 
     // the buffers: the GLB's own, a data uri, or a file beside the model
@@ -666,6 +667,7 @@ async function parseGLTF(data, baseUrl='', files)
             if (!isArray(mesh.primitives)) throw new Error('glTF mesh ' + node.mesh + ' has no primitives');
             for (const primitive of mesh.primitives)
             {
+                if (!primitive?.attributes) throw new Error('glTF mesh ' + node.mesh + ' has a primitive with no attributes');
                 const skinned = skin?.joints?.length && primitive.attributes.JOINTS_0 !== undefined &&
                     primitive.attributes.WEIGHTS_0 !== undefined;
                 const part = gltfPart(json, buffers, textures, copies, primitive, skinned ? new Matrix4 : matrix,
@@ -699,7 +701,7 @@ async function parseGLTF(data, baseUrl='', files)
         // the animations: each channel that moves a node's translation, rotation or scale, with its keys; morph
         // weights are not read, and a node given as a matrix cannot be animated, the format says
         const animations = (json.animations || []).map((animation, i)=> new GLTFAnimation(animation.name || 'animation ' + i,
-            animation.channels.filter(c=> c.target.node !== undefined &&
+            (isArray(animation.channels) ? animation.channels : []).filter(c=> c?.target?.node !== undefined &&
                 ['translation', 'rotation', 'scale'].includes(c.target.path) &&
                 !gltfAt(json.nodes, c.target.node, 'animation target node').matrix).map(c=>
             {
@@ -744,7 +746,7 @@ async function parseGLTF(data, baseUrl='', files)
 function gltfPoseNodes(tree, animation, time)
 {
     const moved = new Map;
-    for (const channel of animation.channels)
+    for (const channel of isArray(animation.channels) ? animation.channels : [])
     {
         let node = moved.get(channel.node);
         node || moved.set(channel.node, node = gltfNodeTRS(tree.nodes[channel.node]));
@@ -1214,7 +1216,9 @@ function gltfPart(json, buffers, textures, copies, primitive, matrix, name)
     // as the extension's text says and as Khronos's sample renderer and three.js turn it, which models are made to
     // look right in; the GLSL sample in the extension's readme, read column major, turns the other way
     const material = json.materials?.[primitive.material] || {}, pbr = material.pbrMetallicRoughness || {};
-    const textureRef = pbr.baseColorTexture, uvTransform = textureRef?.extensions?.KHR_texture_transform;
+    // with no base color texture, the normal or emissive map's, which the same uvs are read for
+    const textureRef = pbr.baseColorTexture ?? material.normalTexture ?? material.emissiveTexture;
+    const uvTransform = textureRef?.extensions?.KHR_texture_transform;
     const uvAccessor = attributes['TEXCOORD_' + (uvTransform?.texCoord ?? textureRef?.texCoord ?? 0)];
     const [ox, oy] = uvTransform?.offset || [0, 0], [sx, sy] = uvTransform?.scale || [1, 1], r = uvTransform?.rotation || 0;
     const c = cos(r), s = sin(r);

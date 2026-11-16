@@ -56,7 +56,7 @@ class AudioEffect
     setMix(mix, fadeTime=0)
     {
         ASSERT(isNumber(mix), 'mix must be a number');
-        this.mix = mix = clamp(mix);
+        this.mix = mix = clamp(audioFinite(mix, 1)); // not a number is fully wet, not silence
         if (!audioContext) return;
         this.rampParam(this.dryGain.gain, 1-mix, fadeTime);
         this.rampParam(this.wetGain.gain, mix, fadeTime);
@@ -138,8 +138,9 @@ class AudioFilter extends AudioEffect
         /** @property {BiquadFilterNode} - The filter node */
         this.node = audioContext.createBiquadFilter();
         this.node.type = type;
-        this.node.frequency.value = frequency;
-        this.node.Q.value = q;
+        // a value that is not finite throws in the browser, a release build past the asserts takes the default
+        this.node.frequency.value = audioFinite(frequency, 350);
+        this.node.Q.value = audioFinite(q, 1);
         this.connectEffect(this.node);
     }
 
@@ -200,7 +201,7 @@ class AudioReverb extends AudioEffect
         ASSERT(isNumber(decay) && decay > 0, 'decay must be positive');
         if (!audioContext) return;
         // a release build, past the asserts, builds a room of a second rather than one of NaN
-        duration = audioFinite(duration, 1) > 0 ? duration : 1, decay = audioFinite(decay, 2) > 0 ? decay : 2;
+        duration = isFinite(duration) && duration > 0 ? duration : 1, decay = isFinite(decay) && decay > 0 ? decay : 2;
         this.node.buffer = this.createImpulse(duration, decay);
     }
 
@@ -294,7 +295,7 @@ class AudioDistortion extends AudioEffect
         super(mix);
 
         /** @property {number} - How hard the signal is driven, 0 is clean and 1 is crushed */
-        this.amount = clamp(amount);
+        this.amount = clamp(audioFinite(amount, 0)); // not a number is clean
         if (!audioContext) return; // no audio outside a browser, where the engine runs headless
 
         /** @property {WaveShaperNode} - The wave shaper node */
@@ -351,8 +352,8 @@ class AudioCompressor extends AudioEffect
 
         /** @property {DynamicsCompressorNode} - The compressor node */
         this.node = audioContext.createDynamicsCompressor();
-        this.node.threshold.value = threshold;
-        this.node.ratio.value = ratio;
+        this.node.threshold.value = audioFinite(threshold, -24);
+        this.node.ratio.value = audioFinite(ratio, 12);
         this.connectEffect(this.node);
     }
 

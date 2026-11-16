@@ -732,6 +732,7 @@ class Box2dObject extends EngineObject
             ASSERT(area >= 1e-6, 'Box2D polygons need 3 to 8 points, not all in a line');
             if (!(area >= 1e-6)) return;
 
+            box2dFixturesAllowed(); // before the buffer and the shape are made, so a refused one leaves nothing
             const buffer = box2d.instance._malloc(points.length * 8);
             for (let i=0, offset=0; i<points.length; ++i)
             {
@@ -741,7 +742,6 @@ class Box2dObject extends EngineObject
                 offset += 4;
             }
             const box2dPoints = box2d.instance.wrapPointer(buffer, box2d.instance.b2Vec2);
-            box2dFixturesAllowed(); // before the shape is made, so a refused one leaves none in the heap
             const shape = new box2d.instance.b2PolygonShape();
             shape.Set(box2dPoints, points.length);
             box2d.instance._free(buffer);

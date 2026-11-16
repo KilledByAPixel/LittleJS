@@ -702,6 +702,10 @@ function inputInit()
         const target = /** @type {HTMLElement} */ (e.target);
         if (target?.closest?.('input,textarea,select,[contenteditable]'))
             return;
+        // a page without focus, an iframe before its first click, lets the wheel scroll the page around it, and
+        // the game reads none of it, as it reads no keys or buttons then
+        if (!document.hasFocus())
+            return;
         if (e.ctrlKey)
         {
             // a trackpad pinch, or Ctrl with the wheel: the game's pinch while touchPinchWheel is on, as two fingers
@@ -764,6 +768,7 @@ function inputInit()
             // what they are with touch input off too, as Firefox and Safari say nothing of where they came from
             inputTouchLast = true;
             inputLastTouchTime = performance.now();
+            mouseInWindow = true; // a finger is on the page, though the mouse left it, so a tap reaches the UI
             if (!touchInputEnable || gamepadOwns)
             {
                 // off, or the touch gamepad owns touch: turned so mid touch, the finger that drove the mouse lets

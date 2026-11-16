@@ -1194,6 +1194,7 @@ A screen recorder such as OBS, the Xbox Game Bar or the macOS screen recorder is
 
 ```javascript
 // record a number of seconds of the game, one image every 1/60 of a second
+// call it from anywhere, gameUpdate too: it starts once the update is over, as engineStep can not run inside one
 function recordFrames(seconds)
 {
     setEngineManualStep(true);       // the engine moves only when engineStep is called
@@ -1208,7 +1209,7 @@ function recordFrames(seconds)
         else
             setEngineManualStep(false); // back to real time
     };
-    next();
+    setTimeout(next);
 }
 ```
 

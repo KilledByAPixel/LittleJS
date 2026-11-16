@@ -338,7 +338,10 @@ function glPreRender(clear=true)
             glCanvas.height = bufferSizeY;
         }
     }
-    glContext.viewport(0, 0, bufferSizeX, bufferSizeY);
+    // the buffer the browser made, which it clamps for a canvas too large, so the view is not cropped against the
+    // 2D canvas; a render target is its own size
+    glRenderTarget ? glContext.viewport(0, 0, bufferSizeX, bufferSizeY) :
+        glContext.viewport(0, 0, glContext.drawingBufferWidth || bufferSizeX, glContext.drawingBufferHeight || bufferSizeY);
     clear && glClearCanvas();
 
     // build the transform matrix
@@ -502,6 +505,9 @@ function glCreateProgram(vsSource, fsSource)
         console.error('LittleJS: a shader failed to build\n' + log);
         glFailedPrograms.add(program);
     }
+    // the shaders live on in the program, deleted they go with it, so one made again leaves none behind
+    glContext.deleteShader(vertexShader);
+    glContext.deleteShader(fragmentShader);
     return program;
 }
 
@@ -632,6 +638,10 @@ function glCreateTexture(image, wrap=false, pixelated=tilesPixelated)
     let mipMap = false;
     if (image?.width)
     {
+        // past the GPU's limit the upload fails and every tile of it draws black, so it is said, as a failed load is
+        glMaxTextureSize && max(image.width, image.height) > glMaxTextureSize &&
+            console.warn('LittleJS: an image of ' + image.width + 'x' + image.height + ' is larger than this GPU\'s ' +
+                glMaxTextureSize + ' pixel textures, it draws black; split it or pack it smaller');
         glSetTextureData(texture, image, pixelated);
         glContext.bindTexture(glContext.TEXTURE_2D, texture);
         // WebGL2 makes mipmaps at any size, a texture that becomes a render target keeps them only at powers of two

@@ -94,9 +94,20 @@ objectLayersAddType('Coin', Coin, {value: 1});
 ```
 
 - **In 2D, a type is made with `new make(pos)`, and its Tiled properties are set on it after the constructor**,
-  so a constructor reads none of them; one that needs them reads them in its first `update`. In 3D they are
-  handed to the constructor, `new make(pos3D, properties)`, so copying a 3D type's constructor into 2D finds
-  no properties.
+  so a constructor reads none of them. A property that changes how the object looks or works, its size from a
+  `value`, is a setter: the loader sets it once the object is made, and the editor sets it again on each edit,
+  so the object follows the edit, where one read in its first `update` would keep the first value. In 3D the
+  properties are handed to the constructor, `new make(pos3D, properties)`, and an edit makes the object again.
+
+```javascript
+class Gem extends EngineObject
+{
+    constructor(pos) { super(pos, vec2(1)); this.value = 1; }
+    set value(value) { this.worth = value; this.size = vec2(.5 + value * .25); } // set again on each edit
+    get value() { return this.worth; }
+}
+objectLayersAddType('Gem', Gem, {value: 1});
+```
 - **In 3D, a class needs its own constructor that takes the position.** One that passes every argument on to
   `EngineObject3D` would pass the properties as its mesh.
 - **A 3D prop with no class:** `level3DAddMesh('Tree', mesh, tileInfo)` makes a static prop. Its properties are:
@@ -129,7 +140,8 @@ levelEditor.onPanel = (box)=> {};      // once, when the panel is made: a box in
 levelEditor.onSave = (text, name)=> false;     // Save: return true when you kept the file yourself
 levelEditor.use3D = true;              // force the 3D editor (false, the 2D one); undefined picks by the level
 levelEditor.onTile = (layer, pos, tile)=> {};  // 2D: a tile was painted, tile undefined when erased
-levelEditor.paletteTiles = [0, 1, 10]; // 2D: the tiles the palette shows, undefined for the whole sheet
+levelEditor.paletteTiles = [0, 1, 10]; // 2D: the tiles the palette shows, undefined for the whole sheet; set it for
+                                       // a tile set packed by loadSprite, whose sheet holds other sprites below it
 ```
 
 ### A key of your own
@@ -145,7 +157,7 @@ The key can be written any of these ways:
 | A key code with its capital, which both editors read | `'ShiftLeft'`, `'Numpad1'`, `'KeyE'` |
 | Any of them with Ctrl | `'ctrl+k'` |
 
-The 2D editor reads a letter by what the key prints. The 3D editor reads its fly and tool keys (WASD, Q, E, R and the rest of its row) and a game's keys by position, so they sit under the hand on any layout, and its Ctrl shortcuts (Z, Y, C, X, V, D, G) and `?` by what the key prints, so undo is Ctrl+Z on AZERTY and QWERTZ too.
+The 2D editor reads a letter by what the key prints. The 3D editor reads its fly keys (WASD, Q and E), its tool keys (Q, W, E, R, B, T, X, G, L, F and the rest of its table) and a game's keys by position, so they sit under the hand on any layout, and its Ctrl shortcuts (Z, Y, C, X, V, D, G) and `?` by what the key prints, so undo is Ctrl+Z on AZERTY and QWERTZ too, and by position on a layout whose letters are not Latin, Cyrillic or Greek; a game's own Ctrl key on the press goes first, and the editor's is not run.
 
 - **The action is called with whether Shift is held.** Return `false` when it did nothing.
 - **Ctrl is the one modifier.** For Shift, read the argument the action is given.

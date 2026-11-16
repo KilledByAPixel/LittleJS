@@ -135,8 +135,10 @@ function editor3DCameraEnd()
 function editor3DLostLock(locked)
 {
     const lost = editor3DWasLocked && !locked && !inputLockLetGo;
+    // the game's own let go is kept till the lock is gone, which the browser does a frame or so after the call, and
+    // forgotten when one is taken again
+    locked !== editor3DWasLocked && (inputLockLetGo = false);
     editor3DWasLocked = locked;
-    inputLockLetGo = false;
     return lost;
 }
 
@@ -518,10 +520,12 @@ function editor3DLevelLoaded(level)
     }
     // the maps an undo could have put back are the last load's
     editor3DPrefabLevels.has(level) || editor3DMapsRemovedClear();
+    // what the editor made for the last load of this same level is the editor's, a game that destroys only the list
+    // level3DLoad gave it would keep it, twice once its level loads again; a level loaded beside it, a room or a
+    // streamed part, leaves the first level's alone
+    const again = editor3DLevel === level;
     editor3DLevel = level;
-    // what the editor made for the last load is the editor's, a game that destroys only the list level3DLoad gave it
-    // would keep it, twice once its level loads again
-    for (const made of editor3DInstances.values())
+    for (const made of again ? editor3DInstances.values() : [])
         editor3DMadeHere.has(made) && !made.destroyed && made.destroy?.();
     editor3DInstances.clear();
     if (isArray(level.objects))
@@ -2871,9 +2875,13 @@ if (debug && globalThis.document?.addEventListener)
         // a key of the game's own, Ctrl+S or F5, is the game's: its action runs in the update, after this
         const own = Object.keys(levelEditor.keys).some((spelled)=> spelled.startsWith('ctrl+') === ctrl &&
             editor3DKeyCode(spelled.slice(spelled.startsWith('ctrl+') ? 5 : 0)) === e.code);
-        // the Ctrl shortcuts and ? by the letter the key prints, kept for the update
-        const letter = typeof e.key === 'string' && e.key.length === 1 ? e.key.toLowerCase() : '';
-        const shortcut = ctrl ? !!editor3DCtrlKeys[letter] : letter === '?';
+        // the Ctrl shortcuts and ? by the letter the key prints, kept for the update; a letter that is not Latin, a
+        // Cyrillic or Greek layout's, goes by the key's position, as the 2D editor reads it; a game's own key on the
+        // press goes first and the editor's is not run
+        let letter = typeof e.key === 'string' && e.key.length === 1 ? e.key.toLowerCase() : '';
+        if (letter && !/[a-z?]/.test(letter) && /\p{L}/u.test(letter))
+            letter = e.code?.match(/^Key([A-Z])$/)?.[1].toLowerCase() ?? letter;
+        const shortcut = !own && (ctrl ? !!editor3DCtrlKeys[letter] : letter === '?');
         shortcut && !e.repeat && !e.altKey && (editor3DLetterPressed = {letter, ctrl, shift: e.shiftKey});
         if (own || ctrl && shortcut)
             e.preventDefault();
