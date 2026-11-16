@@ -196,9 +196,8 @@ bar, or the two would fight over it.
 so the bar is red until a file is ready.
 
 ## Try it
-- Start with a track loaded: change `musicSound, musicInstance;` in
-  the first line to
-  `musicSound = new Sound('song.mp3'), musicInstance;`
+- Start with a track loaded: in the first line, change `musicSound,`
+  to `musicSound = new Sound('song.mp3'),`
 - Show progress as a filling bar: add `progressBar.fillMode = true;`
   after the line that sets `disabledColor`.
 - Change the color of the panel while a file is over it: in

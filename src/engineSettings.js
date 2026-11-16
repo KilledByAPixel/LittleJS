@@ -325,7 +325,8 @@ let touchGamepadEnable = false;
 /** True if touches outside the gamepad controls should still drive mouse/touch input
  *  - When false (the default), enabling the touch gamepad suppresses touch-to-mouse input entirely
  *  - Set true to also pass touches outside the controls through to the game as mouse/touch input
- *  - Touches on the gamepad controls never drive the mouse regardless of this setting
+ *  - Touches on the gamepad controls never drive the mouse regardless of this setting; one beside a control, in the
+ *    corner around it, is the game's, and while paused only one on the center button presses start
  *  @type {boolean}
  *  @default
  *  @memberof Settings */

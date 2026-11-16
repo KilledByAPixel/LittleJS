@@ -678,11 +678,21 @@ function editor3DShadowLight()
 // an entry of a level's objects that is one, not a null, a number or a list
 const editor3DIsObject = (o)=> !!o && typeof o === 'object' && !isArray(o);
 
+// if the level can not be edited now: its autosave of a file that changed waits for Apply or Drop, or an async
+// restart is making the level again, the level being the restart's till its promise settles, since what the editor
+// made now would go into the list the game threw away, and the restart's load would make it a second time
+function editor3DEditsWait()
+{
+    if (editor3DRestartRunning)
+        return editor3DPrefabMessage = EDITOR3D_RESTART_WAIT, true;
+    return !!editor3DRecords.get(editor3DLevel)?.pending;
+}
+
 // change the level's objects as part of the edit being made: change edits a copy of the list; the changes until
 // editor3DStrokeEnd are one undo, so a drag is one undo; false when nothing changed
 function editor3DChange(change)
 {
-    if (!editor3DLevel || editor3DRecords.get(editor3DLevel)?.pending) return false; // its autosave waits first
+    if (!editor3DLevel || editor3DEditsWait()) return false; // its autosave or a restart waits first
     const before = editor3DCopy(editor3DObjects()), after = editor3DCopy(before);
     change(after);
     // what is not an object, a null a game's change pushed, is dropped, as a level's own are when it loads
@@ -753,7 +763,7 @@ function editor3DStrokeBegin()
 // when nothing changed
 function editor3DChangePart(name, change)
 {
-    if (!editor3DLevel || editor3DRecords.get(editor3DLevel)?.pending) return false; // its autosave waits first
+    if (!editor3DLevel || editor3DEditsWait()) return false; // its autosave or a restart waits first
     // a prefab is objects alone, Back keeps only those: blocks, terrain, the scene and the prefabs are the level's,
     // a prefab's change would be lost on Back
     if (editor3DPrefabStack.length) return false;
@@ -846,7 +856,7 @@ function editor3DVoxelInside(map, cell)
 function editor3DVoxelSet(cell, type)
 {
     const map = editor3DVoxelMap();
-    if (!map || editor3DRecords.get(editor3DLevel)?.pending) return false; // its autosave waits first
+    if (!map || editor3DEditsWait()) return false; // its autosave or a restart waits first
     if (!editor3DVoxelInside(map, cell) || map.getVoxel(cell) === type) return false;
     editor3DStrokeBegin().painted = true;
     map.setVoxel(cell, type);
@@ -926,7 +936,7 @@ function editor3DTerrainDragTo(drag, point)
 function editor3DTerrainPaintAt(point, erase=false)
 {
     const map = editor3DTerrainMap();
-    if (!map || editor3DRecords.get(editor3DLevel)?.pending) return false; // its autosave waits first
+    if (!map || editor3DEditsWait()) return false; // its autosave or a restart waits first
     const paint = editor3DTerrainPaint(map), hex = editor3DInputColor(editor3DTerrainBrush.color);
     let color = erase ? 0 : paint.colors.indexOf(hex) + 1;
     if (!erase && !color && paint.colors.length >= 255) return false;
@@ -1040,7 +1050,7 @@ function editor3DTerrainRemove()
 function editor3DTerrainSculpt(point, mode, seconds, level=0)
 {
     const map = editor3DTerrainMap();
-    if (!map || editor3DRecords.get(editor3DLevel)?.pending) return false; // its autosave waits first
+    if (!map || editor3DEditsWait()) return false; // its autosave or a restart waits first
     const {size, strength} = editor3DTerrainBrush, radius = size / 2, heights = map.heights;
     const rows = map.rows, columns = map.columns;
     const stepX = map.mapSize.x / (columns - 1), stepZ = map.mapSize.y / (rows - 1);
@@ -1243,6 +1253,7 @@ function editor3DStrokeCancel()
 // undo the last edit, or redo the last one undone; false with none
 function editor3DUndo(redo=false)
 {
+    if (editor3DRestartRunning) return editor3DEditsWait(), false;
     editor3DStrokeEnd();
     const entry = (redo ? editor3DRedoList : editor3DUndoList).pop();
     if (!entry) return false;
@@ -1349,7 +1360,8 @@ function editor3DMakePrefab(name='')
     const selected = editor3DSelected();
     if (editor3DPrefabStack.length) return refuse('Go back to the level to make a prefab');
     if (!selected.length) return refuse('Select the objects to make a prefab of');
-    if (!editor3DLevel || editor3DRecords.get(editor3DLevel)?.pending) return refuse('The level can not be edited now');
+    if (!editor3DLevel || editor3DEditsWait()) return refuse(editor3DRestartRunning ? EDITOR3D_RESTART_WAIT :
+        'The level can not be edited now');
     name = String(name).trim();
     for (let i = 1; !name; ++i)
         level3DTypes.has('Prefab ' + i) || (name = 'Prefab ' + i);
@@ -1398,7 +1410,8 @@ function editor3DPrefabLoad(name, text)
 {
     const refuse = (why)=> editor3DPrefabMessage = why;
     if (editor3DPrefabStack.length) return refuse('Go back to the level to load a prefab');
-    if (!editor3DLevel || editor3DRecords.get(editor3DLevel)?.pending) return refuse('The level can not be edited now');
+    if (!editor3DLevel || editor3DEditsWait()) return refuse(editor3DRestartRunning ? EDITOR3D_RESTART_WAIT :
+        'The level can not be edited now');
     name = String(name).trim();
     if (!name) return refuse('The prefab needs a name');
     let file;
@@ -1624,7 +1637,7 @@ function editor3DPrefabEnter(id)
     id ??= selected.length === 1 ? selected[0].id : undefined;
     const made = editor3DInstances.get(id), from = editor3DLevel;
     const prefab = made instanceof Prefab3D && level3DPrefabs.get(made.prefabName);
-    if (!prefab || editor3DRecords.get(from)?.pending) return false;
+    if (!prefab || editor3DEditsWait()) return false;
     editor3DStrokeEnd();
     editor3DDrag = editor3DHover = undefined;
     const frame = {level: from, name: made.prefabName, selection: [...editor3DSelection],
@@ -1645,6 +1658,7 @@ function editor3DPrefabEnter(id)
 // no prefab is open
 function editor3DPrefabBack()
 {
+    if (editor3DRestartRunning) return editor3DEditsWait(), false;
     const frame = editor3DPrefabStack.pop();
     if (!frame) return false;
     editor3DStrokeEnd();
@@ -1791,7 +1805,8 @@ function editor3DRestore()
             editor3DMakeInstance(object);
     }
     // the blocks and the terrain as the level has them: what play dug, raised or destroyed is not the level's,
-    // and must not be written into it by the next stroke
+    // and must not be written into it by the next stroke; not while a restart makes the level again, as the objects
+    if (editor3DRestartRunning) return;
     editor3DVoxelShow();
     editor3DTerrainShow();
 }
@@ -2127,7 +2142,7 @@ function editor3DAutosaveFlush()
 function editor3DApplyPending()
 {
     const record = editor3DRecords.get(editor3DLevel), saved = record?.pending;
-    if (!saved || !isArray(saved.objects)) return false;
+    if (!saved || !isArray(saved.objects) || editor3DRestartRunning) return editor3DEditsWait(), false;
     record.pending = undefined;
     editor3DFixIds(saved.objects);
     editor3DChange((list)=> { list.length = 0; list.push(...editor3DCopy(saved.objects)); });
@@ -2152,7 +2167,7 @@ function editor3DDropPending()
 function editor3DRevert()
 {
     const record = editor3DRecords.get(editor3DLevel);
-    if (!record) return false;
+    if (!record || editor3DRestartRunning) return editor3DEditsWait(), false;
     record.pending = undefined;
     if (editor3DSame(editor3DObjects(), record.original) && editor3DSame(editor3DLevelParts(), record.originalParts))
         return editor3DAutosave(), false;

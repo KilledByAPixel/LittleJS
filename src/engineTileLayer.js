@@ -460,6 +460,8 @@ function tileLayersLoad(tileMapData, tileInfo=tileLayerDefaultTile(), renderOrde
         collisionLayer = layers.findIndex((l)=> l.color && l.dataLayer.name === name);
         collisionLayer < 0 && console.error('tileLayersLoad: no tile layer is named ' + name + ', none is solid');
     }
+    else if (collisionLayer !== undefined && !layers[collisionLayer]?.color)
+        console.error('tileLayersLoad: layer ' + collisionLayer + ' is not a tile layer, none is solid');
 
     // create tile layers and fill with data, every layer's tiles checked first, so a bad one leaves none made
     const tileLayers = [];
@@ -713,8 +715,9 @@ function objectLayersAddType(name, make, defaults={}, tileInfo)
  *  - The object's properties in Tiled are set over the type's defaults: numbers, booleans, strings, and colors,
  *    and for a Vector2 default the string x,y
  *  - A class property, a custom type in Tiled, is merged over its default member by member, since Tiled writes only
- *    the members set on that object; a value or member of another kind than its default keeps the default, with a
- *    warning in debug builds, and members named __proto__, constructor or prototype are left out
+ *    the members set on that object, a Color or Vector2 member read from Tiled's text as at the top level; a value
+ *    or member of another kind than its default keeps the default, with a warning in debug builds, a default of
+ *    null or undefined taking any value, and members named __proto__, constructor or prototype are left out
  *  - An object whose type was not added is skipped, with a warning in debug builds
  *  - Tiled templates are not read: an object placed from one has its type only in the template's file, so export
  *    the map with Tiled's Detach templates option
@@ -803,7 +806,8 @@ function objectLayersListProperties(tileMapData)
 // a property's value for one object of its own: a Color or vector copied, and an array or plain object copied with
 // what is in it, so an object that changes its list does not change every other object's, or the map's; a Color or
 // vector is an instance of its class with a copy method, never a plain object, as a file's object may have a member
-// named copy, and every member of a plain object is copied as one, __proto__ too
+// named copy, and every member of a plain object is copied as one but __proto__, constructor and prototype, which
+// are left out, so a level a player made can not reach what every object shares
 function objectPropertyCopy(value)
 {
     if (isArray(value)) return value.map(objectPropertyCopy);
@@ -812,9 +816,31 @@ function objectPropertyCopy(value)
         return typeof value.copy == 'function' ? value.copy() : value;
     const copy = {};
     for (const key of Object.keys(value))
-        Object.defineProperty(copy, key,
+        objectPropertyShared(key) || Object.defineProperty(copy, key,
             {value: objectPropertyCopy(value[key]), enumerable: true, writable: true, configurable: true});
     return copy;
+}
+
+// a name every object has, left out of what a map gives
+const objectPropertyShared = (key)=> key === '__proto__' || key === 'constructor' || key === 'prototype';
+
+// a value's kind for the kind checks, with its article
+const objectPropertyKind = (v)=> isArray(v) ? 'array' : v === null ? 'null' : typeof v;
+const objectPropertyKindName = (v)=> (/^[aeiou]/.test(objectPropertyKind(v)) ? 'an ' : 'a ') + objectPropertyKind(v);
+
+// Tiled's text for a Color, a hex color as #AARRGGBB, or for a Vector2, which Tiled does not have, x,y, made one
+// when the default is that kind; undefined when the value is not that text, so the default is kept
+function objectPropertyFromText(value, fallback)
+{
+    if (typeof value != 'string') return;
+    if (isColor(fallback))
+        return /^#([0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})$/i.test(value) ? tileLayersColor(value) : undefined;
+    if (isVector2(fallback))
+    {
+        const parts = value.split(','), [x, y] = parts.map(Number);
+        return parts.length === 2 && parts.every((part)=> part.trim()) && isNumber(x) && isNumber(y) ?
+            vec2(x, y) : undefined;
+    }
 }
 
 // a property of an object's properties, set as one of its own whatever its name, __proto__ too, which assigned
@@ -854,21 +880,32 @@ const objectPropertyDefault = (defaults, key)=>
 function objectLayersMergeClass(fallback, value, warn, path='')
 {
     const plain = (o)=> !!o && typeof o === 'object' && !isArray(o);
-    if (!plain(fallback) || !plain(value)) return objectPropertyCopy(value);
-    const merged = objectPropertyCopy(fallback);
-    const kind = (v)=> isArray(v) ? 'array' : v === null ? 'null' : typeof v;
+    if (!plain(fallback) || !plain(value) || isColor(fallback) || isVector2(fallback))
+        return objectPropertyCopy(value);
+    // a new object for each, of the default's own class when it is an instance of one, so the type's default,
+    // shared by every object of the type, is never written into
+    const merged = Object.create(Object.getPrototypeOf(fallback));
+    for (const key of Object.keys(fallback))
+        objectPropertySet(merged, key, objectPropertyCopy(fallback[key]));
     for (const key of Object.keys(value))
     {
         const name = path + '.' + key;
-        if (key === '__proto__' || key === 'constructor' || key === 'prototype')
+        if (objectPropertyShared(key))
         {
             warn?.(`${name} is a name every object has, left out`);
             continue;
         }
         const before = objectPropertyDefault(fallback, key), member = value[key];
-        if (before !== undefined && kind(before) !== kind(member))
+        const read = objectPropertyFromText(member, before); // a Color or Vector2 member as Tiled writes it
+        if (read)
         {
-            warn?.(`${name} is a ${kind(member)}, its default a ${kind(before)}, the default is kept`);
+            objectPropertySet(merged, key, read);
+            continue;
+        }
+        if (before != null && objectPropertyKind(before) !== objectPropertyKind(member))
+        {
+            warn?.(`${name} is ${objectPropertyKindName(member)}, its default ${objectPropertyKindName(before)}, ` +
+                'the default is kept');
             continue;
         }
         objectPropertySet(merged, key, objectLayersMergeClass(before, member, warn, name));
@@ -900,24 +937,22 @@ function objectLayersProperties(type, object, tileMapData)
         else if (isVector2(objectPropertyDefault(type.defaults, name)))
         {
             // Tiled has no Vector2, one is the string x,y, and one it can not read keeps the default
-            const parts = String(value).split(','), [x, y] = parts.map(Number);
-            parts.length === 2 && parts.every((part)=> part.trim()) && isNumber(x) && isNumber(y) &&
-                set(name, vec2(x, y));
+            const read = objectPropertyFromText(String(value), objectPropertyDefault(type.defaults, name));
+            read && set(name, read);
         }
         else
         {
             // a value of another kind than its type's default, the text '5' over a number or over a Color, keeps the
             // default, as the 3D loader does, so a game never gets '5' + 1
             const fallback = objectPropertyDefault(type.defaults, name);
-            const kind = (v)=> isArray(v) ? 'array' : v === null ? 'null' : typeof v;
-            if (fallback !== undefined && kind(fallback) !== kind(value))
+            if (fallback != null && objectPropertyKind(fallback) !== objectPropertyKind(value))
             {
                 const said = object.id + ' ' + name, map = tileMapData ?? objectLayersKindSaid; // once for each
                 objectLayersKindSaid.has(map) || objectLayersKindSaid.set(map, new Set);
                 const saidSet = objectLayersKindSaid.get(map);
                 debug && !saidSet.has(said) && saidSet.add(said) && console.warn(
-                    `objectLayersLoad: object ${object.id}'s ${name} is a ${kind(value)}, its ` +
-                    `default a ${kind(fallback)}, the default is kept`);
+                    `objectLayersLoad: object ${object.id}'s ${name} is ${objectPropertyKindName(value)}, ` +
+                    `its default ${objectPropertyKindName(fallback)}, the default is kept`);
                 continue;
             }
             // a class property is the map's object over the type's default, member by member: Tiled writes only the

@@ -128,6 +128,14 @@ function audioWaitingPrune(now=performance.now())
 function audioStateChange()
 {
     if (!audioIsRunning()) return;
+    // a context that starts running while the page is paused, its first input in a page hidden since, is suspended
+    // again, the waiting sounds kept for when the page shows
+    if (audioPagePaused() && !audioSuspendedByPage)
+    {
+        audioSuspendedByPage = true;
+        audioContext.suspend();
+        return;
+    }
     audioWaitingPrune();
     const instances = [...audioWaitingInstances.keys()];
     audioWaitingInstances.clear();

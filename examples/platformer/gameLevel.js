@@ -76,8 +76,11 @@ function loadLevelData()
 {
     // load the level data
     const tileMapData = Game.gameLevelData;
-    tileLayers = LJS.tileLayersLoad(tileMapData, tile(0,16,1), 0, 1);
-    levelSize = tileLayers[0].size;
+    // the Front layer is solid, found by its name, so the layers can be put in
+    // any order in Tiled; an object layer's slot is empty, left out here
+    tileLayers = LJS.tileLayersLoad(tileMapData, tile(0,16,1), 0, 'Front')
+        .filter(Boolean);
+    levelSize = vec2(tileMapData.width, tileMapData.height);
     playerStartPos = vec2(0, levelSize.y); // default player start
 
     // walls past the level's left and right edges, solid and not drawn, so nothing walks out of view, and
@@ -90,17 +93,11 @@ function loadLevelData()
         wall.render = ()=> {};
         wall.isLevelEdge = true;
     }
-    foregroundTileLayer = tileLayers[0];
+    foregroundTileLayer = tileLayers.find((layer)=> layer.isSolid);
 
     for (let i=tileLayers.length; i--;)
     {
         const tileLayer = tileLayers[i];
-        const isForeground = i == tileLayers.length - 1;
-        if (isForeground)
-            foregroundTileLayer = tileLayer;
-        else
-            tileLayer.isSolid = false;
-
         for (let x=levelSize.x; x--;) 
         for (let y=levelSize.y; y--;)
         {

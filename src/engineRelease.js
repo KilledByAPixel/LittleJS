@@ -54,7 +54,7 @@ function tweakEngineDefaults(){}
 const editorEdit2DRelease =
 {
     map: undefined, layer: undefined, hover: undefined, get objects() { return []; }, get selection() { return new Set; },
-    paint(){ return false; }, changeObjects(){ return false; }, strokeEnd(){}, strokeCancel(){}, bulk(){},
+    paint(){ return false; }, changeObjects(){ return false; }, setProperty(){}, strokeEnd(){}, strokeCancel(){}, bulk(){},
     undo(){ return false; }, toJSON(){ return ''; },
 };
 class LevelEditor

@@ -248,6 +248,8 @@ function shareURL(title, url, callback)
  *  - A top level value whose default is a vec2, a vec3 or a Color, a value with a copy method and only numbers,
  *    comes back as a new one, where JSON keeps only its numbers, a number not saved or not finite the default's;
  *    with nothing saved any value with a copy method is a copy of the default, so changing it leaves the default
+ *  - A top level value whose default is a number comes back as the default when what was saved is not a number,
+ *    as for Infinity, which JSON writes as null
  *  @template {Object<string, any>} [T=any]
  *  @param {string} saveName - unique name for the game/save
  *  @param {T} [defaultSaveData] - default values, result is {...default, ...loaded} so this must be an object
@@ -285,6 +287,14 @@ function readSaveData(saveName, defaultSaveData)
     for (const key in defaultSaveData ?? {})
     {
         const value = defaultSaveData[key];
+        if (typeof value === 'number')
+        {
+            // a number saved as anything else, the null JSON writes for Infinity or NaN, is the default, so a best
+            // time of Infinity saved before the first win can still be beaten
+            Object.prototype.hasOwnProperty.call(loadedData, key) && typeof loadedData[key] !== 'number' &&
+                (result[key] = value);
+            continue;
+        }
         if (!value || typeof value !== 'object' || typeof value.copy !== 'function') continue;
         const copy = value.copy(), fields = Object.keys(copy), saved = loadedData[key];
         if (!Object.prototype.hasOwnProperty.call(loadedData, key))

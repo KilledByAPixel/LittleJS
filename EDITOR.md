@@ -388,6 +388,7 @@ The rules every customization follows. The headline of each is enough to start w
 | `selection` | A `Set` of the selected objects' ids |
 | `paint(cell, tile, direction, mirror)` | Set a cell of the selected tile layer to a tile index, -1 erases; false off the layer |
 | `changeObjects((list)=> {...})` | Edit a copy of the selected object layer's objects |
+| `setProperty(object, name, value)` | Inside `changeObjects`, on an object of its list: write a property as Tiled keeps it, left out of the map when it is the type's default |
 | `strokeEnd()` | End the edit: one undo step, and the autosave |
 | `strokeCancel()` | Take the edit being made back |
 | `bulk(()=> {...})` | Many `paint` calls with one redraw a layer |

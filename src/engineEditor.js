@@ -74,6 +74,9 @@
  *    to a tile index, -1 erases, with a direction 0 to 3 and a mirror; false off the layer or with none
  *  @property {function(function(Array<TiledObject>): void): boolean} changeObjects - Edit a copy of the selected object
  *    layer's objects; false when nothing changed
+ *  @property {function(TiledObject, string, number|boolean|string|Color|Vector2): void} setProperty - Write a property
+ *    on an object of the list given to changeObjects as Tiled keeps it, a Color as #AARRGGBB and a Vector2 as x,y,
+ *    left out of the map when it is the type's default
  *  @property {function(): void} strokeEnd - End the edit: one undo step, and the autosave
  *  @property {function(): void} strokeCancel - Take the edit being made back
  *  @property {function(function(): void): void} bulk - Many paints with one redraw a layer
@@ -276,7 +279,8 @@ class LevelEditor
     /** The 2D editor's edit functions, for a key, a button or a tool of the game's own: map, the Tiled map; layer,
      *  the selected TileLayer; objects, a copy of the selected object layer's; hover, the cell under the mouse;
      *  selection, the selected objects' ids; paint(cell, tile, direction, mirror), a tile index, -1 erases;
-     *  changeObjects((list)=> ...); strokeEnd() and strokeCancel(); bulk(()=> ...); undo(redo); toJSON()
+     *  changeObjects((list)=> ...); setProperty(object, name, value); strokeEnd() and strokeCancel(); bulk(()=> ...);
+     *  undo(redo); toJSON()
      *  @return {EditorEdit2D} */
     get edit2D() { return editorEdit2D; }
 
@@ -3400,6 +3404,11 @@ const editorEdit2D =
         return true;
     },
     changeObjects(change) { return editorChangeObjects(editorObjectLayer, change); },
+    setProperty(object, name, value)
+    {
+        const type = objectLayersTypes.get(object.type || object.class);
+        editorObjectSetProperty(object, name, value, type && objectPropertyDefault(type.defaults, name));
+    },
     strokeEnd() { editorStrokeEnd(); },
     strokeCancel() { editorStrokeCancel(); },
     bulk(edit) { editorBulkEdit(edit); },

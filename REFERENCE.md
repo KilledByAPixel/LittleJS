@@ -130,8 +130,8 @@ let remaining = 36000;
 
 // Object Constructors
 vec2(x=0, y=x)                                // Create a 2D vector with Vector or floats
-rgb(r=1, g=1, b=1, a=1)                       // Create a color object with RGBA values
-hsl(h=0, s=0, l=1, a=1)                       // Create a color object with HSLA values
+rgb(r=1, g=1, b=1, a=1)                       // Create a color object with RGBA values, each 0 to 1
+hsl(h=0, s=0, l=1, a=1)                       // Create a color object with HSLA values, each 0 to 1, the hue too
 tile(index=0, size=(16,16), texture=0, padding=0, bleed=0) // Create a tile info object
 tileInfo.frame(n)                             // Tile offset by n animation frames, on into the next row of the sheet
 tileInfo.setColumns(columns)                  // Frames per row, so frame() wraps to the next row
@@ -243,7 +243,7 @@ Color.divide(c)                           // Divide by a color
 Color.scale(scale, alphaScale=scale)      // Scale by a float
 Color.clamp()                             // Copy with each component clamped to 0 to 1
 Color.lerp(c, percent)                    // Interpolate between colors
-Color.setHSLA(h=0, s=0, l=1, a=1)         // Set the color from HSLA values
+Color.setHSLA(h=0, s=0, l=1, a=1)         // Set the color from HSLA values, each 0 to 1, the hue too
 Color.HSLA()                              // Get the color in HSLA format
 Color.mutate(amount=.05, alphaAmount=0)   // Copy randomly diverged from this color
 Color.setHex(hex)                         // Set this color from a hex code
@@ -2719,8 +2719,9 @@ levelEditor.edit3D         // The 3D editor's edit functions: level, objects, se
                            // setProperty(object, name, value), pos(object), rotation(object), scale(object),
                            // mousePoint(), undo(redo), toJSON()
 levelEditor.edit2D         // The 2D editor's: map, layer, objects, hover, selection, paint(cell, tile, direction,
-                           // mirror), changeObjects((list)=> ...), strokeEnd(), strokeCancel(), bulk(()=> ...),
-                           // undo(redo), toJSON(); a change is one undo once strokeEnd() is called
+                           // mirror), changeObjects((list)=> ...), setProperty(object, name, value), strokeEnd(),
+                           // strokeCancel(), bulk(()=> ...), undo(redo), toJSON(); a change is one undo once
+                           // strokeEnd() is called
 class MyEditor extends LevelEditor { onRestart() {} onDraw() {} } // Or a class of your own, its methods the hooks
 setLevelEditor(new MyEditor)   // Make it the one in use, before the editor opens
 // In release builds LevelEditor takes all of this and calls none of it, so a game needs no guards

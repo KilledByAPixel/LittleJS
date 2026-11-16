@@ -17,7 +17,8 @@
  *  @memberof Input */
 let mousePos = vec2();
 
-/** Mouse pos in screen space
+/** Mouse pos in screen space, in canvas pixels counted as the draws count them: pixel n is n - .5 to n + .5, so
+ *  it runs from -.5 to the canvas size less .5, and is a pixel's number when the pointer is over that pixel's middle
  *  @type {Vector2}
  *  @memberof Input */
 let mousePosScreen = vec2();
@@ -519,6 +520,8 @@ let touchGamepadHeldAtHandover = [];
 const touchGamepadStickAnchors = [], touchGamepadStickPointerId = [];
 // pointerId -> control role ('stick0', 'stick1', 'face<n>', or 'start')
 const touchGamepadPointerRole = new Map();
+// the fingers that landed in a touch gamepad zone's box but on none of its controls, with passthrough the game's
+const touchGamepadGameTouches = /* @__PURE__ */ new Set;
 // overlay DOM elements (created lazily on touch devices) and cached SVG shapes
 let touchGamepadOverlay, touchGamepadStage, touchGamepadSvg, touchGamepadSvgEls;
 let touchGamepadSideZones = [], touchGamepadZoneC;
@@ -541,6 +544,8 @@ function inputInit()
     document.addEventListener('wheel', onMouseWheel, { passive: false });
     document.addEventListener('contextmenu', onContextMenu);
     addEventListener('blur', onBlur); // the window's, the browser fires blur there and it does not bubble to the document
+    // and the page hidden, which a phone switching apps may say without a blur, so no key or finger is held after
+    document.addEventListener('visibilitychange', ()=> document.hidden && onBlur());
 
     // init touch input, its handler checks touchInputEnable itself, so turning it on later works too
     if (isTouchDevice)
@@ -760,6 +765,8 @@ function inputInit()
             const down = new Set([...e.touches].map((t)=> t.identifier));
             for (const id of [...inputTouchIds])
                 down.has(id) || inputTouchIds.delete(id);
+            for (const id of [...touchGamepadGameTouches])
+                down.has(id) || touchGamepadGameTouches.delete(id);
             if (ending && !known) return true;
 
             // the touch gamepad hides under an open level editor, and touch is the editor's mouse then
@@ -783,10 +790,15 @@ function inputInit()
             // (its own zones drive gameplay via pointer events)
             if (!gamepadOwns)
             {
-                // touches that landed on a virtual gamepad zone are owned by the gamepad
-                // (handled by its own pointer listeners) and must not drive the game mouse
-                const isGamepadTouch = (t)=>
+                // touches that landed on a control of the virtual gamepad are owned by the gamepad
+                // (handled by its own pointer listeners) and must not drive the game mouse; one in a
+                // zone's box but on none of its controls is the game's, decided as it lands
+                const inZone = (t)=>
                     touchGamepadSideZones.includes(t.target) || t.target === touchGamepadZoneC;
+                if (e.type === 'touchstart')
+                    for (const t of changed)
+                        inZone(t) && !touchGamepadTakes(t) && touchGamepadGameTouches.add(t.identifier);
+                const isGamepadTouch = (t)=> inZone(t) && !touchGamepadGameTouches.has(t.identifier);
                 const gameTouches = [];
                 for (const t of e.touches)
                     if (!isGamepadTouch(t) && inputTouchIds.has(t.identifier)) gameTouches.push(t);
@@ -882,11 +894,12 @@ function inputInit()
 }
 
 // convert a point of the window, a mouse or touch event's, to screen space
-function mouseEventToScreen(mousePos)
+function mouseEventToScreen(mousePos, clamped=true)
 {
-    const rect = mainCanvas.getBoundingClientRect();
-    const px = percent(mousePos.x, rect.left, rect.right);
-    const py = percent(mousePos.y, rect.top, rect.bottom);
+    // kept on the canvas, or past it for a place that is not the mouse's, as a touch gamepad button in a letterbox bar
+    const rect = mainCanvas.getBoundingClientRect(), along = (v, a, b)=> clamped ? percent(v, a, b) : (v - a) / (b - a);
+    const px = along(mousePos.x, rect.left, rect.right);
+    const py = along(mousePos.y, rect.top, rect.bottom);
     const pos = vec2(px*mainCanvasSize.x, py*mainCanvasSize.y);
     // bent once, as it comes in, but not while a level editor is open, which draws over the bent picture flat
     const bent = mouseScreenTransform && !levelEditor.isOpen ? mouseScreenTransform(pos) : pos;
@@ -1016,8 +1029,10 @@ function inputUpdate()
                     sticks[out] = applyDeadZones(touchStick);
                 else if (touchStick.lengthSquared() > .3)
                 {
-                    const x = clamp(round(touchStick.x), -1, 1);
-                    const y = clamp(round(touchStick.y), -1, 1);
+                    // snapped to the nearest of 8 directions by its angle, so a diagonal reads at the same
+                    // push as a straight one, where each axis rounded alone needed a longer push
+                    const a = round(atan2(touchStick.y, touchStick.x) / (PI/4)) * PI/4;
+                    const x = round(cos(a)), y = round(sin(a));
                     sticks[out] = vec2(x, -y).clampLength(); // clamp to circle
                     if (!out) dpad.set(x, -y); // the primary (stick 0) also drives the dpad vector
                 }
@@ -1325,8 +1340,11 @@ function touchGamepadRelayout()
         for (const zone of touchGamepadSideZones) zone.style.display = 'none';
         if (touchGamepadCenterButtonSize)
         {
-            // any touch presses start
-            setZone(touchGamepadZoneC, 'inset:0');
+            // any touch presses start, or with passthrough only one on the start button, so the game's paused
+            // menu gets the rest
+            const c = touchGamepadCenterButtonSize;
+            setZone(touchGamepadZoneC, touchGamepadPassthrough ?
+                `left:50%;top:50%;width:${2*c}px;height:${2*c}px;transform:translate(-50%,-50%)` : 'inset:0');
             touchGamepadZoneC.style.display = '';
         }
         else
@@ -1540,7 +1558,8 @@ function touchGamepadRender()
  *  @memberof Input */
 
 /** Returns where a button of the touch gamepad is on screen, to draw an icon of the game's own over it
- *  - Undefined when the touch gamepad is not showing that button: off, not a touch device, or no such button
+ *  - Undefined when the touch gamepad is not showing that button: off, not a touch device, or no such button, or
+ *    when its center is off the canvas, as in a letterbox bar with canvasFixedSize; one partly off it has its size
  *  - Buttons 0 to 3 are the right side's, 4 to 7 the left side's when it has buttons instead of a stick
  *  - Follows the layout, touchGamepadSize, the screen's safe area and setMouseScreenTransform
  *  @param {number} button
@@ -1563,7 +1582,10 @@ function touchGamepadButtonPos(button)
     // the circle drawn for it, in the stage's CSS pixels, the stage inset by the safe area
     const r = touchGamepadStageRect(), rr = +circle.getAttribute('r');
     const x = r.left + +circle.getAttribute('cx'), y = r.top + +circle.getAttribute('cy');
-    const pos = mouseEventToScreen(vec2(x, y)), edge = mouseEventToScreen(vec2(x + rr, y));
+    // not kept on the canvas, so one past its edge is its whole size, and one wholly off it, in a letterbox bar,
+    // is not on the screen the game draws
+    const pos = mouseEventToScreen(vec2(x, y), false), edge = mouseEventToScreen(vec2(x + rr, y), false);
+    if (pos.x < -.5 || pos.y < -.5 || pos.x > mainCanvasSize.x - .5 || pos.y > mainCanvasSize.y - .5) return;
     const alpha = +touchGamepadOverlay.style.opacity || 0;
     return {pos, size: 2*pos.distance(edge), alpha};
 }
@@ -1644,6 +1666,15 @@ function touchGamepadStartBlockedAt(p, W, H)
             return true;
     return false;
 }
+// if the touch gamepad takes a finger that landed in one of its zones: one on a control, or while paused any on the
+// start zone; a finger in a zone's box but on none of its controls is not the gamepad's
+function touchGamepadTakes(t)
+{
+    if (paused) return t.target === touchGamepadZoneC;
+    const r = touchGamepadStageRect();
+    return !!touchGamepadControlAt(vec2(t.clientX - r.left, t.clientY - r.top), r.width, r.height);
+}
+
 function touchGamepadStartBlockSide(side)
 { return touchGamepadSideHasControl(side) && !(touchGamepadFloating && touchGamepadSideStick(side)); }
 

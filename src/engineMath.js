@@ -1010,7 +1010,8 @@ class Vector2
 
 /**
  * Create a color object with RGBA values, white by default
- *  - Each value is 0 to 1, not 0 to 255: rgb(1, .5, 0) is orange; above 1 is brighter, for additive and emissive
+ *  - Each value is 0 to 1, not 0 to 255: rgb(1, .5, 0) is orange; 2D draws clamp each to 1, while a 3D tint or
+ *    light color above 1 is brighter
  * @param {number} [r=1] - red
  * @param {number} [g=1] - green
  * @param {number} [b=1] - blue
@@ -1026,7 +1027,7 @@ function rgb(r, g, b, a)
 
 // a color given as 0 to 255 or as percents, as other tools take them, said once in a debug build; a value a little
 // past 1 is a bright color, which is why only past 2 counts
-let colorRangeWarned = false, colorHueWarned = false;
+let colorRangeWarned = false;
 function colorRangeWarn(example)
 {
     if (colorRangeWarned) return;
@@ -1047,9 +1048,6 @@ function colorRangeWarn(example)
 function hsl(h, s, l, a)
 {
     debug && (s > 2 || l > 2) && colorRangeWarn('hsl(.5, 100, 50) is hsl(.5, 1, .5)');
-    // a whole hue past 1 is red, so it was most likely meant as degrees, said once
-    debug && !colorHueWarned && h > 1 && h % 1 === 0 && (colorHueWarned = true) &&
-        console.warn(`hsl hue is 0 to 1, not degrees: hsl(${h}, ...) wraps to red, ${h} degrees is hsl(${h}/360, ...)`);
     return new Color().setHSLA(h, s, l, a);
 }
 
@@ -1182,11 +1180,12 @@ class Color
             c.a*p + this.a*(1-p));
     }
 
-    /** Sets this color given a hue, saturation, lightness, and alpha
-     * @param {number} [h] - hue
-     * @param {number} [s] - saturation
-     * @param {number} [l] - lightness
-     * @param {number} [a] - alpha
+    /** Sets this color given a hue, saturation, lightness, and alpha, each 0 to 1 as hsl takes them
+     *  - The hue is not degrees: setHSLA(1/3, 1, .5) is green, and it wraps around, so 120 is red
+     * @param {number} [h] - hue, 0 to 1 around the color wheel from red
+     * @param {number} [s] - saturation, 0 to 1
+     * @param {number} [l] - lightness, 0 to 1
+     * @param {number} [a] - alpha, 0 to 1
      * @return {Color} */
     setHSLA(h=0, s=0, l=1, a=1)
     {

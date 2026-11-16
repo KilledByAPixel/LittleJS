@@ -1797,7 +1797,7 @@ class UISlider extends UIObject
             {
                 // the fill's edge is under the mouse: it grows from the bar's start, left or bottom, from the
                 // narrowest it draws to the whole bar, as render draws it
-                const minWidth = min(handleSize, this.cornerRadius * 2);
+                const minWidth = min(handleSize, max(0, this.cornerRadius) * 2);
                 const along = isHorizontal ? p.x - (centerPos - barSize/2) : centerPos + barSize/2 - p.y;
                 this.value = percent(along, minWidth, barSize);
             }
@@ -1845,7 +1845,7 @@ class UISlider extends UIObject
         if (this.fillMode)
         {
             // draw progress bar
-            const minWidth = min(handleWidth, this.cornerRadius * 2);
+            const minWidth = min(handleWidth, max(0, this.cornerRadius) * 2);
             const progressWidth = lerp(minWidth, barWidth, this.value);
             const p = (progressWidth - barWidth) * (isHorizontal ? .5 : -.5);
             const pos = this.nativePos.add(isHorizontal ? vec2(p, 0) : vec2(0, p));
@@ -1936,10 +1936,15 @@ class UIVideo extends UIObject
         autoplay && this.play();
     }
     
-    /** Play or resume the video
-     *  @return {Promise<boolean>} Resolves true once playback starts, false if the browser refused it */
+    /** Play or resume the video; on a page hidden now it waits, as one paused by the page does, and plays when the
+     *  page shows
+     *  @return {Promise<boolean>} Resolves true once playback starts, false if the browser refused it or it waits */
     async play()
     {
+        // as the page's pause would have it: waiting while hidden, muted while blurred
+        if (soundPauseWhenHidden && document.hidden)
+            return uiVideosPaused.add(this), false;
+        uiVideosBlurred && !this.video.muted && (this.video.muted = true, uiVideosMuted.add(this));
         // try to play the video, catch any errors (autoplay may be blocked)
         try { await this.video.play(); return true; }
         catch(e) { return false; }
