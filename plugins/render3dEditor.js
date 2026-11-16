@@ -54,7 +54,11 @@ function editor3DSetFreeCamera(on)
         pointerLockRequest();
     }
     else
+    {
         pointerLockIsActive() && pointerLockExit();
+        // still held till the browser lets it go, a frame or so on, and that loss is this one, not the browser's
+        editor3DWasLocked = pointerLockIsActive();
+    }
     inputCapture(editor3DViewOn());
 }
 
@@ -289,8 +293,21 @@ let editor3DLevel;
 
 // what the game made for each object of the level, by the object's id
 const editor3DInstances = new Map;
-// the ones the editor made itself, placed or made again, not by a level3DLoad of the game's
-const editor3DMadeHere = /* @__PURE__ */ new WeakSet;
+// the list level3DLoad gave the game for each level, which the objects the editor places or makes again join and
+// leave, so the game's own unloading takes them, whatever way it does it
+const editor3DLevelLists = /* @__PURE__ */ new WeakMap;
+
+// called by level3DLoad with the list it gives the game
+function editor3DLevelMade(level, made) { editor3DLevelLists.set(level, made); }
+
+// one of the editor's objects in the level's list in place of another, or taken out of it with none
+function editor3DListSwap(old, made)
+{
+    const list = editor3DLevel && editor3DLevelLists.get(editor3DLevel);
+    if (!list) return;
+    const i = old ? list.indexOf(old) : -1;
+    made && typeof made === 'object' ? i < 0 ? list.push(made) : list[i] = made : i < 0 || list.splice(i, 1);
+}
 
 // what the editor keeps for each level: {fileName, key, original, originalParts, hash, savedHash,
 // pending, fileHandle, saving, undo, redo}, the file it came from, the file's objects and parts and their hash for
@@ -520,13 +537,7 @@ function editor3DLevelLoaded(level)
     }
     // the maps an undo could have put back are the last load's
     editor3DPrefabLevels.has(level) || editor3DMapsRemovedClear();
-    // what the editor made for the last load of this same level is the editor's, a game that destroys only the list
-    // level3DLoad gave it would keep it, twice once its level loads again; a level loaded beside it, a room or a
-    // streamed part, leaves the first level's alone
-    const again = editor3DLevel === level;
     editor3DLevel = level;
-    for (const made of again ? editor3DInstances.values() : [])
-        editor3DMadeHere.has(made) && !made.destroyed && made.destroy?.();
     editor3DInstances.clear();
     if (isArray(level.objects))
     {
@@ -612,10 +623,11 @@ function editor3DPlaceInstance(made, object)
 // make an object's game object, again when it has one
 function editor3DMakeInstance(object)
 {
-    editor3DInstances.get(object.id)?.destroy?.();
+    const old = editor3DInstances.get(object.id);
+    old?.destroy?.();
     const made = level3DMake(object);
     made ? editor3DInstances.set(object.id, made) : editor3DInstances.delete(object.id);
-    made && typeof made === 'object' && editor3DMadeHere.add(made);
+    editor3DListSwap(old, made);
 }
 
 // set the level's objects to a list and bring the game's objects in line: one gone is destroyed, a new one made,
@@ -631,6 +643,7 @@ function editor3DSetObjects(list)
         if (ids.has(id)) continue;
         made.destroy?.();
         editor3DInstances.delete(id);
+        editor3DListSwap(made, undefined);
     }
     for (const id of [...editor3DSelection])
         ids.has(id) || editor3DSelection.delete(id);
@@ -714,8 +727,10 @@ function editor3DPrefabsShow()
             editor3DMakeInstance(object);
         else if (removed.has(object.type))
         {
-            editor3DInstances.get(object.id)?.destroy?.();
+            const made = editor3DInstances.get(object.id);
+            made?.destroy?.();
             editor3DInstances.delete(object.id);
+            editor3DListSwap(made, undefined);
         }
     }
     editor3DShadowLight();
@@ -2803,10 +2818,11 @@ function editor3DEditorUpdate(seconds)
         if (!ctrl)
             for (const [code, action] of Object.entries(editor3DKeys))
                 taken.has(code) || keyWasPressed(code) && action(shift);
-        // the letters, by what the key prints: a game's key of the same spelling takes its place
+        // the letters, by what the key prints; a press of a game's own key was left out by the listener, so the key
+        // that prints the letter on another layout, QWERTZ's Z where a game took Ctrl on the Y position, still works
         const pressed = editor3DLetterPressed;
         editor3DLetterPressed = undefined;
-        if (pressed && pressed.ctrl === ctrl && !taken.has(editor3DKeyCode(pressed.letter)))
+        if (pressed && pressed.ctrl === ctrl)
             pressed.letter === '?' ? editor3DHelp = !editor3DHelp :
                 pressed.ctrl && editor3DCtrlKeys[pressed.letter]?.(pressed.shift);
     }

@@ -98,3 +98,4 @@ function editor3DCameraBegin(){}
 function editor3DCameraEnd(){}
 function editor3DLevelLoaded(){}
 function editor3DObjectMade(){}
+function editor3DLevelMade(){}

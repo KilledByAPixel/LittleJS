@@ -163,6 +163,9 @@ export class Enemy extends GameObject
         if (this.destroyed)
             return;
 
+        // one that fell out of the level is gone, it was not beaten
+        if (this.pos.y < -9)
+            return this.destroy();
         Game.addToScore();
         GameEffects.sound_score.play(this.pos);
         GameEffects.makeDebris(this.pos, this.color);

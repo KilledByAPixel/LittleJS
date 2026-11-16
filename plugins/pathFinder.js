@@ -168,7 +168,8 @@ class PathFinder
     }
 
     /** Default extra cost for stepping on a cell. Returns 0 (free) by default.
-     *  Override to add cost-weighted terrain (mud, swamp, etc).
+     *  Override to add cost-weighted terrain (mud, swamp, etc); returning nothing for a cell is a cost of 0, so
+     *  `if (mud) return 3;` is enough
      *  @param {number} x - Tile x
      *  @param {number} y - Tile y
      *  @return {number} */
@@ -225,7 +226,9 @@ class PathFinder
             const node = this.nodes[x + y * w];
             node.reset();
             const walkable = !!this.isWalkable(x, y);
-            const cost = walkable ? max(0, this.getCost(x, y)) : 0;
+            const extra = walkable ? this.getCost(x, y) : 0;
+            ASSERT(extra === undefined || isNumber(extra), 'PathFinder getCost must return a number or nothing', extra);
+            const cost = walkable ? max(0, +extra || 0) : 0; // nothing, or not a number, is free ground
             node.walkable = walkable;
             node.cost = cost;
             node.posWorld.set(x + 0.5 + ox, y + 0.5 + oy);

@@ -55,18 +55,24 @@ function render3DDebugColor(color)
         const context = render3DDebugColorContext ||= document.createElement('canvas').getContext('2d') ?? undefined;
         if (context)
         {
-            // a color it does not know leaves the one before, a value no name gives, so a misspelt one is said
-            context.fillStyle = '#010203';
+            // a color it does not know leaves the one before, so it is set over two colors: known, it is the same
+            // after both, unknown, each is left as it was
+            context.fillStyle = '#000';
             context.fillStyle = text;
-            const known = String(context.fillStyle) !== '#010203';
+            const first = String(context.fillStyle);
+            context.fillStyle = '#fff';
+            context.fillStyle = text;
+            const known = String(context.fillStyle) === first;
             ASSERT(known, 'a 3D debug color the browser does not know', color);
-            text = known ? String(context.fillStyle) : '#fff';
+            text = known ? first : '#fff';
         }
     }
     if (text[0] === '#')
         return new Color().setHex(text);
     const rgba = text.match(/rgba?\(([^)]*)\)/)?.[1].split(',').map(Number);
-    return rgba && rgba.length >= 3 ? rgb(rgba[0] / 255, rgba[1] / 255, rgba[2] / 255, rgba[3] ?? 1) : WHITE.copy();
+    const read = !!rgba && rgba.length >= 3;
+    ASSERT(read, 'a 3D debug color the browser gives back as ' + text + ', which is not read, use a hex or rgb color');
+    return read ? rgb(rgba[0] / 255, rgba[1] / 255, rgba[2] / 255, rgba[3] ?? 1) : WHITE.copy();
 }
 
 /** Draw a debug wireframe box

@@ -815,6 +815,8 @@ class EngineObject
     renderNormal() { this.render(); }
 
     /** Destroy this object, destroy its children, detach its parent, and mark it for removal
+     *  - The children go in their order: one a child's destroy hands to another parent, attach or addChild, stays, when
+     *    it comes after that child, one before it is already gone
      *  @param {boolean} [immediate] - true removes attached effects like particle emitters at once, false lets them finish first */
     destroy(immediate=false)
     {

@@ -30,6 +30,7 @@ let glContext;
  *  @type {number}
  *  @memberof WebGL */
 let glMaxTextureSize = 0;
+const glCanvasAsked = /* @__PURE__ */ new Vector2(-1, -1); // the size last asked of the canvas, it may be made smaller
 
 /** A texture size this device can make: the size asked for, or the largest it supports when that is smaller
  *  - The engine sizes the textures it makes itself through this, the shadow maps and the like, so a size a device
@@ -331,17 +332,21 @@ function glPreRender(clear=true)
     if (!glRenderTarget)
     {
         // set to same size as main canvas, only when it changes because
-        // setting it reallocates the drawing buffer and invalidates the frame
-        if (glCanvas.width !== bufferSizeX || glCanvas.height !== bufferSizeY)
+        // setting it reallocates the drawing buffer and invalidates the frame; a buffer the browser made smaller, a
+        // large canvas at a high pixel ratio, makes the canvas that size, so every reader of its size has the real one
+        if (glCanvasAsked.x !== bufferSizeX || glCanvasAsked.y !== bufferSizeY)
         {
+            glCanvasAsked.set(bufferSizeX, bufferSizeY);
             glCanvas.width = bufferSizeX;
             glCanvas.height = bufferSizeY;
+            const madeX = glContext.drawingBufferWidth, madeY = glContext.drawingBufferHeight;
+            if (madeX && madeY && (madeX < bufferSizeX || madeY < bufferSizeY))
+                glCanvas.width = madeX, glCanvas.height = madeY;
         }
     }
-    // the buffer the browser made, which it clamps for a canvas too large, so the view is not cropped against the
-    // 2D canvas; a render target is its own size
+    // the canvas, the buffer the browser made, which it clamps for a canvas too large; a render target is its own size
     glRenderTarget ? glContext.viewport(0, 0, bufferSizeX, bufferSizeY) :
-        glContext.viewport(0, 0, glContext.drawingBufferWidth || bufferSizeX, glContext.drawingBufferHeight || bufferSizeY);
+        glContext.viewport(0, 0, glCanvas.width, glCanvas.height);
     clear && glClearCanvas();
 
     // build the transform matrix

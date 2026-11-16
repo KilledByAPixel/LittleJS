@@ -768,7 +768,9 @@ function inputInit()
             // what they are with touch input off too, as Firefox and Safari say nothing of where they came from
             inputTouchLast = true;
             inputLastTouchTime = performance.now();
-            mouseInWindow = true; // a finger is on the page, though the mouse left it, so a tap reaches the UI
+            // a finger that drives the mouse puts it on the page, though the mouse left it, so a tap reaches the UI;
+            // one the touch gamepad takes moves no mouse, which stays where it was
+            touchInputEnable && !gamepadOwns && (mouseInWindow = true);
             if (!touchInputEnable || gamepadOwns)
             {
                 // off, or the touch gamepad owns touch: turned so mid touch, the finger that drove the mouse lets
@@ -887,7 +889,10 @@ function mouseEventToScreen(mousePos)
     const py = percent(mousePos.y, rect.top, rect.bottom);
     const pos = vec2(px*mainCanvasSize.x, py*mainCanvasSize.y);
     // bent once, as it comes in, but not while a level editor is open, which draws over the bent picture flat
-    return mouseScreenTransform && !levelEditor.isOpen ? mouseScreenTransform(pos) : pos;
+    const bent = mouseScreenTransform && !levelEditor.isOpen ? mouseScreenTransform(pos) : pos;
+    // then in pixels as the draws take them, a pixel's index, which they draw at its middle, half a pixel on, so
+    // mousePos is under the pointer, a canvas pixel being many css pixels with canvasFixedSize scaled up
+    return vec2(bent.x - .5, bent.y - .5);
 }
 
 function inputUpdate()

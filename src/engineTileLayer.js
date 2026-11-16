@@ -844,6 +844,18 @@ const objectLayersKindSaid = /* @__PURE__ */ new WeakMap;
 const objectPropertyDefault = (defaults, key)=>
     Object.prototype.hasOwnProperty.call(defaults, key) ? defaults[key] : undefined;
 
+// a Tiled class property's value over its default, each plain object member by member, so a member Tiled left out,
+// as it leaves out the ones not set, keeps the default's
+function objectLayersMergeClass(fallback, value)
+{
+    const plain = (o)=> !!o && typeof o === 'object' && !isArray(o);
+    if (!plain(fallback) || !plain(value)) return objectPropertyCopy(value);
+    const merged = objectPropertyCopy(fallback);
+    for (const key in value)
+        objectPropertyAssign(merged, key, objectLayersMergeClass(fallback[key], value[key]), 'class', 'objectLayersLoad');
+    return merged;
+}
+
 // the defaults of an object's type, each copied for it, then its properties in Tiled over them
 function objectLayersProperties(type, object, tileMapData)
 {
@@ -888,7 +900,9 @@ function objectLayersProperties(type, object, tileMapData)
                     `default a ${kind(fallback)}, the default is kept`);
                 continue;
             }
-            set(name, objectPropertyCopy(value)); // a class property is the map's own object
+            // a class property is the map's object over the type's default, member by member: Tiled writes only the
+            // members set on that object, the rest are the class's defaults
+            set(name, objectLayersMergeClass(fallback, value));
         }
     }
     return properties;
@@ -1650,6 +1664,8 @@ class TileLayer extends CanvasLayer
  * Tile Collision Layer - a tile layer with collision
  * - adds collision data and functions to TileLayer
  * - there can be multiple tile collision layers
+ * - it is an object, placed by its corner, its box the whole layer, and isSolid says its tiles block objects, so an
+ *   area query, engineObjectsCollect, finds it wherever it covers: leave it out of a test for solid objects
  * - its pos must be whole numbers, so its cells line up with the world grid objects land on
  * @extends TileLayer
  * @memberof TileLayers

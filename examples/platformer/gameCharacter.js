@@ -27,6 +27,7 @@ export class Character extends GameObjects.GameObject
 
         this.lastPos = pos;
         this.groundTimer        = new Timer;
+        this.wallTimer          = new Timer; // a moment after leaving a wall a jump is still a wall jump
         this.jumpTimer          = new Timer;
         this.pressedJumpTimer   = new Timer;
         this.dodgeTimer         = new Timer;
@@ -54,7 +55,12 @@ export class Character extends GameObjects.GameObject
         this.gravityScale = 1; // reset to default gravity
 
         if (this.isDead())
+        {
+            // a body lies a while, then goes, so bodies do not pile up and stop bullets; the player's waits for its
+            // respawn, which makes a new one
+            this.deadTimer.get() > 5 && this !== Game.player && this.destroy();
             return super.update();
+        }
 
         // get move input
         const moveInput = this.moveInput.copy();
@@ -73,8 +79,9 @@ export class Character extends GameObjects.GameObject
         const wallAt = (side)=>
         {
             const pos = this.pos.add(vec2(side * (this.size.x / 2 + .1), 0));
-            return LJS.tileCollisionGetData(pos) > 0 ||
-                LJS.engineObjectsCollect(pos, vec2(.1)).some((o)=> o !== this && o.isSolid);
+            // a solid object, not the tile layer, an object too, placed by its corner, whose box covers the level
+            return LJS.tileCollisionGetData(pos) > 0 || LJS.engineObjectsCollect(pos, vec2(.1)).some((o)=>
+                o !== this && o.isSolid && !(o instanceof LJS.TileCollisionLayer));
         };
         if (moveInput.x && !this.velocity.x && this.velocity.y < 0 && (wallAt(1) || wallAt(-1)))
         {
@@ -151,25 +158,27 @@ export class Character extends GameObjects.GameObject
         }
         else
         {
-            // update jumping and ground check
-            if (this.groundObject || this.climbingWall)
+            // update jumping and ground check: the ground and a wall each give a moment after leaving them to jump
+            if (this.groundObject)
             {
-                if (!this.groundTimer.isSet())
-                    GameEffects.sound_walk.play(this.pos); // land sound
+                if (!this.groundTimer.active() && !this.wallTimer.active())
+                    GameEffects.sound_walk.play(this.pos); // land sound, on a ledge walked off and back on too
                 this.groundTimer.set(.1);
             }
+            if (this.climbingWall)
+                this.wallTimer.set(.1);
 
-            if (this.groundTimer.active() && !this.dodgeTimer.active())
+            if ((this.groundTimer.active() || this.wallTimer.active()) && !this.dodgeTimer.active())
             {
-                // is on ground
+                // is on ground or on a wall
                 if (this.pressedJumpTimer.active() && !this.jumpTimer.active())
                 {
-                    // start jump
-                    if (this.climbingWall)
+                    // start jump: off a wall, or just after leaving one, with no ground under it, a wall jump
+                    if (this.wallTimer.active() && !this.groundObject)
                     {
-                        // off the wall, or the ground time it gave would make a ground jump of it the next frame
                         this.velocity.y = .25;
                         this.groundTimer.unset();
+                        this.wallTimer.unset();
                     }
                     else
                     {
@@ -214,7 +223,7 @@ export class Character extends GameObjects.GameObject
 
         // update walk cycle
         const speed = this.getSpeed();
-        if (this.climbingLadder || this.groundTimer.active() && !this.dodgeTimer.active())
+        if ((this.climbingLadder || this.groundTimer.active() || this.wallTimer.active()) && !this.dodgeTimer.active())
         {
             this.walkCyclePercent += speed * .5;
             this.walkCyclePercent = speed > .01 ? LJS.mod(this.walkCyclePercent) : 0;
@@ -224,7 +233,8 @@ export class Character extends GameObjects.GameObject
 
         // update walk sound
         this.walkSoundTime += speed;
-        if (speed > .001 && ((this.climbingLadder || this.groundTimer.active()) && !this.dodgeTimer.active()))
+        if (speed > .001 && ((this.climbingLadder || this.groundTimer.active() || this.wallTimer.active()) &&
+            !this.dodgeTimer.active()))
         {
             if (this.walkSoundTime > 1)
             {
@@ -244,7 +254,7 @@ export class Character extends GameObjects.GameObject
     {
         // update animation
         const animationFrame = this.isDead() ? 0 :
-            this.climbingLadder || this.groundTimer.active() ?
+            this.climbingLadder || this.groundTimer.active() || this.wallTimer.active() ?
             2*this.walkCyclePercent|0 : 1;
         this.tileInfo = Game.spriteAtlas.player.frame(animationFrame);
 

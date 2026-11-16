@@ -980,6 +980,8 @@ const engineStepMaxFrames = 36000;
  *  Respects paused exactly as the normal update loop does
  *  Does nothing until the promise engineInit returns has resolved, which waits for the images, and the sounds
  *  gameInit made, to load; a test hook steps from that promise's then
+ *  - Not from inside a frame, its update, render or a plugin's callbacks, which would run the engine inside itself: a
+ *    debug build asserts and a release build does nothing; call it after, from a timer or a promise
  *  @param {number} [frames] - frames of 1/60 of a second to advance, max 36000; timeScale sets how many fixed
  *  updates they run, as in the normal loop, one each at timeScale 1
  *  @example
@@ -994,7 +996,7 @@ function engineStep(frames=1)
     ASSERT(engineManualStep,
         'engineStep requires setEngineManualStep(true)');
     ASSERT(engineUpdateInternal, 'engineStep requires engineInit to complete');
-    ASSERT(!engineUpdating, 'engineStep can not be called from inside an update, call it after, as from a timer');
+    ASSERT(!engineUpdating, 'engineStep can not be called from inside an update or a render, call it after, as from a timer');
     // runtime guard so release builds (where the asserts are stripped) can't
     // start a second requestAnimationFrame chain, call an undefined update, or run one inside another
     if (!engineManualStep || !engineUpdateInternal || engineUpdating) return;

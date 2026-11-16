@@ -79,6 +79,15 @@ function loadLevelData()
     tileLayers = LJS.tileLayersLoad(tileMapData, tile(0,16,1), 0, 1);
     levelSize = tileLayers[0].size;
     playerStartPos = vec2(0, levelSize.y); // default player start
+
+    // walls past the level's left and right edges, solid and not drawn, so nothing walks out of view
+    for (const x of [-.5, levelSize.x + .5])
+    {
+        const wall = new LJS.EngineObject(vec2(x, levelSize.y), vec2(1, levelSize.y * 4));
+        wall.setCollision();
+        wall.mass = 0;
+        wall.render = ()=> {};
+    }
     foregroundTileLayer = tileLayers[0];
 
     for (let i=tileLayers.length; i--;)

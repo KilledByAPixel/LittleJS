@@ -1217,9 +1217,11 @@ function gltfPart(json, buffers, textures, copies, primitive, matrix, name)
     // look right in; the GLSL sample in the extension's readme, read column major, turns the other way
     const material = json.materials?.[primitive.material] || {}, pbr = material.pbrMetallicRoughness || {};
     // with no base color texture, the normal or emissive map's, which the same uvs are read for
-    const textureRef = pbr.baseColorTexture ?? material.normalTexture ?? material.emissiveTexture;
-    const uvTransform = textureRef?.extensions?.KHR_texture_transform;
-    const uvAccessor = attributes['TEXCOORD_' + (uvTransform?.texCoord ?? textureRef?.texCoord ?? 0)];
+    // the base color texture is the part's color; with none, the normal or emissive map lends its uvs, never its image
+    const textureRef = pbr.baseColorTexture;
+    const uvRef = textureRef ?? material.normalTexture ?? material.emissiveTexture;
+    const uvTransform = uvRef?.extensions?.KHR_texture_transform;
+    const uvAccessor = attributes['TEXCOORD_' + (uvTransform?.texCoord ?? uvRef?.texCoord ?? 0)];
     const [ox, oy] = uvTransform?.offset || [0, 0], [sx, sy] = uvTransform?.scale || [1, 1], r = uvTransform?.rotation || 0;
     const c = cos(r), s = sin(r);
     const uvs = uvAccessor !== undefined ? read(uvAccessor, (d, k)=>

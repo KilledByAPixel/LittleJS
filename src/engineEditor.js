@@ -2719,6 +2719,7 @@ function editorPaletteTiles(layer)
 // draw the palette of object types, each its icon or the start of its name, the brush's type outlined
 // an image a palette can draw: one that failed to load, or has not, throws in drawImage, which stops a debug build
 const editorImageReady = (image)=> !!image && (image.naturalWidth ?? image.width) > 0;
+const editorIconReady = (tileInfo)=> !!tileInfo?.size.x && editorImageReady(tileInfo.textureInfo?.image);
 
 function editorPaletteDrawObjects(canvas)
 {
@@ -2734,7 +2735,7 @@ function editorPaletteDrawObjects(canvas)
     types.forEach(([name, {tileInfo}], i)=>
     {
         const x = i % columns * cell, y = (i / columns | 0) * cell, image = tileInfo?.textureInfo?.image;
-        if (editorImageReady(image))
+        if (editorIconReady(tileInfo))
             context.drawImage(image, tileInfo.pos.x, tileInfo.pos.y, tileInfo.size.x, tileInfo.size.y,
                 x + 2, y + 2, cell - 4, cell - 4);
         else
@@ -2866,8 +2867,8 @@ function editorPanelUpdate()
     const paletteTiles = editorObjectLayer ? undefined : editorPaletteTiles(editorLayer);
     // for objects, the types the game added and the icons loaded, a type added while open or an icon packed late
     const paletteLoaded = editorObjectLayer ?
-        [...objectLayersTypes.values()].reduce((n, t)=> n + (editorImageReady(t.tileInfo?.textureInfo?.image) ? 1 :
-            0), objectLayersTypes.size * 1e4) :
+        [...objectLayersTypes].map(([name, t])=> name + ':' + (editorIconReady(t.tileInfo) && t.tileInfo.pos + '' +
+            t.tileInfo.size)).join() : // the icons themselves, a loadSprite one packing after on a ready sheet too
         paletteTiles?.reduce((n, t)=> n + (t.tileInfo?.textureInfo?.image ? 1 : 0), 0);
     if (p.paletteLayer !== paletteLayer || p.paletteBrush !== paletteBrush || p.paletteTiles !== paletteTiles ||
         p.paletteCount !== paletteTiles?.length || p.paletteLoaded !== paletteLoaded)
@@ -2957,7 +2958,8 @@ function editorOnKeyDown(e)
 // pixels an event, a mouse wheel held with Ctrl a whole notch, kept to 50 so it is not a jump
 function editorOnWheel(e)
 {
-    if (!editorIsOpen || editorIsTextField(e.target) || e.ctrlKey && !touchPinchWheel) return;
+    // without focus, an iframe before its first click, the page around it scrolls and the editor does not zoom
+    if (!editorIsOpen || editorIsTextField(e.target) || e.ctrlKey && !touchPinchWheel || !document.hasFocus()) return;
     const pixels = e.deltaY * (e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? 400 : 1);
     editorZoom(Math.exp(e.ctrlKey ? -clamp(pixels, -50, 50) * .01 : -pixels * .002));
 }
@@ -3019,7 +3021,7 @@ function editorDrawBox(center, size, color, width)
 function editorDrawObjectIcon(name, pos, size, alpha)
 {
     const tileInfo = objectLayersTypes.get(name)?.tileInfo;
-    if (tileInfo)
+    if (editorIconReady(tileInfo)) // one that failed, or a loadSprite still packing, shows its name
         drawTile(pos, size, tileInfo, hsl(0, 0, 1, alpha), 0, undefined, undefined, glEnable, false);
     else
     {
@@ -3128,9 +3130,9 @@ function editorPropertiesUpdate(box)
         }
         else
         {
-            // a type it has no input for, an array say, shown as it is
+            // a type it has no input for, an array or a class say, shown as it is, its members, not [object Object]
             input.readOnly = true;
-            input.value = String(value);
+            input.value = value && typeof value === 'object' ? JSON.stringify(value) : String(value);
         }
     }
 }

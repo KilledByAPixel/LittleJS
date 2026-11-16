@@ -130,6 +130,8 @@ function level3DAddMesh(name, mesh, tileInfo, color=WHITE, meshCollision=false)
  *    until an undo: a game that holds one takes it again in onRestart, or looks it up when the one it holds is
  *    destroyed or not in engineObjects, as examples/3d does
  *  @param {Level3D} level - The level, the level editor edits this same object
+ *  - In a 3D editing session what the editor places or makes again joins the list this gives back, and leaves it
+ *    when taken out, so a game that unloads the level by its list takes the editor's objects with it
  *  @return {Array<any>} - What each object's type made, a function that made nothing is left out
  *  @memberof Level3D */
 function level3DLoad(level)
@@ -160,6 +162,7 @@ function level3DLoad(level)
         }
     }
     finally { --level3DPrefabLoading; }
+    editor3DLevelMade(level, made); // debug builds: the 3D editor keeps what it makes for the level in this list
     return made;
 }
 

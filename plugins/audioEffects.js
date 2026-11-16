@@ -29,7 +29,7 @@ class AudioEffect
         ASSERT(isNumber(mix), 'mix must be a number');
 
         /** @property {number} - Wet/dry balance, 0 is fully dry and 1 is fully wet */
-        this.mix = clamp(mix);
+        this.mix = clamp(audioFinite(mix, 1)); // not a number is fully wet, as setMix takes it
         if (!audioContext) return; // no audio outside a browser, where the engine runs headless
 
         /** @property {GainNode} - Connect sounds to this node */
@@ -151,7 +151,8 @@ class AudioFilter extends AudioEffect
     {
         ASSERT(isNumber(frequency) && frequency >= 0, 'frequency must be positive or zero');
         if (!audioContext) return;
-        this.rampParam(this.node.frequency, frequency, fadeTime);
+        // not finite is the browser's default, 350 Hz, as the constructor takes it, not 0, which silences a lowpass
+        this.rampParam(this.node.frequency, audioFinite(frequency, 350), fadeTime);
     }
 
     /** Set the resonance at the cutoff

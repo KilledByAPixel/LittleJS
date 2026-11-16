@@ -2465,10 +2465,12 @@ function render3DCubeTexture(cube)
     else
     {
         // a face past the GPU's cube size, or faces of different sizes, sample black with nothing said, so it is said
-        const sizes = cube.faces.map((face)=> face instanceof Uint8Array ? cube.size : face?.width);
+        // a face that is not square, or data of the wrong length, is no size at all
+        const sizes = cube.faces.map((face)=> face instanceof Uint8Array ?
+            face.length === cube.size * cube.size * 4 ? cube.size : 0 : face?.width === face?.height ? face?.width : 0);
         const limit = gl.getParameter(gl.MAX_CUBE_MAP_TEXTURE_SIZE);
-        (sizes.some((size)=> size !== sizes[0]) || sizes[0] > limit) && console.warn('LittleJS: a cube map needs ' +
-            'six square faces of one size, at most ' + limit + ' here, and has ' + sizes.join(', '));
+        (sizes.some((size)=> !size || size !== sizes[0]) || sizes[0] > limit) && console.warn('LittleJS: a cube ' +
+            'map needs six square faces of one size, at most ' + limit + ' here, and has ' + sizes.join(', '));
     }
     cube.faces && cube.faces.forEach((face, i)=> face instanceof Uint8Array ?
         gl.texImage2D(gl.TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, gl.RGBA, cube.size, cube.size, 0, gl.RGBA,

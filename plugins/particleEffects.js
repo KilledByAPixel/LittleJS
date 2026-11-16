@@ -531,8 +531,10 @@ function particleEffectUpdateCallback(behaviors, is3D)
         const behavior = particleEffectBehavior(b.name);
         return [behavior?.[is3D ? 'update3D' : 'update'], behavior && clamp(b.strength, behavior.min, behavior.max)];
     }).filter(c=> c[0]);
-    if (calls.length)
-        return (p)=> { for (const [update, strength] of calls) update(p, strength); };
+    if (!calls.length) return;
+    const callback = /** @type {any} */ ((p)=> { for (const [update, strength] of calls) update(p, strength); });
+    callback.behaviors = behaviors.map((b)=> ({...b})); // what it runs, for particleEffectFromEmitter
+    return callback;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -694,7 +696,9 @@ function particleEffectFromEmitter(emitter, name='Effect')
     settings.emitHeight = emitter.emitSize.y;
     settings.shape = '';
     settings.tileIndex = -1;
-    return particleEffectSanitize({name, settings});
+    // the behaviors the effect it was made from runs, kept on its update callback
+    const behaviors = /** @type {any} */ (emitter.particleUpdateCallback)?.behaviors;
+    return particleEffectSanitize({name, settings, behaviors: behaviors?.map((b)=> ({...b})) ?? []});
 }
 
 ///////////////////////////////////////////////////////////////////////////////

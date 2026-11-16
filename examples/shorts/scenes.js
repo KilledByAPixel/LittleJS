@@ -146,9 +146,9 @@ A switch does three things, in this order:
 
 So a scene starts with an empty world and never has to clean up after
 the one before. It happens at once and can be called from anywhere
-except a `leave`, and one asked for by an object the switch destroys
-is dropped: here a click in a scene's `update` does it, and so does a
-ball's own `update` when the last life goes.
+except a `leave`: here a click in a scene's `update` does it, and so
+does a ball's own `update` when the last life goes. One asked for by
+an object the switch itself destroys is dropped.
 
 ### The scenes
 `titleScene` and `overScene` only wait for a click in `update` and draw
