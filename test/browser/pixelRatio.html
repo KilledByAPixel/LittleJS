@@ -26,10 +26,19 @@ smokeRun(async ()=>
     checkPixel('a rectangle draws at its place', .25, .75, [255, 0, 0, 255]);
     checkPixel('the clear color around it', .75, .25, [0, 0, 255, 255]);
 
-    // the debug overlay over the game, a frame drawn with it
+    // the debug overlay over the game, a frame drawn with it: its text is ink on the 2D canvas that was not there
+    const ink = ()=>
+    {
+        const data = mainCanvas.getContext('2d').getImageData(0, 0, mainCanvas.width, mainCanvas.height).data;
+        let sum = 0;
+        for (let i = 3; i < data.length; i += 4) sum += data[i];
+        return sum;
+    };
+    const without = ink();
     setDebugOverlay(true);
     engineStep();
-    check('the overlay draws', debugOverlay);
+    const withOverlay = ink();
+    check('the overlay draws', withOverlay > without, without + ' then ' + withOverlay);
     checkPixel('the game still draws under it', .25, .75, [255, 0, 0, 255]);
     setDebugOverlay(false);
     engineStep();

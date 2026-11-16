@@ -4,6 +4,12 @@
      a few frames drawn; then the 3D editor opened on a 3D level, its panel made and frames drawn; a throw in either
      panel or its drawing fails the page, as one in the 2D palette did for ten review passes -->
 <base href=../../examples/shorts/>
+<script>
+// shown and focused, as the one tab a player has, though the runner runs four at once in the background
+Object.defineProperty(document, 'hidden', {get: ()=> false});
+Object.defineProperty(document, 'visibilityState', {get: ()=> 'visible'});
+document.hasFocus = ()=> true;
+</script>
 <script src=../../dist/littlejs.js></script>
 <script src=../../test/browser/smoke.js></script>
 <pre id=result>PENDING</pre>
@@ -62,13 +68,28 @@ function gameRenderPost() {}
             check('the whole sheet\'s tiles, read as a grid', sheetTiles.length > 3, sheetTiles.length);
             check('and drawn', parts.palette.height > editorPaletteCell, parts.palette.width + 'x' + parts.palette.height);
             // the brush drawn under the mouse over the level, and a Shift line from the last cell
+            // the tiles and lines drawn a frame counted: the brush is tiles under the mouse, and Shift adds the line
+            // it would paint from the last cell placed to the mouse
+            const counted = async ()=>
+            {
+                const tile = drawTile, line = drawLine;
+                let tiles = 0, lines = 0;
+                drawTile = function() { ++tiles; return tile.apply(this, arguments); };
+                drawLine = function() { ++lines; return line.apply(this, arguments); };
+                try { await step(1); } finally { drawTile = tile, drawLine = line; }
+                return {tiles, lines};
+            };
             mousePosScreen = vec2(240, 135);
-            await step(3);
+            await step(2);
+            editorLastPlaced = {layer: editorLayer, pos: vec2(1, 1)};
+            const brushAlone = await counted();
             inputData[0].ShiftLeft = 1;
-            editorLastPlaced = vec2(1, 1);
-            await step(3);
+            const withLine = await counted();
             inputData[0].ShiftLeft = 0;
-            check('the brush and a Shift line draw over the level', !!editorHover, editorHover + '');
+            check('the brush draws under the mouse', !!editorHover && brushAlone.tiles > 0,
+                editorHover + ' ' + brushAlone.tiles);
+            check('and Shift draws the line it would paint from the last cell', withLine.lines > brushAlone.lines,
+                brushAlone.lines + ' then ' + withLine.lines);
 
             // the object layer: its palette of types, an object placed and selected, its properties box
             const objects = editorLayers().find((l)=> l.isObjects);

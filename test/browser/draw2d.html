@@ -40,6 +40,11 @@ smokeRun(async ()=>
             rgb(0, 0, 1));                                                     // bottom right, green plus blue
     }, ()=> {});
     check('WebGL is on', glEnable && !!glContext);
+    // the build asked for is the one that ran: a release build has no debug, a minified one no indented source
+    const build = new URLSearchParams(location.search).get('build');
+    const minified = !String(drawRect).includes('\n    ');
+    build && check('it is the ' + build + ' build', build === 'release' ? !debug && !minified : minified,
+        'debug ' + debug + ', minified ' + minified);
     engineStep();
     checkPixel('the clear color shows', .25, .25, [0, 0, 255, 255]);
     checkPixel('a rectangle draws in its color', .25, .75, [255, 0, 0, 255]);

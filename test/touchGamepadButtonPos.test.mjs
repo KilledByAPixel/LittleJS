@@ -5,7 +5,7 @@ import { loadEngine } from './vmEngine.mjs';
 // touchGamepadButtonPos: where a touch gamepad button is drawn, in screen space, for a game's own icon over it
 
 // an engine with a touch gamepad overlay standing in for the one a touch device makes: its stage inset 10 and 20
-// pixels by the safe area, and button 0 drawn at 900, 880 in it with a radius of 25; the canvas fills the
+// pixels by the safe area, and button 0 drawn at 900, 880 in it with a radius of 25; the canvas fills the (the centre is given as a screen pixel, half a pixel back from the place, as the mouse is)
 // window at one screen pixel a CSS pixel
 function engine()
 {
@@ -20,7 +20,7 @@ function engine()
 test('a button\'s center, diameter and the gamepad\'s alpha, in screen space through the safe area', () =>
 {
     const run = engine();
-    assert.deepEqual(JSON.parse(run('const b = touchGamepadButtonPos(0); JSON.stringify([b.pos.x, b.pos.y, b.size, b.alpha])')), [910, 900, 50, .3]);
+    assert.deepEqual(JSON.parse(run('const b = touchGamepadButtonPos(0); JSON.stringify([b.pos.x, b.pos.y, b.size, b.alpha])')), [909.5, 899.5, 50, .3]);
 });
 
 test('undefined for a button not drawn, and while the touch gamepad is off or hidden', () =>
@@ -37,7 +37,7 @@ test('it follows the canvas scale and setMouseScreenTransform, as a touch on it 
 {
     const run = engine();
     run('mainCanvasSize = vec2(500)'); // the canvas drawn at half the pixels it shows across
-    assert.deepEqual(JSON.parse(run('const b = touchGamepadButtonPos(0); JSON.stringify([b.pos.x, b.pos.y, b.size])')), [455, 450, 25]);
+    assert.deepEqual(JSON.parse(run('const b = touchGamepadButtonPos(0); JSON.stringify([b.pos.x, b.pos.y, b.size])')), [454.5, 449.5, 25]);
     run('mainCanvasSize = vec2(1000); setMouseScreenTransform((p)=> p.add(vec2(5, 0)))');
-    assert.deepEqual(JSON.parse(run('const c = touchGamepadButtonPos(0); JSON.stringify([c.pos.x, c.pos.y, c.size])')), [915, 900, 50]);
+    assert.deepEqual(JSON.parse(run('const c = touchGamepadButtonPos(0); JSON.stringify([c.pos.x, c.pos.y, c.size])')), [914.5, 899.5, 50]);
 });

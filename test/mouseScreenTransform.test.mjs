@@ -13,28 +13,29 @@ const engine = ()=>
     return { run, move };
 };
 
-test('with no transform the mouse is where the event is', () =>
+// a screen position is a pixel's index, drawn at its middle, so the event's place is half a pixel on from it
+test('with no transform the mouse is where the event is, as the pixel the draws put there', () =>
 {
     const { run, move } = engine();
     assert.equal(run(`mouseScreenTransform`), undefined);
-    assert.deepEqual(move(750, 500), {x: 750, y: 500});
+    assert.deepEqual(move(750, 500), {x: 749.5, y: 499.5});
 });
 
 test('a transform given bends every mouse event once', () =>
 {
     const { run, move } = engine();
     run(`setMouseScreenTransform((pos)=> pos.scale(.5));`);
-    assert.deepEqual(move(750, 500), {x: 375, y: 250});
-    assert.deepEqual(move(750, 500), {x: 375, y: 250}, 'the same event the same place, not bent again');
+    assert.deepEqual(move(750, 500), {x: 374.5, y: 249.5});
+    assert.deepEqual(move(750, 500), {x: 374.5, y: 249.5}, 'the same event the same place, not bent again');
     run(`setMouseScreenTransform();`);
-    assert.deepEqual(move(750, 500), {x: 750, y: 500}, 'and taken off again');
+    assert.deepEqual(move(750, 500), {x: 749.5, y: 499.5}, 'and taken off again');
 });
 
 test('postProcessCurveMouse bends as postProcessCurve does: the middle stays, the rest is pushed out', () =>
 {
     const { run, move } = engine();
     run(`setMouseScreenTransform(postProcessCurveMouse(.1));`);
-    assert.deepEqual(move(500, 500), {x: 500, y: 500});
-    const bent = move(750, 500); // half way out: 1 + .1 * .25 further, 756.25
-    assert.ok(Math.abs(bent.x - 756.25) < 1e-9 && bent.y === 500, JSON.stringify(bent));
+    assert.deepEqual(move(500, 500), {x: 499.5, y: 499.5});
+    const bent = move(750, 500); // half way out: 1 + .1 * .25 further, 756.25, then the pixel's half
+    assert.ok(Math.abs(bent.x - 755.75) < 1e-9 && bent.y === 499.5, JSON.stringify(bent));
 });

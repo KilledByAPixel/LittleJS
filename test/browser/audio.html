@@ -3,6 +3,12 @@
 <!-- the audio graph running in a real browser, which the runner allows to play with no gesture: a zzfx sound heard
      through an analyser on the master bus, then through each effect, a negative volume silent, and a sound
      stopped -->
+<script>
+// shown and focused, as the one tab a player has, though the runner runs four at once in the background
+Object.defineProperty(document, 'hidden', {get: ()=> false});
+Object.defineProperty(document, 'visibilityState', {get: ()=> 'visible'});
+document.hasFocus = ()=> true;
+</script>
 <script src=../../dist/littlejs.js></script>
 <script src=smoke.js></script>
 <pre id=result>PENDING</pre>
@@ -41,19 +47,39 @@ smokeRun(async ()=>
     await wait(300);
     check('a negative volume is silent', await loudest(()=> playSamples(sound.sampleChannels, -1)) < 1e-4);
 
-    // each effect in the path, the sound heard through it
-    for (const [name, make] of [['filter', ()=> new AudioFilter('lowpass', 2000)], ['reverb', ()=> new AudioReverb(.5)],
-        ['delay', ()=> new AudioDelay(.1, .3)], ['distortion', ()=> new AudioDistortion(.5)],
-        ['compressor', ()=> new AudioCompressor()]])
+    // each effect in the path, heard on an analyser only that effect reaches, so a sound that went round it to the
+    // master is not heard there; fully wet, so the dry path does not carry it
+    const heardThrough = async (tone, effect)=>
+    {
+        const own = audioContext.createAnalyser();
+        own.fftSize = 2048;
+        effect.connect(own);
+        tone.output = effect;
+        let peak = 0;
+        const data = new Float32Array(own.fftSize);
+        tone.play();
+        for (let i = 0; i < 10; ++i)
+        {
+            await wait(20);
+            own.getFloatTimeDomainData(data);
+            for (const v of data) peak = Math.max(peak, Math.abs(v));
+        }
+        tone.output = undefined;
+        effect.disconnect();
+        return peak;
+    };
+    for (const [name, make] of [['filter', ()=> new AudioFilter('lowpass', 20000)],
+        ['reverb', ()=> new AudioReverb(.5, 2, 1)], ['delay', ()=> new AudioDelay(.1, .3, 1)],
+        ['distortion', ()=> new AudioDistortion(.5)], ['compressor', ()=> new AudioCompressor()]])
     {
         await wait(300);
-        const effect = make();
-        effect.connect(analyser);
-        sound.output = effect;
-        check('heard through ' + name, await loudest(()=> sound.play()) > .005);
-        sound.output = undefined;
-        effect.disconnect();
+        check('heard through ' + name + ' alone', await heardThrough(sound, make()) > .005);
     }
+    // a 2000 Hz tone through a lowpass at 200 Hz is much quieter than through one at 20000 Hz
+    const high = new Sound([1,,2000,,.2,.2]);
+    const through = async (cutoff)=> { await wait(300); return heardThrough(high, new AudioFilter('lowpass', cutoff)); };
+    const open = await through(20000), shut = await through(200);
+    check('a lowpass below a tone takes it away', shut < open * .3, shut.toFixed(4) + ' against ' + open.toFixed(4));
 
     // a looping play stopped goes quiet
     await wait(300);
