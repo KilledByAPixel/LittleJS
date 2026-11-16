@@ -65,7 +65,7 @@ test('a held slider destroyed by its onUpdate stops following the mouse and call
         const slider = new UISlider(vec2(), vec2(400, 50)); engineStep();
         slider.onChange = ()=> ++changes;
         slider.onUpdate = ()=> held && slider.destroy();
-        const at = (x, state)=> { mousePosScreen = slider.nativePos.add(vec2(x - 500, 0)); inputData[0][0] = state;
+        const at = (x, state)=> { mousePosScreen = slider.nativePos.add(vec2(x - 500.5, -.5)); inputData[0][0] = state;
             engineStep(); };
         at(500, 3); held = true; at(600, 1); at(700, 1);
         return changes; })()`);

@@ -720,14 +720,16 @@ test('screenToRay points forward at the center and right of it toward +x', () =>
     render3D.camera.pos = vec3(1, 2, 10);
     render3D.camera.rotation = vec3();
     render3D.updateMatrices(16/9);
+    // screen positions in the mouse's pixel convention, a pixel's middle at its number, so the canvas's middle and
+    // edges are half a pixel back
     const size = vec2(960, 540);
-    const center = render3D.screenToRay(vec2(480, 270), size);
+    const center = render3D.screenToRay(vec2(479.5, 269.5), size);
     nearVec(center.origin, 1, 2, 10);
     nearVec(center.direction, 0, 0, -1);
-    const right = render3D.screenToRay(vec2(960, 270), size);
+    const right = render3D.screenToRay(vec2(959.5, 269.5), size);
     assert.ok(right.direction.x > 0 && Math.abs(right.direction.y) < 1e-6);
     near(right.direction.length(), 1);
-    const up = render3D.screenToRay(vec2(480, 0), size);
+    const up = render3D.screenToRay(vec2(479.5, -.5), size);
     assert.ok(up.direction.y > 0);
     // the top edge ray makes half the vertical fov with the forward axis
     near(Math.atan2(up.direction.y, -up.direction.z), render3D.camera.fov / 2);
@@ -736,7 +738,7 @@ test('screenToRay points forward at the center and right of it toward +x', () =>
 test('screenToRay and screenToGround answer for the canvas they are handed', () =>
 {
     const size = vec2(960, 540), aspect = size.x / size.y;
-    const toScreen = (clip)=> vec2((clip.x + 1)/2 * size.x, (1 - clip.y)/2 * size.y);
+    const toScreen = (clip)=> vec2((clip.x + 1)/2 * size.x - .5, (1 - clip.y)/2 * size.y - .5); // pixel numbers
     render3D.camera.pos = vec3(0, 8, 10);
     render3D.camera.lookAt(vec3());
     render3D.updateMatrices(aspect);
@@ -1714,7 +1716,7 @@ test('an orthographic camera projects parallel rays', () =>
     near(render3D.worldToClip(vec3(20, 10, 0)).x, 1);
     near(render3D.worldToClip(vec3(20, 10, 0)).y, 1);
     near(render3D.worldToClip(vec3(20, 0, -50)).x, 1);
-    const ray = render3D.screenToRay(vec2(0, 0), vec2(200, 100)); // top left of a 2:1 canvas
+    const ray = render3D.screenToRay(vec2(-.5, -.5), vec2(200, 100)); // top left corner of a 2:1 canvas
     nearVec(ray.direction, 0, 0, -1);
     nearVec(ray.origin, -20, 10, 10 - c.near); // on the near plane
     c.orthographic = 0;
@@ -3284,11 +3286,12 @@ test('worldToScreen and screenToRay are opposites, on the main canvas or any oth
         assert.ok(along > 0, 'and the point is in front of the ray start');
     }
 
-    // the canvas only scales the pixels, so twice the canvas is twice the coordinates
+    // the canvas only scales the pixels, so twice the canvas is twice the coordinates from the corner, which is half
+    // a pixel before pixel 0
     const big = render3D.worldToScreen(vec3(1, 1, 0), canvas.scale(2));
     const small = render3D.worldToScreen(vec3(1, 1, 0), canvas);
-    near(big.x, small.x * 2);
-    near(big.y, small.y * 2);
+    near(big.x + .5, (small.x + .5) * 2);
+    near(big.y + .5, (small.y + .5) * 2);
 });
 
 test('a mirroring transform or combine keeps the faces pointing out, the winding turned with the points', () =>

@@ -83,3 +83,24 @@ test('the player can not walk off the level\'s left edge', ()=>
     assert.ok(p.pos.x > 0, 'inside the level ' + p.pos.x);
     assert.ok(!p.isDead(), 'and alive');
 });
+
+test('the level\'s edge walls are no wall to climb: holding toward one with jump held goes no higher', ()=>
+{
+    const p = Game.player;
+    for (const side of [-1, 1])
+    {
+        const x = side < 0 ? 1.5 : GameLevel.levelSize.x - 1.5;
+        p.pos = vec2(x, GameLevel.playerStartPos.y); p.velocity = vec2();
+        // on the ground first, then held against the edge with jump held, as long as a player might
+        for (let i = 0; i < 60; ++i) drive(vec2(side, 0), false);
+        const ground = p.pos.y;
+        let top = ground;
+        for (let i = 0; i < 600; ++i)
+        {
+            drive(vec2(side, 0), true, i > 0);
+            assert.equal(p.climbingWall, 0, 'no wall at the edge ' + side);
+            top = Math.max(top, p.pos.y);
+        }
+        assert.ok(top < ground + 6, 'one jump high, not a climb: ' + (top - ground));
+    }
+});

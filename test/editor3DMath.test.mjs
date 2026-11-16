@@ -95,9 +95,9 @@ test('the view is 2 tan(fov/2) high at depth 1, and a segment\'s distance from t
     const unit = 1000 / (20 * Math.tan(Math.PI / 6));
     // the renderer's matrices are 32 bit floats, a pixel is good to a thousandth
     const pixels = (a, b)=> assert.ok(Math.abs(a - b) < 1e-3, `${a} is not ${b}`);
-    pixels(run('editor3DWithView(()=> editor3DSegmentDistance(vec2(500, 500), vec3(), vec3(2, 0, 0)))'), 0);
-    pixels(run('editor3DWithView(()=> editor3DSegmentDistance(vec2(500, 400), vec3(), vec3(2, 0, 0)))'), 100);
-    pixels(run(`editor3DWithView(()=> editor3DSegmentDistance(vec2(${500 + 3 * unit}, 500), vec3(), vec3(2, 0, 0)))`), unit);
+    pixels(run('editor3DWithView(()=> editor3DSegmentDistance(vec2(499.5, 499.5), vec3(), vec3(2, 0, 0)))'), 0);
+    pixels(run('editor3DWithView(()=> editor3DSegmentDistance(vec2(499.5, 399.5), vec3(), vec3(2, 0, 0)))'), 100);
+    pixels(run(`editor3DWithView(()=> editor3DSegmentDistance(vec2(${499.5 + 3 * unit}, 499.5), vec3(), vec3(2, 0, 0)))`), unit);
     assert.equal(run('editor3DWithView(()=> editor3DSegmentDistance(vec2(500, 500), vec3(0, 0, 20), vec3(2, 0, 0)))'),
         Infinity, 'an end behind the camera');
 });

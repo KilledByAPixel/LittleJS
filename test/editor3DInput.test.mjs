@@ -23,7 +23,9 @@ async function loadGame()
         var live = (id)=> editor3DInstances.get(id);
         var list = ()=> level.objects;
         var selected = ()=> [...editor3DSelection];
-        var screen = (x, y, z)=> editor3DWithView(()=> render3D.worldToScreen(vec3(x, y, z)));
+        // places on the canvas from its corner, as the tests give the mouse, half a pixel on from mousePosScreen's
+        // pixel numbers
+        var screen = (x, y, z)=> editor3DWithView(()=> render3D.worldToScreen(vec3(x, y, z)))?.add(vec2(.5));
         engineStep(2); // past the first step, which has no time in it
         levelEditor.open()`);
     return engine;
@@ -37,8 +39,9 @@ function step(engine, count=1)
 }
 
 // the mouse: move it, press a button, let one go; and a whole drag of the left button, in a few steps
-const moveTo = (engine, x, y)=> engine.run(`mouseDeltaScreen = vec2(${x}, ${y}).subtract(mousePosScreen);
-    mousePosScreen = vec2(${x}, ${y})`);
+// the mouse at a place on the canvas from its corner, the pixel it is in as mousePosScreen has it
+const moveTo = (engine, x, y)=> engine.run(`mouseDeltaScreen = vec2(${x} - .5, ${y} - .5).subtract(mousePosScreen);
+    mousePosScreen = vec2(${x} - .5, ${y} - .5)`);
 const press = (engine, button=0)=> engine.run(`inputData[0][${button}] = 3`);
 const release = (engine, button=0)=> engine.run(`inputData[0][${button}] = 4`);
 function click(engine, x, y, button=0)
@@ -309,7 +312,7 @@ test('a left drag from empty space selects what is inside the box, and Shift add
 {
     const engine = await loadGame(), { run } = engine;
     drag(engine, [400, 700], [900, 300], 4, false);
-    assert.deepEqual(json(run, '[editor3DDrag.kind, editor3DDrag.from.x, editor3DDrag.to.x]'), ['box', 400, 900]);
+    assert.deepEqual(json(run, '[editor3DDrag.kind, editor3DDrag.from.x, editor3DDrag.to.x]'), ['box', 399.5, 899.5]); // mousePosScreen's pixels
     release(engine); step(engine);
     assert.deepEqual(json(run, 'selected()'), [1, 2]);
     assert.equal(run('editor3DDrag'), undefined);

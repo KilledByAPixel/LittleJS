@@ -5,8 +5,9 @@ import { loadEngine } from './vmEngine.mjs';
 // touchGamepadButtonPos: where a touch gamepad button is drawn, in screen space, for a game's own icon over it
 
 // an engine with a touch gamepad overlay standing in for the one a touch device makes: its stage inset 10 and 20
-// pixels by the safe area, and button 0 drawn at 900, 880 in it with a radius of 25; the canvas fills the (the centre is given as a screen pixel, half a pixel back from the place, as the mouse is)
-// window at one screen pixel a CSS pixel
+// pixels by the safe area, and button 0 drawn at 900, 880 in it with a radius of 25; the canvas fills the window
+// at one screen pixel a CSS pixel; the centre is given as a screen pixel, half a pixel back from the place, as the
+// mouse is
 function engine()
 {
     const { run } = loadEngine();

@@ -53,12 +53,12 @@ test('the elements lie on the line from the sun through the middle of the screen
             {at: 2, size: .1, color: WHITE, shape: 'ring'}];
         sun(0, 0, -1);`);
     for (const [x, y] of json(run, 'shown(flare)'))
-        near(x, 500), near(y, 500, 'the sun dead ahead, everything in the middle');
+        near(x, 499.5), near(y, 499.5, 'the sun dead ahead, everything in the middle pixel');
     run('sun(.3, .2, -1)');
     const [atSun, middle, across] = json(run, 'shown(flare)');
     assert.ok(atSun[0] > 600 && atSun[1] < 450, 'the sun right and up: ' + atSun);
-    near(middle[0], 500), near(middle[1], 500);
-    near(across[0], 1000 - atSun[0]), near(across[1], 1000 - atSun[1], 'as far past the middle as the sun is from it');
+    near(middle[0], 499.5), near(middle[1], 499.5);
+    near(across[0], 999 - atSun[0]), near(across[1], 999 - atSun[1], 'as far past the middle as the sun is from it');
 });
 
 test('size scales the elements with the screen, intensity their brightness', ()=>
@@ -149,7 +149,7 @@ test('a flare with a light is that light\'s: at its place on the screen, in its 
     const run = load();
     run(lampCode);
     const at = json(run, 'flare.getScreenPos()');
-    near(at.x, 500); near(at.y, 500);
+    near(at.x, 499.5); near(at.y, 499.5);
     const first = json(run, 'flare.getScreenElements()[0]');
     assert.deepEqual([first.color.r > 0, first.color.g, first.color.b], [true, 0, 0]);
     run('lamp.pos3D = vec3(0, 0, 10)');
