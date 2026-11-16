@@ -1,0 +1,33 @@
+<!DOCTYPE html><meta charset=utf-8>
+<title>LittleJS smoke: a missing image</title>
+<!-- the engine started with an image that is not there beside one that is, the splash screen on while it loads: the
+     missing one is said once, the game starts, a tile of it draws nothing and throws nothing, the other draws -->
+<script src=../../dist/littlejs.js></script>
+<script src=smoke.js></script>
+<pre id=result>PENDING</pre>
+<script>
+'use strict';
+smokeRun(async ()=>
+{
+    const warnings = [], warn = console.warn;
+    console.warn = (...output)=> { warnings.push(output.map(String).join(' ')); warn.apply(console, output); };
+    setShowSplashScreen(true); // the loading screen draws while the images load
+    setDebugWatermark(false);
+    setEngineManualStep(true);
+    setCanvasFixedSize(vec2(64));
+    setCanvasClearColor(rgb(0, 0, 1));
+    let started = false;
+    await engineInit(()=> { started = true; setCameraScale(1); }, ()=> {}, ()=> {}, ()=>
+    {
+        drawTile(vec2(-16, 16), vec2(16), tile(0, 16, 0)); // the missing image, top left
+        drawTile(vec2(16, 16), vec2(16), tile(0, 16, 1));  // the one that is there, top right
+    }, ()=> {}, ['missing-on-purpose.png', smokeSheet('#0f0')]);
+    console.warn = warn;
+    check('the game starts', started);
+    check('the missing image is said', warnings.some((w)=> w.includes('missing-on-purpose')), warnings.join(' | '));
+    for (let i = 0; i < 3; ++i) engineStep();
+    checkPixel('a tile of the missing image draws nothing', .25, .75, [0, 0, 255, 255]);
+    checkPixel('a tile of the other draws', .75, .75, [0, 255, 0, 255]);
+    checkGLError();
+});
+</script>

@@ -15,7 +15,7 @@ import { fileURLToPath } from 'node:url';
 
 const root = fileURLToPath(new URL('../../', import.meta.url));
 const pages = ['draw2d', 'shaderUniforms', 'textureUpdate', 'layers2d', 'canvasLayer', 'canvasLayerScroll', 'parallax', 'canvas2d', 'textIcons', 'lights2d', 'lights2dSun', 'lights2dNormals', 'shaders', 'postFilter', 'focusBlur', 'draw3d', 'vertexShader', 'billboardLighting', 'depth3d', 'environment', 'shaderFallback', 'spotLight', 'lensFlare', 'gltfAlpha',
-    'editorScene', 'editors', 'contextLoss'];
+    'editorScene', 'editors', 'audio', 'missingImage', 'pixelRatio', 'contextLoss'];
 // one Chrome, and this many tabs of it at a time: measured, 4, 6 and 8 take the same 55 seconds, since every tab
 // draws through the one GPU process, and 12 or more are slower; do not raise it, and never start a second Chrome
 const pageTimeout = 60e3, atOnce = 4;
@@ -108,7 +108,7 @@ function startChrome(chrome)
 {
     const profile = mkdtempSync(join(tmpdir(), 'littlejs-smoke-'));
     const child = spawn(chrome, ['--headless=new', '--no-sandbox', '--disable-gpu-sandbox', '--use-angle=swiftshader',
-        '--enable-unsafe-swiftshader', '--mute-audio', '--no-first-run', '--disable-background-timer-throttling',
+        '--enable-unsafe-swiftshader', '--mute-audio', '--autoplay-policy=no-user-gesture-required', '--no-first-run', '--disable-background-timer-throttling',
         '--disable-renderer-backgrounding', '--disable-backgrounding-occluded-windows', '--window-size=1000,700',
         '--remote-debugging-port=0', '--user-data-dir=' + profile, 'about:blank'], {windowsHide: true});
     const stop = stopChrome = ()=>
@@ -208,7 +208,10 @@ const browser = await startChrome(chrome);
 
 const server = await serve(), base = 'http://127.0.0.1:' + server.address().port + '/test/browser/';
 const only = process.argv.slice(2);
+// a page run again with a parameter, as draw2d on the release and minified builds, named by both
+const pageRuns = ['draw2d?build=release', 'draw2d?build=min'];
 const jobs = [...pages.map((name)=> [name, base + name + '.html']),
+    ...pageRuns.map((run)=> [run.replace('?', ' '), base + run.replace('?', '.html?')]),
     ...shortNames().map((name)=> ['short ' + name, base + 'short.html?short=' + name]),
     ...fullExamples.map((name)=> ['example ' + name, base + 'example.html?example=' + name])]
     .filter(([name])=> !only.length || only.some((word)=> name.split(' ').includes(word)));

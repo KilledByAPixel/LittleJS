@@ -1,0 +1,45 @@
+<!DOCTYPE html><meta charset=utf-8>
+<title>LittleJS smoke: pixel ratio 2</title>
+<!-- the canvas at twice its size in pixels, as a phone or a high density screen has it: the WebGL buffer is twice
+     the size and draws where the 2D canvas does, the debug overlay draws over it, and combineCanvases, what a
+     screenshot saves, has the WebGL picture in the 2D canvas at the same places -->
+<script src=../../dist/littlejs.js></script>
+<script src=smoke.js></script>
+<pre id=result>PENDING</pre>
+<script>
+'use strict';
+smokeRun(async ()=>
+{
+    setShowSplashScreen(false);
+    setDebugWatermark(false);
+    setEngineManualStep(true);
+    setCanvasFixedSize(vec2(64));
+    setCanvasPixelRatio(2);
+    setCanvasClearColor(rgb(0, 0, 1));
+    await engineInit(()=> setCameraScale(1), ()=> {}, ()=> {}, ()=>
+    {
+        drawRect(vec2(-16, 16), vec2(16), rgb(1, 0, 0)); // top left, red
+    }, ()=> {});
+    engineStep();
+    check('the WebGL buffer is twice the size', glCanvas.width === 128 && glCanvas.height === 128,
+        glCanvas.width + 'x' + glCanvas.height);
+    checkPixel('a rectangle draws at its place', .25, .75, [255, 0, 0, 255]);
+    checkPixel('the clear color around it', .75, .25, [0, 0, 255, 255]);
+
+    // the debug overlay over the game, a frame drawn with it
+    setDebugOverlay(true);
+    engineStep();
+    check('the overlay draws', debugOverlay);
+    checkPixel('the game still draws under it', .25, .75, [255, 0, 0, 255]);
+    setDebugOverlay(false);
+    engineStep();
+
+    // what a screenshot saves: the WebGL picture combined into the 2D canvas, at its places, twice the size
+    combineCanvases();
+    const context = mainCanvas.getContext('2d'), at = (x, y)=> [...context.getImageData(x, y, 1, 1).data];
+    check('the 2D canvas is twice the size', mainCanvas.width === 128, mainCanvas.width);
+    check('combined, the rectangle is at its place', smokeNear(at(32, 32), [255, 0, 0, 255]), at(32, 32));
+    check('and the clear color around it', smokeNear(at(96, 96), [0, 0, 255, 255]), at(96, 96));
+    checkGLError();
+});
+</script>

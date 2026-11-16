@@ -61,6 +61,36 @@ function gameRenderPost() {}
             const sheetTiles = editorPaletteTiles(editorLayer);
             check('the whole sheet\'s tiles, read as a grid', sheetTiles.length > 3, sheetTiles.length);
             check('and drawn', parts.palette.height > editorPaletteCell, parts.palette.width + 'x' + parts.palette.height);
+            // the brush drawn under the mouse over the level, and a Shift line from the last cell
+            mousePosScreen = vec2(240, 135);
+            await step(3);
+            inputData[0].ShiftLeft = 1;
+            editorLastPlaced = vec2(1, 1);
+            await step(3);
+            inputData[0].ShiftLeft = 0;
+            check('the brush and a Shift line draw over the level', !!editorHover, editorHover + '');
+
+            // the object layer: its palette of types, an object placed and selected, its properties box
+            const objects = editorLayers().find((l)=> l.isObjects);
+            editorSelectLayer(objects);
+            await step(3);
+            check('the object palette draws the types', parts.palette.style.display !== 'none' &&
+                parts.palette.height >= editorPaletteCell, parts.palette.width + 'x' + parts.palette.height);
+            const placed = editorPlaceObjects(objects, vec2(5.5, 5.5), [{type: 'Coin', properties: [], offset: vec2()}]);
+            editorStrokeEnd();
+            const coin = objects.group?.objects?.slice(-1)[0];
+            coin && editorObjectSelection.add(coin.id);
+            await step(3);
+            check('an object placed and selected shows its properties', !!coin &&
+                parts.properties.childElementCount > 0, coin && parts.properties.textContent.slice(0, 40));
+
+            // the help and the Advanced box
+            editorHelp = true, editorAdvanced = true;
+            await step(3);
+            check('the help shows', parts.help.style.display !== 'none' && parts.help.textContent.length > 100);
+            editorHelp = editorAdvanced = false;
+            await step(2);
+
             levelEditor.close();
             await step(2);
             check('it closes', !levelEditor.isOpen);

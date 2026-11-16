@@ -1,0 +1,68 @@
+<!DOCTYPE html><meta charset=utf-8>
+<title>LittleJS smoke: audio</title>
+<!-- the audio graph running in a real browser, which the runner allows to play with no gesture: a zzfx sound heard
+     through an analyser on the master bus, then through each effect, a negative volume silent, and a sound
+     stopped -->
+<script src=../../dist/littlejs.js></script>
+<script src=smoke.js></script>
+<pre id=result>PENDING</pre>
+<script>
+'use strict';
+smokeRun(async ()=>
+{
+    setShowSplashScreen(false);
+    setDebugWatermark(false);
+    setEngineManualStep(true);
+    setCanvasFixedSize(vec2(64));
+    await engineInit(()=> {}, ()=> {}, ()=> {}, ()=> {}, ()=> {});
+    const wait = (ms)=> new Promise((resolve)=> setTimeout(resolve, ms));
+    audioContext.state === 'running' || await audioContext.resume();
+    check('the audio context runs', audioContext.state === 'running', audioContext.state);
+
+    // everything through an analyser, the loudest sample a play makes
+    const analyser = audioContext.createAnalyser();
+    analyser.fftSize = 2048;
+    setAudioMasterEffect(analyser);
+    const loudest = async (play)=>
+    {
+        play();
+        let peak = 0;
+        const data = new Float32Array(analyser.fftSize);
+        for (let i = 0; i < 10; ++i)
+        {
+            await wait(20);
+            analyser.getFloatTimeDomainData(data);
+            for (const v of data) peak = Math.max(peak, Math.abs(v));
+        }
+        return peak;
+    };
+    const sound = new Sound([1,,440,,.2,.2]); // a plain tone
+    check('a zzfx sound is heard', await loudest(()=> sound.play()) > .01);
+    await wait(300);
+    check('a negative volume is silent', await loudest(()=> playSamples(sound.sampleChannels, -1)) < 1e-4);
+
+    // each effect in the path, the sound heard through it
+    for (const [name, make] of [['filter', ()=> new AudioFilter('lowpass', 2000)], ['reverb', ()=> new AudioReverb(.5)],
+        ['delay', ()=> new AudioDelay(.1, .3)], ['distortion', ()=> new AudioDistortion(.5)],
+        ['compressor', ()=> new AudioCompressor()]])
+    {
+        await wait(300);
+        const effect = make();
+        effect.connect(analyser);
+        sound.output = effect;
+        check('heard through ' + name, await loudest(()=> sound.play()) > .005);
+        sound.output = undefined;
+        effect.disconnect();
+    }
+
+    // a looping play stopped goes quiet
+    await wait(300);
+    const instance = sound.play(undefined, 1, 1, 1, true);
+    await wait(100);
+    check('a loop plays', instance.isPlaying());
+    instance.stop();
+    await wait(200);
+    check('and stops', !instance.isPlaying() && await loudest(()=> {}) < 1e-3);
+    setAudioMasterEffect();
+});
+</script>

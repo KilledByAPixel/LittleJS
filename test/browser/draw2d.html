@@ -1,6 +1,13 @@
 <!DOCTYPE html><meta charset=utf-8>
 <title>LittleJS smoke: 2D draws</title>
-<script src=../../dist/littlejs.js></script>
+<!-- draw2d.html?build=release or ?build=min runs the same draws on that build, which no other page loads -->
+<script>
+{
+    const build = new URLSearchParams(location.search).get('build');
+    const file = build === 'release' ? 'littlejs.release.js' : build === 'min' ? 'littlejs.min.js' : 'littlejs.js';
+    document.write('<script src="../../dist/' + file + '"><\/script>');
+}
+</script>
 <script src=smoke.js></script>
 <pre id=result>PENDING</pre>
 <script>
