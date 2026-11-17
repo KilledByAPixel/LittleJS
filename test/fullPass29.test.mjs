@@ -451,11 +451,15 @@ test('a HeightMap\'s edge higher than a body\'s step is a wall to it from off th
     ()=>
 {
     // raised edges, a plateau on the floor: its side stops at the edge, x 6 less its half width of .4
-    for (const edge of [.1, .5, 1])
+    for (const edge of [.25, .5, 1])
         assert.deepEqual(walkOntoMap(`()=> ${edge}`), {x: 5.6, z: 0, top: .5, on: false}, 'edge ' + edge * 4);
-    // an edge of .2, under the step of .25, is stepped onto
-    const low = walkOntoMap('()=> .05');
-    assert.ok(low.on && low.top > .69, 'a low edge: ' + JSON.stringify(low));
+    // an edge of .2, under the step of .25, is stepped onto, and since pass 31 one of .4, under the step and the
+    // sink of a round body over the crest of a walkable ramp
+    for (const edge of [.05, .1])
+    {
+        const low = walkOntoMap(`()=> ${edge}`);
+        assert.ok(low.on && low.top > .49 + edge * 4, 'a low edge: ' + JSON.stringify(low));
+    }
     // a ring of 0 round a plateau: the map's own rules, a gentle ramp climbed and a cliff a wall, as before
     assert.equal(walkOntoMap('(i, j)=> i && j && i < 8 && j < 8 ? .25 : 0').on, true, 'a ramp from a 0 edge');
     assert.ok(walkOntoMap('(i, j)=> i && j && i < 8 && j < 8 ? 1 : 0').x < 6.01, 'a cliff from a 0 edge');

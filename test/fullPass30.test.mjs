@@ -41,7 +41,7 @@ test('a nine-slice from a sheet of any width reads its 3 by 3 block, and an atla
         return JSON.stringify([0, 4, 8].map((k)=> t.frame(k).pos.toString(0)));
     })()`));
     assert.deepEqual(frames, ['( 0, 0 )', '( 16, 16 )', '( 32, 32 )']);
-    assert.match(String(run('loadAtlas')), /length === 9/, 'a nine frame group is packed as a 3 by 3 block');
+    // the packing of a group of nine is checked by its choice, textureSheetAddGroup, in fullPass31 (pass 31 P3)
 });
 
 // a solid that sends the player to (-10, .5, 6) when it touches it and returns true, in a list order of the floor (f),
