@@ -668,36 +668,48 @@ function render3DSolidReach(o)
 
 // one that stood on a solid last frame and stands on nothing now, not leaving it upward, follows it down as the level
 // shapes follow theirs: lowered in steps of half its radius, as far as its move across could drop at its groundAngle,
-// it lands on the first step that meets the solid's face within its groundAngle of level, so walking down a ramp of a
-// turned box keeps the ground; one that meets the solid any other way, a side, is left where it was
+// it lands on the first step that meets the face of a solid within its groundAngle of level, last frame's or another
+// near it, a ramp going down from a flat top, so walking down a ramp of a turned box keeps the ground; a solid it
+// meets any other way, a side, stops the search, and one the pair does not resolve with, collideWithObject giving
+// false, a platform it drops through, or one whose collision is off, is not stood on
 function render3DFollowSolid(o, ground, oldPos)
 {
-    if (!(ground instanceof EngineObject3D) || ground.destroyed || ground.parent || ground.sync2D || !ground.isSolid ||
-        !o.mass || render3DLevel.includes(ground))
-        return;
-    const v = o.velocity3D, gv = ground.velocity3D;
-    if (v.y > gv.y) return; // leaving it upward, a jump
+    const solid = (b)=> b instanceof EngineObject3D && b !== o && !b.destroyed && !b.parent && !b.sync2D && b.isSolid &&
+        b.collideSolidObjects && !render3DLevel.includes(b);
+    if (!solid(ground) || !o.mass) return;
+    const v = o.velocity3D;
+    if (v.y > ground.velocity3D.y) return; // leaving it upward, a jump
     const across = ((o.pos3D.x - oldPos.x) ** 2 + (o.pos3D.z - oldPos.z) ** 2) ** .5;
     const drop = across * tan(o.groundAngle);
     if (!(drop > 0)) return;
-    const shapeB = render3DSolidShape(ground), start = o.pos3D.y;
-    const size = render3DSolidShape(o), radius = size.radius ?? min(size.size.x, size.size.y, size.size.z) / 2;
+    const start = o.pos3D.y, size = render3DSolidShape(o);
+    const radius = size.radius ?? min(size.size.x, size.size.y, size.size.z) / 2;
     const step = max(radius / 2, 1e-3), cos0 = cos(o.groundAngle);
+    // last frame's first, then the solids that could be within the drop, nearest the list's order
+    const reach = render3DSolidReach(o) + drop;
+    const near = engineObjectsCollide.filter((b)=> b !== ground && b instanceof EngineObject3D && solid(b) &&
+        b.pos3D.distanceSquared(o.pos3D) <= (reach + render3DSolidReach(b)) ** 2);
+    const candidates = [ground, ...near].map((b)=> ({b, shape: render3DSolidShape(b)}));
     for (let down = step; ; down += step)
     {
         const d = min(down, drop);
         o.pos3D.y = start - d;
-        const push = render3DSolidPush(render3DSolidShape(o), shapeB);
-        if (push)
+        const shapeA = render3DSolidShape(o);
+        for (const {b, shape} of candidates)
         {
+            const push = render3DSolidPush(shapeA, shape);
+            if (!push) continue;
             const lengthSquared = push.lengthSquared(), up = push.y / lengthSquared ** .5;
-            if (up < cos0 || !render3DOnFace(push, shapeB))
-                break; // a side or an edge, not ground
+            if (up < cos0 || !render3DOnFace(push, shape) || !render3DCollideAsk(o, b, push))
+            {
+                o.pos3D.y = start; // a side or an edge, not ground, or one it passes through
+                return;
+            }
             // on its face, pushed straight up out of it, as standing on a solid is
             o.pos3D.y += lengthSquared / push.y;
-            o.groundObject = ground;
-            render3DRiderAdd(ground, o);
-            v.y = gv.y;
+            o.groundObject = b;
+            render3DRiderAdd(b, o);
+            v.y = b.velocity3D.y;
             const grid = render3DSolidGrid();
             grid && render3DGridPlace(grid, o);
             return;

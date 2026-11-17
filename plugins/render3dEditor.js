@@ -1340,7 +1340,12 @@ function editor3DValueProblem(value, fallback)
 {
     if (typeof value == 'number')
         return isFinite(value) ? undefined : 'holds a number that is not finite, which the file keeps as null';
+    if (typeof value == 'function')
+        return 'holds a function, which the file can not keep';
     if (!value || typeof value !== 'object') return;
+    if ((value instanceof Color || value instanceof Vector2 || value instanceof Vector3) &&
+        !isColor(value) && !isVector2(value) && !isVector3(value))
+        return 'holds a Color or a vector that is not valid, a number in it not finite';
     if (isColor(value) || isVector3(value) || isVector2(value))
         return (isColor(value) ? isColor(fallback) : isVector3(value) ? isVector3(fallback) : isVector2(fallback)) ?
             undefined : 'holds a Color or a vector where its default has none, which the file brings back as text ' +
@@ -1353,7 +1358,7 @@ function editor3DValueProblem(value, fallback)
     {
         const before = isArray(value) ? isArray(fallback) && fallback.length ?
             fallback[min(+key, fallback.length - 1)] : undefined :
-            object && !isArray(fallback) ? objectPropertyDefault(fallback, key) : undefined;
+            object && !isArray(fallback) ? objectPropertyMember(fallback, key) : undefined;
         const problem = editor3DValueProblem(value[key], before);
         if (problem) return problem;
     }
@@ -2065,7 +2070,8 @@ const editor3DEdit =
         // member out would load with the default's, and so would a member the merge does not read
         const merges = !!d && typeof d === 'object' && !isArray(d) && !isColor(d) && !isVector2(d) && !isVector3(d);
         let dropped;
-        !problem && merges && objectPropertyPlain(value) && objectLayersMergeClass(d, editor3DEncode(value), (text)=>
+        !problem && (merges && objectPropertyPlain(value) || isArray(d) && isArray(value)) &&
+            objectLayersMergeClass(d, editor3DEncode(value), (text)=>
             /left out$|the default is kept$/.test(text) && (dropped ??= text.trim()), '', undefined, level3DFromText);
         const kind = (v)=> v === undefined ? 'none' : isColor(v) ? 'a Color' : isVector3(v) ? 'a Vector3' :
             isVector2(v) ? 'a Vector2' : typeof v == 'number' ? String(v) : objectPropertyKindName(v);
@@ -2160,9 +2166,15 @@ function editor3DToolUpdate(ray, idle, shift, ctrl)
     }
     else if (idle && mouseWasPressed(0))
     {
+        // a held press let go and pressed again within one frame is released first, its own undo
+        if (editor3DToolHeld)
+        {
+            editor3DToolHeld = false;
+            try { tool.onRelease?.(at); }
+            finally { editor3DStrokeEnd(); }
+        }
         // a press that is not held, as one returning false, throwing or closing the editor, ends the stroke it made,
         // so the next press's edit is not one undo with it
-        editor3DToolHeld = false;
         try { editor3DToolHeld = tool.onPress?.(at) !== false && editor3DIsOpen; }
         finally { editor3DToolHeld || editor3DStrokeEnd(); }
     }

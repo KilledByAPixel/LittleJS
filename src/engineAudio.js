@@ -621,6 +621,7 @@ class SoundInstance
     start(offset=0)
     {
         ASSERT(offset >= 0, 'Sound start offset must be positive or zero');
+        offset = max(audioFinite(offset, 0), 0); // and kept as its clock, so a bad one in a release build is 0
         if (this.isPlaying())
             this.stop();
         this.gainNode = audioContext.createGain();

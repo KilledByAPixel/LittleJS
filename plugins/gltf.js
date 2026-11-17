@@ -315,6 +315,7 @@ class GLTFObject extends EngineObject3D
         this.animationLoop = true;
         /** @property {boolean} - Whether it is moving through the animation now */
         this.animationPlaying = false;
+        this.blendPlayFrame = -2; // the update a play with a blend was last called in, see play
         // what a cross-fade comes from: an animation going on as it was, or a pose held, and how far it is
         /** @type {{animation?: GLTFAnimation, time?: number, speed?: number, loop?: boolean,
          *  nodes?: Map<number, GLTFNodeTRS>}|undefined} */
@@ -369,7 +370,8 @@ class GLTFObject extends EngineObject3D
 
     /** Play an animation from its start, at once or cross-faded from the pose it is in
      *  - A play with a blend of the animation already playing goes on with it, so state code may call it each
-     *    frame; without a blend it starts the animation again
+     *    frame, and so does one of an animation that played to its end and stopped while it was called each
+     *    frame, a death held on its last pose; without a blend it starts the animation again
      *  @param {string|number|GLTFAnimation} [animation] - Its name, its number in model.animations, or itself
      *  @param {boolean} [loop] - Start again at the end, or stop there
      *  @param {number} [speed] - 1 is as made, negative plays it backward from its end
@@ -380,7 +382,10 @@ class GLTFObject extends EngineObject3D
         const found = this.model.getAnimation(animation);
         ASSERT(found, 'the model has no animation ' + animation, this.model.animations.map(a=> a.name));
         if (!found) return;
-        if (blend > 0 && found === this.animation && this.animationPlaying)
+        // called on the update before too, it is the same play going on, even once a clip that does not loop ended
+        const going = this.animationPlaying || this.blendPlayFrame >= frame - 1;
+        this.blendPlayFrame = blend > 0 ? frame : -2;
+        if (blend > 0 && found === this.animation && going)
         {
             this.animationLoop = loop, this.animationSpeed = speed;
             return;

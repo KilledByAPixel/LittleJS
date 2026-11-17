@@ -922,6 +922,16 @@ const objectLayersKindSaid = /* @__PURE__ */ new WeakMap;
 const objectPropertyDefault = (defaults, key)=>
     Object.prototype.hasOwnProperty.call(defaults, key) ? defaults[key] : undefined;
 
+// an object default's member as a merge reads it: its own, or for an instance of a class one behind an accessor of its
+// class, read from the default, which its class made; not a method
+function objectPropertyMember(fallback, key)
+{
+    let member = objectPropertyDefault(fallback, key);
+    if (member === undefined && !objectPropertyPlain(fallback) && key in fallback)
+        try { typeof fallback[key] != 'function' && (member = fallback[key]); } catch { }
+    return member;
+}
+
 // a Tiled class property's value over its default, each plain object member by member, so a member Tiled left out,
 // as it leaves out the ones not set, keeps the default's; a member of another kind than its default keeps the
 // default, said through warn with its path, as a property does; a member named __proto__, constructor or prototype
@@ -929,14 +939,23 @@ const objectPropertyDefault = (defaults, key)=>
 // alone, or gives of the wrong kind, whose copy method gives back no new object is said through shared with its path
 function objectLayersMergeClass(fallback, value, warn, path='', shared, fromText=objectPropertyFromText)
 {
-    // a list over a list, each of its items read as the default's item there is, or its last, a vector as a list
-    // and a color as text, so a 3D level file's list of vectors comes back vectors
+    // a list over a list, each of its items read as the default's item there is, or its last, as a member is: a
+    // vector as a list and a color as text, an object or a list merged into it, so a 3D level file's list of vectors or
+    // of objects comes back as the default has them, and an item of another kind keeps the default's, said
     if (isArray(fallback) && isArray(value))
         return value.map((item, i)=>
         {
-            const before = fallback[min(i, fallback.length - 1)];
-            return before !== undefined && (fromText(item, before) || objectPropertyFromArray(item, before)) ||
-                objectPropertyCopy(item);
+            const before = fallback[min(i, fallback.length - 1)], name = path + '[' + i + ']';
+            if (before === undefined) return objectPropertyCopy(item);
+            const read = fromText(item, before) || objectPropertyFromArray(item, before);
+            if (read) return read;
+            if (before !== null && objectPropertyKind(before) !== objectPropertyKind(item))
+            {
+                warn?.(`${name} is ${objectPropertyKindName(item)}, its default ${objectPropertyKindName(before)}, ` +
+                    'the default is kept');
+                return objectPropertyCopy(before);
+            }
+            return objectLayersMergeClass(before, item, warn, name, shared, fromText);
         });
     // a value of the game's class, given from code, is copied as itself, never made the default's class
     if (!fallback || typeof fallback !== 'object' || isArray(fallback) || !objectPropertyPlain(value))
@@ -970,9 +989,7 @@ function objectLayersMergeClass(fallback, value, warn, path='', shared, fromText
             continue;
         }
         // the default's member, one behind an accessor of its class too, read from the default, which its class made
-        let before = objectPropertyDefault(fallback, key);
-        if (own && before === undefined && key in fallback)
-            try { typeof fallback[key] != 'function' && (before = fallback[key]); } catch { }
+        const before = objectPropertyMember(fallback, key);
         const member = value[key];
         // a Color or Vector2 member as Tiled writes it, or a vector as a list, as a 3D level file writes it
         const read = fromText(member, before) || objectPropertyFromArray(member, before);

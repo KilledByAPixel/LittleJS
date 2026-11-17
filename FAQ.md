@@ -158,7 +158,7 @@ This is the simplest setup — three files served by a local web server. If you'
 
 ### How do I use LittleJS as an ES module?
 
-If you're using a bundler (Vite, Rollup, webpack, etc.) or just want to use native ES modules, install via npm and import what you need:
+With a bundler (Vite, Rollup, webpack, etc.), install via npm and import what you need:
 
 ```
 npm install littlejsengine
@@ -185,7 +185,13 @@ import * as LJS from 'littlejsengine';
 LJS.drawText('Hello!', LJS.vec2(0,0), 4);
 ```
 
-For a working example, see [examples/module/](examples/module/). That example imports from a relative path (`'../../dist/littlejs.esm.js'`) since it runs straight out of the repo without `npm install` — once you've installed the package, replace that with `'littlejsengine'` as shown above. The Vite section below shows the full bundler-based setup.
+A bare `'littlejsengine'` like this needs a bundler to find the package. A browser with no bundler can only find it through an import map in the page, before the game's script, pointing the name at the engine file:
+
+```html
+<script type=importmap>{"imports": {"littlejsengine": "./node_modules/littlejsengine/dist/littlejs.esm.js"}}</script>
+```
+
+[examples/typescript/](examples/typescript/) has one. Without a bundler or a map, import the engine file by its path instead, as [examples/module/](examples/module/) does (`'../../dist/littlejs.esm.js'`), which its build rewrites for the zip; keep that path there, since its build only rewrites a path to `littlejs.esm.js`. The Vite section below shows the full bundler-based setup.
 
 ### How do I use LittleJS with TypeScript?
 

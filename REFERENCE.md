@@ -2644,8 +2644,10 @@ loadTiles(sources, tileSize, padding=1) // Pack tile images, or several tile she
 tileInfo.tiles                        // a tile set's tiles, each where it was packed: a tile layer draws tile n
                                       // from tiles[n], and the level editor's palette offers each
 loadSprite(src, frameSize, padding=1, sourcePadding=0) // Load an image and pack it, returns a TileInfo
-loadAtlas(imageSrc, jsonSrc, padding=1) // Load a TexturePacker or Aseprite atlas, returns name->TileInfo object
-parseAtlas(data)                      // Parse atlas json into named frame groups, used by loadAtlas, a tag's group with its direction
+loadAtlas(imageSrc, jsonSrc, padding=1) // Load a TexturePacker or Aseprite atlas, returns name->TileInfo object;
+                                      // numbered names, run_0 or gem1, group into an animation, each frame also under its own name
+parseAtlas(data)                      // Parse atlas json into named frame groups, used by loadAtlas, a tag's group with its direction,
+                                      // one grouped from its frames' names marked named
 spritesReady()                        // Promise resolved when all sprites are packed
 textureSheets                         // Array of TextureSheet created by loadSprite, loadAtlas and loadTiles
 new TextureSheet(size=2048)           // A texture that images are packed into
@@ -2717,7 +2719,7 @@ levelEditor.addKey('k', (shift)=> {}, 'K: what it does') // A key of your own: a
 levelEditor.addButton('Label', ()=> {}, 'title')         // A button of your own in the panel
 levelEditor.addTool('Name', {key, hint, onPress, onDrag, onRelease, onDraw}) // A tool of your own: while it is on
                            // the left button is its; each callback gets {pos, cell, lastCell, ray, shift, ctrl}, and a
-                           // press, drag and release are one undo
+                           // press, drag and release are one undo; onPress returning false ends it there, no drag or release
 levelEditor.tool           // The name of your tool that is on, undefined for one of the editor's
 levelEditor.onOpen = ()=> {}   onClose   onUpdate   onDraw // Moments the editor calls: opened, closed, each
                            // frame while open, and while it draws the level, for overlays

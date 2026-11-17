@@ -346,7 +346,7 @@ class VoxelMap extends EngineObject3D
             if (up && !this.boxBlocked(up, size, o))
             {
                 p.set(up.x, up.y, up.z);
-                v.y = max(v.y, 0);
+                v.y = max(v.y, this.velocity3D.y); // relative to its own speed, a lift's, as the others land
                 o.groundObject = this;
                 return;
             }
@@ -400,7 +400,9 @@ class VoxelMap extends EngineObject3D
             }
             if (axis === 'y' && move < 0)
                 o.groundObject = this;
-            v[axis] *= -restitution;
+            // bounced relative to the map's own speed, a lift's, so what lands on one going down goes with it
+            const base = this.velocity3D[axis];
+            v[axis] = base - (v[axis] - base) * restitution;
         }
         p.set(place.x, place.y, place.z);
     }

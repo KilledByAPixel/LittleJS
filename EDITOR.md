@@ -243,7 +243,8 @@ give one. While it is on, the left mouse button in the level is your tool's. Eac
 
 **Do not call `strokeEnd` in a tool.** What its callbacks change is one undo: the editor ends the stroke at the
 release, and takes it back, with no `onRelease`, when the right button, Escape or a two finger pinch ends the
-press.
+press. An `onPress` that returns `false` ends the press there: what it changed is its own undo, and that press gets
+no `onDrag` or `onRelease`, nor does the editor's brush take the rest of it.
 
 3D, a tool that lays a row of posts along a drag, tested:
 

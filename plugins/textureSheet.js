@@ -649,13 +649,18 @@ function parseAtlas(data)
 }
 
 // an atlas's groups, with a warning for each name two of them have, as a sprite is looked up by name and the second
-// takes the first's place
+// takes the first's place, and for a frame of a group made from names whose own name another group has, as that
+// group is what the name gives, the frame only through its group's frame()
 function parseAtlasNamesCheck(groups)
 {
     const names = new Set;
     for (const {name} of groups)
         names.has(name) ? console.warn(`parseAtlas: two sprites are named ${name}, the second takes the first's place`) :
             names.add(name);
+    for (const {name, frames, named} of groups)
+        named && frames.forEach((f, i)=> f.name !== name && names.has(f.name) &&
+            console.warn(`parseAtlas: frame ${i} of ${name} is named ${f.name} as another sprite is, which that name ` +
+            `gives; read it as ${name}.frame(${i})`));
     return groups;
 }
 

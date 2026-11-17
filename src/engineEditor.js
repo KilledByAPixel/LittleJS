@@ -3424,11 +3424,18 @@ function editorToolUpdate(space)
     }
     else if (mouseWasPressed(0) && !space && !editorMouseOnPanel)
     {
+        // a held press let go and pressed again within one frame is released first, its own undo
+        if (editorToolHeld)
+        {
+            editorToolHeld = false;
+            try { tool.onRelease?.(at); }
+            finally { editorStrokeEnd(); }
+        }
         // a press that is not held, as one returning false, throwing or closing the editor, ends the stroke it made,
-        // so the next press's edit is not one undo with it
-        editorToolHeld = false;
+        // so the next press's edit is not one undo with it, and the rest of it is spent, not handed to the editor's
+        // brush if the tool is put down while it is held
         try { editorToolHeld = tool.onPress?.(at) !== false && editorIsOpen; }
-        finally { editorToolHeld || editorStrokeEnd(); }
+        finally { editorToolHeld || (editorStrokeEnd(), editorLeftSpent = true); }
     }
     else if (editorToolHeld && mouseIsDown(0))
         tool.onDrag?.(at);

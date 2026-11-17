@@ -991,7 +991,19 @@ class MeshCollider extends EngineObject3D
         /** @type {{size: number, cells: Map<number, Array<number>>, big: Array<number>, min: Vector3, max: Vector3,
          *  seen: Int32Array, stamp: number}|undefined} */
         this.grid = undefined;                // the triangles by the cells they cover, see meshColliderNear
+        this.movedBy = vec3();                // how far its own velocity moved it in the pass movedPass
+        this.movedPass = -1;
         render3DLevel.push(this);
+    }
+
+    /** Move by its velocity, as any object, kept for what collides with it after, a lift's move
+     *  @ignore */
+    updatePhysics()
+    {
+        const x = this.pos3D.x, y = this.pos3D.y, z = this.pos3D.z;
+        super.updatePhysics();
+        this.movedBy.set(this.pos3D.x - x, this.pos3D.y - y, this.pos3D.z - z);
+        this.movedPass = engineObjectsUpdateCount;
     }
 
     /** Take the triangles from the mesh again, after it changed */
@@ -1528,7 +1540,10 @@ function meshColliderCollide(collider, o, oldPos, wasOn, fromOther)
     const radius = o.collideAsSphere3D ? max(sx, sy, sz) / 2 : min(sx, sy, sz) / 2;
     const half = o.collideAsSphere3D ? 0 : max(0, sy / 2 - radius);
     if (!(radius > 0)) return;
-    const p = o.pos3D, from = oldPos || p;
+    // swept from where it was, carried by the collider's own move this pass, a lift's, which moved before it, so the
+    // sweep is its move on the collider and a fast lift does not throw it off or take it through
+    const p = o.pos3D, moved = collider.movedPass === engineObjectsUpdateCount ? collider.movedBy : undefined;
+    const from = oldPos ? moved ? oldPos.add(moved) : oldPos : p;
     const mx = p.x - from.x, my = p.y - from.y, mz = p.z - from.z, move = hypot(mx, my, mz);
     // nothing near where it went or came from, which is most objects most of the time; one that stood on another
     // level shape last frame and is not rising is looked for as far below as it moved across, so walking down off a
