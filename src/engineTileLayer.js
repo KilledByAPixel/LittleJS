@@ -819,7 +819,7 @@ function objectPropertyCopy(value, shared, path='')
 {
     if (isArray(value)) return value.map((item, i)=> objectPropertyCopy(item, shared, path + '[' + i + ']'));
     if (!value || typeof value != 'object') return value;
-    if (Object.getPrototypeOf(value) !== Object.prototype)
+    if (!objectPropertyPlain(value))
     {
         // a copy method that gives back no new object is as none, the value itself, said through shared with where
         // it is, at any depth, as every object that leaves it alone shares the one value
@@ -840,6 +840,23 @@ function objectPropertyCopy(value, shared, path='')
 const objectPropertySharedWarn = (map, who, typeName, key)=> (path)=> objectLayersWarnOnce(map,
     'copy ' + typeName + ' ' + key + path, `${who}: ${typeName}'s default ${key}${path} has a copy method that ` +
     'gives back no new object, so the objects that leave it alone share it');
+
+// an object of members alone, as JSON makes, one made with Object.create(null) too, not a list or of a class
+const objectPropertyPlain = (v)=> !!v && typeof v == 'object' && !isArray(v) &&
+    (Object.getPrototypeOf(v) === Object.prototype || Object.getPrototypeOf(v) === null);
+
+// a vector member written as a list of numbers, as a 3D level file writes one, read as the default's own kind: a copy
+// of it with the list's numbers, for a default whose members are x and y, or x, y and z; undefined for anything else
+function objectPropertyFromArray(value, fallback)
+{
+    if (!isArray(value) || !fallback || typeof fallback != 'object' || typeof fallback.copy != 'function') return;
+    const axes = ['x', 'y', 'z'].slice(0, value.length);
+    if (value.length < 2 || Object.keys(fallback).join() !== axes.join() ||
+        !value.every((v)=> typeof v == 'number' && isFinite(v))) return;
+    const copy = fallback.copy();
+    axes.forEach((axis, i)=> copy[axis] = value[i]);
+    return copy;
+}
 
 // a name every object has, left out of what a map gives
 const objectPropertyShared = (key)=> key === '__proto__' || key === 'constructor' || key === 'prototype';
@@ -912,14 +929,14 @@ const objectPropertyDefault = (defaults, key)=>
 // alone, or gives of the wrong kind, whose copy method gives back no new object is said through shared with its path
 function objectLayersMergeClass(fallback, value, warn, path='', shared)
 {
-    const plain = (o)=> !!o && typeof o === 'object' && !isArray(o);
-    if (!plain(fallback) || !plain(value))
+    // a value of the game's class, given from code, is copied as itself, never made the default's class
+    if (!fallback || typeof fallback !== 'object' || isArray(fallback) || !objectPropertyPlain(value))
         return objectPropertyCopy(value);
     // a new object for each, so the type's default, shared by every object of the type, is never written into: an
     // instance of a class with a copy method, a Color, a Vector2 or the game's own, is its copy, which keeps what
     // the class keeps to itself, and the members are assigned so its setters run; one with no copy method is a new
     // object of its class with the default's members, without its private fields
-    const own = Object.getPrototypeOf(fallback) !== Object.prototype;
+    const own = !objectPropertyPlain(fallback);
     let merged = own && typeof fallback.copy == 'function' ? fallback.copy() : undefined;
     // one that gives back no new object, nothing or the default itself, would be written into, so is as none
     if (own && typeof fallback.copy == 'function' && (!merged || typeof merged != 'object' || merged === fallback))
@@ -948,7 +965,8 @@ function objectLayersMergeClass(fallback, value, warn, path='', shared)
         if (own && before === undefined && key in fallback)
             try { typeof fallback[key] != 'function' && (before = fallback[key]); } catch { }
         const member = value[key];
-        const read = objectPropertyFromText(member, before); // a Color or Vector2 member as Tiled writes it
+        // a Color or Vector2 member as Tiled writes it, or a vector as a list, as a 3D level file writes it
+        const read = objectPropertyFromText(member, before) || objectPropertyFromArray(member, before);
         // given as every member is: assigned to a copy, its setter run, and its own to one with no copy method
         const give = (result)=> copied ?
             objectPropertyAssign(merged, key, result, '', '', (why)=> warn?.(`${name} ${why}, left out`)) :

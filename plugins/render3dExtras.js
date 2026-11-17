@@ -1839,7 +1839,7 @@ class ThirdPersonCamera3D extends EngineObject3D
         if (this.manualControl)
         {
             if (this.lockPointer && mouseWasPressed(this.dragButton) && !render3DUIHasPress(this.dragButton))
-                pointerLockRequest();
+                cameraLockRequest(this);
             const d = mouseDeltaScreen, stick = gamepadStick(this.stick);
             if ((pointerLockIsActive() || mouseIsDown(this.dragButton) && !render3DUIHasPress(this.dragButton)) && (d.x || d.y))
                 this.turn(-d.x * this.lookSpeed, d.y * this.lookSpeed);
@@ -1921,8 +1921,8 @@ class ThirdPersonCamera3D extends EngineObject3D
      *  @param {boolean} [immediate] */
     destroy(immediate)
     {
-        // only the camera driving lets go of the mouse, one under it leaves the driver's lock alone
-        cameraDriver() === this && this.lockPointer && pointerLockIsActive() && pointerLockExit();
+        // only a lock it took, never the driver's, the game's or the free camera's
+        cameraLockRelease(this);
         super.destroy(immediate);
     }
 
@@ -2036,12 +2036,10 @@ class FirstPersonCamera3D extends EngineObject3D
         // only the camera driving the view reads input, so one under a newer camera, a cutscene's, stands still and
         // still falls
         const driving = cameraDriver() === this;
-        // one under a camera that does not lock the mouse lets go of it, or that camera would look with every move
-        !driving && this.lockPointer && pointerLockIsActive() && !cameraDriver()?.lockPointer && pointerLockExit();
 
         // a click captures the mouse, then it looks around while captured or while a button is held
         if (driving && this.lockPointer && mouseWasPressed(this.dragButton) && !render3DUIHasPress(this.dragButton))
-            pointerLockRequest();
+            cameraLockRequest(this);
         if (driving && (pointerLockIsActive() || mouseIsDown(this.dragButton) && !render3DUIHasPress(this.dragButton)))
         {
             this.yaw -= mouseDeltaScreen.x * this.lookSpeed;
@@ -2067,8 +2065,8 @@ class FirstPersonCamera3D extends EngineObject3D
      *  @param {boolean} [immediate] */
     destroy(immediate)
     {
-        // only the camera driving lets go of the mouse, one under it leaves the driver's lock alone
-        cameraDriver() === this && this.lockPointer && pointerLockIsActive() && pointerLockExit();
+        // only a lock it took, never the driver's, the game's or the free camera's
+        cameraLockRelease(this);
         super.destroy(immediate);
     }
 

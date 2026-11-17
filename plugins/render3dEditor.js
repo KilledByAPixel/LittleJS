@@ -52,6 +52,7 @@ function editor3DSetFreeCamera(on)
     {
         editor3DCameraStart();
         pointerLockRequest();
+        cameraLockOwner = undefined; // the free camera's lock now, which no game camera lets go of
     }
     else
     {
@@ -1326,16 +1327,17 @@ function editor3DHasInstance(value, top)
 {
     if (!value || typeof value !== 'object') return false;
     if (top && (isColor(value) || isVector2(value) || isVector3(value))) return false;
-    if (!isArray(value) && Object.getPrototypeOf(value) !== Object.prototype) return true;
+    if (!isArray(value) && !objectPropertyPlain(value)) return true;
     return Object.values(value).some((v)=> editor3DHasInstance(v));
 }
 
 // whether a plain object has every member of an object default, and of each member that is an object itself, since
-// the load merges it into the default and a member left out would be the default's
+// the load merges it into the default and a member left out would be the default's; a member the default holds as
+// undefined, a class field declared with no value, is not in a file either, so may be left out
 function editor3DCoversDefault(defaultValue, value)
 {
     const object = (v)=> !!v && typeof v === 'object' && !isArray(v);
-    return Object.keys(defaultValue).every((key)=> Object.hasOwn(value, key) &&
+    return Object.keys(defaultValue).every((key)=> (defaultValue[key] === undefined || Object.hasOwn(value, key)) &&
         (!object(defaultValue[key]) || !object(value[key]) || editor3DCoversDefault(defaultValue[key], value[key])));
 }
 
@@ -2029,19 +2031,27 @@ const editor3DEdit =
         // an object over an object default is merged into it member by member when loaded, so one that leaves a
         // member out would load with the default's
         const merges = !!d && typeof d === 'object' && !isArray(d) && !isColor(d) && !isVector2(d) && !isVector3(d);
+        // and a member the merge would not read, of another kind than the default's, it keeps the default's for
+        let dropped;
+        merges && objectPropertyPlain(value) && objectLayersMergeClass(d, value, (text)=>
+            /left out$|the default is kept$/.test(text) && (dropped ??= text.trim()));
+        const kind = (v)=> v === undefined ? 'none' : isColor(v) ? 'a Color' : isVector3(v) ? 'a Vector3' :
+            isVector2(v) ? 'a Vector2' : typeof v == 'number' ? String(v) : objectPropertyKindName(v);
+        const why = !finite ? 'can not be ' + kind(value) :
+            special && !(isColor(value) || isVector2(value) || isVector3(value)) ? 'can not be given an instance of a ' +
+                'class, nor a value holding one, as the file brings it back a plain object' :
+            merges && objectPropertyPlain(value) && !editor3DCoversDefault(d, value) ? 'leaves out a member of its ' +
+                'default, which the load would put back' :
+            dropped ? 'has a member the load would not read: ' + dropped :
+            `can not be ${kind(value)}, its default is ${kind(d)}`;
         const fits = finite && (isColor(d) ? isColor(value) : isVector3(d) ? isVector3(value) :
             isVector2(d) ? isVector2(value) : d === undefined ? !special :
             d === null ? !special && typeof value === 'object' :
             !special && typeof value === typeof d && value !== null && isArray(value) === isArray(d) &&
-            (!merges || editor3DCoversDefault(d, value)));
-        const kind = (v)=> v === undefined ? 'none' : isColor(v) ? 'a Color' : isVector3(v) ? 'a Vector3' :
-            isVector2(v) ? 'a Vector2' : typeof v == 'number' ? String(v) : editor3DHasInstance(v, true) ?
-            'an instance of a class, or hold one' : merges && v && typeof v === 'object' && !isArray(v) &&
-            !editor3DCoversDefault(d, v) ? 'an object that leaves out a member of the default' :
-            objectPropertyKindName(v);
+            (!merges || editor3DCoversDefault(d, value) && !dropped));
         ASSERT(!!editor3DChanging?.includes(object),
             'setProperty works on an object of the list change gives, inside change');
-        ASSERT(fits, `setProperty: ${name} can not be ${kind(value)}, its default is ${kind(d)}`);
+        ASSERT(fits, `setProperty: ${name} ${why}`);
         fits && editor3DSetProperty(object, name, value, d);
     },
     pos(object) { return editor3DPos(object); },
@@ -2121,7 +2131,12 @@ function editor3DToolUpdate(ray, idle, shift, ctrl)
         editor3DToolHeld = false;
     }
     else if (idle && mouseWasPressed(0))
-        editor3DToolHeld = tool.onPress?.(at) !== false && editor3DIsOpen; // not held by a press that closed it
+    {
+        // a press that throws ends the stroke it made, so the next press's edit is not one undo with it
+        let pressed = false;
+        try { editor3DToolHeld = tool.onPress?.(at) !== false && editor3DIsOpen; pressed = true; } // not held by a
+        finally { pressed || (editor3DToolHeld = false, editor3DStrokeEnd()); }                   // press that closed it
+    }
     else if (editor3DToolHeld && mouseIsDown(0))
         tool.onDrag?.(at);
     if (editor3DToolHeld && !mouseIsDown(0))

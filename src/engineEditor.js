@@ -3423,7 +3423,12 @@ function editorToolUpdate(space)
         editorToolHeld = false;
     }
     else if (mouseWasPressed(0) && !space && !editorMouseOnPanel)
-        editorToolHeld = tool.onPress?.(at) !== false && editorIsOpen; // not held by a press that closed it
+    {
+        // a press that throws ends the stroke it made, so the next press's edit is not one undo with it
+        let pressed = false;
+        try { editorToolHeld = tool.onPress?.(at) !== false && editorIsOpen; pressed = true; } // not held by a press
+        finally { pressed || (editorToolHeld = false, editorStrokeEnd()); }                    // that closed it
+    }
     else if (editorToolHeld && mouseIsDown(0))
         tool.onDrag?.(at);
     // the cell under the mouse at the last callback, given to the next as lastCell, so a quick drag can fill between
@@ -3493,9 +3498,19 @@ const editorEdit2D =
         fits && editorObjectSetProperty(object, name, value, defaultValue);
     },
     strokeEnd() { editorStrokeEnd(); },
-    strokeCancel() { editorStrokeCancel(); },
+    strokeCancel()
+    {
+        // inside changeObjects the outer one would write its copy over what it took back
+        ASSERT(!editorEdit2DChanging, 'strokeCancel can not be called inside changeObjects');
+        editorEdit2DChanging || editorStrokeCancel();
+    },
     bulk(edit) { editorBulkEdit(edit); },
-    undo(redo=false) { return editorUndo(redo); },
+    undo(redo=false)
+    {
+        // inside changeObjects the outer one would write its copy over the undo, and its stroke clear the redo
+        ASSERT(!editorEdit2DChanging, 'undo can not be called inside changeObjects');
+        return !editorEdit2DChanging && editorUndo(redo);
+    },
     toJSON() { const record = editorRecord(); return record ? editorMapJSON(record) : ''; },
 };
 

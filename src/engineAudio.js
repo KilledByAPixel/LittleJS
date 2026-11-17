@@ -809,8 +809,8 @@ function speak(text, volume=1, rate=1, pitch=1, language='')
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = language;
     utterance.volume = audioFinite(clamp(max(volume, 0) * max(soundVolume, 0)), 0); // NaN or below 0 is silence
-    utterance.rate = rate;
-    utterance.pitch = pitch;
+    utterance.rate = audioFinite(rate, 1); // the browser throws on NaN or Infinity
+    utterance.pitch = audioFinite(pitch, 1);
     speechSynthesis.speak(utterance);
     return utterance;
 }

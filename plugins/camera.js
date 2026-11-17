@@ -17,6 +17,24 @@
 const cameraList = [];
 // the camera that drove the view last update
 let cameraDriving;
+// the camera that took the pointer lock, so a camera lets go only of a lock it took, never one the game or the free
+// camera took
+let cameraLockOwner;
+
+// ask for the pointer lock for a camera, which lets go of it when another drives or it is destroyed
+function cameraLockRequest(camera)
+{
+    pointerLockRequest();
+    cameraLockOwner = camera;
+}
+
+// let go of the pointer lock a camera took, when it holds it
+function cameraLockRelease(camera)
+{
+    if (!camera || cameraLockOwner !== camera) return;
+    cameraLockOwner = undefined;
+    pointerLockIsActive() && pointerLockExit();
+}
 // the plugin hook is added with the first camera
 let cameraPluginAdded = false;
 
@@ -51,6 +69,9 @@ function cameraUpdatePost()
     const camera = cameraList[cameraList.length - 1];
     if (camera && camera !== cameraDriving && !camera.cameraNew && !camera.cameraSnapped)
         camera.takeView();
+    // the camera that took the lock no longer drives: a driver that locks the mouse too takes it on, or it lets go
+    if (cameraLockOwner && cameraLockOwner !== camera)
+        camera?.lockPointer && pointerLockIsActive() ? cameraLockOwner = camera : cameraLockRelease(cameraLockOwner);
     for (const c of cameraList)
         c.cameraNew = false;
     camera && (camera.cameraSnapped = false); // the one driving goes on from where it is

@@ -125,8 +125,20 @@ function zipBuildStep()
 // so a file name can not run as a command; a tool that is not installed fails instead of being downloaded
 function runTool(binPath, args, options)
 {
-    let bin;
-    try { bin = require.resolve(binPath); }
-    catch { throw new Error(`${binPath.split('/')[0]} is not installed, run "npm install" first`); }
-    execFileSync(process.execPath, [bin, ...args], {stdio: 'inherit', ...options});
+    execFileSync(process.execPath, [toolPath(binPath), ...args], {stdio: 'inherit', ...options});
+}
+
+// the versions this build runs, as the repository's package.json pins them: a newer bestzip hides its cli
+const toolVersions = {'google-closure-compiler': '20230502', 'uglify-js': '3.17', bestzip: '2', roadroller: '2.1'};
+
+function toolPath(binPath)
+{
+    try { return require.resolve(binPath); }
+    catch (error)
+    {
+        // a copy outside the repository has no package.json, so the tool is named to install, with its version
+        const name = binPath.split('/')[0], install = `npm install --save-dev ${name}@${toolVersions[name]}`;
+        throw new Error(error.code === 'MODULE_NOT_FOUND' ? `${name} is not installed, run "${install}" first` :
+            `the ${name} installed is a version this build can not run, run "${install}"`);
+    }
 }
