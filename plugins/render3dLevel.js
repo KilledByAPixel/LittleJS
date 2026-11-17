@@ -274,6 +274,10 @@ function level3DTerrainShape(terrain)
 function level3DHexColor(hex)
 { return typeof hex === 'string' && /^#([0-9a-f]{6}|[0-9a-f]{8})$/i.test(hex) ? new Color().setHex(hex) : undefined; }
 
+// a member's text as a 3D level file writes it, a color as #rrggbb or #rrggbbaa, where Tiled puts the alpha first
+const level3DFromText = (value, fallback)=> isColor(fallback) ? level3DHexColor(value) :
+    objectPropertyFromText(value, fallback);
+
 // a number of a level that is a real one, not NaN or Infinity, which JSON writes as 1e999
 const level3DFinite = (v)=> typeof v === 'number' && isFinite(v);
 
@@ -515,12 +519,14 @@ function level3DProperties(type, object)
                 isArray(value) && value.length === 2 && value.every(level3DFinite) && set(key, vec2(value[0], value[1]));
         else if (typeof d === 'number')
             level3DFinite(value) && set(key, value);
-        else if (d && typeof d === 'object' && !isArray(d) && objectPropertyPlain(value))
+        else if (d && typeof d === 'object' && (isArray(d) ? isArray(value) : objectPropertyPlain(value)))
             // a plain object, as a file has, over its default member by member, as 2D's class properties are, so an
             // instance of the game's class stays one, with its methods, and a member the file left out keeps the
-            // default's; an instance given from code, to level3DSpawn, is copied as itself below
+            // default's; an instance given from code, to level3DSpawn, is copied as itself below; a list over a list
+            // with each item read as the default's, so a list of vectors comes back vectors
             set(key, objectLayersMergeClass(d, value, (text)=> objectLayersWarnOnce(undefined, 'level3D ' + object.type +
-                ' ' + key + text, `level3DLoad: ${object.type} ${object.id}'s ${key}${text}`), '', shared(key)));
+                ' ' + key + text, `level3DLoad: ${object.type} ${object.id}'s ${key}${text}`), '', shared(key),
+                level3DFromText));
         else if (d === undefined ||
             typeof value === typeof d && (d === null || value !== null && isArray(value) === isArray(d)))
             set(key, objectPropertyCopy(value)); // null and a list are objects to typeof, but neither is a

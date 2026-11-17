@@ -913,6 +913,7 @@ function playAudioBuffer(buffer, volume=1, rate=1, pan=0, loop=false, gainNode, 
     }
 
     volume = max(audioFinite(volume, 0), 0), rate = audioFinite(rate, 1), pan = audioFinite(pan, 0);
+    offset = max(audioFinite(offset, 0), 0); // start throws on one not finite or below 0, after the nodes connected
 
     // setup source, many sources can share one buffer
     const source = audioContext.createBufferSource();

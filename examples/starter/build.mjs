@@ -29,6 +29,9 @@ const dataFiles =
     // add your game's data files here
 ];
 
+// the versions this build runs, as the repository pins them: a newer bestzip hides its cli
+const toolVersions = {'google-closure-compiler': '20230502', 'uglify-js': '3.17', bestzip: '2', roadroller: '2.1'};
+
 console.log(`Building ${PROGRAM_NAME}...`);
 const startTime = Date.now();
 
@@ -132,9 +135,6 @@ function runTool(binPath, args, options)
 {
     execFileSync(process.execPath, [toolPath(binPath), ...args], {stdio: 'inherit', ...options});
 }
-
-// the versions this build runs, as the repository's package.json pins them: a newer bestzip hides its cli
-const toolVersions = {'google-closure-compiler': '20230502', 'uglify-js': '3.17', bestzip: '2', roadroller: '2.1'};
 
 function toolPath(binPath)
 {

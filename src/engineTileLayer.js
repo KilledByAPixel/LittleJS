@@ -828,7 +828,7 @@ function objectPropertyCopy(value, shared, path='')
         typeof value.copy == 'function' && shared?.(path);
         return value;
     }
-    const copy = {};
+    const copy = Object.getPrototypeOf(value) === null ? Object.create(null) : {}; // as the merge makes it
     for (const key of Object.keys(value))
         objectPropertyShared(key) || Object.defineProperty(copy, key,
             {value: objectPropertyCopy(value[key], shared, path + '.' + key), enumerable: true, writable: true,
@@ -927,8 +927,17 @@ const objectPropertyDefault = (defaults, key)=>
 // default, said through warn with its path, as a property does; a member named __proto__, constructor or prototype
 // is left out, so a level a player made can not reach what every object shares; a default member the value leaves
 // alone, or gives of the wrong kind, whose copy method gives back no new object is said through shared with its path
-function objectLayersMergeClass(fallback, value, warn, path='', shared)
+function objectLayersMergeClass(fallback, value, warn, path='', shared, fromText=objectPropertyFromText)
 {
+    // a list over a list, each of its items read as the default's item there is, or its last, a vector as a list
+    // and a color as text, so a 3D level file's list of vectors comes back vectors
+    if (isArray(fallback) && isArray(value))
+        return value.map((item, i)=>
+        {
+            const before = fallback[min(i, fallback.length - 1)];
+            return before !== undefined && (fromText(item, before) || objectPropertyFromArray(item, before)) ||
+                objectPropertyCopy(item);
+        });
     // a value of the game's class, given from code, is copied as itself, never made the default's class
     if (!fallback || typeof fallback !== 'object' || isArray(fallback) || !objectPropertyPlain(value))
         return objectPropertyCopy(value);
@@ -966,7 +975,7 @@ function objectLayersMergeClass(fallback, value, warn, path='', shared)
             try { typeof fallback[key] != 'function' && (before = fallback[key]); } catch { }
         const member = value[key];
         // a Color or Vector2 member as Tiled writes it, or a vector as a list, as a 3D level file writes it
-        const read = objectPropertyFromText(member, before) || objectPropertyFromArray(member, before);
+        const read = fromText(member, before) || objectPropertyFromArray(member, before);
         // given as every member is: assigned to a copy, its setter run, and its own to one with no copy method
         const give = (result)=> copied ?
             objectPropertyAssign(merged, key, result, '', '', (why)=> warn?.(`${name} ${why}, left out`)) :
@@ -984,7 +993,7 @@ function objectLayersMergeClass(fallback, value, warn, path='', shared)
         }
         // assigned to a copy, so its setters run; one with no copy method has none of its class's private fields for
         // an accessor to read, it gets the member as its own
-        const result = objectLayersMergeClass(before, member, warn, name, shared);
+        const result = objectLayersMergeClass(before, member, warn, name, shared, fromText);
         // its own would take the place of a method of the game's class, read by its descriptor so no getter runs
         // from the default itself, whose own field is data, through its class to Object's, toString and valueOf too
         let method = false;

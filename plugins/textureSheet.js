@@ -350,6 +350,8 @@ function loadTiles(sources, tileSize=tileDefaultSize, padding=textureSheetPaddin
  *  - Frames are named by the json, animations are grouped automatically
  *  - Aseprite frame tags become animations, so do names like run_0, run_1, their frames in the file's order
  *    whichever way the tag plays, which parseAtlas gives as the group's direction
+ *  - Names numbered with no separator, gem1, gem2, are grouped too, and every frame of a group made from names is
+ *    also set under its own name, so atlas.gem2 is atlas.gem.frame(1), as is atlas.run_1 atlas.run.frame(1)
  *  - Trimmed frames are restored to their full source size when packed
  *  - Rotated frames are rotated back upright when packed
  *  - A group of nine frames, panel_0 to panel_8, is packed as a 3 by 3 block, so it is a drawNineSlice start tile
@@ -469,6 +471,11 @@ function loadAtlas(imageSrc, jsonSrc, padding=textureSheetPadding)
                 sheet.glDirty = true;
                 // as its own, a frame named __proto__ too, which assigned would set the atlas's prototype
                 objectPropertySet(atlas, group.name, tile);
+                // each frame of a group made from names under its own name too, gem1 of gem1, gem2 and gem3, separate
+                // sprites in a pack exported by file name, unless a sprite of that name is in the atlas
+                if (group.named)
+                    group.frames.forEach((f, i)=> Object.hasOwn(atlas, f.name) ||
+                        objectPropertySet(atlas, f.name, tile.frame(i)));
             }
         }
         else
@@ -517,12 +524,12 @@ function textureSheetQueueJob(name, job, failed)
 
 /** Parse atlas json into a list of named frame groups, used by loadAtlas
  *  - Accepts TexturePacker json (hash and array) and Aseprite json
- *  - Frames tagged in Aseprite or named like run_0, run_1 group into animations
+ *  - Frames tagged in Aseprite or named like run_0, run_1, or gem1, gem2, group into animations
  *  - A tag's frames are in the file's order, and its group keeps how Aseprite plays them, its direction: forward,
  *    reverse, pingpong or pingpong_reverse, for the game to play them that way
  *  @param {Object} data - Parsed atlas json data
- *  @return {Array<{name: string, frames: Array<AtlasFrame>, direction?: string}>} List of {name, frames} groups in
- *    atlas order, a tag's with its direction
+ *  @return {Array<{name: string, frames: Array<AtlasFrame>, direction?: string, named?: boolean}>} List of
+ *    {name, frames} groups in atlas order, a tag's with its direction, one made from its frames' names marked named
  *  @memberof TextureSheets */
 function parseAtlas(data)
 {
@@ -634,7 +641,7 @@ function parseAtlas(data)
             list.every(f=> f.sourceSize.x === list[0].sourceSize.x &&
                            f.sourceSize.y === list[0].sourceSize.y);
         if (grouped)
-            groups.push({name: stem, frames: list});
+            groups.push({name: stem, frames: list, named: true});
         else
             list.forEach(f=> groups.push({name: f.name, frames: [f]}));
     }

@@ -219,6 +219,10 @@ let engineObjectsPhysicsRunning = false;
 // called with each object once its updatePhysics is done, by a plugin that keeps solids of its own in a grid, as
 // the 3D plugin does, so a solid an override moved after the engine's physics is found where it is
 let engineObjectsPhysicsDone;
+// a plugin's own objects that move before the rest each update, as a solid with no mass that moves does: the 3D
+// level shapes moved by their velocity, so what stands on one sees it where it is now, whatever the list order
+/** @type {(()=> Iterable<EngineObject>)|undefined} */
+let engineObjectsMovesFirst;
 
 // where each object that collides with solids was before this frame's moves, kept only when a one way solid is among
 // them, so a one way test goes by where both were whichever of the two updates first
@@ -1050,6 +1054,9 @@ function engineObjectsUpdate()
     // on it, rides it or passes up through it sees it where it is now and where it was, whatever the render order
     const first = new Set(engineObjectsCollide.filter((o)=> !o.mass && !o.parent &&
         (o.oneWay || o.isSolid && (o.velocity.x || o.velocity.y))));
+    if (engineObjectsMovesFirst)
+        for (const o of engineObjectsMovesFirst())
+            o.parent || first.add(o);
     engineObjectsPhysicsRunning = true;
     try
     {

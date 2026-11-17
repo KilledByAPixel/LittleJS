@@ -856,6 +856,9 @@ class Render3DPlugin
             render3DPreRender, render3DGridRelease);
         render3DPluginAdded = true;
         engineObjectsPhysicsDone = render3DGridPhysicsDone;
+        // a level shape moved by its velocity, a lift, moves before what stands on it, whatever the list order
+        engineObjectsMovesFirst = ()=> render3DLevel.filter((level)=> !level.destroyed &&
+            (level.velocity3D.x || level.velocity3D.y || level.velocity3D.z));
     }
 
     ///////////////////////////////////////////////////////////////////////////

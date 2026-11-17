@@ -3424,10 +3424,11 @@ function editorToolUpdate(space)
     }
     else if (mouseWasPressed(0) && !space && !editorMouseOnPanel)
     {
-        // a press that throws ends the stroke it made, so the next press's edit is not one undo with it
-        let pressed = false;
-        try { editorToolHeld = tool.onPress?.(at) !== false && editorIsOpen; pressed = true; } // not held by a press
-        finally { pressed || (editorToolHeld = false, editorStrokeEnd()); }                    // that closed it
+        // a press that is not held, as one returning false, throwing or closing the editor, ends the stroke it made,
+        // so the next press's edit is not one undo with it
+        editorToolHeld = false;
+        try { editorToolHeld = tool.onPress?.(at) !== false && editorIsOpen; }
+        finally { editorToolHeld || editorStrokeEnd(); }
     }
     else if (editorToolHeld && mouseIsDown(0))
         tool.onDrag?.(at);

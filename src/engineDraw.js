@@ -2042,8 +2042,10 @@ function cameraShake(amount=.5, direction=vec2(1))
 {
     ASSERT(isNumber(amount) && amount >= 0, 'cameraShake: amount must be a number, 0 or more', amount);
     ASSERT(isVector2(direction), 'cameraShake: direction must be a vec2', direction);
-    amount = min(amount, 1); // the shake is at most 1, and Infinity times an axis of 0 would be NaN
-    const x = abs(direction.x), y = abs(direction.y);
+    // the shake is at most 1, and Infinity times an axis of 0 would be NaN; in a release build NaN is no shake, and an
+    // axis that is not finite none, as one NaN would stop every shake after it
+    amount = amount === amount ? clamp(amount, 0, 1) : 0;
+    const axis = (v)=> isFinite(v) ? abs(v) : 0, x = axis(direction?.x), y = axis(direction?.y);
     cameraShakeAxes = vec2(min(1, cameraShakeAxes.x + amount * x), min(1, cameraShakeAxes.y + amount * y));
     cameraShakeTrauma = min(1, cameraShakeTrauma + amount * max(x, y));
 }

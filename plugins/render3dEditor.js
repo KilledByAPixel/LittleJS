@@ -52,7 +52,7 @@ function editor3DSetFreeCamera(on)
     {
         editor3DCameraStart();
         pointerLockRequest();
-        cameraLockOwner = undefined; // the free camera's lock now, which no game camera lets go of
+        cameraLockOwner = cameraLockAsked = undefined; // the free camera's lock now, which no game camera lets go of
     }
     else
     {
@@ -1311,33 +1311,62 @@ function editor3DSetTransform(object, pos, rotation, scale)
 // string, with its alpha when it has one, and a vector as an array
 function editor3DSetProperty(object, name, value, defaultValue)
 {
-    const encode = (v)=> isColor(v) ? v.toString(v.a < 1) : isVector3(v) ? [v.x, v.y, v.z] :
-        isVector2(v) ? [v.x, v.y] : v;
     const properties = {...object.properties};
-    if (editor3DSame(encode(value), encode(defaultValue)))
+    if (editor3DSame(editor3DEncode(value), editor3DEncode(defaultValue)))
         delete properties[name];
     else
-        properties[name] = encode(value);
+        properties[name] = editor3DEncode(value);
     Object.keys(properties).length ? object.properties = properties : delete object.properties;
 }
 
-// whether a value is or holds, in its lists and plain objects at any depth, an object of a class, which a level file
-// would keep as a plain object; at the top a Color or a vector is allowed, as the file writes them as text or a list
-function editor3DHasInstance(value, top)
+// a value as a level file writes it, at any depth: a Color as #rrggbb or #rrggbbaa, a vector as a list
+function editor3DEncode(value)
 {
-    if (!value || typeof value !== 'object') return false;
-    if (top && (isColor(value) || isVector2(value) || isVector3(value))) return false;
-    if (!isArray(value) && !objectPropertyPlain(value)) return true;
-    return Object.values(value).some((v)=> editor3DHasInstance(v));
+    if (isColor(value)) return value.toString(value.a < 1);
+    if (isVector3(value)) return [value.x, value.y, value.z];
+    if (isVector2(value)) return [value.x, value.y];
+    if (isArray(value)) return value.map(editor3DEncode);
+    if (!objectPropertyPlain(value)) return value;
+    const encoded = {};
+    for (const key of Object.keys(value))
+        objectPropertySet(encoded, key, editor3DEncode(value[key]));
+    return encoded;
+}
+
+// what in a value, at any depth, a level file would not bring back as it is, said, or undefined: a number that is not
+// finite, which it keeps as null, a Color or a vector where its default has none, which it brings back as text or a
+// list, and an object of a class, which it brings back a plain object
+function editor3DValueProblem(value, fallback)
+{
+    if (typeof value == 'number')
+        return isFinite(value) ? undefined : 'holds a number that is not finite, which the file keeps as null';
+    if (!value || typeof value !== 'object') return;
+    if (isColor(value) || isVector3(value) || isVector2(value))
+        return (isColor(value) ? isColor(fallback) : isVector3(value) ? isVector3(fallback) : isVector2(fallback)) ?
+            undefined : 'holds a Color or a vector where its default has none, which the file brings back as text ' +
+            'or a list';
+    if (!isArray(value) && !objectPropertyPlain(value))
+        return 'can not be given an instance of a class, nor a value holding one, as the file brings it back a ' +
+            'plain object';
+    const object = !!fallback && typeof fallback == 'object';
+    for (const key of Object.keys(value))
+    {
+        const before = isArray(value) ? isArray(fallback) && fallback.length ?
+            fallback[min(+key, fallback.length - 1)] : undefined :
+            object && !isArray(fallback) ? objectPropertyDefault(fallback, key) : undefined;
+        const problem = editor3DValueProblem(value[key], before);
+        if (problem) return problem;
+    }
 }
 
 // whether a plain object has every member of an object default, and of each member that is an object itself, since
 // the load merges it into the default and a member left out would be the default's; a member the default holds as
-// undefined, a class field declared with no value, is not in a file either, so may be left out
+// undefined, a class field declared with no value, or a function, is not in a file either, so may be left out
 function editor3DCoversDefault(defaultValue, value)
 {
     const object = (v)=> !!v && typeof v === 'object' && !isArray(v);
-    return Object.keys(defaultValue).every((key)=> (defaultValue[key] === undefined || Object.hasOwn(value, key)) &&
+    return Object.keys(defaultValue).every((key)=> (defaultValue[key] === undefined ||
+        typeof defaultValue[key] == 'function' || Object.hasOwn(value, key)) &&
         (!object(defaultValue[key]) || !object(value[key]) || editor3DCoversDefault(defaultValue[key], value[key])));
 }
 
@@ -2021,38 +2050,37 @@ const editor3DEdit =
     setProperty(object, name, value)
     {
         // a value the load reads back as it was given, as the 2D one takes, or the load would keep the default and
-        // the edit would be an undo step the game never sees: of its default's kind, a number finite, the type's own
-        // default read as the load reads it, over null an object or a list, and a Color or a vector only over one
+        // the edit would be an undo step the game never sees: of its default's kind, every number in it finite, the
+        // type's own default read as the load reads it, over null an object or a list, a Color or a vector only
+        // where the default has one, given as one or as the file writes it, text or a list
         const type = level3DTypes.get(object.type), d = type && objectPropertyDefault(type.defaults, name);
-        const finite = typeof value != 'number' || isFinite(value);
-        // an object of a class of the game's would be saved as its members and come back a plain object, so an
-        // object is a plain one or a list, as a file has them, and so is all it holds, at any depth
-        const special = isColor(value) || isVector2(value) || isVector3(value) || editor3DHasInstance(value, true);
+        // the file's form of a Color or vector over one, as a value read back from edit3D.objects is
+        value = isColor(d) && typeof value == 'string' ? level3DHexColor(value) ?? value :
+            isVector3(d) && isArray(value) ? level3DVector(value, value) :
+            isVector2(d) && isArray(value) && value.length === 2 && value.every(level3DFinite) ?
+            vec2(value[0], value[1]) : value;
+        const vector = isColor(value) || isVector2(value) || isVector3(value);
+        const problem = editor3DValueProblem(value, d);
         // an object over an object default is merged into it member by member when loaded, so one that leaves a
-        // member out would load with the default's
+        // member out would load with the default's, and so would a member the merge does not read
         const merges = !!d && typeof d === 'object' && !isArray(d) && !isColor(d) && !isVector2(d) && !isVector3(d);
-        // and a member the merge would not read, of another kind than the default's, it keeps the default's for
         let dropped;
-        merges && objectPropertyPlain(value) && objectLayersMergeClass(d, value, (text)=>
-            /left out$|the default is kept$/.test(text) && (dropped ??= text.trim()));
+        !problem && merges && objectPropertyPlain(value) && objectLayersMergeClass(d, editor3DEncode(value), (text)=>
+            /left out$|the default is kept$/.test(text) && (dropped ??= text.trim()), '', undefined, level3DFromText);
         const kind = (v)=> v === undefined ? 'none' : isColor(v) ? 'a Color' : isVector3(v) ? 'a Vector3' :
             isVector2(v) ? 'a Vector2' : typeof v == 'number' ? String(v) : objectPropertyKindName(v);
-        const why = !finite ? 'can not be ' + kind(value) :
-            special && !(isColor(value) || isVector2(value) || isVector3(value)) ? 'can not be given an instance of a ' +
-                'class, nor a value holding one, as the file brings it back a plain object' :
+        const sameKind = vector || isColor(d) || isVector2(d) || isVector3(d) ? vector && !problem :
+            d === undefined || (d === null ? typeof value === 'object' :
+            typeof value === typeof d && value !== null && isArray(value) === isArray(d));
+        const why = problem && !vector ? problem :
+            !sameKind ? `can not be ${kind(value)}, its default is ${kind(d)}` :
             merges && objectPropertyPlain(value) && !editor3DCoversDefault(d, value) ? 'leaves out a member of its ' +
                 'default, which the load would put back' :
-            dropped ? 'has a member the load would not read: ' + dropped :
-            `can not be ${kind(value)}, its default is ${kind(d)}`;
-        const fits = finite && (isColor(d) ? isColor(value) : isVector3(d) ? isVector3(value) :
-            isVector2(d) ? isVector2(value) : d === undefined ? !special :
-            d === null ? !special && typeof value === 'object' :
-            !special && typeof value === typeof d && value !== null && isArray(value) === isArray(d) &&
-            (!merges || editor3DCoversDefault(d, value) && !dropped));
+            dropped ? 'has a member the load would not read: ' + dropped : undefined;
         ASSERT(!!editor3DChanging?.includes(object),
             'setProperty works on an object of the list change gives, inside change');
-        ASSERT(fits, `setProperty: ${name} ${why}`);
-        fits && editor3DSetProperty(object, name, value, d);
+        ASSERT(!why, `setProperty: ${name} ${why}`);
+        why || editor3DSetProperty(object, name, value, d);
     },
     pos(object) { return editor3DPos(object); },
     rotation(object) { return editor3DRotation(object); },
@@ -2132,10 +2160,11 @@ function editor3DToolUpdate(ray, idle, shift, ctrl)
     }
     else if (idle && mouseWasPressed(0))
     {
-        // a press that throws ends the stroke it made, so the next press's edit is not one undo with it
-        let pressed = false;
-        try { editor3DToolHeld = tool.onPress?.(at) !== false && editor3DIsOpen; pressed = true; } // not held by a
-        finally { pressed || (editor3DToolHeld = false, editor3DStrokeEnd()); }                   // press that closed it
+        // a press that is not held, as one returning false, throwing or closing the editor, ends the stroke it made,
+        // so the next press's edit is not one undo with it
+        editor3DToolHeld = false;
+        try { editor3DToolHeld = tool.onPress?.(at) !== false && editor3DIsOpen; }
+        finally { editor3DToolHeld || editor3DStrokeEnd(); }
     }
     else if (editor3DToolHeld && mouseIsDown(0))
         tool.onDrag?.(at);

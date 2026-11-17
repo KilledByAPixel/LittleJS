@@ -887,7 +887,7 @@ class HeightMap extends EngineObject3D
         {
             // one that stood on it and is not rising keeps to it going downhill, as far down as it moved across, so
             // it stays grounded down a slope as steep as 45 degrees instead of falling in small hops
-            const follow = wasOn && o.velocity3D.y <= 0 ? hypot(p.x - oldPos.x, p.z - oldPos.z) : 0;
+            const follow = wasOn && o.velocity3D.y <= this.velocity3D.y ? hypot(p.x - oldPos.x, p.z - oldPos.z) : 0;
             if (p.y - half > ground + follow) return;
         }
         // ground steeper than its groundAngle is not ground, as a MeshCollider's steep face is not: it is not stood
@@ -902,8 +902,10 @@ class HeightMap extends EngineObject3D
         if (n.y >= cosGround || l && gentleNear())
         {
             p.y = ground + half;
-            if (v.y < 0)
-                v.y *= -max(o.restitution, this.restitution);
+            // its fall stopped relative to the map's own speed, so a body on a map that moves, a lift, goes with it
+            const lift = this.velocity3D.y;
+            if (v.y < lift)
+                v.y = lift - (v.y - lift) * max(o.restitution, this.restitution);
             o.groundObject = this;
         }
         else
@@ -1533,7 +1535,8 @@ function meshColliderCollide(collider, o, oldPos, wasOn, fromOther)
     // map onto a mesh stays on the ground, as the follow below looks that far; not the one it stood on, which would
     // pull it back down as it climbs a step onto another
     const g = collider.grid, reach = radius + half;
-    const below = fromOther && o.velocity3D.y <= 0 ? hypot(mx, mz) + 1e-3 : 0;
+    const lift = collider.velocity3D.y; // its own speed, a lift's, which what stands on it goes with
+    const below = fromOther && o.velocity3D.y <= lift ? hypot(mx, mz) + 1e-3 : 0;
     if (max(p.x, from.x) + radius < g.min.x || min(p.x, from.x) - radius > g.max.x ||
         max(p.y, from.y) + reach < g.min.y || min(p.y, from.y) - reach - below > g.max.y ||
         max(p.z, from.z) + radius < g.min.z || min(p.z, from.z) - radius > g.max.z)
@@ -1546,7 +1549,7 @@ function meshColliderCollide(collider, o, oldPos, wasOn, fromOther)
         center.x += mx / steps, center.y += my / steps, center.z += mz / steps;
         ground = meshColliderResolve(collider, center, half, radius, o.groundAngle, walls, mx, mz); // where it ends up
     }
-    if (!ground && wasOn && o.velocity3D.y <= 0)
+    if (!ground && wasOn && o.velocity3D.y <= lift)
     {
         // down a slope: try it below, as far down as it moved across, in steps of half its radius as the move is,
         // and keep the first that lands, so a fast one is not pushed through a floor thinner than it or past it
@@ -1565,7 +1568,8 @@ function meshColliderCollide(collider, o, oldPos, wasOn, fromOther)
     const v = o.velocity3D, restitution = max(o.restitution, collider.restitution);
     // standing, its fall is stopped first, so the steep faces of a V take back only speed across, and its fall
     // taken back along them does not leave it a speed down the crease
-    ground && v.y < 0 && (v.y *= -restitution);
+    // relative to the collider's own speed, so a body on one that moves, a lift, goes with it
+    ground && v.y < lift && (v.y = lift - (v.y - lift) * restitution);
     for (const n of walls)
     {
         const into = v.dot(n);
@@ -1765,7 +1769,8 @@ class ThirdPersonCamera3D extends EngineObject3D
         this.manualControl = true;
         /** @property {number} - Mouse button that turns it while held, 0 is left and 2 is right */
         this.dragButton = 2;
-        /** @property {boolean} - Capture the mouse on a press of dragButton, so turning needs no button held */
+        /** @property {boolean} - Capture the mouse on a press of dragButton, so turning needs no button held; let go
+         *  when another camera drives, unless that one captures it too, or when this one is destroyed */
         this.lockPointer = false;
         /** @property {number} - How far a pixel of mouse movement turns it */
         this.lookSpeed = .003;
@@ -1917,15 +1922,6 @@ class ThirdPersonCamera3D extends EngineObject3D
         this.pos3D = render3D.camera.pos.copy();
     }
 
-    /** Let go of the mouse and stop driving the camera
-     *  @param {boolean} [immediate] */
-    destroy(immediate)
-    {
-        // only a lock it took, never the driver's, the game's or the free camera's
-        cameraLockRelease(this);
-        super.destroy(immediate);
-    }
-
     /** Camera controls draw nothing */
     render3D() {}
 }
@@ -1975,7 +1971,8 @@ class FirstPersonCamera3D extends EngineObject3D
         this.pitchRange = vec2(-1.5, 1.5);
         /** @property {boolean} - Move the way it looks, up and down included, instead of walking level */
         this.fly = false;
-        /** @property {boolean} - Capture the mouse on a click, so looking needs no button held */
+        /** @property {boolean} - Capture the mouse on a click, so looking needs no button held; let go when another
+         *  camera drives, unless that one captures it too, or when this one is destroyed */
         this.lockPointer = true;
         /** @property {number} - Mouse button that looks while held, and captures the mouse with lockPointer, 0 is
          *  left and 2 is right */
@@ -2059,15 +2056,6 @@ class FirstPersonCamera3D extends EngineObject3D
         // a jump from the ground, level collision sets what it stands on
         if (driving && this.jumpSpeed && !this.fly && this.groundObject && (keyWasPressed('Space') || gamepadWasPressed(0)))
             this.velocity3D.y = this.jumpSpeed;
-    }
-
-    /** Let go of the mouse and stop driving the camera
-     *  @param {boolean} [immediate] */
-    destroy(immediate)
-    {
-        // only a lock it took, never the driver's, the game's or the free camera's
-        cameraLockRelease(this);
-        super.destroy(immediate);
     }
 
     /** Camera controls draw nothing */

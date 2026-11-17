@@ -20,20 +20,37 @@ let cameraDriving;
 // the camera that took the pointer lock, so a camera lets go only of a lock it took, never one the game or the free
 // camera took
 let cameraLockOwner;
+// the camera that asked for the lock last and when, since the browser gives it a frame or more later: one that lands
+// with no camera holding it, after a hand-over that came first, is still the asker's
+let cameraLockAsked, cameraLockAskedTime = 0;
 
 // ask for the pointer lock for a camera, which lets go of it when another drives or it is destroyed
 function cameraLockRequest(camera)
 {
     pointerLockRequest();
-    cameraLockOwner = camera;
+    cameraLockOwner = cameraLockAsked = camera;
+    cameraLockAskedTime = timeReal;
 }
 
-// let go of the pointer lock a camera took, when it holds it
-function cameraLockRelease(camera)
+// hand the lock a camera took on, or let it go, once its camera no longer drives or is gone: a driver that locks the
+// pointer too takes it on, so a new camera made before or after the old one is destroyed in the same update keeps it
+function cameraLockUpdate()
 {
-    if (!camera || cameraLockOwner !== camera) return;
-    cameraLockOwner = undefined;
-    pointerLockIsActive() && pointerLockExit();
+    const driver = cameraDriver(), active = pointerLockIsActive();
+    if (cameraLockAsked && (active || timeReal - cameraLockAskedTime > 1))
+    {
+        // landed, or never will: landed with no camera holding it, it is the asker's
+        active && !cameraLockOwner && (cameraLockOwner = cameraLockAsked);
+        cameraLockAsked = undefined;
+    }
+    if (!cameraLockOwner || cameraLockOwner === driver) return;
+    if (driver?.lockPointer && (active || cameraLockAsked))
+        cameraLockOwner = driver;
+    else
+    {
+        cameraLockOwner = undefined;
+        active && pointerLockExit();
+    }
 }
 // the plugin hook is added with the first camera
 let cameraPluginAdded = false;
@@ -65,13 +82,11 @@ function cameraUpdatePost()
 {
     for (let i = cameraList.length; i--;)
         cameraList[i].destroyed && cameraList.splice(i, 1);
+    cameraLockUpdate(); // paused too, so a camera destroyed then lets go
     if (paused || engineFrozenTick) return; // held while paused or at time scale 0
     const camera = cameraList[cameraList.length - 1];
     if (camera && camera !== cameraDriving && !camera.cameraNew && !camera.cameraSnapped)
         camera.takeView();
-    // the camera that took the lock no longer drives: a driver that locks the mouse too takes it on, or it lets go
-    if (cameraLockOwner && cameraLockOwner !== camera)
-        camera?.lockPointer && pointerLockIsActive() ? cameraLockOwner = camera : cameraLockRelease(cameraLockOwner);
     for (const c of cameraList)
         c.cameraNew = false;
     camera && (camera.cameraSnapped = false); // the one driving goes on from where it is
