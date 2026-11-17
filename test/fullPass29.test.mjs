@@ -418,3 +418,54 @@ test('a 3D snippet can read a spotlight\'s cone as lightCones (G2)', ()=>
     const { run } = loadEngine();
     assert.match(run('RENDER3D_SNIPPET_NAMES'), /#define lightCones extraLightCones/);
 });
+
+// a body of height 1, its step .25, walking from off an 8 by 8 HeightMap at (10, 0, 0) onto it along a floor; the
+// map's 9 by 9 samples from height(i, j), 0 to 1 of its height of 4; where it ends, its highest and if it stood on it
+function walkOntoMap(height, {start = 'vec3(0, .5, 0)', velocity = 'vec3(.1, 0, 0)', frames = 120} = {})
+{
+    const { run } = loadEngine();
+    return JSON.parse(run(`(()=>
+    {
+        setHeadlessMode(true); new Render3DPlugin; render3D.gravity = vec3(0, -.02, 0);
+        const floor = new EngineObject3D(vec3(0, -.5, 0)); floor.size3D = vec3(60, 1, 60); floor.setCollision();
+        floor.mass = 0;
+        const height = ${height}, heights = [];
+        for (let j = 0; j < 9; ++j) { heights.push([]); for (let i = 0; i < 9; ++i) heights[j].push(height(i, j)); }
+        const map = new HeightMap(heights, vec2(8, 8), 4, undefined, vec3(10, 0, 0));
+        const body = new EngineObject3D(${start}); body.size3D = vec3(.8, 1, .8); body.setCollision(); body.mass = 1;
+        let top = -Infinity, on = false;
+        for (let f = 0; f < ${frames}; ++f)
+        {
+            const v = ${velocity}; body.velocity3D.x = v.x; body.velocity3D.z = v.z;
+            engineObjectsUpdate();
+            top = Math.max(top, body.pos3D.y); on ||= body.groundObject === map;
+        }
+        const r = (n)=> Math.round(n * 1e3) / 1e3;
+        map.destroy();
+        return JSON.stringify({x: r(body.pos3D.x), z: r(body.pos3D.z), top: r(top), on});
+    })()`));
+}
+
+test('a HeightMap\'s edge higher than a body\'s step is a wall to it from off the map, a lower one is walked onto (C4)',
+    ()=>
+{
+    // raised edges, a plateau on the floor: its side stops at the edge, x 6 less its half width of .4
+    for (const edge of [.1, .5, 1])
+        assert.deepEqual(walkOntoMap(`()=> ${edge}`), {x: 5.6, z: 0, top: .5, on: false}, 'edge ' + edge * 4);
+    // an edge of .2, under the step of .25, is stepped onto
+    const low = walkOntoMap('()=> .05');
+    assert.ok(low.on && low.top > .69, 'a low edge: ' + JSON.stringify(low));
+    // a ring of 0 round a plateau: the map's own rules, a gentle ramp climbed and a cliff a wall, as before
+    assert.equal(walkOntoMap('(i, j)=> i && j && i < 8 && j < 8 ? .25 : 0').on, true, 'a ramp from a 0 edge');
+    assert.ok(walkOntoMap('(i, j)=> i && j && i < 8 && j < 8 ? 1 : 0').x < 6.01, 'a cliff from a 0 edge');
+    // a fast walker up a gentle ramp from a 0 edge, its middle well past the edge in one frame
+    const fast = walkOntoMap('(i)=> i * .02', {velocity: 'vec3(.5, 0, 0)', frames: 30});
+    assert.ok(fast.on && fast.x > 11, 'a fast walk up a ramp: ' + JSON.stringify(fast));
+    // a body falling onto a raised edge from above lands on it
+    const drop = walkOntoMap('()=> .5', {start: 'vec3(5.8, 4, 0)', frames: 60});
+    assert.ok(drop.on && drop.top <= 4 && drop.x > 6, 'dropped onto it: ' + JSON.stringify(drop));
+    // at a corner, coming at it on a diagonal: held off the map, it slides along the side and past it
+    const corner = walkOntoMap('()=> 1', {start: 'vec3(4, .5, -6)', velocity: 'vec3(.1, 0, .1)'});
+    assert.equal(corner.on, false, 'a corner: ' + JSON.stringify(corner));
+    assert.equal(corner.top, .5, 'it slides along the side, never climbing it');
+});

@@ -446,8 +446,8 @@ function buildText3D(text, size=1, depth=.2, font=engineImageFont)
  * - pos3D is the center of the map, its grid spans mapSize on X and Z around it, and a full value is height above it
  * - getHeight, getNormal, getColor and raycast are in world space, with the map's position taken off
  * - It stays upright and unscaled, its lookups do not turn with it
- * - Its edges are not walls: a body walking on from off the map steps up to the edge's height, however high, so keep
- *   the edge samples at the height of the ground around it, as a hill on a floor has a ring of the floor's height
+ * - Its edge, to a body coming from off the map, is a wall where it stands higher than the body's step, as a cliff
+ *   inside the map is, and a lower edge is stepped onto
  * @extends EngineObject3D
  * @memberof Render3D
  * @example
@@ -734,9 +734,38 @@ class HeightMap extends EngineObject3D
      *  @ignore */
     levelCollide3D(o, oldPos, wasOn)
     {
-        const p = o.pos3D, m = this.pos3D, size = this.mapSize;
-        if (abs(p.x - m.x) > size.x / 2 || abs(p.z - m.z) > size.y / 2) return; // off the map
+        const p = o.pos3D, m = this.pos3D, size = this.mapSize, hx = size.x / 2, hz = size.y / 2;
         const half = o.size3D.y * abs(o.scale3D.y) / 2;
+        // the map's edge, to a body coming from off it, is a wall where it stands higher than the body's step above
+        // its foot, as a cliff inside the map is, so a raised edge is not climbed at once however high; its side
+        // stops at the edge, and a lower edge is walked onto
+        if (oldPos && (abs(oldPos.x - m.x) > hx || abs(oldPos.z - m.z) > hz))
+        {
+            const side = min(o.size3D.x * abs(o.scale3D.x), o.size3D.z * abs(o.scale3D.z)) / 2;
+            const inX = hx + side - abs(p.x - m.x), inZ = hz + side - abs(p.z - m.z); // how far its box is past the edges
+            // the height on the edge it came over, not past it, where a ramp from a low edge is the slope rule's
+            const offX = abs(oldPos.x - m.x) > hx, offZ = abs(oldPos.z - m.z) > hz;
+            const edge = this.getHeight(offX ? m.x + sign(oldPos.x - m.x) * hx : clamp(p.x, m.x - hx, m.x + hx),
+                offZ ? m.z + sign(oldPos.z - m.z) * hz : clamp(p.z, m.z - hz, m.z + hz));
+            if (inX > 1e-9 && inZ > 1e-9 && edge > oldPos.y - half + half / 2 + 1e-6)
+            {
+                // back out across the edge it came over, at a corner the one it is in least past
+                const acrossX = offX && (!offZ || inX <= inZ), v = o.velocity3D;
+                if (acrossX)
+                {
+                    const s = sign(oldPos.x - m.x);
+                    p.x = m.x + s * (hx + side);
+                    v.x * s < 0 && (v.x = 0);
+                }
+                else
+                {
+                    const s = sign(oldPos.z - m.z);
+                    p.z = m.z + s * (hz + side);
+                    v.z * s < 0 && (v.z = 0);
+                }
+            }
+        }
+        if (abs(p.x - m.x) > hx || abs(p.z - m.z) > hz) return; // off the map
         let ground = this.getHeight(p.x, p.z);
         // the wall rule, as a MeshCollider's: ground steeper than its groundAngle and than about 45 degrees that it
         // would rise onto, past its step, the quarter of its height the sweep below lets it take, is a wall to walk
