@@ -625,9 +625,9 @@ class SpriteAnimator
 const SHADER_RESERVED_NAMES = /* @__PURE__ */ new Set(['main', 'mainImage', 'mainVertex', 'mainNormal', 'localUV',
     'premultipliedTexture', 'cameraPos', 'cameraDir', 'modelMatrix', 'vertexColor', 'viewProjection', 'viewProj',
     'lightViewProj', 'instanceData', 'instanceDataV', 'sceneDepth', 'worldPos', 'worldNormal', 'sunDirection',
-    'sunColor', 'ambientColor', 'ambientGroundColor', 'lightCount', 'lights', 'lightColors', 'lightDir', 'lightColor',
-    'ambientFog', 'ambientGround', 'fogColor', 'fogFade', 'shadowParams', 'extraLights', 'extraLightColors',
-    'extraLightCones', 'extraLightCount', 'materialParams', 'emissiveTint', 'skyTop', 'skyHorizon', 'skyBottom',
+    'sunColor', 'ambientColor', 'ambientGroundColor', 'lightCount', 'lights', 'lightColors', 'lightCones', 'lightDir',
+    'lightColor', 'ambientFog', 'ambientGround', 'fogColor', 'fogFade', 'shadowParams', 'extraLights',
+    'extraLightColors', 'extraLightCones', 'extraLightCount', 'materialParams', 'emissiveTint', 'skyTop', 'skyHorizon', 'skyBottom',
     'gelAxes', 'tex', 'normalTex', 'emissiveTex', 'gelTex', 'envMap', 'envParams', 'shadowMap', 'shadow', 'gel',
     'normalMapNormal', 'roundNormal']);
 
@@ -662,11 +662,11 @@ const SHADER_VERTEX_NAMES = /* @__PURE__ */ new Set(['p', 'n', 't', 'c', 'm0', '
  * - Names in both renderers: iChannel0 the texture, iTime, iResolution, premultipliedTexture, and localUV, 0 to 1
  *   across the sprite or the mesh's own uv
  * - Names in 3D only: worldPos, worldNormal, cameraPos, sunDirection, sunColor, ambientColor, ambientGroundColor,
- *   lightCount, lights[i], lightColors[i], lightCones[i] (a spotlight's cone: clamp(dot(c.xyz, toPixel) - c.w, 0., 1.)
- *   is 1 inside it and 0 past its edge, toPixel the unit way from the light, and 1 everywhere for a light with no
- *   cone) and shadow(), the sun's shadow or render3D.shadowLight's when it is set,
- *   and viewProjection, the camera's matrix from the world to
- *   the screen, for a snippet that sets its own depth: vec4 c = viewProjection * vec4(p, 1.); gl_FragDepth =
+ *   lightCount, lights[i], lightColors[i], lightCones[i] (a spotlight's cone: k = clamp(dot(c.xyz, toPixel) - c.w,
+ *   0., 1.) is 1 inside it and 0 past its edge, toPixel the unit way from the light, and 1 everywhere for a light
+ *   with no cone; the light is faded by k*k*(3.-2.*k), smoothstep, as the engine lights it) and shadow(), the
+ *   sun's shadow or render3D.shadowLight's when it is set, and viewProjection, the camera's matrix from the world
+ *   to the screen, for a snippet that sets its own depth: vec4 c = viewProjection * vec4(p, 1.); gl_FragDepth =
  *   c.z / c.w * .5 + .5 puts it at world point p; only on the screen, the shadow map and sceneDepth draw the mesh
  *   where it is
  * - In 3D the snippet may also define void mainNormal(inout vec3 n), given the normal facing the camera after the

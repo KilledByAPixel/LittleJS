@@ -852,19 +852,31 @@ function objectPropertySet(properties, key, value)
 
 // a property given to an object a type made: assigned, so a setter of the game's class runs; __proto__ made its own,
 // assigned it would set the object's prototype; one named as a method of the object, like update, would take the
-// method's place, and one that can only be read, a getter with no setter, would throw, so both are left out
-function objectPropertyAssign(target, key, value, name, who='objectLayersLoad')
+// method's place, and one that can only be read, a getter with no setter, would throw, so both are left out, said
+// through say, which a load gives so it is said once for each map
+function objectPropertyAssign(target, key, value, name, who='objectLayersLoad',
+    say=(why)=> debug && console.warn(`${who}: ${name} property ${key} ${why}, left out`))
 {
     if (key === '__proto__') return objectPropertySet(target, key, value);
     let found;
     for (let o = target; o && !found; o = Object.getPrototypeOf(o))
         found = Object.getOwnPropertyDescriptor(o, key);
-    if (typeof target[key] === 'function' && typeof value !== 'function')
-        debug && console.warn(`${who}: ${name} property ${key} has a method's name, left out`);
+    if (found && !found.get && typeof found.value === 'function' && typeof value !== 'function')
+        say("has a method's name");
     else if (found && (found.get || found.set ? !found.set : !found.writable))
-        debug && console.warn(`${who}: ${name} property ${key} can only be read, left out`);
+        say('can only be read');
     else
         target[key] = value;
+}
+
+// a warning said once for each map and what it is about, as the editor makes an object again as it is dragged
+function objectLayersWarnOnce(tileMapData, about, text)
+{
+    if (!debug) return;
+    const map = tileMapData ?? objectLayersKindSaid;
+    objectLayersKindSaid.has(map) || objectLayersKindSaid.set(map, new Set);
+    const said = objectLayersKindSaid.get(map);
+    said.has(about) || (said.add(about), console.warn(text));
 }
 
 // for each map, the object ids and property names whose kind warning was said, see objectLayersProperties; the
@@ -901,7 +913,11 @@ function objectLayersMergeClass(fallback, value, warn, path='')
             warn?.(`${name} is a name every object has, left out`);
             continue;
         }
-        const before = objectPropertyDefault(fallback, key), member = value[key];
+        // the default's member, one behind an accessor of its class too, read from the default, which its class made
+        let before = objectPropertyDefault(fallback, key);
+        if (own && before === undefined && key in fallback)
+            try { typeof fallback[key] != 'function' && (before = fallback[key]); } catch { }
+        const member = value[key];
         const read = objectPropertyFromText(member, before); // a Color or Vector2 member as Tiled writes it
         if (read)
         {
@@ -914,8 +930,11 @@ function objectLayersMergeClass(fallback, value, warn, path='')
                 'the default is kept');
             continue;
         }
+        // assigned to a copy, so its setters run; one with no copy method has none of its class's private fields for
+        // an accessor to read, it gets the member as its own
         const result = objectLayersMergeClass(before, member, warn, name);
-        own ? objectPropertyAssign(merged, key, result, 'a class member') : objectPropertySet(merged, key, result);
+        copied ? objectPropertyAssign(merged, key, result, '', '', (why)=> warn?.(`${name} ${why}, left out`)) :
+            objectPropertySet(merged, key, result);
     }
     return merged;
 }
@@ -931,9 +950,13 @@ function objectLayersProperties(type, object, tileMapData)
     const list = objectLayersPropertyList(object);
     debug && isArray(object.properties) && list.length < object.properties.length &&
         console.warn(`objectLayersLoad: object ${object.id} has a property that is not {name, value}`);
+    const say = (about, text)=> objectLayersWarnOnce(tileMapData, object.id + ' ' + name + about,
+        `objectLayersLoad: object ${object.id}'s ${name}${text}`);
+    let name;
     for (const property of list)
     {
-        const {name, value} = property;
+        const {value} = property;
+        name = property.name;
         const fallback = objectPropertyDefault(type.defaults, name);
         if (property.type === 'color' && (fallback == null || isColor(fallback)))
         {
@@ -944,9 +967,11 @@ function objectLayersProperties(type, object, tileMapData)
         }
         else if (isVector2(fallback) && typeof value != 'object')
         {
-            // Tiled has no Vector2, one is the string x,y, and one it can not read keeps the default
-            const read = objectPropertyFromText(String(value), objectPropertyDefault(type.defaults, name));
-            read && set(name, read);
+            // Tiled has no Vector2, one is the string x,y, and one it can not read keeps the default, said, a color
+            // or a number too
+            const read = objectPropertyFromText(String(value), fallback);
+            read ? set(name, read) : value !== '' && value != null &&
+                say('', ` is ${JSON.stringify(value)}, not x,y, its default a Vector2, the default is kept`);
         }
         else
         {
@@ -955,24 +980,13 @@ function objectLayersProperties(type, object, tileMapData)
             // is its text, and said the same way; a Color or Vector2 written as an object is its members, read below
             if (fallback != null && objectPropertyKind(fallback) !== objectPropertyKind(value))
             {
-                const said = object.id + ' ' + name, map = tileMapData ?? objectLayersKindSaid; // once for each
-                objectLayersKindSaid.has(map) || objectLayersKindSaid.set(map, new Set);
-                const saidSet = objectLayersKindSaid.get(map);
-                debug && !saidSet.has(said) && saidSet.add(said) && console.warn(
-                    `objectLayersLoad: object ${object.id}'s ${name} is ${objectPropertyKindName(value)}, ` +
-                    `its default ${objectPropertyKindName(fallback)}, the default is kept`);
+                say('', ` is ${objectPropertyKindName(value)}, its default ${objectPropertyKindName(fallback)}, ` +
+                    'the default is kept');
                 continue;
             }
             // a class property is the map's object over the type's default, member by member: Tiled writes only the
             // members set on that object, the rest are the class's defaults
-            set(name, objectLayersMergeClass(fallback, value, (text)=>
-            {
-                const said = object.id + ' ' + name + text, map = tileMapData ?? objectLayersKindSaid;
-                objectLayersKindSaid.has(map) || objectLayersKindSaid.set(map, new Set);
-                const saidSet = objectLayersKindSaid.get(map);
-                debug && !saidSet.has(said) && saidSet.add(said) &&
-                    console.warn(`objectLayersLoad: object ${object.id}'s ${name}${text}`);
-            }));
+            set(name, objectLayersMergeClass(fallback, value, (text)=> say(text, text)));
         }
     }
     return properties;
@@ -999,7 +1013,8 @@ function objectLayersMake(tileMapData, object)
     const {make} = type, result = make.prototype ? new make(pos) : make(pos);
     if (!result || typeof result !== 'object') return;
     for (const [key, value] of Object.entries(properties))
-        objectPropertyAssign(result, key, value, name);
+        objectPropertyAssign(result, key, value, name, undefined, (why)=> objectLayersWarnOnce(tileMapData,
+            object.id + ' ' + key + why, `objectLayersLoad: ${name} property ${key} ${why}, left out`));
     return result;
 }
 

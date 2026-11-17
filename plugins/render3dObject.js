@@ -262,8 +262,8 @@ class EngineObject3D extends EngineObject
      *    the top down a stack's boxes keep a small speed down, and a game that zeroes the speed of what stands sinks
      *    it a little a level, as can a stack made touching on its first frames; more than two or three high wants
      *    a full physics engine, as Box2D is in 2D; two that both move trade momentum by their masses; a row pushed
-     *    into a wall, a player shoving two crates, is the same: in some list orders the pusher ends a frame a little
-     *    inside the crate it pushes
+     *    into a wall, a player shoving two crates, is the same: the pusher ends a frame a little inside the crate it
+     *    pushes, in some list orders against a solid wall, in every order against a MeshCollider or VoxelMap wall
      *  - A door or a lift that closes a gap on a body, against a fixed solid or the level, can not hold it in less room
      *    than it has: it stays in the one it is in, the door, and is not handed on into the wall, but a gap closed
      *    all the way, or a lift into a ceiling, can squeeze it into the floor or through; leave a body room
@@ -896,7 +896,10 @@ function render3DSettleFixed(o, pusher, from)
         grid && (render3DGridPlace(grid, o), b.parent || render3DGridPlace(grid, b)); // a callback may have moved either
         shape = render3DSolidShape(o), reachO = render3DSolidReach(o); // or moved or resized this one
         if (o.pos3D.x !== x || o.pos3D.y !== y || o.pos3D.z !== z)
+        {
             moved = true, from = o.pos3D.copy(); // sent away by the game: met from where it was put
+            continue; // and the push, for where it was, is not made
+        }
         if (!resolve || b.parent) continue;
         // standing as in a pair: a push off a face within its groundAngle of up holds it there, turned straight up
         const lengthSquared = push.lengthSquared(), up = push.y / lengthSquared ** .5;
@@ -1006,6 +1009,7 @@ function render3DCollideSolid(a)
         push = render3DPushFrom(shapeA, shapeB, a, b, push);
 
         // both objects hear about it, and either one can take the touch over
+        const ax = a.pos3D.x, ay = a.pos3D.y, az = a.pos3D.z, bx = b.pos3D.x, by = b.pos3D.y, bz = b.pos3D.z;
         const resolve = render3DCollideAsk(a, b, push, false);
         // a callback that attached either one, an arrow sticking or a crate picked up, ends the pair: a child rides
         // along with its parent, and one that is a child now meets no more solids
@@ -1014,6 +1018,11 @@ function render3DCollideSolid(a)
         // so the next solid is tested where a callback put it and at the size it gave it, a teleport too
         shapeA = render3DSolidShape(a), reachA = render3DSolidReach(a);
         if (!resolve || b.parent) continue;
+        // a callback that moved either one, a respawn or a portal, has the last word: the push, the bounce and the
+        // standing, worked out for where they were, are not made, as 2D tests the pair again from where they are
+        if (a.pos3D.x !== ax || a.pos3D.y !== ay || a.pos3D.z !== az || b.pos3D.x !== bx || b.pos3D.y !== by ||
+            b.pos3D.z !== bz)
+            continue;
 
         // standing: resting on a box's face within the upper one's groundAngle of level holds it there, the push
         // turned straight up, as far as it takes to leave the surface, so it does not creep down a ramp; only what

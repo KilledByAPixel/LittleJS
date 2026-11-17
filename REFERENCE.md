@@ -1638,9 +1638,9 @@ render3D.shader = undefined           // a Shader for the next draws, set from e
                                       // worldPos, worldNormal, cameraPos, sunDirection (toward the sun), sunColor,
                                       // ambientColor, ambientGroundColor, lightCount, lights[i] (xyz position, or
                                       // direction toward a directional one, w radius, negative when directional),
-                                      // lightColors[i] (rgb, a strength), lightCones[i] (clamp(dot(c.xyz,
+                                      // lightColors[i] (rgb, a strength), lightCones[i] (k = clamp(dot(c.xyz,
                                       // toPixel) - c.w, 0., 1.) is 1 in a spotlight's cone, 0 past it, 1 always
-                                      // with no cone) and shadow(), the shadow 0 to 1 here, the
+                                      // with no cone, the light faded by k*k*(3.-2.*k)) and shadow(), the shadow 0 to 1 here, the
                                       // sun's, or render3D.shadowLight's when it is set;
                                       // viewProjection, world to screen, for a snippet that sets gl_FragDepth,
                                       // which shadows and sceneDepth do not see
@@ -2547,7 +2547,8 @@ newgrounds.resendUnlocks()           // advanced: send the ones whose request di
 ```
 
 ## LittleJS Wavedash
-- Optional plugin for Wavedash achievements and leaderboards, the same shape as the Newgrounds one
+- Optional plugin for Wavedash achievements and leaderboards; medals and cloud saves are the same shape as the
+  Newgrounds one, scores take their own arguments
 - Wavedash serves the game's page and puts its SDK in `window.Wavedash`, so nothing is bundled; off Wavedash every call
   does nothing and medals unlock as any do
 - Make the plugin at the end of `gameInit`: it calls `Wavedash.init()`, until which Wavedash keeps its loading screen

@@ -61,11 +61,10 @@ function drawNineSlice(pos, size, startTile, color, borderSize, additiveColor, e
         extraSpace = 0; // see through, the overlap that hides a seam would draw twice and show brighter
     // setup nine slice tiles - startTile is the top-left of a 3x3 tile block,
     // so the center tile is one tile down and right from it, stepping over
-    // the padding around each tile the way tile() lays out the grid; a packed tile with columns, a group of an
-    // atlas, has its nine frames in reading order wherever they were packed
+    // the padding around each tile the way tile() lays out the grid, a packed sheet's too, which keeps its image's
+    // layout, and an atlas's group of nine frames, packed as a 3 by 3 block
     const step = startTile.size.add(vec2(startTile.padding*2));
-    const piece = (col, row)=> startTile.columns ? startTile.frame(row*3 + col) :
-        startTile.offset(step.multiply(vec2(col, row)));
+    const piece = (col, row)=> startTile.offset(step.multiply(vec2(col, row)));
     if (screenSpace && !angle)
     {
         // on whole pixels, the pieces in the screen's rows and columns of the block

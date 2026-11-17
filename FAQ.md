@@ -1134,7 +1134,7 @@ const saveData = readSaveData('MyGame', { highScore: 0, level: 1 });
 writeSaveData('MyGame', { highScore: 99999, level: 5 });
 ```
 
-The `saveName` should be unique per game so multiple LittleJS games on the same host don't collide. The data object must be JSON-serializable (no functions, no circular references). A value whose default is a `vec2` or a Color comes back as one, though JSON keeps only its numbers. Under the hood these are thin wrappers around `localStorage` + `JSON.stringify` / `JSON.parse`.
+The `saveName` should be unique per game so multiple LittleJS games on the same host don't collide. The data object must be JSON-serializable (no functions, no circular references). A top level value whose default is a `vec2` or a Color comes back as one, though JSON keeps only its numbers; inside an array or object it comes back as its numbers, `{x, y}`. A setting added to a nested default after a game saved comes back as its default. Under the hood these are thin wrappers around `localStorage` + `JSON.stringify` / `JSON.parse`.
 
 ### How do I use the medals (achievements) system?
 

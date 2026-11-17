@@ -250,7 +250,11 @@ function shareURL(title, url, callback)
  *    with nothing saved any value with a copy method is a copy of the default, so changing it leaves the default
  *  - A value whose default is a number, at the top level or inside an array or object default, comes back as the
  *    default when what was saved is not a number, as for Infinity, which JSON writes as null
- *  - An array or object default not saved comes back as a copy, so changing it leaves the default
+ *  - An array or object default not saved comes back as a copy, a vec2 or a Color in it too, so changing it leaves
+ *    the default; a key a nested object default has that the save has not, a setting added since, is the default's,
+ *    and a saved array is the array that was saved, shorter or longer than its default
+ *  - Inside an array or object a vec2 or a Color comes back as JSON gave it, {x, y} or {r, g, b, a}, and a value of a
+ *    class with no copy method is the default's own when not saved, and as JSON gave it once saved
  *  @template {Object<string, any>} [T=any]
  *  @param {string} saveName - unique name for the game/save
  *  @param {T} [defaultSaveData] - default values, result is {...default, ...loaded} so this must be an object
@@ -320,11 +324,13 @@ function readSaveData(saveName, defaultSaveData)
 const saveDataPlain = (v)=> isArray(v) ||
     !!v && typeof v === 'object' && Object.getPrototypeOf(v) === Object.prototype;
 
-// a copy of a default's arrays and plain objects, all the way down; anything else is itself
+// a copy of a default's arrays and plain objects, all the way down, and of a value with a copy method in them, a
+// vec2 or a Color, frozen like WHITE too; anything else is itself
 function saveDataCopy(value)
 {
     if (isArray(value)) return value.map(saveDataCopy);
-    if (!saveDataPlain(value)) return value;
+    if (!saveDataPlain(value))
+        return value && typeof value === 'object' && typeof value.copy === 'function' ? value.copy() : value;
     const copy = {};
     for (const key of Object.keys(value))
         key === '__proto__' || (copy[key] = saveDataCopy(value[key]));
@@ -332,7 +338,9 @@ function saveDataCopy(value)
 }
 
 // a saved value over its default: where the default has a number, at the top or at an index or key inside it, a
-// saved value that is not one, the null JSON writes for Infinity, is the default's number; the rest is as saved
+// saved value that is not one, the null JSON writes for Infinity, is the default's number; a key a nested object's
+// default has and the save does not, a setting added after the save, is a copy of the default's; a saved array is
+// the array, as long as it was saved; the rest is as saved
 function saveDataNumbers(fallback, saved)
 {
     if (typeof fallback === 'number')
@@ -342,6 +350,10 @@ function saveDataNumbers(fallback, saved)
     for (const key of Object.keys(saved))
         key !== '__proto__' && Object.prototype.hasOwnProperty.call(fallback, key) &&
             (saved[key] = saveDataNumbers(fallback[key], saved[key]));
+    if (!isArray(fallback))
+        for (const key of Object.keys(fallback))
+            key === '__proto__' || Object.prototype.hasOwnProperty.call(saved, key) ||
+                (saved[key] = saveDataCopy(fallback[key]));
     return saved;
 }
 

@@ -76,12 +76,14 @@
  *    layer's objects; false when nothing changed
  *  @property {function(TiledObject, string, number|boolean|string|Color|Vector2): void} setProperty - Write a property
  *    on an object of the list given to changeObjects as Tiled keeps it, a Color as #AARRGGBB and a Vector2 as x,y,
- *    left out of the map when it is the type's default; a value not of the default's kind is not written, with an
- *    assert, as the load would drop it
+ *    left out of the map when it is the type's default; a value not of the default's kind, a Vector2 over no
+ *    default, a class property, or a number that is not finite, is not written, with an assert, as the load would
+ *    drop it
  *  @property {function(): void} strokeEnd - End the edit: one undo step, and the autosave
  *  @property {function(): void} strokeCancel - Take the edit being made back
  *  @property {function(function(): void): void} bulk - Many paints with one redraw a layer
  *  @property {(redo?: boolean) => boolean} undo - Undo, or redo with true; false when there was nothing to undo or
+ *    an async onRestart runs; false when there was nothing to undo or
  *    it waits for a restart
  *  @property {function(): string} toJSON - The map as the text Save writes
  *  @memberof Editor
@@ -155,14 +157,15 @@
  *  @property {function(): Array<Level3DObject>} selected - The selected objects
  *  @property {function(number): any} made - What the game made for an object's id
  *  @property {function(function(Array<Level3DObject>): void): boolean} change - Edit a copy of the object list; false
- *    when nothing changed, or when the level can not be edited while its autosave waits for Apply or Drop
+ *    when nothing changed, or when the level can not be edited while its autosave waits for Apply or Drop or an
+ *    async onRestart runs
  *  @property {function(string, function(any): any): boolean} changePart - Edit the level's scene, voxels, terrain
  *    or prefabs block; false as change gives it
  *  @property {function(): void} strokeEnd - End the edit: one undo step, and the autosave
  *  @property {function(): void} strokeCancel - Take the edit being made back
  *  @property {function(string, Vector3): number|undefined} place - Add an object of a type at a position, selected;
  *    its id, undefined when there is no such type, a prefab would hold itself, or the level can not be edited
- *    while its autosave waits for Apply or Drop
+ *    while its autosave waits for Apply or Drop or an async onRestart runs
  *  @property {(object: Level3DObject, pos3D?: Vector3, rotation?: Vector3, scale3D?: Vector3) => void} setTransform -
  *    Write a place, a rotation and a scale on an
  *    object of the list given to change; one left out is kept
@@ -1677,9 +1680,14 @@ function editorSetObjects(layer, list)
             if ('pos' in made && (old.x !== object.x || old.y !== object.y))
                 typeof made.setPosition == 'function' ? made.setPosition(editorObjectPos(record, object)) :
                     made.pos = editorObjectPos(record, object);
-            const was = objectLayersProperties(type, old, record.map), now = objectLayersProperties(type, object, record.map);
-            for (const key in now) // given as objectLayersMake gives them
-                editorSameData(was[key], now[key]) || objectPropertyAssign(made, key, now[key], name);
+            // a property whose entry in the map changed, judged by the entry, as a class that keeps its state private
+            // reads the same as JSON whatever it holds; given as objectLayersMake gives them
+            const now = objectLayersProperties(type, object, record.map);
+            const entry = (o, key)=> objectLayersPropertyList(o).find((property)=> property.name === key);
+            for (const key in now)
+                editorSameData(entry(old, key), entry(object, key)) || objectPropertyAssign(made, key, now[key], name,
+                    undefined, (why)=> objectLayersWarnOnce(record.map, object.id + ' ' + key + why,
+                    `objectLayersLoad: ${name} property ${key} ${why}, left out`));
         }
     }
 }
@@ -3410,11 +3418,14 @@ const editorEdit2D =
         const type = objectLayersTypes.get(object.type || object.class);
         const defaultValue = type && objectPropertyDefault(type.defaults, name);
         // a value the map can keep, of its default's kind, as the properties box takes, or the load would drop it
-        const fits = isColor(defaultValue) ? isColor(value) : isVector2(defaultValue) ? isVector2(value) :
-            defaultValue == null ? isColor(value) || isVector2(value) || /^(number|boolean|string)$/.test(typeof value) :
-            typeof defaultValue != 'object' && typeof value === typeof defaultValue;
-        ASSERT(fits, `setProperty: ${name} can not be ${objectPropertyKindName(value)}, its default is ` +
-            objectPropertyKindName(defaultValue));
+        // a Vector2 over no default would be its text, x,y, which the load does not read back; a number must be
+        // finite, as JSON keeps NaN and Infinity as null, as the properties box takes
+        const fits = (typeof value != 'number' || isFinite(value)) && (isColor(defaultValue) ? isColor(value) :
+            isVector2(defaultValue) ? isVector2(value) :
+            defaultValue == null ? isColor(value) || /^(number|boolean|string)$/.test(typeof value) :
+            typeof defaultValue != 'object' && typeof value === typeof defaultValue);
+        ASSERT(fits, `setProperty: ${name} can not be ${typeof value == 'number' ? value :
+            objectPropertyKindName(value)}, its default is ` + objectPropertyKindName(defaultValue));
         fits && editorObjectSetProperty(object, name, value, defaultValue);
     },
     strokeEnd() { editorStrokeEnd(); },

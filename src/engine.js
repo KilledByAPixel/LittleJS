@@ -586,7 +586,9 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
             // of following however fast the display refreshes, and gameUpdatePost and input still run to leave it
             const frozen = enginePausedNow() || !combinedScale;
             frameTimeBufferMS += frozen ? frameTimeDeltaUnscaledMS : frameTimeDeltaMS;
-            frameTimeBufferMS = min(frameTimeBufferMS, 50 * (frozen ? 1 : max(1, combinedScale))); // clamp min framerate
+            // clamp min framerate, and the scale's catch up at 100 times, about 300 updates a frame, so a huge scale
+            // runs behind it rather than freezing the page on millions of updates
+            frameTimeBufferMS = min(frameTimeBufferMS, 50 * (frozen ? 1 : clamp(combinedScale, 1, 100)));
 
             // apply time delta smoothing, improves smoothness of framerate in some browsers; engineStep's frames are
             // exact and wait for no refresh, held back they would leave a step under a time scale a tick short

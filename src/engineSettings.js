@@ -558,7 +558,8 @@ function setCameraShakeDecay(decay)
 
 /** Set scale applied to engine time
  *  - 0 freezes the game like a pause, gameUpdatePost and input still run so the game can set it back
- *  - Above 1 the fixed step runs that many updates each frame, so a large scale costs as many updates
+ *  - Above 1 the fixed step runs that many updates each frame, so a large scale costs as many updates; past about
+ *    100 a frame that falls behind does not catch up, so the page never freezes on a huge one
  *  @param {number} scale - 0 or more, finite
  *  @memberof Settings */
 function setTimeScale(scale)

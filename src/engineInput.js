@@ -782,6 +782,7 @@ function inputInit()
                 if (inputWasTouching && (inputData[0][0] & 1))
                     inputData[0][0] = inputData[0][0] & 2 | 4;
                 inputWasTouching = 0;
+                inputPinch = undefined; // a pinch made meanwhile is not the game's when it gets touch back
                 if (!touchInputEnable) return;
             }
 
@@ -1357,7 +1358,6 @@ function touchGamepadRelayout()
         for (let side = 0; side < 2; side++)
         {
             const zone = touchGamepadSideZones[side], edge = side ? 'right' : 'left';
-            zone.style.display = touchGamepadSideHasControl(side) ? '' : 'none';
             if (touchGamepadFloating && touchGamepadSideStick(side))
             {
                 // bottom 60% grabs the stick; the top 40% passes through. A side with no
@@ -1367,11 +1367,13 @@ function touchGamepadRelayout()
             }
             else // fixed, and face buttons which never float: a compact box hugging the corner control
                 setZone(zone, `${edge}:0;bottom:0;width:${3*S}px;height:${3*S}px`);
+            // after the zone's place, which sets its whole style, so a side with no control takes no touch
+            zone.style.display = touchGamepadSideHasControl(side) ? '' : 'none';
         }
-        touchGamepadZoneC.style.display = touchGamepadCenterButtonSize ? '' : 'none';
         const c = touchGamepadCenterButtonSize;
         setZone(touchGamepadZoneC,
             `left:50%;top:50%;width:${2*c}px;height:${2*c}px;transform:translate(-50%,-50%)`);
+        touchGamepadZoneC.style.display = c ? '' : 'none';
     }
 
     touchGamepadBuildSvg(W, H);

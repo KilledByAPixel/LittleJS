@@ -352,6 +352,7 @@ function loadTiles(sources, tileSize=tileDefaultSize, padding=textureSheetPaddin
  *    whichever way the tag plays, which parseAtlas gives as the group's direction
  *  - Trimmed frames are restored to their full source size when packed
  *  - Rotated frames are rotated back upright when packed
+ *  - A group of nine frames, panel_0 to panel_8, is packed as a 3 by 3 block, so it is a drawNineSlice start tile
  *  - A frame outside the image or with no size is left out, and one load packs at most 16 times the image's area,
  *    or 8 sheets', of untrimmed frames, the rest left out with a warning
  *  - The same atlas loaded again by its paths, with the same padding, gives back what the first load did, packed
@@ -433,7 +434,10 @@ function loadAtlas(imageSrc, jsonSrc, padding=textureSheetPadding)
                         'left out:', group.name);
                     continue;
                 }
-                const blockSize = vec2(sourceSize.x*group.frames.length, sourceSize.y);
+                // a row of its frames, or a group of nine as a 3 by 3 block, as a nine-slice reads one; frame(k) is
+                // the same frame either way
+                const nine = group.frames.length === 9;
+                const blockSize = nine ? sourceSize.scale(3) : vec2(sourceSize.x*group.frames.length, sourceSize.y);
                 const added = textureSheetAdd(blockSize, sourceSize, padding);
                 if (!added)
                 {

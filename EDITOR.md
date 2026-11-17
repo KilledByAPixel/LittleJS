@@ -130,7 +130,9 @@ levelEditor.onRestart = ()=> buildLevel();         // adds a Restart button: loa
                                                    // till it settles Restart waits, in the 2D editor a resize,
                                                    // its undo and redo and Apply or Reset of another size too,
                                                    // the 3D editor takes no edit, undo or Reset, and Escape and
-                                                   // Play play on, with no onPlayFrom, so a fade can finish
+                                                   // Play play on, with no onPlayFrom, so a fade can finish;
+                                                   // with no debug key the 3D editor stays closed till it
+                                                   // settles, then opens again
 levelEditor.onPlayFrom = (pos)=> player.pos = pos; // adds "Play from mouse": put the player at the mouse
 levelEditor.onOpen = ()=> {};          // the editor opened
 levelEditor.onClose = ()=> {};         // it closed, the game plays on
@@ -388,7 +390,7 @@ The rules every customization follows. The headline of each is enough to start w
 | `selection` | A `Set` of the selected objects' ids |
 | `paint(cell, tile, direction, mirror)` | Set a cell of the selected tile layer to a tile index, -1 erases; false off the layer |
 | `changeObjects((list)=> {...})` | Edit a copy of the selected object layer's objects |
-| `setProperty(object, name, value)` | Inside `changeObjects`, on an object of its list: write a property as Tiled keeps it, left out of the map when it is the type's default |
+| `setProperty(object, name, value)` | Inside `changeObjects`, on an object of its list: write a property as Tiled keeps it, left out of the map when it is the type's default; a value not of the default's kind, a Vector2 over no default, a class property or a number that is not finite is not written, and asserts |
 | `strokeEnd()` | End the edit: one undo step, and the autosave |
 | `strokeCancel()` | Take the edit being made back |
 | `bulk(()=> {...})` | Many `paint` calls with one redraw a layer |

@@ -1902,7 +1902,14 @@ function editor3DRestart()
     if (editor3DRestartRunning)
         return void (editor3DPrefabMessage = EDITOR3D_RESTART_WAIT);
     editor3DSetOpen(false);
-    const result = /** @type {any} */ (levelEditor.onRestart()); // may be async, any thenable
+    let result;
+    try { result = /** @type {any} */ (levelEditor.onRestart()); } // may be async, any thenable
+    catch (error)
+    {
+        // one that throws, with no debug key, still comes back to the editor, as one that rejects does
+        debugKey || editor3DSetOpen(true);
+        throw error;
+    }
     if (typeof result?.then === 'function')
     {
         const token = editor3DRestartRunning = {};
@@ -1911,9 +1918,9 @@ function editor3DRestart()
             if (editor3DRestartRunning !== token) return;
             editor3DRestartRunning = undefined;
             editor3DPrefabMessage === EDITOR3D_RESTART_WAIT && (editor3DPrefabMessage = '');
-            // with no debug key the editor comes back now the restart is done; open, it makes what it skipped
-            // while the restart ran, a level whose restart failed after the game destroyed it
-            debugKey ? editor3DIsOpen && editor3DRestore() : editor3DSession && editor3DSetOpen(true);
+            // open, it makes what it skipped while the restart ran, a level whose restart failed after the game
+            // destroyed it, opened again during the wait too; with no debug key it comes back now the restart is done
+            editor3DIsOpen ? editor3DRestore() : !debugKey && editor3DSession && editor3DSetOpen(true);
         };
         try { result.then(settled, (error)=> { settled(); throw error; }); }
         catch (error) { settled(); throw error; } // a thenable whose then throws is taken as a reject
