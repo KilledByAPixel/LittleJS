@@ -319,7 +319,7 @@ test('tileLayersLoad says when a collision layer index is not a tile layer, as i
 test('the platformer loads with its object layer anywhere among the tile layers (O3)', async ()=>
 {
     const source = fs.readFileSync('examples/platformer/gameLevel.js', 'utf8');
-    assert.match(source, /tileLayersLoad\(tileMapData, tile\(0,16,1\), 0, 'Front'\)\s*\.filter\(Boolean\)/);
+    assert.match(source, /tileLayersLoad\(tileMapData, tile\(0,16,1\), 0, 'Front', false\)\s*\.filter\(Boolean\)/);
     assert.match(source, /levelSize = vec2\(tileMapData\.width, tileMapData\.height\)/);
     const map = JSON.parse(fs.readFileSync('examples/platformer/gameLevelData.json', 'utf8'));
     assert.deepEqual(map.layers.filter((l)=> l.type === 'tilelayer').map((l)=> l.name).includes('Front'), true);
