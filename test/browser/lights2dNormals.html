@@ -60,10 +60,19 @@ smokeRun(async ()=>
     const white = [left, right];
 
     // a TileInfo given as the normal map is read as its texture, as 3D reads one
+    const tileWarnings = [];
+    console.warn = (...args)=> tileWarnings.push(args.join(' '));
     ramp.normalMap = tile(0, rampTexture.size, rampTexture);
     const tiled = leftRight();
     check('tile: a TileInfo normal map shades as its texture', Math.abs(tiled[0] - left) <= 2 &&
         Math.abs(tiled[1] - right) <= 2, [tiled, white]);
+    // a tile of the sheet, not its whole texture, is warned of once
+    const whole = tileWarnings.length;
+    ramp.normalMap = tile(0, rampTexture.size.scale(.5), rampTexture);
+    engineStep(3);
+    console.warn = warn;
+    check('tile: a TileInfo normal map that is part of a sheet is warned of once', !whole &&
+        tileWarnings.filter((text)=> text.includes('normalMap given as a TileInfo')).length == 1, tileWarnings);
     ramp.normalMap = rampTexture;
 
     // a ramp leaning up the image faces a light above it, the green of a normal map
