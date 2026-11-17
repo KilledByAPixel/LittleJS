@@ -72,8 +72,8 @@ Prefer adding new optional features as plugins when it keeps the core simpler.
 - `examples/shorts/*.js` - Single-file demos loaded by the shorts harness; the 3D ones are `render3d*.js`
 - `examples/3d/` - The 3D plugin in one scene; `examples/threejs/` - the same idea rendered with Three.js
 
-### Benchmarks (`bench/`)
-- Pages that run LittleJS and other engines (three.js, PixiJS and Phaser, loaded from a CDN) through the same scenes, and `all.html` runs the whole set and prints a table to copy; `bench/README.md` says how to run them and how to read the numbers
+### Benchmarks
+- They live in the [webgl-engine-bench](https://github.com/KilledByAPixel/webgl-engine-bench) repo: the published comparison, and `littlejs-bench/`, the pages that run LittleJS and other engines (three.js, PixiJS and Phaser, loaded from a CDN) through the same scenes to measure a change to the engine; they load a copy of `dist/littlejs.release.js` kept in that folder, copied over after a build, and its README says how to run them and how to read the numbers
 - Per frame work in a LittleJS bench page goes in a pre render hook, not gameUpdate, since the fixed timestep runs gameUpdate several times a frame below 60 fps and would count it several times over
 - The GPU time comes from a timer query and only means something when the frame is at the refresh rate; a CPU bound page shows its CPU time there
 

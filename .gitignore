@@ -18,5 +18,3 @@ examples/typescript/build
 docs/superpowers/
 .claude/
 .vscode/
-# bench copies of older builds for comparisons
-bench/*.prev.js

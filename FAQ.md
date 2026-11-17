@@ -70,7 +70,7 @@ If you don't find an answer here, feel free to ask the community or check the do
 ### What is LittleJS, and how is it different from other JavaScript game engines?
 
 LittleJS is a lightweight, high-performance JavaScript game engine designed for simplicity and speed.
-It offers a hybrid rendering system that combines the advantages of WebGL and 2D Canvas, and [bench/](bench/) runs the same scenes in it and in three.js, PixiJS and Phaser.
+It offers a hybrid rendering system that combines the advantages of WebGL and 2D Canvas, and the [WebGL Engine Bench](https://github.com/KilledByAPixel/webgl-engine-bench) measures it against PixiJS, Three.js, PlayCanvas and more.
 Unlike those feature-heavy engines, LittleJS keeps to a comprehensive set of simple, easy to use features, for 2D games first, with a 3D renderer of its own as well.
 LittleJS is perfect for developers who want a minimal yet powerful engine to bring their 2D game ideas to life without the complexity of larger frameworks, and it's especially well suited for size-constrained competitions like js13kGames.
 
