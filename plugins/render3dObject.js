@@ -603,8 +603,11 @@ function render3DMove(o, cap)
 // ground is what it stood on last frame, which a height map keeps it on going down a slope
 function render3DCollideLevel(o, oldPos, ground)
 {
+    // one that stood on any level shape last frame stood on each, so walking down from one map onto the next, a
+    // chunk of the same terrain, follows the ground down as on one map, where it left it for a few frames
+    const stood = !!ground && render3DLevel.includes(ground);
     for (const level of render3DLevel)
-        level.destroyed || level.levelCollide3D(o, oldPos, level === ground);
+        level.destroyed || level.levelCollide3D(o, oldPos, stood);
 }
 
 // where a solid object is in the world and what it collides as: the sphere that fits size3D, or the size3D box,

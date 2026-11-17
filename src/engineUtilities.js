@@ -254,7 +254,8 @@ function shareURL(title, url, callback)
  *    the default; a key a nested object default has that the save has not, a setting added since, is the default's,
  *    and a saved array is the array that was saved, shorter or longer than its default
  *  - Inside an array or object a vec2 or a Color comes back as one too, from its saved numbers, and an object or
- *    array default saved as anything that is not one, an older save's number, comes back as the default; a value of a
+ *    array default saved as anything that is not one, an older save's number or a null, comes back as the default, so
+ *    a value that may be none is best a default of null; a value of a
  *    class with no copy method is the default's own when not saved, and as JSON gave it once saved
  *  @template {Object<string, any>} [T=any]
  *  @param {string} saveName - unique name for the game/save
@@ -355,9 +356,9 @@ function saveDataNumbers(fallback, saved)
         if (saved && typeof saved === 'object' && !isArray(saved) && fields.every((f)=> typeof copy[f] === 'number'))
             for (const field of fields)
                 Number.isFinite(saved[field]) && (copy[field] = saved[field]);
-        else if (saved && typeof saved === 'object')
+        else if (saved && typeof saved === 'object' && !isArray(saved))
             return saved; // one with more than numbers stays as JSON gave it
-        return copy;
+        return copy; // and a list saved for it is the default, as at the top level
     }
     if (!saveDataPlain(fallback))
         return saved;

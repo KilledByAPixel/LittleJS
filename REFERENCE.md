@@ -344,7 +344,8 @@ new Shader(fragmentCode, vertexCode, uniforms) // uniforms: values the snippets 
                                   // declared for them, a number a float, a boolean a bool, a Vector2, Vector3 or
                                   // Color a vec2 to vec4, a list of 2 to 4, 9 or 16 numbers or a Matrix4 a vector,
                                   // mat3 or mat4, column by column; a name the engine's shader uses already, like
-                                  // lightColor, or tint in vertex code, is refused by an assert in debug builds
+                                  // lightColor, or tint in vertex code, or a GLSL word or built-in function, as
+                                  // step, distance or sample, is refused by an assert in debug builds
 shader.setUniform(name, value)    // change one, no recompile; in 2D the draws before keep the old value, in 3D set it
                                   // outside the 3D pass and it holds for the frame
 new Shader(fragmentCode, vertexCode) // 3D: vertexCode defines void mainVertex(inout vec3 pos, inout vec3 normal),

@@ -520,10 +520,12 @@ function editor3DLevelLoaded(level)
     editor3DAutosaveFlush(); // what the last level has waiting is written before this one reads the autosaves
     if (editor3DLevel !== level)
     {
-        // another level, the selection, the edit being made and what was said of it were the last one's
+        // another level, the selection, the edit being made and what was said of it were the last one's, and a drag
+        // held, whose object or cells were in it, ends, or it would move the new level's object of the same id
         editor3DSelection.clear();
         editor3DStroke = undefined;
         editor3DPrefabMessage = '';
+        editor3DDrag = editor3DHover = editor3DPlacedHeld = undefined;
     }
     if (!editor3DPrefabLevels.has(level) && editor3DPrefabStack.length)
     {
@@ -1959,15 +1961,25 @@ const editor3DEdit =
     strokeEnd() { editor3DStrokeEnd(); },
     strokeCancel() { editor3DStrokeCancel(); },
     place(type, pos3D) { return level3DTypes.has(type) ? editor3DPlace(type, pos3D) : undefined; },
-    setTransform(object, pos3D, rotation, scale3D) { editor3DSetTransform(object, pos3D, rotation, scale3D); },
+    setTransform(object, pos3D, rotation, scale3D)
+    {
+        // a place, a turn and a scale the file keeps, NaN would be saved as null and read back as 0
+        const fine = (v)=> v === undefined || isVector3(v) && isFinite(v.x) && isFinite(v.y) && isFinite(v.z);
+        ASSERT(fine(pos3D) && fine(rotation) && fine(scale3D), 'setTransform takes finite Vector3s', pos3D, rotation,
+            scale3D);
+        fine(pos3D) && fine(rotation) && fine(scale3D) && editor3DSetTransform(object, pos3D, rotation, scale3D);
+    },
     setProperty(object, name, value)
     {
-        // a value the load reads back, of its default's kind and a number finite, as the 2D one takes, or the load
-        // would keep the default and the edit would be an undo step the game never sees
-        const d = level3DTypes.get(object.type)?.defaults[name];
+        // a value the load reads back as it was given, as the 2D one takes, or the load would keep the default and
+        // the edit would be an undo step the game never sees: of its default's kind, a number finite, the type's own
+        // default read as the load reads it, over null an object or a list, and a Color or a vector only over one
+        const type = level3DTypes.get(object.type), d = type && objectPropertyDefault(type.defaults, name);
         const finite = typeof value != 'number' || isFinite(value);
+        const special = isColor(value) || isVector2(value) || isVector3(value);
         const fits = finite && (isColor(d) ? isColor(value) : isVector3(d) ? isVector3(value) :
-            isVector2(d) ? isVector2(value) : d === undefined || d === null ? true :
+            isVector2(d) ? isVector2(value) : d === undefined ? !special :
+            d === null ? !special && typeof value === 'object' :
             typeof value === typeof d && value !== null && isArray(value) === isArray(d));
         ASSERT(fits, `setProperty: ${name} can not be ${typeof value == 'number' ? value : objectPropertyKindName(value)}` +
             `, its default is ${objectPropertyKindName(d)}`);

@@ -716,7 +716,8 @@ const SHADER_VERTEX_NAMES = /* @__PURE__ */ new Set(['p', 'n', 't', 'c', 'm0', '
  *   need not declare them: new Shader(code, '', {glow: 1, tint: RED}), then shader.setUniform('glow', 2) as often as
  *   needed, with no recompile; each is declared in the snippets that use it, so one may share a name with an input
  *   of the engine's in the other stage, and is sent to a program only when it changed; a name the engine's shader
- *   uses already, like lightColor, or tint in vertex code, is refused by an assert in debug builds; a matrix list
+ *   uses already, like lightColor, or tint in vertex code, or a GLSL keyword, reserved word or built-in function, as
+ *   step, distance, sample or filter, which would not compile, is refused by an assert in debug builds; a matrix list
  *   is column by column; in 3D set a value outside the 3D pass, it holds for the frame
  * @example
  * const fade = new Shader(`
@@ -773,7 +774,7 @@ class Shader
         this.uniformsVersion = 0;
         for (const name in uniforms)
         {
-            ASSERT(/^[A-Za-z_][A-Za-z0-9_]*$/.test(name) && !name.startsWith('gl_') && !name.includes('__') &&
+            ASSERT(/^[A-Za-z_][A-Za-z0-9_]*$/.test(name) && !/^gl_/i.test(name) && !name.includes('__') &&
                 !SHADER_GLSL_WORDS.has(name),
                 'a Shader uniform is named as a GLSL variable is, not a GLSL word or built-in function', name);
             // the wrappers' own names would be declared twice or turned into something else by their macros: i and a

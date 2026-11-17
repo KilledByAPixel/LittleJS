@@ -446,8 +446,11 @@ function buildText3D(text, size=1, depth=.2, font=engineImageFont)
  * - pos3D is the center of the map, its grid spans mapSize on X and Z around it, and a full value is height above it
  * - getHeight, getNormal, getColor and raycast are in world space, with the map's position taken off
  * - It stays upright and unscaled, its lookups do not turn with it
- * - Its edge, to a body coming from off the map, is a wall where it stands higher than the body's step, as a cliff
- *   inside the map is, and a lower edge is stepped onto
+ * - Its edge, to a body moving onto it from off the map, is a wall where it stands higher than the body's step, as a
+ *   cliff inside the map is, plus what a walkable slope could still rise before the body's middle reaches it and a
+ *   round body's sink over a crest, which grow with groundAngle and with the body's height, so a seam on a slope
+ *   between two maps and a ramp onto one are walked, and an edge up to about half the body's height stepped onto; a
+ *   body moving away from it or falling beside it is left alone
  * @extends EngineObject3D
  * @memberof Render3D
  * @example
@@ -756,9 +759,11 @@ class HeightMap extends EngineObject3D
                 const edge = this.getHeight(offX ? m.x + sign(oldPos.x - m.x) * hx : clamp(p.x, m.x - hx, m.x + hx),
                     offZ ? m.z + sign(oldPos.z - m.z) * hz : clamp(p.z, m.z - hz, m.z + hz));
                 // and a round body coming over the crest where a ramp meets the edge sinks by as much as it sits
-                // lower on the steepest of them, its side by 1 / cos less 1
+                // lower on the steepest of them, its side by 1 / cos less 1, its side no more than half its height,
+                // so a body wider than it is tall does not step up a raised edge as high as itself
                 const steep = min(cos(o.groundAngle), .7), rise = (1 - steep * steep) ** .5 / steep;
-                if (edge > oldPos.y - half + half / 2 + max(0, now - h) * rise + side * (1 / steep - 1) + 1e-6)
+                const crest = min(side, half) * (1 / steep - 1);
+                if (edge > oldPos.y - half + half / 2 + max(0, was - h) * rise + crest + 1e-6)
                 {
                     // it goes no further in: its side at the edge, or where it was if it was nearer already
                     const stop = mc + s * min(h + side, was), v = o.velocity3D;

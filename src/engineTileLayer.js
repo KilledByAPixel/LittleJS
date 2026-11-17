@@ -948,12 +948,12 @@ function objectLayersMergeClass(fallback, value, warn, path='')
         // an accessor to read, it gets the member as its own
         const result = objectLayersMergeClass(before, member, warn, name);
         // its own would take the place of a method of the game's class, read by its descriptor so no getter runs
+        // from the default itself, whose own field is data, through its class to Object's, toString and valueOf too
         let method = false;
-        for (let p = Object.getPrototypeOf(fallback); !copied && own && p && p !== Object.prototype;
-            p = Object.getPrototypeOf(p))
+        for (let p = fallback; !copied && own && p; p = Object.getPrototypeOf(p))
         {
             const found = Object.getOwnPropertyDescriptor(p, key);
-            if (found) { method = !found.get && !found.set && typeof found.value == 'function'; break; }
+            if (found) { method = p !== fallback && !found.get && !found.set && typeof found.value == 'function'; break; }
         }
         if (method && typeof result != 'function')
             warn?.(`${name} has a method's name, left out`);
@@ -968,7 +968,14 @@ function objectLayersProperties(type, object, tileMapData)
 {
     const properties = {}, set = (key, value)=> objectPropertySet(properties, key, value);
     for (const [key, value] of Object.entries(type.defaults))
-        set(key, objectPropertyCopy(value));
+    {
+        const copy = objectPropertyCopy(value);
+        // a default of a class whose copy method gives back nothing is one object every object of the type shares
+        copy === value && value && typeof value == 'object' && typeof value.copy == 'function' &&
+            objectLayersWarnOnce(tileMapData, 'copy ' + key, `objectLayersLoad: the default ${key} has a copy ` +
+            'method that gives back no object, so every object shares the one default');
+        set(key, copy);
+    }
     // a list of {name, type, value}, as Tiled 1.2 and on write it, or an older map's object of them; an entry that is
     // not one, or a color that is not a hex string, is said and left out, read before the object is made
     const list = objectLayersPropertyList(object);

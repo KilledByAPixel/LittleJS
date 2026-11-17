@@ -73,7 +73,8 @@
  *    selected tile layer
  *    to a tile index, -1 erases, with a direction 0 to 3 and a mirror; false off the layer or with none
  *  @property {function(function(Array<TiledObject>): void): boolean} changeObjects - Edit a copy of the selected object
- *    layer's objects; false when nothing changed, or while an async onRestart runs, which makes the objects again
+ *    layer's objects; false when nothing changed, or while its autosaved edits wait for Apply or Drop or an async
+ *    onRestart runs, which makes the objects again
  *  @property {function(TiledObject, string, number|boolean|string|Color|Vector2): void} setProperty - Write a property
  *    on an object of the list given to changeObjects as Tiled keeps it, a Color as #AARRGGBB and a Vector2 as x,y,
  *    left out of the map when it is the type's default; a value not of the default's kind, a Vector2 over no
@@ -168,7 +169,8 @@
  *    while its autosave waits for Apply or Drop or an async onRestart runs
  *  @property {(object: Level3DObject, pos3D?: Vector3, rotation?: Vector3, scale3D?: Vector3) => void} setTransform -
  *    Write a place, a rotation and a scale on an
- *    object of the list given to change; one left out is kept
+ *    object of the list given to change; one left out is kept, one that is not a finite Vector3 asserts and writes
+ *    nothing
  *  @property {function(Level3DObject, string, any): void} setProperty - Write a property on an object of the list given
  *    to change, left out of the file when it is the type's default; a value not of the default's kind, or a number
  *    that is not finite, is not written, with an assert, as the load would keep the default
@@ -1178,6 +1180,16 @@ function editorApplyPending(record)
     const resized = (saved.width ?? record.map.width) !== record.map.width ||
         (saved.height ?? record.map.height) !== record.map.height;
     if (resized && editorRestartRunning) return editorBusyNudge(), false;
+    // and edits of objects wait for a restart of any size, which makes the objects again: painted in now they would be
+    // made twice, or dropped, and the autosave holding them written over; same size tiles still go in
+    if (editorRestartRunning)
+    {
+        const now = editorObjectGroups(record.map.layers).map((group)=> group.objects ?? []);
+        const saving = saved.objects ?? [];
+        if (!Array.from({length: max(now.length, saving.length)}, (_, i)=> i)
+            .every((i)=> editorSameData(saving[i] ?? [], now[i] ?? [])))
+            return editorBusyNudge(), false;
+    }
     if (!editorPendingFits(record, saved))
     {
         record.pendingUnfit = true;
@@ -1236,6 +1248,10 @@ function editorRevert(record)
     if (record.pending) return editorPendingNudge();
     // and while an async onRestart makes a resized map's layers, which take no edits till then
     if (editorRecordResizing(record)) return editorBusyNudge();
+    // and one that would put objects back waits for any restart, which makes them again
+    if (editorRestartRunning && !editorSameData(editorObjectGroups(record.map.layers).map((g)=> g.objects ?? []),
+        record.originalObjects ?? []))
+        return editorBusyNudge();
     record.pendingUnfit = undefined;
     const {width, height} = record.originalSize ?? record.map;
     editorPaintData(record, record.original, record.originalObjects, width, height);
@@ -1872,11 +1888,11 @@ function editorDeleteObjects()
     if (!editorObjectSelection.size) return false;
     const selection = new Set(editorObjectSelection);
     editorStrokeEnd();
-    editorChangeObjects(editorObjectLayer, (list)=>
+    const deleted = editorChangeObjects(editorObjectLayer, (list)=>
         list.splice(0, list.length, ...list.filter((object)=> !selection.has(object.id))));
-    editorObjectSelection.clear(); // the same Set, which edit2D.selection hands a game
+    deleted && editorObjectSelection.clear(); // the same Set, which edit2D.selection hands a game; kept when refused
     editorStrokeEnd();
-    return true;
+    return deleted;
 }
 
 // the selected objects into the brush, each a copy with its offset from the lowest corner of their positions, snapped
@@ -1898,6 +1914,10 @@ function editorCopyObjects()
 function editorCutObjects()
 {
     const selection = new Set(editorObjectSelection);
+    // refused before it copies, as the delete would be, or the brush would place a second copy
+    const layer = editorObjectLayer;
+    if (layer && (layer.record.pending || editorRecordResizing(layer.record) || editorRestartRunning))
+        return layer.record.pending ? editorPendingNudge() : editorBusyNudge(), false;
     if (!editorCopyObjects()) return false;
     selection.forEach((id)=> editorObjectSelection.add(id));
     return editorDeleteObjects();
@@ -2279,7 +2299,7 @@ function editorFloodCells(layer, start)
 // clear the selected area, with All Layers the objects in it too, as one undo
 function editorClear()
 {
-    if (!editorSelection) return;
+    if (!editorSelection || editorAreaObjectsWait(editorLayer, editorSelection)) return;
     editorStrokeEnd(); // a drag held while Delete is pressed is an undo of its own
     editorBulkEdit(()=>
     {
@@ -2365,6 +2385,7 @@ function editorCopy()
 // start dragging the selection from a cell in it, with All Layers the objects in it go too
 function editorSelectionDragStart(layer, cell)
 {
+    if (editorAreaObjectsWait(layer, editorSelection)) return;
     editorStrokeEnd();
     const area = editorSelection, objects = [];
     if (editorAllLayers)
@@ -2423,7 +2444,7 @@ function editorSelectionDragCancel()
 function editorCut()
 {
     const area = editorSelection;
-    if (!editorCopy()) return false;
+    if (editorAreaObjectsWait(editorLayer, area) || !editorCopy()) return false;
     editorSelection = area;
     editorClear();
     editorSelection = undefined;
@@ -2497,6 +2518,16 @@ let editorPendingNudgeTime, editorBusyNudgeTime;
 function editorPendingNudge() { editorPendingNudgeTime = timeReal; }
 // an edit refused while an async onRestart makes a resized map's layers says so at the mouse
 function editorBusyNudge() { editorBusyNudgeTime = timeReal; }
+
+// an action on a selection with All Layers that would move or take objects, while an async onRestart makes the
+// objects again, is refused whole, said at the mouse, where its tiles would go in and its objects not
+function editorAreaObjectsWait(layer, area)
+{
+    if (!editorRestartRunning || !editorAllLayers || !layer || !area || !editorAreaObjects(layer, area).length)
+        return false;
+    editorBusyNudge();
+    return true;
+}
 const editorPendingNudgeAge = ()=> editorPendingNudgeTime === undefined ? Infinity : timeReal - editorPendingNudgeTime;
 
 // the panel's box, flashing brighter after a refused press
@@ -3308,14 +3339,16 @@ function editorUpdate()
     else if (left && !space && !editorLeftSpent && !editorRightPress)
     {
         const last = editorLastPlaced, shift = keyIsDown('ShiftLeft') || keyIsDown('ShiftRight');
-        if (mouseWasPressed(0) && shift && last?.layer === layer)
+        if (mouseWasPressed(0) && editorBrush.objects?.length && editorRestartRunning)
+            editorBusyNudge(), editorLeftSpent = true; // its tiles and its objects wait as one
+        else if (mouseWasPressed(0) && shift && last?.layer === layer)
         {
             editorPaintBetween(layer, last.pos, editorHover);
             editorLastCell = editorHover;
         }
         else
             editorPaintLine(layer, editorHover);
-        if (mouseWasPressed(0) && editorBrush.objects)
+        if (mouseWasPressed(0) && editorBrush.objects && !editorLeftSpent)
             editorPlaceStampObjects(layer, editorHover, editorBrush); // once a click, not along the drag
     }
     if (!mouseIsDown(0))

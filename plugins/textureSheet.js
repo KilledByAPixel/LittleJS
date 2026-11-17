@@ -677,8 +677,6 @@ function textureSheetCreate()
     return sheet;
 }
 
-// use the first sheet with enough space, or make a new one,
-// returns undefined if it would not fit even on an empty sheet
 // a block for an atlas group's frames: a row of them, or a group of nine as a 3 by 3 block, as a nine-slice reads
 // one, and as a row when frames that tall do not fit three high; frame(k) is the same frame either way
 function textureSheetAddGroup(count, frameSize, padding)
@@ -687,6 +685,8 @@ function textureSheetAddGroup(count, frameSize, padding)
         textureSheetAdd(vec2(frameSize.x * count, frameSize.y), frameSize, padding);
 }
 
+// use the first sheet with enough space, or make a new one,
+// returns undefined if it would not fit even on an empty sheet
 function textureSheetAdd(imageSize, frameSize, padding, sourcePadding)
 {
     let sheet, tile;
