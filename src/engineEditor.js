@@ -3464,6 +3464,9 @@ const editorEdit2D =
     },
     changeObjects(change)
     {
+        // inside another the outer one would write its copy over this one's edit
+        if (editorEdit2DChanging)
+            return ASSERT(false, 'changeObjects inside changeObjects changes nothing'), false;
         return editorChangeObjects(editorObjectLayer, (list)=>
         {
             editorEdit2DChanging = list;

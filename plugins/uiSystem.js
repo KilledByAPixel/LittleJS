@@ -35,6 +35,10 @@ let uiDebug = 0;
 // then; a click needs a release, which the mouse let go of by a window losing focus is not
 let uiActiveReleased = false;
 
+// the mouse was pressed this frame, read before any object updates, since one that takes no press, disabled or not
+// interactive, still clears it, and a held object after it must still see the press that ended its hold
+let uiMousePressed = false;
+
 /** Enable UI system debug drawing
  *  0=off, 1=normal, 2=show invisible
  *  @param {number|boolean} debugMode
@@ -227,6 +231,7 @@ class UISystemPlugin
         function uiUpdate()
         {
             ++updatePass;
+            uiMousePressed = mouseWasPressed(0);
             // the level editor has the mouse and keys while it is open, so a click paints and does not also press
             // the game's button under it: what was held lets go, what was hovered is left, an edit ends, and the
             // objects still update, their onUpdate and a video's volume and mute, with no input
@@ -1193,7 +1198,7 @@ class UIObject
 
         // a new press while this is still active from the one before means that one was let go of in between, by a
         // second quick tap or a release missed in a hitch: it is clicked and released first, so neither is lost
-        if (isActive && mouseWasPressed(0))
+        if (isActive && uiMousePressed)
         {
             if (!uiSystem.activateOnPress && this.interactive && !disabled)
                 this.click();
@@ -1777,7 +1782,7 @@ class UISlider extends UIObject
     {
         // held when the frame began, so a release in the same frame as the last move still reads it, but not by a
         // new press, after a release it missed, which is another widget's or none
-        const wasActive = this.isActiveObject() && !mouseWasPressed(0);
+        const wasActive = this.isActiveObject() && !uiMousePressed;
         super.update();
         if (!this.interactive || this.destroyed)
             return; // destroyed by its onUpdate, it no longer follows the mouse or calls onChange

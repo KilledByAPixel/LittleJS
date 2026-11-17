@@ -50,6 +50,8 @@ function level3DOffsetOf(o, rotation=o.rotation3D)
  *    called as make(pos3D, properties), for what is not an object, like a player start
  *  - properties is the defaults with the object's own values over them, and each of the type's own is also set on
  *    what was made; a property the type has no default for is in properties and is not set
+ *  - An object default, plain or of a class, takes a level's object member by member, so a member the level leaves
+ *    out keeps the default's and {} is the whole default, as 2D's class properties are
  *  - Give a class a constructor of its own that takes the position: one that hands every argument on to
  *    EngineObject3D would hand it the properties as its mesh
  *  - An EngineObject3D then gets the object's rotation, and its scale times the scale it was made with
@@ -108,6 +110,7 @@ function level3DAddMesh(name, mesh, tileInfo, color=WHITE, meshCollision=false)
  *  - A Color property is a #rrggbb or #rrggbbaa string, a Vector2 or Vector3 an array, as the default says
  *  - An object whose type was not added is skipped, with a warning in debug builds
  *  - What a file written by hand gets wrong uses the default: a value that is not of its default's type
+ *  - An object over an object default is merged into it member by member, so {} is the whole default
  *  - An object its type can not make is skipped with an error in debug builds, where asserts throw, and the rest
  *    of the level is made
  *  - A level may hold a map of blocks, in a voxels block: pos, its corner, size, its cells along x, y and z, and
@@ -511,9 +514,11 @@ function level3DProperties(type, object)
                 isArray(value) && value.length === 2 && value.every(level3DFinite) && set(key, vec2(value[0], value[1]));
         else if (typeof d === 'number')
             level3DFinite(value) && set(key, value);
-        else if (d && typeof d === 'object' && !isArray(d) && value && typeof value === 'object' && !isArray(value))
-            // an object over its default member by member, as 2D's class properties are, so an instance of the game's
-            // class stays one, with its methods, and a member the file left out keeps the default's
+        else if (d && typeof d === 'object' && !isArray(d) && value && typeof value === 'object' && !isArray(value) &&
+            Object.getPrototypeOf(value) === Object.prototype)
+            // a plain object, as a file has, over its default member by member, as 2D's class properties are, so an
+            // instance of the game's class stays one, with its methods, and a member the file left out keeps the
+            // default's; an instance given from code, to level3DSpawn, is copied as itself below
             set(key, objectLayersMergeClass(d, value, (text)=> objectLayersWarnOnce(undefined, 'level3D ' + object.type +
                 ' ' + key + text, `level3DLoad: ${object.type} ${object.id}'s ${key}${text}`), '', shared(key)));
         else if (d === undefined ||
@@ -588,7 +593,8 @@ function level3DMakeAt(object, pos, rotation, scale)
  *  @param {ObjectProperties} [properties] - Over the type's defaults; a color or a vector may be a Color or a vector,
  *    or written as a level file has it, a hex string or an array; a value not of its default's type keeps the default;
  *    each is copied for the object, a list or a plain object with what is in it, as a level file's are, so the object
- *    has its own and not the one passed
+ *    has its own and not the one passed; a plain object over an object default is merged into it member by member,
+ *    as a level file's is, and an instance of a class is copied as itself
  *  @return {any} - What the type made, a Prefab3D for a prefab, undefined when there is no such type or it made no
  *    object of the game's
  *  @memberof Level3D

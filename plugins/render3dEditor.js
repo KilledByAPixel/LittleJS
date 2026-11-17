@@ -1320,6 +1320,25 @@ function editor3DSetProperty(object, name, value, defaultValue)
     Object.keys(properties).length ? object.properties = properties : delete object.properties;
 }
 
+// whether a value is or holds, in its lists and plain objects at any depth, an object of a class, which a level file
+// would keep as a plain object; at the top a Color or a vector is allowed, as the file writes them as text or a list
+function editor3DHasInstance(value, top)
+{
+    if (!value || typeof value !== 'object') return false;
+    if (top && (isColor(value) || isVector2(value) || isVector3(value))) return false;
+    if (!isArray(value) && Object.getPrototypeOf(value) !== Object.prototype) return true;
+    return Object.values(value).some((v)=> editor3DHasInstance(v));
+}
+
+// whether a plain object has every member of an object default, and of each member that is an object itself, since
+// the load merges it into the default and a member left out would be the default's
+function editor3DCoversDefault(defaultValue, value)
+{
+    const object = (v)=> !!v && typeof v === 'object' && !isArray(v);
+    return Object.keys(defaultValue).every((key)=> Object.hasOwn(value, key) &&
+        (!object(defaultValue[key]) || !object(value[key]) || editor3DCoversDefault(defaultValue[key], value[key])));
+}
+
 // add an object of a type at a position, selected; its id, or undefined when the level can not be edited
 function editor3DPlace(type, pos)
 {
@@ -1980,13 +1999,18 @@ const editor3DEdit =
     change(change) { return editor3DChange(change); },
     changePart(name, change) { return editor3DLevelPartNames.includes(name) && editor3DChangePart(name, change); },
     strokeEnd() { editor3DStrokeEnd(); },
-    strokeCancel() { editor3DStrokeCancel(); },
+    strokeCancel()
+    {
+        // inside a change the outer one would write its copy over what it took back
+        ASSERT(!editor3DChanging, 'strokeCancel can not be called inside change');
+        editor3DChanging || editor3DStrokeCancel();
+    },
     place(type, pos3D) { return level3DTypes.has(type) ? editor3DPlace(type, pos3D) : undefined; },
     setTransform(object, pos3D, rotation, scale3D)
     {
         // a place, a turn and a scale the file keeps, NaN would be saved as null and read back as 0
         ASSERT(!!editor3DChanging?.includes(object),
-            'setTransform works on an object of the list change gives, inside change');
+            'setTransform works on an object of the list change gives, inside change: push a new one into the list first');
         const fine = (v)=> v === undefined || isVector3(v) && isFinite(v.x) && isFinite(v.y) && isFinite(v.z);
         ASSERT(fine(pos3D) && fine(rotation) && fine(scale3D), 'setTransform takes finite Vector3s', pos3D, rotation,
             scale3D);
@@ -2000,16 +2024,20 @@ const editor3DEdit =
         const type = level3DTypes.get(object.type), d = type && objectPropertyDefault(type.defaults, name);
         const finite = typeof value != 'number' || isFinite(value);
         // an object of a class of the game's would be saved as its members and come back a plain object, so an
-        // object is a plain one or a list, as a file has them
-        const special = isColor(value) || isVector2(value) || isVector3(value) || !!value &&
-            typeof value === 'object' && !isArray(value) && Object.getPrototypeOf(value) !== Object.prototype;
+        // object is a plain one or a list, as a file has them, and so is all it holds, at any depth
+        const special = isColor(value) || isVector2(value) || isVector3(value) || editor3DHasInstance(value, true);
+        // an object over an object default is merged into it member by member when loaded, so one that leaves a
+        // member out would load with the default's
+        const merges = !!d && typeof d === 'object' && !isArray(d) && !isColor(d) && !isVector2(d) && !isVector3(d);
         const fits = finite && (isColor(d) ? isColor(value) : isVector3(d) ? isVector3(value) :
             isVector2(d) ? isVector2(value) : d === undefined ? !special :
             d === null ? !special && typeof value === 'object' :
-            !special && typeof value === typeof d && value !== null && isArray(value) === isArray(d));
+            !special && typeof value === typeof d && value !== null && isArray(value) === isArray(d) &&
+            (!merges || editor3DCoversDefault(d, value)));
         const kind = (v)=> v === undefined ? 'none' : isColor(v) ? 'a Color' : isVector3(v) ? 'a Vector3' :
-            isVector2(v) ? 'a Vector2' : typeof v == 'number' ? String(v) : !!v && typeof v === 'object' &&
-            !isArray(v) && Object.getPrototypeOf(v) !== Object.prototype ? 'an instance of a class' :
+            isVector2(v) ? 'a Vector2' : typeof v == 'number' ? String(v) : editor3DHasInstance(v, true) ?
+            'an instance of a class, or hold one' : merges && v && typeof v === 'object' && !isArray(v) &&
+            !editor3DCoversDefault(d, v) ? 'an object that leaves out a member of the default' :
             objectPropertyKindName(v);
         ASSERT(!!editor3DChanging?.includes(object),
             'setProperty works on an object of the list change gives, inside change');
@@ -2020,7 +2048,12 @@ const editor3DEdit =
     rotation(object) { return editor3DRotation(object); },
     scale(object) { return editor3DScale(object); },
     mousePoint() { return editor3DIsOpen && !editor3DMouseOnPanel ? editor3DWithView(editor3DMousePoint) : undefined; },
-    undo(redo=false) { return editor3DUndo(redo); },
+    undo(redo=false)
+    {
+        // inside a change the outer one would write its copy over the undo, and its stroke clear the redo
+        ASSERT(!editor3DChanging, 'undo can not be called inside change');
+        return !editor3DChanging && editor3DUndo(redo);
+    },
     toJSON() { return editor3DLevel ? editor3DLevelJSON() : ''; },
 };
 

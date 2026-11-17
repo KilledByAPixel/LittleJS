@@ -164,7 +164,7 @@ npm install littlejsengine
 import * as LJS from 'littlejsengine';
 ```
 
-**With a script tag and no build step**: clone this repository, or use Download ZIP on its GitHub page, and copy [examples/starter](https://github.com/KilledByAPixel/LittleJS/tree/main/examples/starter). Its page and build load the engine from `../../dist/`, so a copy kept outside the repository needs that path changed to where `littlejs.js` and `littlejs.release.js` are. Every engine name is a global, as in the example above. The examples are only in the repository; the npm package and the release zip hold the engine alone.
+**With a script tag and no build step**: clone this repository, or use Download ZIP on its GitHub page, and copy [examples/starter](https://github.com/KilledByAPixel/LittleJS/tree/main/examples/starter). Its page and build load the engine from `../../dist/`, so a copy kept outside the repository needs that path changed to where `littlejs.js` and `littlejs.release.js` are, and its build tools installed: `npm install --save-dev google-closure-compiler uglify-js bestzip`, and `roadroller` with `USE_ROADROLLER`. Every engine name is a global, as in the example above. The examples are only in the repository; the npm package and the release zip hold the engine alone.
 
 A page that loads images or modules needs a local web server, since browsers block them from a file on disk. Vite brings its own. For the repository, serve its root, for example with `npx http-server`, then open `http://localhost:8080/examples/starter/`. The [FAQ](https://github.com/KilledByAPixel/LittleJS/blob/main/FAQ.md#do-i-need-a-local-server-to-run-littlejs-games-and-how-do-i-set-one-up) has more.
 

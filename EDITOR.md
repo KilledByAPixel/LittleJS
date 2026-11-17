@@ -98,8 +98,8 @@ objectLayersAddType('Coin', Coin, {value: 1});
   `value`, is a setter: the loader sets it once the object is made, and the editor sets it again on each edit,
   so the object follows the edit, where one read in its first `update` would keep the first value. In 3D the
   properties are handed to the constructor, `new make(pos3D, properties)`, and an edit makes the object again.
-  A function type, for what is not an object like a player start, is called with them in both,
-  `make(pos, properties)`, and what it gives back is not kept in the loader's list when it is a position or a
+  An arrow function type, for what is not an object like a player start, is called with them in both,
+  `make(pos, properties)`; a `function` is made with `new`, as a class is, in 2D with no properties. What an arrow gives back is not kept in the loader's list when it is a position or a
   `Color`.
 
 ```javascript
@@ -380,10 +380,10 @@ The rules every customization follows. The headline of each is enough to start w
 | `change((list)=> {...})` | Edit a copy of the object list; false when nothing changed, or when the level can not be edited while its autosave waits for Apply or Drop or an async `onRestart` runs; called inside another `change` it asserts and changes nothing, as the outer one would write over it |
 | `changePart(name, (part)=> newPart)` | Edit the level's `scene`, `voxels`, `terrain` or `prefabs` block; false as `change` gives it, and for any part inside Edit prefab, where a prefab is objects alone |
 | `strokeEnd()` | End the edit: one undo step, and the autosave |
-| `strokeCancel()` | Take the edit being made back |
+| `strokeCancel()` | Take the edit being made back; not inside `change`, where it asserts, as do `undo`, `change` and `place`: only `setTransform` and `setProperty` run inside it |
 | `place(type, pos3D)` | Add an object of a type, selected; its id, or undefined when there is no such type, a prefab would hold itself, or the level can not be edited while its autosave waits or an async `onRestart` runs; not inside `change`, where it asserts, push to the list instead |
-| `setTransform(object, pos3D, rotation, scale3D)` | Inside `change`, on an object of its list: write a place, a rotation in degrees and a scale; leave one out to keep it; one that is not a finite Vector3 asserts and writes nothing |
-| `setProperty(object, name, value)` | Inside `change`, on an object of its list: write a property, left out of the file when it is the type's default; a value not of the default's kind, a Color or vector over a default that is not one or over none, or a number that is not finite is not written, and asserts, as does a call outside `change` or on an object not of its list; an object of a class of the game's is refused too, as the file brings it back a plain object |
+| `setTransform(object, pos3D, rotation, scale3D)` | Inside `change`, on an object of its list, a new one pushed into it first: write a place, a rotation in degrees and a scale; leave one out to keep it; one that is not a finite Vector3 asserts and writes nothing |
+| `setProperty(object, name, value)` | Inside `change`, on an object of its list: write a property, left out of the file when it is the type's default; a value not of the default's kind, a Color or vector over a default that is not one or over none, or a number that is not finite is not written, and asserts, as does a call outside `change` or on an object not of its list; an object of a class of the game's is refused too, held at any depth, a Color or vector inside a value too, as the file brings it back a plain object, and so is a plain object over an object default that leaves out a member of it, as the load would merge the default's back in |
 | `pos(object)`, `rotation(object)`, `scale(object)` | Read them as vectors, the rotation in degrees |
 | `mousePoint()` | Where the mouse is on the level or the ground, undefined while it is over the panel |
 | `undo(redo)` | Undo, or redo with true; false when there was nothing to undo or it waits for a restart |
@@ -399,7 +399,7 @@ The rules every customization follows. The headline of each is enough to start w
 | `hover` | The cell under the mouse on the selected tile layer |
 | `selection` | A `Set` of the selected objects' ids |
 | `paint(cell, tile, direction, mirror)` | Set a cell of the selected tile layer to a tile index, -1 erases; false off the layer |
-| `changeObjects((list)=> {...})` | Edit a copy of the selected object layer's objects; false when nothing changed, or while its autosaved edits wait for Apply or Drop or an async `onRestart` runs |
+| `changeObjects((list)=> {...})` | Edit a copy of the selected object layer's objects; false when nothing changed, or while its autosaved edits wait for Apply or Drop or an async `onRestart` runs; called inside another `changeObjects` it asserts and changes nothing, as the outer one would write over it |
 | `setProperty(object, name, value)` | Inside `changeObjects`, on an object of its list: write a property as Tiled keeps it, left out of the map when it is the type's default; a value not of the default's kind, a Vector2 over no default, a class property or a number that is not finite is not written, and asserts, as does a call outside `changeObjects` or on an object not of its list |
 | `strokeEnd()` | End the edit: one undo step, and the autosave |
 | `strokeCancel()` | Take the edit being made back |

@@ -1921,7 +1921,8 @@ class ThirdPersonCamera3D extends EngineObject3D
      *  @param {boolean} [immediate] */
     destroy(immediate)
     {
-        this.lockPointer && pointerLockIsActive() && pointerLockExit();
+        // only the camera driving lets go of the mouse, one under it leaves the driver's lock alone
+        cameraDriver() === this && this.lockPointer && pointerLockIsActive() && pointerLockExit();
         super.destroy(immediate);
     }
 
@@ -2035,6 +2036,8 @@ class FirstPersonCamera3D extends EngineObject3D
         // only the camera driving the view reads input, so one under a newer camera, a cutscene's, stands still and
         // still falls
         const driving = cameraDriver() === this;
+        // one under a camera that does not lock the mouse lets go of it, or that camera would look with every move
+        !driving && this.lockPointer && pointerLockIsActive() && !cameraDriver()?.lockPointer && pointerLockExit();
 
         // a click captures the mouse, then it looks around while captured or while a button is held
         if (driving && this.lockPointer && mouseWasPressed(this.dragButton) && !render3DUIHasPress(this.dragButton))
@@ -2064,7 +2067,8 @@ class FirstPersonCamera3D extends EngineObject3D
      *  @param {boolean} [immediate] */
     destroy(immediate)
     {
-        this.lockPointer && pointerLockIsActive() && pointerLockExit();
+        // only the camera driving lets go of the mouse, one under it leaves the driver's lock alone
+        cameraDriver() === this && this.lockPointer && pointerLockIsActive() && pointerLockExit();
         super.destroy(immediate);
     }
 
@@ -3093,7 +3097,9 @@ class LensFlare3D extends EngineObject3D
     {
         this.visibleFound || render3D.updateMatrices();
         const shows = !!this.flareLook() && !(this.occlusion && this.isHidden());
-        const step = this.fadeTime > 0 && this.visibleFound ? seconds / this.fadeTime : 1;
+        // it eases only from what this camera saw, so after the level editor's camera it is set at once
+        const step = this.fadeTime > 0 && this.visibleFound && this.visibleCamera === render3D.camera ?
+            seconds / this.fadeTime : 1;
         this.visible = clamp(this.visible + (shows ? step : -step));
         this.visibleFound = true;
         this.visibleCamera = render3D.camera;

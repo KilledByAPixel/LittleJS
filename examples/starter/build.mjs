@@ -136,5 +136,6 @@ function runTool(binPath, args, options)
 function toolPath(binPath)
 {
     try { return require.resolve(binPath); }
-    catch { throw new Error(`${binPath.split('/')[0]} is not installed, run "npm install" first`); }
+    // a copy outside the repository has no package.json, so the tool is named to install
+    catch { const name = binPath.split('/')[0]; throw new Error(`${name} is not installed, run "npm install --save-dev ${name}" first`); }
 }
