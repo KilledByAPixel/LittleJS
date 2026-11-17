@@ -76,9 +76,14 @@ class Timer
      * @return {boolean} */
     elapsed() { return this.getGlobalTime() + timerTolerance >= this.time; }
 
-    /** Get how long since elapsed, returns 0 if not set (returns negative if currently active)
+    /** Get how long since elapsed, returns 0 if not set (returns negative if currently active), 0 on the frame it
+     *  ends, as elapsed() reads it
      * @return {number} */
-    get() { return this.isSet()? this.getGlobalTime() - this.time : 0; }
+    get()
+    {
+        const since = this.isSet() ? this.getGlobalTime() - this.time : 0;
+        return abs(since) < timerTolerance ? 0 : since;
+    }
 
     /** Get percentage elapsed based on time it was set to, returns 0 if not set.
      *  Zero-duration timers report 1 (already elapsed).
@@ -86,7 +91,7 @@ class Timer
     getPercent()
     {
         if (!this.isSet()) return 0;
-        if (!(this.setTime > 0)) return 1;
+        if (!(this.setTime > 0) || this.elapsed()) return 1; // as elapsed() reads it, on the frame it ends
         if (this.setTime === Infinity) return 0; // a timer that never ends has not begun, not Infinity / Infinity
         return 1 - percent(this.time - this.getGlobalTime(), 0, this.setTime);
     }

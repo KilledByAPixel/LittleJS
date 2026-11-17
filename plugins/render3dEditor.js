@@ -1379,7 +1379,7 @@ function editor3DCoversDefault(defaultValue, value)
     let accessors = false;
     for (let p = Object.getPrototypeOf(defaultValue); p && p !== Object.prototype && !accessors;
         p = Object.getPrototypeOf(p))
-        accessors = Object.values(Object.getOwnPropertyDescriptors(p)).some((d)=> !!(d.get || d.set));
+        accessors = Object.values(Object.getOwnPropertyDescriptors(p)).some((d)=> !!d.set);
     return (accessors || Object.keys(defaultValue).every((key)=> defaultValue[key] === undefined ||
         typeof defaultValue[key] == 'function' || Object.hasOwn(value, key))) &&
         Object.keys(value).every((key)=> editor3DCoversDefault(objectPropertyMember(defaultValue, key), value[key]));
@@ -4133,6 +4133,7 @@ function editor3DUpdate()
         const after = editor3DAfterView;
         editor3DAfterView = undefined;
         after?.();
+        editor3DIsOpen || editorClearPressed(); // closed in its update, by a game's tool, key or onUpdate
         return;
     }
 

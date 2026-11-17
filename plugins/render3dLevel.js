@@ -605,8 +605,8 @@ function level3DMakeAt(object, pos, rotation, scale)
  *    or written as a level file has it, a hex string or an array; a value not of its default's type keeps the default;
  *    each is copied for the object, a list or a plain object with what is in it, as a level file's are, so the object
  *    has its own and not the one passed; a plain object over an object default is merged into it member by member,
- *    and a list over a list default item by item, as a level file's are, and an instance of a class, at any depth, is copied with its copy method, or shared when
- *    it has none
+ *    and a list over a list default item by item, as a level file's are, and an instance of a class, at any depth,
+ *    is copied with its copy method, or shared when it has none
  *  @return {any} - What the type made, a Prefab3D for a prefab, undefined when there is no such type or it made no
  *    object of the game's
  *  @memberof Level3D

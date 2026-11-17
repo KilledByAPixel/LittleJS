@@ -919,6 +919,16 @@ function objectLayersWarnOnce(tileMapData, about, text)
 // editor makes an object again from a copy as it is dragged, so it is the map's ids, not the objects
 const objectLayersKindSaid = /* @__PURE__ */ new WeakMap;
 
+// the setter of an accessor a class instance has for a key through its class, not Object's, or undefined
+function objectPropertySetter(object, key)
+{
+    for (let p = Object.getPrototypeOf(object); p && p !== Object.prototype; p = Object.getPrototypeOf(p))
+    {
+        const found = Object.getOwnPropertyDescriptor(p, key);
+        if (found) return found.set;
+    }
+}
+
 // a type's default for a property, its own, not one every object has, like constructor or toString
 const objectPropertyDefault = (defaults, key)=>
     Object.prototype.hasOwnProperty.call(defaults, key) ? defaults[key] : undefined;
@@ -994,10 +1004,18 @@ function objectLayersMergeClass(fallback, value, warn, path='', shared, fromText
         const member = value[key];
         // a Color or Vector2 member as Tiled writes it, or a vector as a list, as a 3D level file writes it
         const read = fromText(member, before) || objectPropertyFromArray(member, before);
-        // given as every member is: assigned to a copy, its setter run, and its own to one with no copy method
-        const give = (result)=> copied ?
-            objectPropertyAssign(merged, key, result, '', '', (why)=> warn?.(`${name} ${why}, left out`)) :
+        // given as every member is: assigned to a copy, its setter run, and to one with no copy method through a
+        // setter of its class too, which writes the fields copied from the default, its own when the setter throws,
+        // as it reads a private field that object has not
+        const setter = !copied && own && objectPropertySetter(fallback, key);
+        const give = (result)=>
+        {
+            if (copied)
+                return objectPropertyAssign(merged, key, result, '', '', (why)=> warn?.(`${name} ${why}, left out`));
+            if (setter)
+                try { return setter.call(merged, result); } catch { }
             objectPropertySet(merged, key, result);
+        };
         if (read)
         {
             give(read);

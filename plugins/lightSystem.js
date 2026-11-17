@@ -179,6 +179,7 @@ class LightSystemPlugin
          *  sprite's normals a little */
         this.normalMaps = false;
         this.normalMapsWarned = false; // a debug build has said a normalMap does nothing with normalMaps off
+        this.normalTileWarned = false; // and that a TileInfo normalMap is a tile of a sheet, read whole
         this.normalMapsChecks = 0;     // renders with normalMaps off, a debug build looks for one every 60
         /** @property {boolean} - True while the normal pass runs, read only, so a render() can skip parts */
         this.normalPass = false;
@@ -802,6 +803,16 @@ class LightSystemPlugin
                     if (o.destroyed) continue;
                     // not there until its image has loaded, flat till then; a TileInfo is its texture's
                     const map = o.normalMap, texture = (map instanceof TileInfo ? map.textureInfo : map)?.glTexture;
+                    // a debug build says once of a tile of a sheet, its own art's or one beside it, read whole
+                    if (debug && map instanceof TileInfo && !ls.normalTileWarned && map.textureInfo?.size &&
+                        (map.pos.x || map.pos.y || map.size.x !== map.textureInfo.size.x ||
+                        map.size.y !== map.textureInfo.size.y || o.tileInfo?.textureInfo === map.textureInfo))
+                    {
+                        ls.normalTileWarned = true;
+                        console.warn('LightSystemPlugin: a normalMap given as a TileInfo is read as its whole ' +
+                            'texture, at the place of the tile drawn, so give it a texture of its own laid out like ' +
+                            'the sheet, not a tile of a sheet');
+                    }
                     glColorMask = 0xff000000;                // only the draw's own alpha
                     glColorAdditive = 0xff8080;              // the flat normal, red in the low byte, for what has no texture
                     glTextureOverride = texture;

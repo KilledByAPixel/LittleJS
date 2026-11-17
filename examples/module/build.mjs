@@ -81,8 +81,10 @@ function moduleFixStep(filename)
     
     let code = fs.readFileSync(filename, 'utf8');
     
-    // update the engine's import path to use the local minified version, whatever is imported from it
-    code = code.replace(/from (['"])[^'"]*littlejs\.esm(?:\.min)?\.js\1/g, "from './littlejs.esm.min.js'");
+    // update the engine's import path to use the local minified version, whatever is imported from it, and a
+    // dynamic import() of it
+    code = code.replace(/(from\s*|import\s*\(?\s*)(['"])[^'"]*littlejs\.esm(?:\.min)?\.js\2/g,
+        "$1'./littlejs.esm.min.js'");
     
     // also fix relative imports to other game modules
     code = code.replace(/from ['"]\.\.\//g, "from './");

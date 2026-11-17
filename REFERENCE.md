@@ -1270,7 +1270,8 @@ lightSystem.normalPass                // read only: true while objects draw into
 lightSystem.normalTexture             // read only: the normal buffer, the lightmap's size, while normalMaps is on
 light.height = 1                      // how far the light is above the scene, how steeply it falls on normal maps
 obj.normalMap = undefined             // a TextureInfo the lights shade it by with lightSystem.normalMaps on: an image
-                                      // laid out like its sheet, read where its tile is, green up, as 3D's normalMap
+                                      // laid out like its sheet, read where its tile is, green up, as 3D's normalMap;
+                                      // or a TileInfo, read as its whole texture, never as one tile of a sheet
 obj.renderNormal()                    // draws it into the normal buffer, render() by default, its normalMap in place
                                       // of its textures, or flat without one; screen space draws skipped
 

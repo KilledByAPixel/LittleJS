@@ -113,19 +113,20 @@ class EngineObject3D extends EngineObject
         /** @property {number} - The highlight's exponent, how small and sharp it is: 4 is broad like rubber, 16 the
          *  default, 100 sharp like polished metal; shows only with specular above 0 */
         this.shininess = 16;
-        /** @property {TextureInfo|undefined} - A normal map that bends the surface at each texel so it catches the
-         *  light like bumps and grooves, green pointing up the image as OpenGL and glTF have it; read at the color
-         *  texture's coordinates, see normalMapFromHeight to make one in code
-         *  @type {TextureInfo|undefined} */
+        /** @property {TextureInfo|TileInfo|undefined} - A normal map that bends the surface at each texel so it
+         *  catches the light like bumps and grooves, green pointing up the image as OpenGL and glTF have it; read at
+         *  the color texture's coordinates, see normalMapFromHeight to make one in code; a TileInfo is its whole texture
+         *  @type {TextureInfo|TileInfo|undefined} */
         this.normalMap = undefined;
         /** @property {number} - How strongly the normal map bends the surface, 0 turns it off, as glTF's scale */
         this.normalScale = 1;
         /** @property {number} - How much it reflects the sky, 0 none and 1 a mirror of it; the edges seen at a
          *  glancing angle reflect more either way, as water and glass do */
         this.reflectivity = 0;
-        /** @property {TextureInfo|undefined} - A texture of where it glows, added on top of the lit surface so it
-         *  shows in the dark, like lit windows; read at the color texture's coordinates
-         *  @type {TextureInfo|undefined} */
+        /** @property {TextureInfo|TileInfo|undefined} - A texture of where it glows, added on top of the lit surface
+         *  so it shows in the dark, like lit windows; read at the color texture's coordinates; a TileInfo is its whole
+         *  texture
+         *  @type {TextureInfo|TileInfo|undefined} */
         this.emissiveMap = undefined;
         /** @property {Color} - Multiplies the emissive map, as glTF's emissiveFactor */
         this.emissiveMapColor = WHITE;
@@ -402,6 +403,7 @@ class EngineObject3D extends EngineObject
     {
         if (!(child instanceof EngineObject3D))
             return super.attach(child); // a 2D child only has the 2D transform to keep
+        if (engineObjectAttachRefused(this, child)) return child; // before it leaves its old parent
         child.parent?.removeChild(child); // keeps its world values, so its own matrix is its world matrix
         const local = render3DObjectMatrix(this).copy().invert().multiply(render3DObjectMatrix(child));
         super.attach(child);
@@ -671,13 +673,15 @@ function render3DSolidReach(o)
 // it lands on the first step that meets the face of a solid within its groundAngle of level, last frame's or another
 // near it it is not leaving upward, a ramp going down from a flat top, so walking down a ramp of a turned box keeps
 // the ground; a solid it meets any other way, a side, is passed over for the next, as is one the pair does not
-// resolve with, collideWithObject giving false, a platform it drops through, and one whose collision is off, but it
-// does not land deeper into a side than it started; a callback that moves, attaches or destroys it or changes its
-// speed has the last word, as in a settle
+// resolve with, collideWithObject giving false, a platform it drops through, one whose callback moved it, and one
+// whose collision is off, but it does not land deeper into a side than it started, a floor at a ramp's foot not
+// counted; a callback that moves, attaches or destroys it, or sends it up off the solid, a stomp's bounce, has the
+// last word, as in a settle, and a speed a callback set otherwise is kept as it lands, a conveyor's
 function render3DFollowSolid(o, ground, oldPos)
 {
-    const solid = (b)=> b instanceof EngineObject3D && b !== o && !b.destroyed && !b.parent && !b.sync2D && b.isSolid &&
-        b.collideSolidObjects && !render3DLevel.includes(b);
+    // a pair meets when either is solid, as in the pair loop
+    const solid = (b)=> b instanceof EngineObject3D && b !== o && !b.destroyed && !b.parent && !b.sync2D &&
+        (b.isSolid || o.isSolid) && b.collideSolidObjects && !render3DLevel.includes(b);
     if (!solid(ground) || !o.mass) return;
     const v = o.velocity3D;
     if (v.y > ground.velocity3D.y) return; // leaving it upward, a jump
@@ -700,24 +704,28 @@ function render3DFollowSolid(o, ground, oldPos)
         return {b, shape, depth: push ? push.lengthSquared() : 0, skip: false};
     });
     // asks the pair, as the settles do: undefined when the callback had the last word, moving, attaching or
-    // destroying the body or changing its speed, which then stands, else whether it resolves
+    // destroying the body or sending it up off the solid, which then stands, else whether it resolves; a solid the
+    // callback moved is passed over, as the pair loop makes no push for it
     const ask = (c, push)=>
     {
-        const x = o.pos3D.x, y = o.pos3D.y, z = o.pos3D.z, vx = v.x, vy = v.y, vz = v.z;
-        const resolve = render3DCollideAsk(o, c.b, push);
+        const x = o.pos3D.x, y = o.pos3D.y, z = o.pos3D.z, speed = o.velocity3D, vy = speed.y;
+        const b = c.b, bx = b.pos3D.x, by = b.pos3D.y, bz = b.pos3D.z;
+        const resolve = render3DCollideAsk(o, b, push);
         if (o.parent || o.destroyed) return; // attached or destroyed in the callback
-        grid && !c.b.parent && render3DGridPlace(grid, c.b); // a callback may have moved it
+        grid && !b.parent && render3DGridPlace(grid, b); // a callback may have moved it
         if (o.pos3D.x !== x || o.pos3D.y !== y || o.pos3D.z !== z)
         {
             grid && render3DGridPlace(grid, o); // sent away by the game, a respawn, its place is the game's
             return;
         }
-        if (v.x !== vx || v.y !== vy || v.z !== vz)
+        // read again, as a callback may give it a new vector
+        if ((o.velocity3D !== speed || o.velocity3D.y !== vy) && o.velocity3D.y > b.velocity3D.y)
         {
-            o.pos3D.y = start; // a bounce or a knock back the game gave, from where it was
+            o.pos3D.y = start; // a bounce the game gave, from where it was
             return;
         }
-        resolve && !c.b.destroyed && !c.b.parent || (c.skip = true); // one it passes through
+        const moved = b.pos3D.x !== bx || b.pos3D.y !== by || b.pos3D.z !== bz;
+        resolve && !moved && !b.destroyed && !b.parent || (c.skip = true); // one it passes through
         return !c.skip;
     };
     for (let down = step; ; down += step)
@@ -745,6 +753,7 @@ function render3DFollowSolid(o, ground, oldPos)
                 if (other === c || other.skip || other.b.destroyed) continue;
                 const into = render3DSolidPush(shapeLanded, other.shape);
                 if (!into || into.lengthSquared() <= other.depth + 1e-9) continue;
+                if (into.y / into.length() >= cos0) continue; // a floor, a ramp's foot, is no side
                 const blocks = ask(other, into);
                 if (blocks === undefined) return;
                 if (blocks)
@@ -755,7 +764,7 @@ function render3DFollowSolid(o, ground, oldPos)
             }
             o.groundObject = c.b;
             render3DRiderAdd(c.b, o);
-            v.y = c.b.velocity3D.y;
+            o.velocity3D.y = c.b.velocity3D.y; // a new vector a callback gave too
             grid && render3DGridPlace(grid, o);
             return;
         }

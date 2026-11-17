@@ -3295,6 +3295,7 @@ function editorUpdate()
     editorMouseOnPanel || (editorMouseScreen = mousePosScreen.copy());
     mouseWasPressed(0) && !space && !editorMouseOnPanel && editorRecord()?.pending && editorPendingNudge();
     editorCall('onUpdate');
+    if (!editorIsOpen) return; // closed by the game's onUpdate
     if (editorToolUpdate(space)) return; // a tool of the game's own has the mouse
     if (editorObjectLayer)
         return editorUpdateObjects(space);
@@ -3672,8 +3673,21 @@ debug && engineAddPlugin(()=>
 {
     const open = editorIsOpen;
     try { editorUpdate(); }
-    finally { open && (mouseWheel = touchPinch = inputWheelPinch = 0); }
+    finally
+    {
+        open && (mouseWheel = touchPinch = inputWheelPinch = 0);
+        open && !editorIsOpen && editorClearPressed(); // closed in its update, by a game's tool, key or onUpdate
+    }
 });
+
+// what was pressed this frame is let go for the game until it is let go, when an editor closes in its own update, so
+// the game's gameUpdatePost does not take the click or key that closed it, as the editors' own close keys clear theirs
+function editorClearPressed()
+{
+    const keys = inputData[0];
+    for (const key in keys)
+        keys[key] & 2 && inputClearKey(key);
+}
 
 // the editor's own listeners for letter shortcuts and the wheel, the engine's input reads keys by position
 if (debug && globalThis.document?.addEventListener)

@@ -978,6 +978,7 @@ class EngineObject
     {
         ASSERT(child instanceof EngineObject, 'child must be an EngineObject');
         ASSERT(/** @type {EngineObject} */ (child) !== this, 'cannot attach self');
+        if (engineObjectAttachRefused(this, child)) return child; // before it leaves its old parent
         child.parent?.removeChild(child);
         // the local values that updateTransforms turns back into the child's current pos and angle
         const mirror = this.getMirrorSign(), local = this.worldToLocal(child.pos);
@@ -1062,4 +1063,17 @@ class EngineObject
             debugRect(this.pos, size.scale(.8), rgb(1,1,1,.5), 0, this.angle, false, false);
         this.parent && debugLine(this.pos, this.parent.pos, rgb(1,1,1,.5), .5, 0, false);
     }
+}
+
+// whether attach refuses a child, said in debug builds as addChild says it, checked before the child leaves its old
+// parent, so a refused one stays where it was: a destroyed parent or child, or a parent that is the child or its own
+function engineObjectAttachRefused(parent, child)
+{
+    ASSERT(!parent.destroyed, 'cannot add child to destroyed object');
+    ASSERT(!child.destroyed, 'cannot add a destroyed child');
+    let loop = false;
+    for (let p = parent; p && !loop; p = p.parent)
+        loop = p === child;
+    ASSERT(!loop, 'cannot add an object as a child of itself or of its own child');
+    return parent.destroyed || child.destroyed || loop;
 }
