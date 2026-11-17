@@ -446,11 +446,14 @@ function buildText3D(text, size=1, depth=.2, font=engineImageFont)
  * - pos3D is the center of the map, its grid spans mapSize on X and Z around it, and a full value is height above it
  * - getHeight, getNormal, getColor and raycast are in world space, with the map's position taken off
  * - It stays upright and unscaled, its lookups do not turn with it
- * - Its edge, to a body moving onto it from off the map, is a wall where it stands higher than the body's step, as a
- *   cliff inside the map is, plus what a walkable slope could still rise before the body's middle reaches it and a
- *   round body's sink over a crest, which grow with groundAngle and with the body's height, so a seam on a slope
- *   between two maps and a ramp onto one are walked, and an edge up to about half the body's height stepped onto; a
- *   body moving away from it or falling beside it is left alone
+ * - Its edge, to a body moving onto it from off the map, is a wall as a cliff inside the map is: an edge up to
+ *   the body's step, a quarter of its height, and a little for a round body's sink over a crest,
+ *   .43 times the lesser of its half width and half height at the default groundAngle, about .46 for a 1x1x1, is stepped
+ *   onto; one a little higher may be climbed or stop it by its speed, and a stopped body has its front over the edge
+ *   and its middle off the map, so it walks away freely; a body as fast as a car, .25 a frame and up, climbs as high as
+ *   .7; the slope a walkable ramp could still rise before its middle reaches the edge is allowed too, so a seam on a
+ *   slope between two maps and a ramp onto one are walked; a body moving away from it or falling beside it is left
+ *   alone
  * @extends EngineObject3D
  * @memberof Render3D
  * @example
@@ -733,7 +736,8 @@ class HeightMap extends EngineObject3D
     /** Keep an object above the ground, called by the engine for each object with collideLevel
      *  @param {EngineObject3D} o
      *  @param {Vector3} oldPos - Where it was before it moved
-     *  @param {boolean} [wasOn] - It stood on this map last frame
+     *  @param {boolean} [wasOn] - It stood on this shape last frame, or on another level shape and no shape grounded it
+     *    this frame, a second pass, so it is followed down from a seam
      *  @ignore */
     levelCollide3D(o, oldPos, wasOn)
     {
@@ -765,8 +769,10 @@ class HeightMap extends EngineObject3D
                 const crest = min(side, half) * (1 / steep - 1);
                 if (edge > oldPos.y - half + half / 2 + max(0, was - h) * rise + crest + 1e-6)
                 {
-                    // it goes no further in: its side at the edge, or where it was if it was nearer already
-                    const stop = mc + s * min(h + side, was), v = o.velocity3D;
+                    // it goes no further in: its side at the edge, or where it was if it was nearer already, its
+                    // middle always kept off the map by a margin, so it is judged by the edge again next frame and
+                    // is never left with its middle on the plateau and its box in it
+                    const stop = mc + s * max(h + 1e-4, min(h + side, was)), v = o.velocity3D;
                     acrossX ? (p.x = stop, v.x * s < 0 && (v.x = 0)) : (p.z = stop, v.z * s < 0 && (v.z = 0));
                 }
             }
@@ -1010,9 +1016,11 @@ class MeshCollider extends EngineObject3D
     /** Keep an object out of the triangles, called by the engine for each object with collideLevel
      *  @param {EngineObject3D} o
      *  @param {Vector3} oldPos - Where it was before it moved
-     *  @param {boolean} [wasOn] - It stood on this one last frame
+     *  @param {boolean} [wasOn] - It stood on this shape last frame, or on another level shape and no shape grounded it
+     *    this frame, a second pass, so it is followed down from a seam
+     *  @param {boolean} [fromOther] - That level shape was another, so it is looked for below as far as it moved
      *  @ignore */
-    levelCollide3D(o, oldPos, wasOn) { meshColliderCollide(this, o, oldPos, wasOn); }
+    levelCollide3D(o, oldPos, wasOn, fromOther) { meshColliderCollide(this, o, oldPos, wasOn, fromOther); }
 
     /** Where a short move first meets a triangle, for a particle's move in one frame: the part of the move made
      *  before it, 0 to 1, and the triangle's normal facing back along the move; undefined when it meets none
@@ -1509,7 +1517,7 @@ function meshColliderResolve(collider, center, half, radius, groundAngle, walls,
 // keep an object out of a collider: its move from where it was in steps no longer than half its width, each pushed out
 // of the triangles near it; a fall stopped by ground stands it there and bounces by restitution, a wall takes the
 // speed into it; one that stood on it last frame and is not rising follows it down a slope as far as it moved across
-function meshColliderCollide(collider, o, oldPos, wasOn)
+function meshColliderCollide(collider, o, oldPos, wasOn, fromOther)
 {
     meshColliderBake(collider);
     if (!collider.triangleCount) return;
@@ -1519,10 +1527,14 @@ function meshColliderCollide(collider, o, oldPos, wasOn)
     if (!(radius > 0)) return;
     const p = o.pos3D, from = oldPos || p;
     const mx = p.x - from.x, my = p.y - from.y, mz = p.z - from.z, move = hypot(mx, my, mz);
-    // nothing near where it went or came from, which is most objects most of the time
+    // nothing near where it went or came from, which is most objects most of the time; one that stood on another
+    // level shape last frame and is not rising is looked for as far below as it moved across, so walking down off a
+    // map onto a mesh stays on the ground, as the follow below looks that far; not the one it stood on, which would
+    // pull it back down as it climbs a step onto another
     const g = collider.grid, reach = radius + half;
+    const below = fromOther && o.velocity3D.y <= 0 ? hypot(mx, mz) + 1e-3 : 0;
     if (max(p.x, from.x) + radius < g.min.x || min(p.x, from.x) - radius > g.max.x ||
-        max(p.y, from.y) + reach < g.min.y || min(p.y, from.y) - reach > g.max.y ||
+        max(p.y, from.y) + reach < g.min.y || min(p.y, from.y) - reach - below > g.max.y ||
         max(p.z, from.z) + radius < g.min.z || min(p.z, from.z) - radius > g.max.z)
         return;
     const steps = min(64, max(1, ceil(move / (radius / 2))));

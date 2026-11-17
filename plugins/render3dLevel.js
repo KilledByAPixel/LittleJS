@@ -135,7 +135,8 @@ function level3DAddMesh(name, mesh, tileInfo, color=WHITE, meshCollision=false)
  *    again takes its old one's place in it and one taken out is spliced, so look an object up again rather than
  *    keep its index
  *  @param {Level3D} level - The level, the level editor edits this same object
- *  @return {Array<any>} - What each object's type made, a function that made nothing is left out
+ *  @return {Array<any>} - What each object's type made, an object of the game's, so the level can be unloaded by
+ *    it; a function that made nothing, or gave back a value of the engine's, as a marker's position, is left out
  *  @memberof Level3D */
 function level3DLoad(level)
 {
@@ -496,7 +497,8 @@ function level3DProperties(type, object)
 {
     const properties = {}, own = object.properties, set = (key, value)=> objectPropertySet(properties, key, value);
     for (const [key, value] of Object.entries(type.defaults))
-        set(key, objectPropertyCopy(value));
+        set(key, objectPropertyCopy(value, own && typeof own === 'object' && Object.hasOwn(own, key) ? undefined :
+            objectPropertySharedWarn(undefined, 'level3DLoad', object.type, key)));
     for (const [key, value] of Object.entries(own && typeof own === 'object' ? own : {}))
     {
         const d = objectPropertyDefault(type.defaults, key); // the type's own, not one every object has
@@ -550,7 +552,10 @@ function level3DMakeAt(object, pos, rotation, scale)
             o.destroy();
         return;
     }
-    if (!result || typeof result !== 'object') return;
+    // what it made is an object of the game's; a marker's function, (pos)=> start = pos, gives back the position, a
+    // value of the engine's, which is not, and a list unloaded by destroy would throw on it
+    if (!result || typeof result !== 'object' || isVector3(result) || result instanceof Vector2 || isColor(result))
+        return;
     if (result instanceof EngineObject3D)
     {
         level3DBaseScale.set(result, result.scale3D.copy());
@@ -580,7 +585,8 @@ function level3DMakeAt(object, pos, rotation, scale)
  *    or written as a level file has it, a hex string or an array; a value not of its default's type keeps the default;
  *    each is copied for the object, a list or a plain object with what is in it, as a level file's are, so the object
  *    has its own and not the one passed
- *  @return {any} - What the type made, a Prefab3D for a prefab, undefined when there is no such type
+ *  @return {any} - What the type made, a Prefab3D for a prefab, undefined when there is no such type or it made no
+ *    object of the game's
  *  @memberof Level3D
  *  @example
  *  level3DAddPrefab('House', await fetchJSON('house.json'));

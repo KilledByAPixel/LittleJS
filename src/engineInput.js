@@ -203,7 +203,7 @@ function inputClearDevices(keepGamepads=false)
     touchGamepadButtons.length = 0;
     touchGamepadButtonsPressed.length = 0;
     touchGamepadSticks.length = 0;
-    touchGamepadStickPointerId.length = 0; // release floating sticks so they re-anchor
+    touchGamepadStickRelease(0), touchGamepadStickRelease(1); // release floating sticks so they re-anchor
     gamepadStickData.length = 0;
     gamepadDpadData.length = 0;
     // gamepadButtonsLast and gamepadAxisCentered describe the pads, not input, so they are kept: a button held
@@ -990,7 +990,7 @@ function inputUpdate()
             touchGamepadTimer.unset(), touchGamepadHandedOver = true, touchGamepadOwning = false;
             touchGamepadPointerRole.clear();
             touchGamepadButtons.length = touchGamepadButtonsPressed.length = touchGamepadSticks.length = 0;
-            touchGamepadStickPointerId.length = 0;
+            touchGamepadStickRelease(0), touchGamepadStickRelease(1);
             touchGamepadHeldAtHandover = touchGamepadButtonsLast.flatMap((held, i)=> held ? [i] : []);
             touchGamepadButtonsLast.length = 0;
         }
@@ -1514,7 +1514,7 @@ function touchGamepadRender()
             touchGamepadButtons.length = 0;
             touchGamepadButtonsPressed.length = 0;
             touchGamepadSticks.length = 0;
-            touchGamepadStickPointerId.length = 0;
+            touchGamepadStickRelease(0), touchGamepadStickRelease(1);
         }
         return;
     }
@@ -1763,6 +1763,14 @@ function touchGamepadPointerMove(e)
     // face buttons & start are held until release (no slide-between this pass)
 }
 
+// a stick let go of, by its finger lifting or by a blur, a hidden page, a real gamepad or an editor taking over: one
+// held through a resize goes back to its side's place, its anchor in the old stage's pixels
+function touchGamepadStickRelease(side)
+{
+    touchGamepadStickPointerId[side] = undefined;
+    touchGamepadStickStale[side] && (touchGamepadStickAnchors[side] = undefined, touchGamepadStickStale[side] = 0);
+}
+
 function touchGamepadPointerUp(e)
 {
     const role = touchGamepadPointerRole.get(e.pointerId);
@@ -1771,10 +1779,7 @@ function touchGamepadPointerUp(e)
     if (role === 'stick0' || role === 'stick1')
     {
         const side = role === 'stick1' ? 1 : 0;
-        touchGamepadStickPointerId[side] = undefined;
-        // a floating one held through a resize goes back to its side's place once let go, its anchor in the old
-        // stage's pixels
-        touchGamepadStickStale[side] && (touchGamepadStickAnchors[side] = undefined, touchGamepadStickStale[side] = 0);
+        touchGamepadStickRelease(side);
         touchGamepadSticks[side] = vec2();
         delete touchGamepadButtons[touchGamepadStickButton(side)];
     }

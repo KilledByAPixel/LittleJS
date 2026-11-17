@@ -132,8 +132,11 @@ levelEditor.isOpen;                    // true while editing
 levelEditor.onRestart = ()=> buildLevel();         // adds a Restart button: load the level again; it may be async:
                                                    // till it settles Restart waits, in the 2D editor a resize,
                                                    // its undo and redo and Apply or Reset of another size too,
-                                                   // the 2D editor takes no object edit or its undo, the 3D
-                                                   // editor no edit, undo or Reset, and Escape and
+                                                   // the 2D editor takes no object edit or its undo, no Apply
+                                                   // of object edits or Reset putting objects back, and no Clear,
+                                                   // Cut, drag or stamp with All Layers holding objects, tile
+                                                   // edits going in, the 3D editor no edit, undo or Reset, and
+                                                   // Escape and
                                                    // Play play on, with no onPlayFrom, so a fade can finish;
                                                    // with no debug key the 3D editor stays closed till it
                                                    // settles, then opens again
@@ -377,7 +380,7 @@ The rules every customization follows. The headline of each is enough to start w
 | `strokeCancel()` | Take the edit being made back |
 | `place(type, pos3D)` | Add an object of a type, selected; its id, or undefined when there is no such type, a prefab would hold itself, or the level can not be edited while its autosave waits or an async `onRestart` runs |
 | `setTransform(object, pos3D, rotation, scale3D)` | Inside `change`, on an object of its list: write a place, a rotation in degrees and a scale; leave one out to keep it; one that is not a finite Vector3 asserts and writes nothing |
-| `setProperty(object, name, value)` | Inside `change`, on an object of its list: write a property, left out of the file when it is the type's default; a value not of the default's kind or a number that is not finite is not written, and asserts |
+| `setProperty(object, name, value)` | Inside `change`, on an object of its list: write a property, left out of the file when it is the type's default; a value not of the default's kind, a Color or vector over a default that is not one or over none, or a number that is not finite is not written, and asserts, as does a call outside `change` |
 | `pos(object)`, `rotation(object)`, `scale(object)` | Read them as vectors, the rotation in degrees |
 | `mousePoint()` | Where the mouse is on the level or the ground, undefined while it is over the panel |
 | `undo(redo)` | Undo, or redo with true; false when there was nothing to undo or it waits for a restart |

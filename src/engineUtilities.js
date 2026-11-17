@@ -255,7 +255,8 @@ function shareURL(title, url, callback)
  *    and a saved array is the array that was saved, shorter or longer than its default
  *  - Inside an array or object a vec2 or a Color comes back as one too, from its saved numbers, and an object or
  *    array default saved as anything that is not one, an older save's number or a null, comes back as the default, so
- *    a value that may be none is best a default of null; a value of a
+ *    a value that may be none is best a default of null, but a vec2 or a Color, which over a null default comes back
+ *    as plain numbers with no methods, is best its own default with a flag beside it; a value of a
  *    class with no copy method is the default's own when not saved, and as JSON gave it once saved
  *  @template {Object<string, any>} [T=any]
  *  @param {string} saveName - unique name for the game/save

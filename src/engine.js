@@ -1169,7 +1169,8 @@ function engineObjectsDestroy(immediate=true)
  *  @param {Vector2|number} [size] - Diameter of a circle if a number, full size of a rectangle if a Vector2,
  *                                   left out or 0 the objects that overlap the point at pos
  *  @param {Array<EngineObject>} [objects=engineObjects] - List of objects to check
- *  @param {boolean} [testCenters] - Test only each object's center, a little faster, and ignores object sizes
+ *  @param {boolean} [testCenters] - Test only each object's center, a little faster, and ignores object sizes; it
+ *    needs an area, with no size it finds nothing, as no center is inside a point
  *  @return {Array<EngineObject>} - List of collected objects
  *  @memberof Engine */
 function engineObjectsCollect(pos, size, objects=engineObjects, testCenters=false)

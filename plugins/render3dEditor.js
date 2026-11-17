@@ -522,6 +522,15 @@ function editor3DLevelLoaded(level)
     {
         // another level, the selection, the edit being made and what was said of it were the last one's, and a drag
         // held, whose object or cells were in it, ends, or it would move the new level's object of the same id
+        // the stroke being made puts the last level back as it was before it, in its data alone, as its objects are
+        // the game's to unload, so a game that loads that level again gets it unmoved, as no undo has the half move
+        const stroke = editor3DStroke, old = editor3DLevel;
+        if (stroke && old && isArray(old.objects))
+        {
+            old.objects.splice(0, old.objects.length, ...editor3DCopy(stroke.before));
+            for (const name of editor3DLevelPartNames)
+                stroke.parts?.[name] ? old[name] = editor3DCopy(stroke.parts[name]) : delete old[name];
+        }
         editor3DSelection.clear();
         editor3DStroke = undefined;
         editor3DPrefabMessage = '';
@@ -695,11 +704,17 @@ function editor3DEditsWait()
 
 // change the level's objects as part of the edit being made: change edits a copy of the list; the changes until
 // editor3DStrokeEnd are one undo, so a drag is one undo; false when nothing changed
+let editor3DChanging = false;
 function editor3DChange(change)
 {
     if (!editor3DLevel || editor3DEditsWait()) return false; // its autosave or a restart waits first
     const before = editor3DCopy(editor3DObjects()), after = editor3DCopy(before);
-    change(after);
+    // while it runs, setTransform and setProperty write into its copy; outside it they would write into the level
+    // itself, with no undo, autosave or move
+    const was = editor3DChanging;
+    editor3DChanging = true;
+    try { change(after); }
+    finally { editor3DChanging = was; }
     // what is not an object, a null a game's change pushed, is dropped, as a level's own are when it loads
     for (let i = after.length; i--;)
         editor3DIsObject(after[i]) || after.splice(i, 1);
@@ -1964,6 +1979,7 @@ const editor3DEdit =
     setTransform(object, pos3D, rotation, scale3D)
     {
         // a place, a turn and a scale the file keeps, NaN would be saved as null and read back as 0
+        ASSERT(editor3DChanging, 'setTransform works on an object of the list change gives, inside change');
         const fine = (v)=> v === undefined || isVector3(v) && isFinite(v.x) && isFinite(v.y) && isFinite(v.z);
         ASSERT(fine(pos3D) && fine(rotation) && fine(scale3D), 'setTransform takes finite Vector3s', pos3D, rotation,
             scale3D);
@@ -1980,9 +1996,11 @@ const editor3DEdit =
         const fits = finite && (isColor(d) ? isColor(value) : isVector3(d) ? isVector3(value) :
             isVector2(d) ? isVector2(value) : d === undefined ? !special :
             d === null ? !special && typeof value === 'object' :
-            typeof value === typeof d && value !== null && isArray(value) === isArray(d));
-        ASSERT(fits, `setProperty: ${name} can not be ${typeof value == 'number' ? value : objectPropertyKindName(value)}` +
-            `, its default is ${objectPropertyKindName(d)}`);
+            !special && typeof value === typeof d && value !== null && isArray(value) === isArray(d));
+        const kind = (v)=> v === undefined ? 'none' : isColor(v) ? 'a Color' : isVector3(v) ? 'a Vector3' :
+            isVector2(v) ? 'a Vector2' : typeof v == 'number' ? String(v) : objectPropertyKindName(v);
+        ASSERT(editor3DChanging, 'setProperty works on an object of the list change gives, inside change');
+        ASSERT(fits, `setProperty: ${name} can not be ${kind(value)}, its default is ${kind(d)}`);
         fits && editor3DSetProperty(object, name, value, d);
     },
     pos(object) { return editor3DPos(object); },

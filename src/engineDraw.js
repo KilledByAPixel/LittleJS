@@ -716,7 +716,8 @@ const SHADER_VERTEX_NAMES = /* @__PURE__ */ new Set(['p', 'n', 't', 'c', 'm0', '
  *   need not declare them: new Shader(code, '', {glow: 1, tint: RED}), then shader.setUniform('glow', 2) as often as
  *   needed, with no recompile; each is declared in the snippets that use it, so one may share a name with an input
  *   of the engine's in the other stage, and is sent to a program only when it changed; a name the engine's shader
- *   uses already, like lightColor, or tint in vertex code, or a GLSL keyword, reserved word or built-in function, as
+ *   uses already, like lightColor, or tint in vertex code, a name of i and a capital, kept for the engine's, as
+ *   iTime, or a GLSL keyword, reserved word or built-in function, as
  *   step, distance, sample or filter, which would not compile, is refused by an assert in debug builds; a matrix list
  *   is column by column; in 3D set a value outside the 3D pass, it holds for the frame
  * @example
@@ -784,7 +785,8 @@ class Shader
             ASSERT(!/^i[A-Z]/.test(name) && !SHADER_RESERVED_NAMES.has(name) &&
                 !(SHADER_FRAGMENT_NAMES.has(name) && names(fragmentCode)) &&
                 !(SHADER_VERTEX_NAMES.has(name) && names(vertexCode)),
-                'a Shader uniform has a name of its own, not one of the engine\'s', name);
+                'a Shader uniform has a name of its own, not one of the engine\'s nor i and a capital, kept for them',
+                name);
             const type = this.uniformTypes[name] = glUniformType(uniforms[name]);
             ASSERT(!!type, 'a Shader uniform is a number, boolean, vector, Color, matrix or list of 2, 3, 4, 9 or 16 numbers',
                 name, uniforms[name]);

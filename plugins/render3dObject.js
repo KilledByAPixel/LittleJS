@@ -603,11 +603,16 @@ function render3DMove(o, cap)
 // ground is what it stood on last frame, which a height map keeps it on going down a slope
 function render3DCollideLevel(o, oldPos, ground)
 {
-    // one that stood on any level shape last frame stood on each, so walking down from one map onto the next, a
-    // chunk of the same terrain, follows the ground down as on one map, where it left it for a few frames
-    const stood = !!ground && render3DLevel.includes(ground);
+    // each shape, the one it stood on last frame following it down a slope
     for (const level of render3DLevel)
-        level.destroyed || level.levelCollide3D(o, oldPos, stood);
+        level.destroyed || level.levelCollide3D(o, oldPos, level === ground);
+    // then, only when none grounded it, the others follow it down too, as it stood on one level shape and so on each:
+    // walking down from one map onto the next, a chunk of the same terrain, or onto a mesh, stays on the ground as on
+    // one map; after every shape had its turn, so terrain under a floor laid just above it, a building's, does not
+    // follow it down through the floor, nor a deck pull it off a step it climbs onto, whatever the list order
+    if (ground && !o.groundObject && render3DLevel.includes(ground))
+        for (const level of render3DLevel)
+            level.destroyed || level === ground || level.levelCollide3D(o, oldPos, true, true);
 }
 
 // where a solid object is in the world and what it collides as: the sphere that fits size3D, or the size3D box,
@@ -1574,7 +1579,8 @@ class InstancedMesh3D extends EngineObject3D
     {
         super(vec3(), mesh, tileInfo, color);
         ASSERT(mesh instanceof Mesh, 'an InstancedMesh3D needs a Mesh');
-        ASSERT(count >= 1, 'an InstancedMesh3D needs room for at least one instance');
+        ASSERT(count >= 1 && count % 1 === 0, 'an InstancedMesh3D needs room for a whole number of instances, one or more',
+            count);
         this.size3D = vec3(); // not a solid thing to pick or collect
         /** @property {number} - How many instances draw, the first ones, up to the count it was made with */
         this.count = count;

@@ -76,7 +76,7 @@ class LightSystemPlugin
         this.shadersFailed = false; // a shader did not build on this device, so the system draws nothing
         /** @property {Color} - Baseline color applied to unlit areas of the scene. Defaults to BLACK (pitch dark). Set to a small RGB for a faint ambient. The lightmap is cleared to this color each frame, then lights add on top, then the result multiplies the scene. */
         this.ambientColor = (ambientColor || BLACK).copy();
-        /** @property {Vector2|undefined} - Size of the lightmap texture, follows mainCanvasSize (css pixels, so it is not scaled by canvasPixelRatio) unless a size was passed; undefined until the system starts when none was; a new size set later makes the lightmap again at it, with textureSizeAuto false so the canvas does not set it back
+        /** @property {Vector2|undefined} - Size of the lightmap texture, follows mainCanvasSize (css pixels, so it is not scaled by canvasPixelRatio) unless a size was passed; undefined until the system starts when none was; a new size set later makes the lightmap again at it, and turns textureSizeAuto off so the canvas does not set it back
          *  @type {Vector2|undefined} */
         this.textureSize = textureSize ? textureSize.copy() : undefined;
         /** @property {boolean} - True when no size was passed, so the lightmap follows mainCanvasSize */
@@ -865,6 +865,10 @@ class LightSystemPlugin
             // an automatic size follows the canvas, and a size given may be set again, so reallocate the lightmap
             // when the size it should be is not the one it was made at, after the flush so the batch keeps its texture
             const size = lightSystem.textureSize, made = lightSystem.textureSizeAllocated;
+            // while automatic the size is always the one made, so one that differs the game set: it is the game's
+            // now, as textureSizeAuto false, where the lights drew into a corner of a texture of the canvas's size
+            if (lightSystem.textureSizeAuto && size && made?.x && (size.x !== made.x || size.y !== made.y))
+                lightSystem.textureSizeAuto = false;
             const auto = lightSystem.textureSizeAuto;
             const wantX = glClampTextureSize(auto ? mainCanvasSize.x : size.x); // to what the device makes
             const wantY = glClampTextureSize(auto ? mainCanvasSize.y : size.y);

@@ -241,11 +241,12 @@ class LevelEditor
      *  which calls it after switching to play
      *  - It may be async: till its promise settles, every action that starts a restart waits, with a note at the
      *    mouse: Restart, and in the 2D editor a resize, its undo and redo, and Apply or Reset of another size, an
-     *    Apply of the same size going in as any edit, and the 3D editor takes no edit, undo or Reset; the
+     *    Apply of the same size going in as any tile edit, and the 3D editor takes no edit, undo or Reset; the
      *    game is held still while the editor is open, so one that waits for its frames, a fade, finishes once the editor
      *    closes, which Play and Escape do then with no player put at the mouse, and with no debug key the 3D editor
-     *    stays closed till it settles, then opens again; the 2D editor takes no object edit or undo meanwhile, which
-     *    the restart would make a second time; a promise that never settles makes restarts wait till the page reloads
+     *    stays closed till it settles, then opens again; the 2D editor takes no object edit meanwhile, which the
+     *    restart would make a second time, nor an undo of one, an Apply carrying object edits, a Reset putting objects
+     *    back, or a Clear, Cut, drag or stamp with All Layers holding objects, each refused whole; tile edits go in; a promise that never settles makes restarts wait till the page reloads
      *  @return {void|Promise<void>} */
     onRestart() {}
 
@@ -1162,12 +1163,19 @@ function editorPaintData(record, data, objects, width=record.map.width, height=r
                 gids.forEach((gid, i)=> editorPaint(layer, vec2(i % width, height - 1 - (i / width | 0)), gid));
         }
         // an autosave from before the file had an object layer leaves that layer as the file has it; Reset to file
-        // empties a layer the file did not have
-        editorObjectLayers(record).forEach((layer, i)=> objects && !(keepUnknown && i >= objects.length) &&
+        // empties a layer the file did not have; a layer already as written is left alone, so nothing is asked of it
+        editorObjectLayers(record).forEach((layer, i)=> editorObjectLayerChanges(layer, i, objects, keepUnknown) &&
             editorChangeObjects(layer, (list)=> list.splice(0, list.length, ...editorObjectsCopy(objects[i] ?? []))));
     });
     editorStroke ? editorStrokeEnd() : editorAutosave(record);
 }
+
+// whether painting a map's objects, as editorPaintData does, changes an object layer: each layer by its index in
+// the lists, one past them kept as it is when keepUnknown, an empty list the same as none
+const editorObjectLayerChanges = (layer, i, objects, keepUnknown)=> !!objects && !(keepUnknown && i >= objects.length) &&
+    !editorSameData(editorObjectList(layer), objects[i] ?? []);
+const editorObjectsChange = (record, objects, keepUnknown)=>
+    editorObjectLayers(record).some((layer, i)=> editorObjectLayerChanges(layer, i, objects, keepUnknown));
 
 // the autosaved edits of a file that changed since, applied as one undo; edits that do not fit the file now are
 // kept waiting, with their autosave, until they are dropped, and it returns false
@@ -1182,14 +1190,8 @@ function editorApplyPending(record)
     if (resized && editorRestartRunning) return editorBusyNudge(), false;
     // and edits of objects wait for a restart of any size, which makes the objects again: painted in now they would be
     // made twice, or dropped, and the autosave holding them written over; same size tiles still go in
-    if (editorRestartRunning)
-    {
-        const now = editorObjectGroups(record.map.layers).map((group)=> group.objects ?? []);
-        const saving = saved.objects ?? [];
-        if (!Array.from({length: max(now.length, saving.length)}, (_, i)=> i)
-            .every((i)=> editorSameData(saving[i] ?? [], now[i] ?? [])))
-            return editorBusyNudge(), false;
-    }
+    if (editorRestartRunning && editorObjectsChange(record, saved.objects, true))
+        return editorBusyNudge(), false;
     if (!editorPendingFits(record, saved))
     {
         record.pendingUnfit = true;
@@ -1249,8 +1251,7 @@ function editorRevert(record)
     // and while an async onRestart makes a resized map's layers, which take no edits till then
     if (editorRecordResizing(record)) return editorBusyNudge();
     // and one that would put objects back waits for any restart, which makes them again
-    if (editorRestartRunning && !editorSameData(editorObjectGroups(record.map.layers).map((g)=> g.objects ?? []),
-        record.originalObjects ?? []))
+    if (editorRestartRunning && editorObjectsChange(record, record.originalObjects, false))
         return editorBusyNudge();
     record.pendingUnfit = undefined;
     const {width, height} = record.originalSize ?? record.map;
@@ -2444,6 +2445,8 @@ function editorSelectionDragCancel()
 function editorCut()
 {
     const area = editorSelection;
+    // its autosaved edits wait for Apply or Drop: the clear would take nothing, and the brush would place a copy
+    if (editorLayer?.record.pending) return editorPendingNudge(), false;
     if (editorAreaObjectsWait(editorLayer, area) || !editorCopy()) return false;
     editorSelection = area;
     editorClear();

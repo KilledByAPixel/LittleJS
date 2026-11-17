@@ -726,7 +726,8 @@ function objectLayersAddType(name, make, defaults={}, tileInfo)
  *  - Tiled templates are not read: an object placed from one has its type only in the template's file, so export
  *    the map with Tiled's Detach templates option
  *  @param {TiledMap} tileMapData - The same Tiled map given to tileLayersLoad
- *  @return {Array<any>} - What each object's type made, a function that made nothing is left out
+ *  @return {Array<any>} - What each object's type made, an object of the game's, so the level can be unloaded by
+ *    it; a function that made nothing, or gave back a value of the engine's, as a marker's position, is left out
  *  @memberof TileLayers */
 function objectLayersLoad(tileMapData)
 {
@@ -812,22 +813,31 @@ function objectLayersListProperties(tileMapData)
 // vector is an instance of its class with a copy method, never a plain object, as a file's object may have a member
 // named copy, and every member of a plain object is copied as one but __proto__, constructor and prototype, which
 // are left out, so a level a player made can not reach what every object shares
-function objectPropertyCopy(value)
+function objectPropertyCopy(value, shared, path='')
 {
-    if (isArray(value)) return value.map(objectPropertyCopy);
+    if (isArray(value)) return value.map((item, i)=> objectPropertyCopy(item, shared, path + '[' + i + ']'));
     if (!value || typeof value != 'object') return value;
     if (Object.getPrototypeOf(value) !== Object.prototype)
     {
-        // a copy method that gives back no object is as none, the value itself
+        // a copy method that gives back no new object is as none, the value itself, said through shared with where
+        // it is, at any depth, as every object that leaves it alone shares the one value
         const copy = typeof value.copy == 'function' ? value.copy() : undefined;
-        return copy && typeof copy == 'object' ? copy : value;
+        if (copy && typeof copy == 'object' && copy !== value) return copy;
+        typeof value.copy == 'function' && shared?.(path);
+        return value;
     }
     const copy = {};
     for (const key of Object.keys(value))
         objectPropertyShared(key) || Object.defineProperty(copy, key,
-            {value: objectPropertyCopy(value[key]), enumerable: true, writable: true, configurable: true});
+            {value: objectPropertyCopy(value[key], shared, path + '.' + key), enumerable: true, writable: true,
+            configurable: true});
     return copy;
 }
+
+// a warning for a default of a class whose copy method gives back no new object, once for each type and place
+const objectPropertySharedWarn = (map, who, typeName, key)=> (path)=> objectLayersWarnOnce(map,
+    'copy ' + typeName + ' ' + key + path, `${who}: ${typeName}'s default ${key}${path} has a copy method that ` +
+    'gives back no new object, so the objects that leave it alone share it');
 
 // a name every object has, left out of what a map gives
 const objectPropertyShared = (key)=> key === '__proto__' || key === 'constructor' || key === 'prototype';
@@ -908,9 +918,10 @@ function objectLayersMergeClass(fallback, value, warn, path='')
     // object of its class with the default's members, without its private fields
     const own = Object.getPrototypeOf(fallback) !== Object.prototype;
     let merged = own && typeof fallback.copy == 'function' ? fallback.copy() : undefined;
-    if (own && typeof fallback.copy == 'function' && (!merged || typeof merged != 'object'))
-        warn?.(`${path || ' default'} has a copy method that gives back no object, its members taken as its own`);
-    const copied = !!merged && typeof merged == 'object';
+    // one that gives back no new object, nothing or the default itself, would be written into, so is as none
+    if (own && typeof fallback.copy == 'function' && (!merged || typeof merged != 'object' || merged === fallback))
+        warn?.(`${path || ' default'} has a copy method that gives back no new object, its members taken as its own`);
+    const copied = !!merged && typeof merged == 'object' && merged !== fallback;
     copied || (merged = Object.create(Object.getPrototypeOf(fallback)));
     if (!copied)
         for (const key of Object.keys(fallback))
@@ -967,18 +978,17 @@ function objectLayersMergeClass(fallback, value, warn, path='')
 function objectLayersProperties(type, object, tileMapData)
 {
     const properties = {}, set = (key, value)=> objectPropertySet(properties, key, value);
+    const list = objectLayersPropertyList(object);
     for (const [key, value] of Object.entries(type.defaults))
     {
-        const copy = objectPropertyCopy(value);
-        // a default of a class whose copy method gives back nothing is one object every object of the type shares
-        copy === value && value && typeof value == 'object' && typeof value.copy == 'function' &&
-            objectLayersWarnOnce(tileMapData, 'copy ' + key, `objectLayersLoad: the default ${key} has a copy ` +
-            'method that gives back no object, so every object shares the one default');
-        set(key, copy);
+        // a default of a class whose copy method gives back no new object, at any depth, is said by its type, and
+        // only for an object that leaves it alone, which then shares it; one the map sets gets its own
+        const typeName = object.type || object.class, given = list.some((property)=> property.name === key);
+        set(key, objectPropertyCopy(value, given ? undefined :
+            objectPropertySharedWarn(tileMapData, 'objectLayersLoad', typeName, key)));
     }
     // a list of {name, type, value}, as Tiled 1.2 and on write it, or an older map's object of them; an entry that is
     // not one, or a color that is not a hex string, is said and left out, read before the object is made
-    const list = objectLayersPropertyList(object);
     isArray(object.properties) && list.length < object.properties.length && objectLayersWarnOnce(tileMapData,
         object.id + ' not {name, value}', `objectLayersLoad: object ${object.id} has a property that is not {name, value}`);
     const say = (about, text)=> objectLayersWarnOnce(tileMapData, object.id + ' ' + name + about,
@@ -1042,7 +1052,9 @@ function objectLayersMake(tileMapData, object)
     // its properties read first, so a map that can not be read stops before anything is made for it
     const properties = objectLayersProperties(type, object, tileMapData);
     const {make} = type, result = make.prototype ? new make(pos) : make(pos);
-    if (!result || typeof result !== 'object') return;
+    // what it made is an object of the game's; a marker's function, (pos)=> start = pos, gives back the position, a
+    // value of the engine's, which is not, and a list unloaded by destroy would throw on it
+    if (!result || typeof result !== 'object' || result instanceof Vector2 || isColor(result)) return;
     for (const [key, value] of Object.entries(properties))
         objectPropertyAssign(result, key, value, name, undefined, (why)=> objectLayersWarnOnce(tileMapData,
             object.id + ' ' + key + why, `objectLayersLoad: ${name} property ${key} ${why}, left out`));
