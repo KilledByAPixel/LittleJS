@@ -98,7 +98,7 @@ test('readSaveData gives a number default back inside arrays and objects, and co
             best: {level1: 'Infinity', level2: 5}, names: ['a', 'b'], deep: {list: [{t: 'Infinity'}]}}, file);
         // a number where the default has one, anything else as saved where it has none
         assert.deepEqual(JSON.parse(result[1]), {bestTimes: [12, 'Infinity', 'Infinity', 7],
-            best: {level1: 3, extra: null}, names: [1, null], deep: {list: [{t: 'Infinity'}]}}, file);
+            best: {level1: 3, extra: null, level2: 5}, names: [1, null], deep: {list: [{t: 'Infinity'}]}}, file);
         assert.deepEqual(JSON.parse(result[2]), {bestTimes: ['Infinity', 'Infinity', 'Infinity'],
             best: {level1: 'Infinity', level2: 5}, names: ['a', 'b'], deep: {list: [{t: 'Infinity'}]}},
             file + ': defaults untouched');
@@ -339,7 +339,7 @@ test('setSoundPauseWhenHidden changed while the page is hidden moves the UI\'s v
     assert.equal(run('video.video.paused'), false, 'and back when it is off');
 });
 
-test('a nine-slice of a packed group of nine frames reads them in order, a grid tile its block (P3)', ()=>
+test('a nine-slice reads its 3 by 3 block whatever its tile\'s columns (P3, pass 30 P1)', ()=>
 {
     const { run } = loadEngine();
     const read = (columns)=> JSON.parse(run(`(()=>
@@ -352,7 +352,8 @@ test('a nine-slice of a packed group of nine frames reads them in order, a grid 
         finally { drawTile = draw; }
         return JSON.stringify([...new Set(seen)].sort());
     })()`));
-    assert.deepEqual(read(9), ['0,0', '1,0', '2,0', '3,0', '4,0', '5,0', '6,0', '7,0', '8,0'], 'one row of nine');
+    // pass 30: an atlas packs a group of nine as a 3 by 3 block, so every start tile reads its block
+    assert.deepEqual(read(9), ['0,0', '0,1', '0,2', '1,0', '1,1', '1,2', '2,0', '2,1', '2,2'], 'columns 9');
     assert.deepEqual(read(0), ['0,0', '0,1', '0,2', '1,0', '1,1', '1,2', '2,0', '2,1', '2,2'], 'a 3 by 3 block');
 });
 
