@@ -532,6 +532,9 @@ function editor3DLevelLoaded(level)
         for (const frame of editor3DPrefabStack)
             for (const map of frame.maps)
                 map && !map.destroyed && map.destroy();
+        // and what the open prefab made, in no list of the game's, so nothing would ever take it out of the world
+        for (const made of editor3DInstances.values())
+            made?.destroy?.(), editor3DListSwap(made, undefined);
         editor3DPrefabStack.length = 0;
         editor3DPrefabEdits = {};
     }
@@ -1126,6 +1129,10 @@ function editor3DVoxelBoxTo(drag, cell)
 {
     const map = editor3DVoxelMap();
     if (!map) return;
+    // the same box as last frame is filled already, done again it would rebuild its chunks every frame it is held
+    const key = [cell.x, cell.y, cell.z, drag.layer, drag.grow, drag.height, drag.axis, drag.mode].join();
+    if (drag.boxKey === key) return;
+    drag.boxKey = key;
     for (const [at, type] of drag.changed.values())
         map.setVoxel(at, type);
     drag.changed.clear();
@@ -1954,7 +1961,18 @@ const editor3DEdit =
     place(type, pos3D) { return level3DTypes.has(type) ? editor3DPlace(type, pos3D) : undefined; },
     setTransform(object, pos3D, rotation, scale3D) { editor3DSetTransform(object, pos3D, rotation, scale3D); },
     setProperty(object, name, value)
-    { editor3DSetProperty(object, name, value, level3DTypes.get(object.type)?.defaults[name]); },
+    {
+        // a value the load reads back, of its default's kind and a number finite, as the 2D one takes, or the load
+        // would keep the default and the edit would be an undo step the game never sees
+        const d = level3DTypes.get(object.type)?.defaults[name];
+        const finite = typeof value != 'number' || isFinite(value);
+        const fits = finite && (isColor(d) ? isColor(value) : isVector3(d) ? isVector3(value) :
+            isVector2(d) ? isVector2(value) : d === undefined || d === null ? true :
+            typeof value === typeof d && value !== null && isArray(value) === isArray(d));
+        ASSERT(fits, `setProperty: ${name} can not be ${typeof value == 'number' ? value : objectPropertyKindName(value)}` +
+            `, its default is ${objectPropertyKindName(d)}`);
+        fits && editor3DSetProperty(object, name, value, d);
+    },
     pos(object) { return editor3DPos(object); },
     rotation(object) { return editor3DRotation(object); },
     scale(object) { return editor3DScale(object); },

@@ -634,6 +634,34 @@ const SHADER_RESERVED_NAMES = /* @__PURE__ */ new Set(['main', 'mainImage', 'mai
 // the short names of the wrappers' inputs, outputs and uniforms, which a uniform can not take in a stage whose
 // snippet names it, where it would be declared: the 2D fragment's and the 3D fragment's, and the 3D vertex
 // stage's, its depth program's (cut, a float the engine sets, A) too; a name a snippet does not use is never declared
+// GLSL ES 3.00's keywords, its reserved words and its built-in functions, which a uniform can not be named, as its
+// declaration would not compile or would hide the function from the wrapper's own code after it
+const SHADER_GLSL_WORDS = /* @__PURE__ */ new Set((
+    'const uniform layout centroid flat smooth break continue do for while switch case default if else in out ' +
+    'inout float int void bool true false invariant discard return mat2 mat3 mat4 mat2x2 mat2x3 mat2x4 mat3x2 ' +
+    'mat3x3 mat3x4 mat4x2 mat4x3 mat4x4 vec2 vec3 vec4 ivec2 ivec3 ivec4 bvec2 bvec3 bvec4 uint uvec2 uvec3 uvec4 ' +
+    'lowp mediump highp precision sampler2D sampler3D samplerCube sampler2DShadow samplerCubeShadow ' +
+    'sampler2DArray sampler2DArrayShadow isampler2D isampler3D isamplerCube isampler2DArray usampler2D usampler3D ' +
+    'usamplerCube usampler2DArray struct attribute varying coherent volatile restrict readonly writeonly resource ' +
+    'atomic_uint noperspective patch sample subroutine common partition active asm class union enum typedef ' +
+    'template this goto inline noinline public static extern external interface long short double half fixed ' +
+    'unsigned superp input output hvec2 hvec3 hvec4 dvec2 dvec3 dvec4 fvec2 fvec3 fvec4 sampler3DRect filter ' +
+    'image1D image2D image3D imageCube iimage1D iimage2D iimage3D iimageCube uimage1D uimage2D uimage3D ' +
+    'uimageCube image1DArray image2DArray iimage1DArray iimage2DArray uimage1DArray uimage2DArray image1DShadow ' +
+    'image2DShadow image1DArrayShadow image2DArrayShadow imageBuffer iimageBuffer uimageBuffer sampler1D ' +
+    'sampler1DShadow sampler1DArray sampler1DArrayShadow isampler1D isampler1DArray usampler1D usampler1DArray ' +
+    'sampler2DRect sampler2DRectShadow isampler2DRect usampler2DRect samplerBuffer isamplerBuffer usamplerBuffer ' +
+    'sampler2DMS isampler2DMS usampler2DMS sampler2DMSArray isampler2DMSArray usampler2DMSArray sizeof cast ' +
+    'namespace using buffer shared radians degrees sin cos tan asin acos atan sinh cosh tanh asinh acosh atanh ' +
+    'pow exp log exp2 log2 sqrt inversesqrt abs sign floor trunc round roundEven ceil fract mod modf min max ' +
+    'clamp mix step smoothstep isnan isinf floatBitsToInt floatBitsToUint intBitsToFloat uintBitsToFloat ' +
+    'packSnorm2x16 unpackSnorm2x16 packUnorm2x16 unpackUnorm2x16 packHalf2x16 unpackHalf2x16 length distance dot ' +
+    'cross normalize faceforward reflect refract matrixCompMult outerProduct transpose determinant inverse ' +
+    'lessThan lessThanEqual greaterThan greaterThanEqual equal notEqual any all not textureSize texture ' +
+    'textureProj textureLod textureOffset texelFetch texelFetchOffset textureProjOffset textureLodOffset ' +
+    'textureProjLod textureProjLodOffset textureGrad textureGradOffset textureProjGrad textureProjGradOffset dFdx ' +
+    'dFdy fwidth').split(' '));
+
 const SHADER_FRAGMENT_NAMES = /* @__PURE__ */ new Set(['v', 'l', 'd', 'e', 'c', 'm', 'P', 'N', 'T', 'L', 'C', 'S',
     'o']);
 const SHADER_VERTEX_NAMES = /* @__PURE__ */ new Set(['p', 'n', 't', 'c', 'm0', 'm1', 'm2', 'm3', 'tint', 'uvRect',
@@ -745,8 +773,9 @@ class Shader
         this.uniformsVersion = 0;
         for (const name in uniforms)
         {
-            ASSERT(/^[A-Za-z_][A-Za-z0-9_]*$/.test(name) && !name.startsWith('gl_'),
-                'a Shader uniform is named as a GLSL variable is', name);
+            ASSERT(/^[A-Za-z_][A-Za-z0-9_]*$/.test(name) && !name.startsWith('gl_') && !name.includes('__') &&
+                !SHADER_GLSL_WORDS.has(name),
+                'a Shader uniform is named as a GLSL variable is, not a GLSL word or built-in function', name);
             // the wrappers' own names would be declared twice or turned into something else by their macros: i and a
             // capital as iTime, the rest of the 2D and 3D wrappers' names, listed here since core can not read the
             // plugin's, and their short names in a stage whose snippet names them

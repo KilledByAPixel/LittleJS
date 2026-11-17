@@ -253,7 +253,8 @@ function shareURL(title, url, callback)
  *  - An array or object default not saved comes back as a copy, a vec2 or a Color in it too, so changing it leaves
  *    the default; a key a nested object default has that the save has not, a setting added since, is the default's,
  *    and a saved array is the array that was saved, shorter or longer than its default
- *  - Inside an array or object a vec2 or a Color comes back as JSON gave it, {x, y} or {r, g, b, a}, and a value of a
+ *  - Inside an array or object a vec2 or a Color comes back as one too, from its saved numbers, and an object or
+ *    array default saved as anything that is not one, an older save's number, comes back as the default; a value of a
  *    class with no copy method is the default's own when not saved, and as JSON gave it once saved
  *  @template {Object<string, any>} [T=any]
  *  @param {string} saveName - unique name for the game/save
@@ -345,7 +346,25 @@ function saveDataNumbers(fallback, saved)
 {
     if (typeof fallback === 'number')
         return typeof saved === 'number' ? saved : fallback;
-    if (!saveDataPlain(fallback) || !saved || typeof saved !== 'object' || isArray(fallback) !== isArray(saved))
+    if (fallback && typeof fallback === 'object' && !saveDataPlain(fallback) && typeof fallback.copy === 'function')
+    {
+        // a vec2 or a Color in an array or object made one again from its numbers, as one at the top level is
+        const copy = fallback.copy();
+        if (!copy || typeof copy !== 'object') return saved;
+        const fields = Object.keys(copy);
+        if (saved && typeof saved === 'object' && !isArray(saved) && fields.every((f)=> typeof copy[f] === 'number'))
+            for (const field of fields)
+                Number.isFinite(saved[field]) && (copy[field] = saved[field]);
+        else if (saved && typeof saved === 'object')
+            return saved; // one with more than numbers stays as JSON gave it
+        return copy;
+    }
+    if (!saveDataPlain(fallback))
+        return saved;
+    // an object or array default saved as a number, a string or null, an older save's form, is the default
+    if (!saved || typeof saved !== 'object')
+        return saveDataCopy(fallback);
+    if (isArray(fallback) !== isArray(saved))
         return saved;
     for (const key of Object.keys(saved))
         key !== '__proto__' && Object.prototype.hasOwnProperty.call(fallback, key) &&

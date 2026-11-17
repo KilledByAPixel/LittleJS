@@ -47,7 +47,8 @@ you call `engineStep`. Together they make time-driven game logic deterministic a
 `Timer`, time-based spawns, cooldowns, and physics all advance exactly as many frames as you
 ask for. `engineStep` drives the real update loop, so `timeScale` scales fixed updates per
 step just as it does under `requestAnimationFrame`: at `timeScale = .5`, ten steps run five
-fixed updates. Leave `timeScale` at 1 when you want frame counts to match exactly.
+fixed updates, up to a scale of 300, past which a step runs about 300 as a frame does. Leave
+`timeScale` at 1 when you want frame counts to match exactly.
 
 ```javascript
 setHeadlessMode(true);        // no rendering, audio, or input
@@ -1952,7 +1953,7 @@ buildTorus(size=1, tubeSize=.3, sides=16, tubeSides=8, smooth) // size is the di
                                                                // to outside edge; it lies flat in the XZ plane like a
                                                                // coin on a table, so rotation3D.x = PI/2 stands it up
 buildLathe(profile, sides=16, smooth, capped=true) // spins an outline around the Y axis like a vase on a wheel; profile
-                                                   // is [[radius, y], ...] bottom to top, a closed profile is a ring;
+                                                   // is [[radius, y], ...] or vec2(radius, y)s bottom to top, closed a ring;
                                                    // an uncapped end makes it doubleSided, so its inside shows;
                                                    // smooth, an end on the axis within 45 degrees of level is a
                                                    // round pole like a sphere's, a steeper one a point like a cone's

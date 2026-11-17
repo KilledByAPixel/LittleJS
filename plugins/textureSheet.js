@@ -434,11 +434,7 @@ function loadAtlas(imageSrc, jsonSrc, padding=textureSheetPadding)
                         'left out:', group.name);
                     continue;
                 }
-                // a row of its frames, or a group of nine as a 3 by 3 block, as a nine-slice reads one; frame(k) is
-                // the same frame either way
-                const nine = group.frames.length === 9;
-                const blockSize = nine ? sourceSize.scale(3) : vec2(sourceSize.x*group.frames.length, sourceSize.y);
-                const added = textureSheetAdd(blockSize, sourceSize, padding);
+                const added = textureSheetAddGroup(group.frames.length, sourceSize, padding);
                 if (!added)
                 {
                     console.warn('loadAtlas frames are too large to fit on a texture sheet:', group.name);
@@ -683,6 +679,14 @@ function textureSheetCreate()
 
 // use the first sheet with enough space, or make a new one,
 // returns undefined if it would not fit even on an empty sheet
+// a block for an atlas group's frames: a row of them, or a group of nine as a 3 by 3 block, as a nine-slice reads
+// one, and as a row when frames that tall do not fit three high; frame(k) is the same frame either way
+function textureSheetAddGroup(count, frameSize, padding)
+{
+    return count === 9 && textureSheetAdd(frameSize.scale(3), frameSize, padding) ||
+        textureSheetAdd(vec2(frameSize.x * count, frameSize.y), frameSize, padding);
+}
+
 function textureSheetAdd(imageSize, frameSize, padding, sourcePadding)
 {
     let sheet, tile;

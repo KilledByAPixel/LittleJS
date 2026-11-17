@@ -736,32 +736,33 @@ class HeightMap extends EngineObject3D
     {
         const p = o.pos3D, m = this.pos3D, size = this.mapSize, hx = size.x / 2, hz = size.y / 2;
         const half = o.size3D.y * abs(o.scale3D.y) / 2;
-        // the map's edge, to a body coming from off it, is a wall where it stands higher than the body's step above
-        // its foot, as a cliff inside the map is, so a raised edge is not climbed at once however high; its side
-        // stops at the edge, and a lower edge is walked onto
+        // the map's edge, to a body moving onto it from off it, is a wall where it stands higher than the body's step
+        // above its foot, as a cliff inside the map is, so a raised edge is not climbed at once however high, and a
+        // lower edge is walked onto; judged while its side is over the map but its middle not yet, the ground it
+        // walks on, another map or a ramp, may still rise to the edge, as steep as a walkable slope over the way its
+        // middle has to go, so that much more is allowed: a seam on a slope is no wall, a raised edge stops its side
+        // at the edge; a body moving away from the map, or falling beside it, is left alone, as at a cliff in the map
         if (oldPos && (abs(oldPos.x - m.x) > hx || abs(oldPos.z - m.z) > hz))
         {
             const side = min(o.size3D.x * abs(o.scale3D.x), o.size3D.z * abs(o.scale3D.z)) / 2;
             const inX = hx + side - abs(p.x - m.x), inZ = hz + side - abs(p.z - m.z); // how far its box is past the edges
-            // the height on the edge it came over, not past it, where a ramp from a low edge is the slope rule's
+            // the edge it came over, at a corner the one it is in least past, and the height on it, not past it
             const offX = abs(oldPos.x - m.x) > hx, offZ = abs(oldPos.z - m.z) > hz;
-            const edge = this.getHeight(offX ? m.x + sign(oldPos.x - m.x) * hx : clamp(p.x, m.x - hx, m.x + hx),
-                offZ ? m.z + sign(oldPos.z - m.z) * hz : clamp(p.z, m.z - hz, m.z + hz));
-            if (inX > 1e-9 && inZ > 1e-9 && edge > oldPos.y - half + half / 2 + 1e-6)
+            const acrossX = offX && (!offZ || inX <= inZ), h = acrossX ? hx : hz, mc = acrossX ? m.x : m.z;
+            const s = sign((acrossX ? oldPos.x : oldPos.z) - mc), at = (x)=> s * (x - mc); // how far out along it
+            const was = at(acrossX ? oldPos.x : oldPos.z), now = at(acrossX ? p.x : p.z);
+            if (inX > 1e-9 && inZ > 1e-9 && now < was)
             {
-                // back out across the edge it came over, at a corner the one it is in least past
-                const acrossX = offX && (!offZ || inX <= inZ), v = o.velocity3D;
-                if (acrossX)
+                const edge = this.getHeight(offX ? m.x + sign(oldPos.x - m.x) * hx : clamp(p.x, m.x - hx, m.x + hx),
+                    offZ ? m.z + sign(oldPos.z - m.z) * hz : clamp(p.z, m.z - hz, m.z + hz));
+                // and a round body coming over the crest where a ramp meets the edge sinks by as much as it sits
+                // lower on the steepest of them, its side by 1 / cos less 1
+                const steep = min(cos(o.groundAngle), .7), rise = (1 - steep * steep) ** .5 / steep;
+                if (edge > oldPos.y - half + half / 2 + max(0, now - h) * rise + side * (1 / steep - 1) + 1e-6)
                 {
-                    const s = sign(oldPos.x - m.x);
-                    p.x = m.x + s * (hx + side);
-                    v.x * s < 0 && (v.x = 0);
-                }
-                else
-                {
-                    const s = sign(oldPos.z - m.z);
-                    p.z = m.z + s * (hz + side);
-                    v.z * s < 0 && (v.z = 0);
+                    // it goes no further in: its side at the edge, or where it was if it was nearer already
+                    const stop = mc + s * min(h + side, was), v = o.velocity3D;
+                    acrossX ? (p.x = stop, v.x * s < 0 && (v.x = 0)) : (p.z = stop, v.z * s < 0 && (v.z = 0));
                 }
             }
         }

@@ -690,7 +690,9 @@ const objectLayersTypes = new Map;
  *    make(pos), for what is not an object, like a player start
  *  - The defaults, and then the properties the object has in Tiled, are set on what it made
  *  - Each object gets a copy of an array or plain object default; a default that is an instance of a class of the
- *    game's own is copied with its copy method, so give the class one, or every object shares the one instance
+ *    game's own is copied with its copy method, so give the class one, or every object shares the one instance,
+ *    and an object whose map sets one of its members gets a new instance of the class with none of its private
+ *    fields, the members its own
  *  - Adding a name again replaces it
  *  @param {string} name - The type the objects have in Tiled
  *  @param {(function(Vector2): unknown)|(function(new: unknown, Vector2))} make - A class made at each object's
@@ -815,7 +817,11 @@ function objectPropertyCopy(value)
     if (isArray(value)) return value.map(objectPropertyCopy);
     if (!value || typeof value != 'object') return value;
     if (Object.getPrototypeOf(value) !== Object.prototype)
-        return typeof value.copy == 'function' ? value.copy() : value;
+    {
+        // a copy method that gives back no object is as none, the value itself
+        const copy = typeof value.copy == 'function' ? value.copy() : undefined;
+        return copy && typeof copy == 'object' ? copy : value;
+    }
     const copy = {};
     for (const key of Object.keys(value))
         objectPropertyShared(key) || Object.defineProperty(copy, key,
@@ -900,8 +906,12 @@ function objectLayersMergeClass(fallback, value, warn, path='')
     // instance of a class with a copy method, a Color, a Vector2 or the game's own, is its copy, which keeps what
     // the class keeps to itself, and the members are assigned so its setters run; one with no copy method is a new
     // object of its class with the default's members, without its private fields
-    const own = Object.getPrototypeOf(fallback) !== Object.prototype, copied = own && typeof fallback.copy == 'function';
-    const merged = copied ? fallback.copy() : Object.create(Object.getPrototypeOf(fallback));
+    const own = Object.getPrototypeOf(fallback) !== Object.prototype;
+    let merged = own && typeof fallback.copy == 'function' ? fallback.copy() : undefined;
+    if (own && typeof fallback.copy == 'function' && (!merged || typeof merged != 'object'))
+        warn?.(`${path || ' default'} has a copy method that gives back no object, its members taken as its own`);
+    const copied = !!merged && typeof merged == 'object';
+    copied || (merged = Object.create(Object.getPrototypeOf(fallback)));
     if (!copied)
         for (const key of Object.keys(fallback))
             objectPropertySet(merged, key, objectPropertyCopy(fallback[key]));
@@ -919,9 +929,13 @@ function objectLayersMergeClass(fallback, value, warn, path='')
             try { typeof fallback[key] != 'function' && (before = fallback[key]); } catch { }
         const member = value[key];
         const read = objectPropertyFromText(member, before); // a Color or Vector2 member as Tiled writes it
+        // given as every member is: assigned to a copy, its setter run, and its own to one with no copy method
+        const give = (result)=> copied ?
+            objectPropertyAssign(merged, key, result, '', '', (why)=> warn?.(`${name} ${why}, left out`)) :
+            objectPropertySet(merged, key, result);
         if (read)
         {
-            objectPropertySet(merged, key, read);
+            give(read);
             continue;
         }
         if (before != null && objectPropertyKind(before) !== objectPropertyKind(member))
@@ -933,8 +947,18 @@ function objectLayersMergeClass(fallback, value, warn, path='')
         // assigned to a copy, so its setters run; one with no copy method has none of its class's private fields for
         // an accessor to read, it gets the member as its own
         const result = objectLayersMergeClass(before, member, warn, name);
-        copied ? objectPropertyAssign(merged, key, result, '', '', (why)=> warn?.(`${name} ${why}, left out`)) :
-            objectPropertySet(merged, key, result);
+        // its own would take the place of a method of the game's class, read by its descriptor so no getter runs
+        let method = false;
+        for (let p = Object.getPrototypeOf(fallback); !copied && own && p && p !== Object.prototype;
+            p = Object.getPrototypeOf(p))
+        {
+            const found = Object.getOwnPropertyDescriptor(p, key);
+            if (found) { method = !found.get && !found.set && typeof found.value == 'function'; break; }
+        }
+        if (method && typeof result != 'function')
+            warn?.(`${name} has a method's name, left out`);
+        else
+            give(result);
     }
     return merged;
 }
@@ -948,8 +972,8 @@ function objectLayersProperties(type, object, tileMapData)
     // a list of {name, type, value}, as Tiled 1.2 and on write it, or an older map's object of them; an entry that is
     // not one, or a color that is not a hex string, is said and left out, read before the object is made
     const list = objectLayersPropertyList(object);
-    debug && isArray(object.properties) && list.length < object.properties.length &&
-        console.warn(`objectLayersLoad: object ${object.id} has a property that is not {name, value}`);
+    isArray(object.properties) && list.length < object.properties.length && objectLayersWarnOnce(tileMapData,
+        object.id + ' not {name, value}', `objectLayersLoad: object ${object.id} has a property that is not {name, value}`);
     const say = (about, text)=> objectLayersWarnOnce(tileMapData, object.id + ' ' + name + about,
         `objectLayersLoad: object ${object.id}'s ${name}${text}`);
     let name;
@@ -961,8 +985,8 @@ function objectLayersProperties(type, object, tileMapData)
         if (property.type === 'color' && (fallback == null || isColor(fallback)))
         {
             const hex = typeof value == 'string' && /^#([0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})$/i.test(value);
-            value && !hex && debug && console.warn(`objectLayersLoad: object ${object.id}'s color ${name} is not a ` +
-                'hex color, left out');
+            value && !hex && objectLayersWarnOnce(tileMapData, object.id + ' ' + name + ' hex',
+                `objectLayersLoad: object ${object.id}'s color ${name} is not a hex color, left out`);
             hex && set(name, tileLayersColor(value)); // an empty color is unset
         }
         else if (isVector2(fallback) && typeof value != 'object')

@@ -1272,7 +1272,14 @@ function touchGamepadInit()
     touchGamepadSideZones[1] = makeZone(); // right
     touchGamepadZoneC = makeZone(); // center/start, appended last so it sits above the sides
 
-    addEventListener('resize', ()=> touchGamepadNeedRelayout = true);
+    // a resize lays the zones out again, and a floating stick no finger holds goes back to its side's place, as its
+    // last place is in the old stage's pixels, off a rotated one
+    addEventListener('resize', ()=>
+    {
+        touchGamepadNeedRelayout = true;
+        touchGamepadStickAnchors.forEach((a, side)=> touchGamepadStickPointerId[side] === undefined &&
+            (touchGamepadStickAnchors[side] = undefined));
+    });
     document.body.appendChild(overlay);
     touchGamepadNeedRelayout = true;
 }

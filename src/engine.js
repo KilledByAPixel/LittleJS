@@ -615,6 +615,9 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
                         if (!frozenTick)
                             time = timeFixedStart + (frame++ - frameFixedStart) / frameRate;
                         engineTick(frozenTick);
+                        // frozen by the game mid catch-up, the rest of the frame's ticks are dropped, one frozen
+                        // tick is enough, where a big time scale would run a hundred more
+                        frozenTick && !frozen && (frameTimeBufferMS = min(frameTimeBufferMS, 1e3 / frameRate - 1e-9));
                     }
                     finally { frameTimeBufferMS -= 1e3 / frameRate; }
                 }

@@ -933,12 +933,12 @@ function render3DWholeCount(count, name)
 
 /**
  * Spin a flat outline around the Y axis to make a round shape, like a vase or a wheel
- * - profile is [[radius, y], ...] from bottom to top
+ * - profile is [[radius, y], ...] from bottom to top, or vec2(radius, y) points
  * - A profile that ends where it starts makes a closed ring like a donut
  * - An end left open, with a radius and no cap, makes the mesh doubleSided so its inside shows
  * - An end on the axis smooth shades as a round pole like a sphere's when its segment is within 45 degrees of
  *   level, and as a point like a cone's tip when it is steeper
- * @param {Array<Array<number>>} profile
+ * @param {Array<Array<number>|Vector2>} points - The profile
  * @param {number} [sides] - Around the axis
  * @param {boolean} [smooth] - Defaults to render3D.smoothShading
  * @param {boolean} [capped] - Close the ends that have a radius with flat discs
@@ -947,9 +947,14 @@ function render3DWholeCount(count, name)
  * @example
  * const vase = buildLathe([[0, -1], [.8, -.3], [.9, .2], [.4, .6], [0, 1]], 12);
  */
-function buildLathe(profile, sides=16, smooth=render3D?.smoothShading, capped=true)
+function buildLathe(points, sides=16, smooth=render3D?.smoothShading, capped=true)
 {
-    ASSERT(isArray(profile) && profile.length > 1, 'lathe profile needs at least 2 points');
+    ASSERT(isArray(points) && points.length > 1, 'lathe profile needs at least 2 points');
+    // a point is [radius, y] or a vec2 of them, each a finite number
+    const profile = /** @type {Array<Array<number>>} */ (points.map((p)=> isVector2(p) ? [p.x, p.y] : p));
+    ASSERT(profile.every((p)=> isArray(p) && p.length >= 2 && isFinite(p[0]) && isFinite(p[1])),
+        'a lathe profile point is [radius, y] or vec2(radius, y)', profile.find((p)=> !isArray(p) || !isFinite(p[0]) ||
+        !isFinite(p[1])));
     sides = render3DWholeCount(sides, 'sides');
     ASSERT(sides > 2, 'lathe needs at least 3 sides');
     sides = max(3, sides);

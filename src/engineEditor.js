@@ -73,7 +73,7 @@
  *    selected tile layer
  *    to a tile index, -1 erases, with a direction 0 to 3 and a mirror; false off the layer or with none
  *  @property {function(function(Array<TiledObject>): void): boolean} changeObjects - Edit a copy of the selected object
- *    layer's objects; false when nothing changed
+ *    layer's objects; false when nothing changed, or while an async onRestart runs, which makes the objects again
  *  @property {function(TiledObject, string, number|boolean|string|Color|Vector2): void} setProperty - Write a property
  *    on an object of the list given to changeObjects as Tiled keeps it, a Color as #AARRGGBB and a Vector2 as x,y,
  *    left out of the map when it is the type's default; a value not of the default's kind, a Vector2 over no
@@ -83,8 +83,8 @@
  *  @property {function(): void} strokeCancel - Take the edit being made back
  *  @property {function(function(): void): void} bulk - Many paints with one redraw a layer
  *  @property {(redo?: boolean) => boolean} undo - Undo, or redo with true; false when there was nothing to undo or
- *    an async onRestart runs; false when there was nothing to undo or
- *    it waits for a restart
+ *    it waits for a restart: of objects while an async onRestart runs, of a resize or a resized layer's tiles till
+ *    it has made the layers
  *  @property {function(): string} toJSON - The map as the text Save writes
  *  @memberof Editor
  */
@@ -170,12 +170,14 @@
  *    Write a place, a rotation and a scale on an
  *    object of the list given to change; one left out is kept
  *  @property {function(Level3DObject, string, any): void} setProperty - Write a property on an object of the list given
- *    to change, left out of the file when it is the type's default
+ *    to change, left out of the file when it is the type's default; a value not of the default's kind, or a number
+ *    that is not finite, is not written, with an assert, as the load would keep the default
  *  @property {function(Level3DObject): Vector3} pos - An object's position
  *  @property {function(Level3DObject): Vector3} rotation - Its rotation, in degrees
  *  @property {function(Level3DObject): Vector3} scale - Its scale
  *  @property {function(): Vector3|undefined} mousePoint - Where the mouse is on the level or the ground, undefined over the panel
- *  @property {(redo?: boolean) => boolean} undo - Undo, or redo with true
+ *  @property {(redo?: boolean) => boolean} undo - Undo, or redo with true; false when there was nothing to undo or
+ *    an async onRestart runs
  *  @property {function(): string} toJSON - The level as the text Save writes
  *  @memberof Editor
  */
@@ -240,7 +242,8 @@ class LevelEditor
      *    Apply of the same size going in as any edit, and the 3D editor takes no edit, undo or Reset; the
      *    game is held still while the editor is open, so one that waits for its frames, a fade, finishes once the editor
      *    closes, which Play and Escape do then with no player put at the mouse, and with no debug key the 3D editor
-     *    stays closed till it settles; a promise that never settles makes restarts wait till the page reloads
+     *    stays closed till it settles, then opens again; the 2D editor takes no object edit or undo meanwhile, which
+     *    the restart would make a second time; a promise that never settles makes restarts wait till the page reloads
      *  @return {void|Promise<void>} */
     onRestart() {}
 
@@ -1490,9 +1493,11 @@ function editorUndo(redo=false)
     const list = redo ? editorRedoList : editorUndoList, last = list[list.length - 1];
     // a stroke on a layer an async onRestart is making again waits on its list, as its cells are not the map's
     // yet; a resize waits while a restart runs, as undoing it calls the game's onRestart again, and goes on once the
-    // restart has settled, which is how one that failed is ended
+    // restart has settled, which is how one that failed is ended; one of objects waits for any restart, which makes
+    // them again
     if (last?.some((entry)=> entry.layer && editorLayerResizing(entry.layer) ||
-        entry.objectLayer && editorRecordResizing(entry.objectLayer.record) || entry.resize && editorRestartRunning))
+        entry.objectLayer && (editorRecordResizing(entry.objectLayer.record) || editorRestartRunning) ||
+        entry.resize && editorRestartRunning))
         return editorBusyNudge(), false;
     const stroke = list.pop();
     if (!stroke) return false;
@@ -1697,7 +1702,9 @@ function editorSetObjects(layer, list)
 function editorChangeObjects(layer, change)
 {
     if (!layer || layer.record.pending) return false; // its autosaved edits wait to be applied or dropped first
-    if (editorRecordResizing(layer.record)) return editorBusyNudge(), false; // its map is being made again
+    // its map is being made again, or an async onRestart makes the level's objects, which would make one added or
+    // changed now a second time, as the 3D editor waits
+    if (editorRecordResizing(layer.record) || editorRestartRunning) return editorBusyNudge(), false;
     const before = editorObjectList(layer), after = editorObjectsCopy(before);
     change(after);
     if (editorSameData(before, after)) return false;
