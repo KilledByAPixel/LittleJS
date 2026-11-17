@@ -110,10 +110,10 @@ test('edit3D.setProperty refuses a plain object that leaves out a default member
         return JSON.stringify({said, written, saved: level.objects[0].properties, undo: editor3DUndoList.length});
     })()`));
     assert.deepEqual(r.said, [
-        'loot can not be an object that leaves out a member of the default, its default is an object',
-        'loot can not be an object that leaves out a member of the default, its default is an object',
-        'extra can not be an instance of a class, or hold one, its default is a null',
-        'extra can not be an instance of a class, or hold one, its default is a null']);
+        'loot leaves out a member of its default, which the load would put back',
+        'loot leaves out a member of its default, which the load would put back',
+        'extra can not be given an instance of a class, nor a value holding one, as the file brings it back a plain object',
+        'extra can not be given an instance of a class, nor a value holding one, as the file brings it back a plain object']);
     assert.equal(r.written, true);
     assert.deepEqual(r.saved, {loot: {gold: 2, gem: {kind: 3, size: 2}}});
     assert.equal(r.undo, 1, 'only the edit written is an undo');

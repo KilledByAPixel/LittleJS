@@ -772,7 +772,7 @@ test('a tile area takes a rectangle that fills one of its cells, which hangs fro
         `{ id: 1, type: 'Coin', point: true, x: 8, y: 8 }, { id: 3, type: 'Coin', x: 16, y: 0, width: 16, height: 16 },`) +
         'editorAllLayers = true; editorSelection = editorArea(vec2(1, 1), vec2(1, 1));');
     typed(engine, 'Delete');
-    assert.deepEqual(engine.run('list().map((o)=> o.id)'), [1, 2]);
+    assert.deepEqual(JSON.parse(engine.run('JSON.stringify(list().map((o)=> o.id))')), [1, 2]);
 });
 
 test('a bulk erase of a tile only the game put there draws the layer again', async () =>

@@ -156,12 +156,16 @@ test('only the level and solid objects pull it in, not a sprite or a mesh that i
     near(run(`render3D.camera.pos.distance(vec3(0, 1, 0))`), 6, 'full length');
 });
 
-test('destroying it lets go of a captured pointer', () =>
+test('destroying it lets go of a pointer it captured, and not of one the game captured', () =>
 {
     const run = engine();
     run(`camera.lockPointer = true; var exited = 0; pointerLockIsActive = ()=> true; pointerLockExit = ()=> ++exited;
-        camera.destroy();`);
+        pointerLockRequest = ()=> {}; cameraLockRequest(camera); camera.destroy();`);
     assert.equal(run(`exited`), 1);
+    const run2 = engine();
+    run2(`camera.lockPointer = true; var exited = 0; pointerLockIsActive = ()=> true; pointerLockExit = ()=> ++exited;
+        camera.destroy();`);
+    assert.equal(run2(`exited`), 0);
 });
 
 test('snap on a third person camera that is not driving leaves the view alone', () =>

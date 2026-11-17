@@ -13,7 +13,7 @@ export function loadEngine(extra={}, setup='', file='littlejs.js') // setup runs
     const handlers = {}, listeners = {};
     const context = {
         console, performance, setTimeout, clearTimeout, setInterval, clearInterval, Promise, Map, Set, WeakMap,
-        Float32Array, Uint8Array, Math, JSON, URL, queueMicrotask,
+        Float32Array, Uint8Array, Math, URL, queueMicrotask,
         window: {},
         document: { addEventListener(type, f)
         {

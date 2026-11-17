@@ -28,7 +28,8 @@ test('a property object with a member named copy, or __proto__, is copied as dat
             JSON.stringify({made: made.length, first: seen[0], own: seen[1][0].x === undefined && Object.keys(seen[1][0]).join(), tiled: tiled.map((o)=> o.text)})`));
         assert.equal(result.made, 2, file + ': the level loads');
         assert.deepEqual(result.first, [{speaker: 'Bob', copy: 'Hello'}], file);
-        assert.equal(result.own, '__proto__', file + ': __proto__ is a member, not the prototype');
+        // left out, as a name every object has (pass 28 O4), and never made the prototype
+        assert.equal(result.own, '', file + ': __proto__ is left out, not the prototype');
         assert.deepEqual(result.tiled, [{copy: 'Hi', size: 2}], file + ': and in Tiled');
     }
 });
