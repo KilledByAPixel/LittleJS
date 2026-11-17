@@ -800,7 +800,8 @@ class LightSystemPlugin
                 for (const o of engineObjects)
                 {
                     if (o.destroyed) continue;
-                    const texture = o.normalMap?.glTexture; // not there until its image has loaded, flat till then
+                    // not there until its image has loaded, flat till then; a TileInfo is its texture's
+                    const map = o.normalMap, texture = (map instanceof TileInfo ? map.textureInfo : map)?.glTexture;
                     glColorMask = 0xff000000;                // only the draw's own alpha
                     glColorAdditive = 0xff8080;              // the flat normal, red in the low byte, for what has no texture
                     glTextureOverride = texture;

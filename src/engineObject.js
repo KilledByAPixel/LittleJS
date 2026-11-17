@@ -259,10 +259,11 @@ class EngineObject
          *  renderEmissive, as 3D's emissive. Exact for solid pixels; a partly transparent one is self lit by its alpha
          *  too, so a half alpha pixel shows at a quarter and a fading emissive sprite fades a little faster */
         this.emissive = 0;
-        /** @property {TextureInfo|undefined} - With the light system's normalMaps on, a normal map the lights shade
-         *  it by: an image laid out like its tile sheet, read at the same place as whatever tile it draws, so an
-         *  animation's frames keep their normals, green up the image as 3D's normalMap has it
-         *  @type {TextureInfo|undefined} */
+        /** @property {TextureInfo|TileInfo|undefined} - With the light system's normalMaps on, a normal map the
+         *  lights shade it by: an image laid out like its tile sheet, read at the same place as whatever tile it
+         *  draws, so an animation's frames keep their normals, green up the image as 3D's normalMap has it; a
+         *  TileInfo is read as its whole texture, as 3D's is
+         *  @type {TextureInfo|TileInfo|undefined} */
         this.normalMap = undefined;
         /** @property {boolean} - Should the rendered tile flip along the y axis. Affects rendering and the local→world transform of attached children (a mirrored parent flips its children's localPos.x and localAngle). Does not affect this object's own physics, collision, or localToWorld/worldToLocal. */
         this.mirror = false;

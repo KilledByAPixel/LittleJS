@@ -59,6 +59,13 @@ smokeRun(async ()=>
     check('on: a normal mapped surface faces its light', right > left + 40, [left, right]);
     const white = [left, right];
 
+    // a TileInfo given as the normal map is read as its texture, as 3D reads one
+    ramp.normalMap = tile(0, rampTexture.size, rampTexture);
+    const tiled = leftRight();
+    check('tile: a TileInfo normal map shades as its texture', Math.abs(tiled[0] - left) <= 2 &&
+        Math.abs(tiled[1] - right) <= 2, [tiled, white]);
+    ramp.normalMap = rampTexture;
+
     // a ramp leaning up the image faces a light above it, the green of a normal map
     const upTexture = image('rgb(128,218,218)');
     ramp.normalMap = upTexture;

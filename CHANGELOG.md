@@ -51,6 +51,7 @@ What changed in each release, newest first. Releases before 1.20.0 are on the
 - 3D: two solids with mass that meet trade momentum by their masses, as 2D's do, where each bounced as off a wall, so a crate pushed by the player slides on after it and a kicked ball rolls away; a game that wanted the old stop sets the restitution and damping it needs
 
 ### Fixes
+- A 2D object's `normalMap` may be a TileInfo, read as its texture as 3D's is, where it drew flat
 - A `Timer` of a whole number of frames elapses on the frame it ends, where it was often a frame late, so a cooldown set again each time it elapses keeps an even beat
 - Gamepads: a second player's pad gets no release for a button the first player's pad held as it dropped out; flying the free camera or the 3D editor with the keys does not make `lastInputDevice` the keyboard
 - The module example's build rewrites every import of the engine for its zip, `import {vec2} from` too, where only `import * as LJS` was, leaving a blank page
