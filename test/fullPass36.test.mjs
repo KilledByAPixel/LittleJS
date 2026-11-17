@@ -46,7 +46,7 @@ test('a camera that took the pointer lock lets go when another drives, unless th
         const handed = locked();
         eye.destroy(); // not the owner any more, leaves the lock alone
         const afterOld = locked();
-        chase.destroy(); // the owner lets go
+        chase.destroy(); cameraUpdatePost(); // the owner lets go, at the camera update after
         return JSON.stringify({took, underOrbit, handed, afterOld, last: locked()});
     })()`));
     assert.deepEqual(r, {took: true, underOrbit: false, handed: true, afterOld: true, last: false});

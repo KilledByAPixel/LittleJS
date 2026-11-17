@@ -113,7 +113,7 @@ test('edit3D.setProperty refuses a plain object that leaves out a default member
         'loot leaves out a member of its default, which the load would put back',
         'loot leaves out a member of its default, which the load would put back',
         'extra can not be given an instance of a class, nor a value holding one, as the file brings it back a plain object',
-        'extra can not be given an instance of a class, nor a value holding one, as the file brings it back a plain object']);
+        'extra holds a Color or a vector where its default has none, which the file brings back as text or a list']);
     assert.equal(r.written, true);
     assert.deepEqual(r.saved, {loot: {gold: 2, gem: {kind: 3, size: 2}}});
     assert.equal(r.undo, 1, 'only the edit written is an undo');
@@ -190,7 +190,7 @@ test('a first person camera\'s pointer lock follows driving, and one not driving
         cameraUpdatePost(); inputData[0][0] = 3; a.update(); b.update(); inputData[0][0] = 0;
         exits = 0; a.destroy();
         const switched = {locked, exits};
-        b.destroy();
+        b.destroy(); cameraUpdatePost(); // let go at the camera update after
         return JSON.stringify({tookLock, cutscene, switched, last: {locked, exits}});
     })()`));
     assert.equal(r.tookLock, true);

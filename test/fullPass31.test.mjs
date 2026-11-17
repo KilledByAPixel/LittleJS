@@ -327,7 +327,7 @@ test('edit3D.setProperty writes nothing of another kind or a number that is not 
     run(`level3DAddType('Lamp', class extends EngineObject3D { constructor(pos) { super(pos); } },
         {power: 1, tint: rgb(1, 1, 1), at: vec3(), name: 'a', list: [1]});
         level3DLoad({littlejs3D: 1, objects: [{id: 1, type: 'Lamp', pos: [0, 0, 0]}]}); editor3DOpen();`);
-    for (const code of [`'power', Infinity`, `'power', NaN`, `'power', '5'`, `'tint', '#ff0000'`, `'at', [1, 2, 3]`,
+    for (const code of [`'power', Infinity`, `'power', NaN`, `'power', '5'`, `'tint', '#ff00'`, `'at', [1, 2]`,
         `'name', 5`, `'list', {}`])
         assert.throws(()=> run(`levelEditor.edit3D.change((list)=> levelEditor.edit3D.setProperty(list[0], ${code}))`),
             /Assert failed/, code);

@@ -253,7 +253,7 @@ test('parseAtlas does not group non-contiguous or mismatched frames', () =>
     assert.deepEqual(groups.map(g=> g.name).sort(), ['a_0', 'a_2', 'b_0', 'b_1']);
 });
 
-test('parseAtlas keeps all digit and digit-ending names individual', () =>
+test('parseAtlas keeps all digit names, and a digit-ending name whose stem has no other frame, individual', () =>
 {
     const groups = parseAtlas({frames: {
         '10.png': texturePackerFrame(0, 0, 8, 8),

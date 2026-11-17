@@ -160,11 +160,11 @@ test('destroying it lets go of a pointer it captured, and not of one the game ca
 {
     const run = engine();
     run(`camera.lockPointer = true; var exited = 0; pointerLockIsActive = ()=> true; pointerLockExit = ()=> ++exited;
-        pointerLockRequest = ()=> {}; cameraLockRequest(camera); camera.destroy();`);
+        pointerLockRequest = ()=> {}; cameraLockRequest(camera); camera.destroy(); cameraUpdatePost();`);
     assert.equal(run(`exited`), 1);
     const run2 = engine();
     run2(`camera.lockPointer = true; var exited = 0; pointerLockIsActive = ()=> true; pointerLockExit = ()=> ++exited;
-        camera.destroy();`);
+        camera.destroy(); cameraUpdatePost();`);
     assert.equal(run2(`exited`), 0);
 });
 
