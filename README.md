@@ -34,7 +34,7 @@ The code is very clean and well documented with many examples to get you started
 
 ### ✨ Graphics
 
-- Blazing fast WebGL2 + Canvas2D hybrid rendering system
+- Blazing fast WebGL2 + Canvas2D hybrid rendering system, measured against PixiJS, Three.js, PlayCanvas and more in the [WebGL Engine Bench](https://github.com/KilledByAPixel/webgl-engine-bench)
 - Apply [Shadertoy](https://www.shadertoy.com) style shaders for post-processing effects, or on any object or draw, with values the game sets each frame
 - 2D lights with soft shadows, tinted glass and emissive objects, a sun with long shadows, spotlight cones and gels, and normal maps
 - Robust particle effect system with a library of ready made effects and an [effect design tool](https://killedbyapixel.github.io/LittleJS/examples/particles/)
