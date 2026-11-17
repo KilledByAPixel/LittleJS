@@ -261,22 +261,7 @@ test('a sound started at a bad offset in a release build keeps time from 0 (K1)'
     assert.deepEqual(r, [0, 0, 0]);
 });
 
-test('an atlas frame named as another sprite is said (P1)', ()=>
-{
-    const { run } = loadEngine();
-    const frame = (x)=> ({frame: {x, y: 0, w: 8, h: 8}});
-    const r = JSON.parse(run(`(()=>
-    {
-        const warned = [], warn = console.warn;
-        console.warn = (text)=> warned.push(text);
-        parseAtlas({frames: ${JSON.stringify({run_0: frame(0), run_1: frame(8), run_2: frame(16), run_1_0: frame(24),
-            run_1_1: frame(32)})}});
-        console.warn = warn;
-        return JSON.stringify(warned);
-    })()`));
-    assert.deepEqual(r, ['parseAtlas: frame 1 of run is named run_1 as another sprite is, which that name gives; read ' +
-        'it as run.frame(1)']);
-});
+// an atlas frame named as another sprite (P1) is said by loadAtlas since pass 39, see fullPass39's P1 test
 
 const lockSetup = `headlessMode = true; new Render3DPlugin; timeDelta = 1/60;
     var exits = 0, pending = false;
