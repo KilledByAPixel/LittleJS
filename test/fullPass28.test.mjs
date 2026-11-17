@@ -394,6 +394,7 @@ test('edit2D.setProperty writes a property as Tiled keeps it, and leaves out the
     {
         objectLayersAddType('Mob', ()=> {}, {hp: 10, tint: rgb(1, 0, 0), offset: vec2(1, 2), name: 'x'});
         const object = {id: 1, type: 'Mob'}, edit = levelEditor.edit2D;
+        editorEdit2DChanging = [object]; // as changeObjects gives it, since pass 34 E2
         edit.setProperty(object, 'hp', 5); edit.setProperty(object, 'tint', rgb(0, 1, 0));
         edit.setProperty(object, 'offset', vec2(3, 4)); edit.setProperty(object, 'name', 'x');
         const set = object.properties.slice();

@@ -177,7 +177,7 @@ test('the shared default warning: by type, only for objects that leave it alone,
         const said = [];
         const load = (objects)=> { warned.length = 0; objectLayersLoad({width: 4, height: 4, tilewidth: 16,
             tileheight: 16, layers: [{type: 'objectgroup', id: 1, name: 'Objects', objects}]}); said.push(warned.slice()); };
-        // every Mob sets look: nothing is shared, nothing said of it
+        // every Mob sets look, cfg and list: only cfg.inner, which its cfg leaves alone, is shared (pass 34 O2)
         load([{id: 1, type: 'Mob', x: 0, y: 0, point: true, properties: [{name: 'look', type: 'class', value: {hp: 2}},
             {name: 'cfg', type: 'class', value: {}}, {name: 'list', type: 'class', value: []}]}]);
         // a Mob and a Crate leaving theirs alone: each type said, nested and a copy giving back itself too
@@ -191,7 +191,7 @@ test('the shared default warning: by type, only for objects that leave it alone,
         return JSON.stringify(said);
     })()`));
     const tail = ' has a copy method that gives back no new object, so the objects that leave it alone share it';
-    assert.deepEqual(result[0].filter((t)=> t.includes('share')), []);
+    assert.deepEqual(result[0].filter((t)=> t.includes('share')), [`objectLayersLoad: Mob's default cfg.inner${tail}`]);
     assert.deepEqual(result[1], [`objectLayersLoad: Mob's default look${tail}`,
         `objectLayersLoad: Mob's default cfg.inner${tail}`, `objectLayersLoad: Mob's default list[0]${tail}`,
         `objectLayersLoad: Crate's default look${tail}`]);

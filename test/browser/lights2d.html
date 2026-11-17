@@ -98,13 +98,17 @@ smokeRun(async ()=>
         viewport2[3] == glCanvas.height && !glAdditive && glCustomShader === shaderBefore && drawContext === mainContext, [thrown, viewport2]);
     glowing.destroy();
 
-    // a lightmap size set later makes the lightmap again at it, so the lights are not drawn into a corner of the old one
-    lightSystem.textureSizeAuto = false;
+    // a lightmap size set later, alone, makes the lightmap again at it and stops following the canvas, so a light in
+    // the top right corner is drawn there and not into a corner of the old one
+    light.gel = undefined;
+    light.angle = 0;
+    light.pos = vec2(3, 3);
     lightSystem.textureSize = vec2(40, 20);
-    engineStep();
-    check('a lightmap size set later makes the lightmap that size',
-        lightSystem.textureSizeAllocated.x == 40 && lightSystem.textureSizeAllocated.y == 20,
-        [lightSystem.textureSizeAllocated.x, lightSystem.textureSizeAllocated.y]);
+    engineStep(2);
+    check('a lightmap size set later makes the lightmap that size, lit where its lights are',
+        lightSystem.textureSizeAllocated.x == 40 && lightSystem.textureSizeAllocated.y == 20 &&
+        !lightSystem.textureSizeAuto && bright(3, 3) > 120,
+        [lightSystem.textureSizeAllocated.x, lightSystem.textureSizeAllocated.y, bright(3, 3)]);
     checkGLError();
 });
 </script>

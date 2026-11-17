@@ -170,6 +170,7 @@ test('edit2D.setProperty keeps an object link an object, and writes nothing of t
             stats: {a: 1}});
         const object = {id: 1, type: 'Mob', properties: [{name: 'target', type: 'object', value: 12}]};
         const edit = levelEditor.edit2D, linked = [];
+        editorEdit2DChanging = [object]; // as changeObjects gives it, since pass 34 E2
         edit.setProperty(object, 'target', 12); linked.push(JSON.stringify(object.properties));
         edit.setProperty(object, 'target', 14); linked.push(JSON.stringify(object.properties));
         const refused = [['hp', vec2(1, 1)], ['tint', '#ff0000'], ['offset', 5], ['stats', {a: 2}], ['hp', '5']]
