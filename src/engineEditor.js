@@ -3207,12 +3207,14 @@ function editorUpdate()
         return;
     }
 
-    // Escape while a tool of the game's own is held takes its press back, and stays in the editor
+    // Escape while a tool of the game's own is held takes its press back, and stays in the editor; the rest of the
+    // press is spent, not the editor's brush's if the tool is put down while it is held
     if (editorToolHeld && debugKey && keyWasPressed(debugKey))
     {
         inputClearKey(debugKey);
         editorStrokeCancel();
         editorToolHeld = false;
+        mouseIsDown(0) && (editorLeftSpent = true);
         return;
     }
 
@@ -3413,7 +3415,7 @@ function editorToolUpdate(space)
         return false;
     }
     editorToolHeld || (editorToolLastCell = undefined); // a press starts with none, not the last drag's
-    const at = editorToolAt();
+    let at = editorToolAt();
     editorHover = at.cell;
     editorRightPress = undefined; // a right press from before the tool was on is not the editor's to finish
     if (editorToolHeld && mouseWasPressed(2))
@@ -3421,15 +3423,22 @@ function editorToolUpdate(space)
         inputClearKey(2);
         editorStrokeCancel();
         editorToolHeld = false;
+        mouseIsDown(0) && (editorLeftSpent = true); // the rest of the press is no brush stroke either
     }
     else if (mouseWasPressed(0) && !space && !editorMouseOnPanel)
     {
-        // a held press let go and pressed again within one frame is released first, its own undo
+        // a held press let go and pressed again within one frame is released first, its own undo; the new press is
+        // spent if that release threw, put the tool down or closed the editor, and is given no last cell
         if (editorToolHeld)
         {
             editorToolHeld = false;
+            editorLeftSpent = true;
             try { tool.onRelease?.(at); }
             finally { editorStrokeEnd(); }
+            if (levelEditor.tool !== editorToolName || !editorIsOpen)
+                return true;
+            editorToolLastCell = undefined;
+            at = editorToolAt();
         }
         // a press that is not held, as one returning false, throwing or closing the editor, ends the stroke it made,
         // so the next press's edit is not one undo with it, and the rest of it is spent, not handed to the editor's

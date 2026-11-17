@@ -12,6 +12,9 @@
 
 'use strict';
 
+// how far a timer may be short of its end and count as elapsed, far below a frame, more than time's rounding
+const timerTolerance = 1e-6;
+
 /**
  * Timer object tracks how long has passed since it was set
  * @memberof Engine
@@ -66,11 +69,12 @@ class Timer
 
     /** Returns true if set and has not elapsed
      * @return {boolean} */
-    active() { return this.getGlobalTime() < this.time; }
+    active() { return this.getGlobalTime() + timerTolerance < this.time; }
 
-    /** Returns true if set and elapsed
+    /** Returns true if set and elapsed, on the frame it ends though the time it was set at and its seconds round
+     *  apart, so a timer of a whole number of frames takes that many
      * @return {boolean} */
-    elapsed() { return this.getGlobalTime() >= this.time; }
+    elapsed() { return this.getGlobalTime() + timerTolerance >= this.time; }
 
     /** Get how long since elapsed, returns 0 if not set (returns negative if currently active)
      * @return {number} */

@@ -51,6 +51,8 @@ const RENDER3D_VOXEL_ORDER = [0, 1, 2, 3], RENDER3D_VOXEL_FLIPPED = [1, 3, 0, 2]
  *   hits and the face it comes in through
  * - Its blocks are walls: a body walking into one stops however low it stands over the ground beside it, there is no
  *   step up onto it as a HeightMap or a MeshCollider has, so a game jumps onto blocks or lays its floors level
+ * - To be a lift, it moves by its velocity3D, which moves it before the objects and carries what stands on it; one
+ *   moved by setting pos3D, or in its own update, leaves a rider behind, a fast one dropping it through
  * @extends EngineObject3D
  * @memberof Render3D
  * @example

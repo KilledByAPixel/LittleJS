@@ -54,8 +54,8 @@ has loaded, each frame is copied into a texture sheet, the same kind
 - A frame is named by its entry with the file extension taken off, so
   `'circle.png'` is `atlas.circle`.
 - Names that end in numbers that follow each other, like `spin_0` to
-  `spin_3`, or `gem1` to `gem3` with no separator, become one
-  entry, `atlas.spin`, when the frames are the same size. Its frames
+  `spin_3`, become one entry, `atlas.spin`, when the frames are the
+  same size, and so do `gem1` to `gem3`, `atlas.gem`. Its frames
   are reached with `atlas.spin.frame(n)`, and each also keeps its own
   name, so `atlas.spin_2` is `atlas.spin.frame(2)`.
 

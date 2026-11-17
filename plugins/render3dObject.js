@@ -669,9 +669,11 @@ function render3DSolidReach(o)
 // one that stood on a solid last frame and stands on nothing now, not leaving it upward, follows it down as the level
 // shapes follow theirs: lowered in steps of half its radius, as far as its move across could drop at its groundAngle,
 // it lands on the first step that meets the face of a solid within its groundAngle of level, last frame's or another
-// near it, a ramp going down from a flat top, so walking down a ramp of a turned box keeps the ground; a solid it
-// meets any other way, a side, stops the search, and one the pair does not resolve with, collideWithObject giving
-// false, a platform it drops through, or one whose collision is off, is not stood on
+// near it it is not leaving upward, a ramp going down from a flat top, so walking down a ramp of a turned box keeps
+// the ground; a solid it meets any other way, a side, is passed over for the next, as is one the pair does not
+// resolve with, collideWithObject giving false, a platform it drops through, and one whose collision is off, but it
+// does not land deeper into a side than it started; a callback that moves, attaches or destroys it or changes its
+// speed has the last word, as in a settle
 function render3DFollowSolid(o, ground, oldPos)
 {
     const solid = (b)=> b instanceof EngineObject3D && b !== o && !b.destroyed && !b.parent && !b.sync2D && b.isSolid &&
@@ -682,35 +684,78 @@ function render3DFollowSolid(o, ground, oldPos)
     const across = ((o.pos3D.x - oldPos.x) ** 2 + (o.pos3D.z - oldPos.z) ** 2) ** .5;
     const drop = across * tan(o.groundAngle);
     if (!(drop > 0)) return;
-    const start = o.pos3D.y, size = render3DSolidShape(o);
-    const radius = size.radius ?? min(size.size.x, size.size.y, size.size.z) / 2;
+    const start = o.pos3D.y, startShape = render3DSolidShape(o);
+    const radius = startShape.radius ?? min(startShape.size.x, startShape.size.y, startShape.size.z) / 2;
     const step = max(radius / 2, 1e-3), cos0 = cos(o.groundAngle);
-    // last frame's first, then the solids that could be within the drop, nearest the list's order
-    const reach = render3DSolidReach(o) + drop;
-    const near = engineObjectsCollide.filter((b)=> b !== ground && b instanceof EngineObject3D && solid(b) &&
-        b.pos3D.distanceSquared(o.pos3D) <= (reach + render3DSolidReach(b)) ** 2);
-    const candidates = [ground, ...near].map((b)=> ({b, shape: render3DSolidShape(b)}));
+    // last frame's first, then the solids that could be within the drop, nearest the list's order, through the grid
+    // when there is one, and not one it is leaving upward
+    const reach = render3DSolidReach(o) + drop, grid = render3DSolidGrid(), at = o.pos3D.copy();
+    const near = (grid ? [...render3DGridWalk(grid, ()=> reach, ()=> at, Infinity)] : engineObjectsCollide)
+        .filter((b)=> b !== ground && b instanceof EngineObject3D && solid(b) && v.y <= b.velocity3D.y &&
+        b.pos3D.distanceSquared(at) <= (reach + render3DSolidReach(b)) ** 2);
+    // how deep each is at the start, so a landing never goes deeper into a side than that
+    const candidates = [ground, ...near].map((b)=>
+    {
+        const shape = render3DSolidShape(b), push = render3DSolidPush(startShape, shape);
+        return {b, shape, depth: push ? push.lengthSquared() : 0, skip: false};
+    });
+    // asks the pair, as the settles do: undefined when the callback had the last word, moving, attaching or
+    // destroying the body or changing its speed, which then stands, else whether it resolves
+    const ask = (c, push)=>
+    {
+        const x = o.pos3D.x, y = o.pos3D.y, z = o.pos3D.z, vx = v.x, vy = v.y, vz = v.z;
+        const resolve = render3DCollideAsk(o, c.b, push);
+        if (o.parent || o.destroyed) return; // attached or destroyed in the callback
+        grid && !c.b.parent && render3DGridPlace(grid, c.b); // a callback may have moved it
+        if (o.pos3D.x !== x || o.pos3D.y !== y || o.pos3D.z !== z)
+        {
+            grid && render3DGridPlace(grid, o); // sent away by the game, a respawn, its place is the game's
+            return;
+        }
+        if (v.x !== vx || v.y !== vy || v.z !== vz)
+        {
+            o.pos3D.y = start; // a bounce or a knock back the game gave, from where it was
+            return;
+        }
+        resolve && !c.b.destroyed && !c.b.parent || (c.skip = true); // one it passes through
+        return !c.skip;
+    };
     for (let down = step; ; down += step)
     {
         const d = min(down, drop);
         o.pos3D.y = start - d;
         const shapeA = render3DSolidShape(o);
-        for (const {b, shape} of candidates)
+        for (const c of candidates)
         {
-            const push = render3DSolidPush(shapeA, shape);
+            if (c.skip) continue;
+            const push = render3DSolidPush(shapeA, c.shape);
             if (!push) continue;
             const lengthSquared = push.lengthSquared(), up = push.y / lengthSquared ** .5;
-            if (up < cos0 || !render3DOnFace(push, shape) || !render3DCollideAsk(o, b, push))
-            {
-                o.pos3D.y = start; // a side or an edge, not ground, or one it passes through
-                return;
-            }
-            // on its face, pushed straight up out of it, as standing on a solid is
+            if (up < cos0 || !render3DOnFace(push, c.shape))
+                continue; // a side or an edge, not ground
+            const resolve = ask(c, push);
+            if (resolve === undefined) return;
+            if (!resolve) continue;
+            // on its face, pushed straight up out of it, as standing on a solid is, unless that is deeper into a
+            // side of one it does not pass through
             o.pos3D.y += lengthSquared / push.y;
-            o.groundObject = b;
-            render3DRiderAdd(b, o);
-            v.y = b.velocity3D.y;
-            const grid = render3DSolidGrid();
+            const shapeLanded = render3DSolidShape(o);
+            for (const other of candidates)
+            {
+                if (other === c || other.skip || other.b.destroyed) continue;
+                const into = render3DSolidPush(shapeLanded, other.shape);
+                if (!into || into.lengthSquared() <= other.depth + 1e-9) continue;
+                const blocks = ask(other, into);
+                if (blocks === undefined) return;
+                if (blocks)
+                {
+                    o.pos3D.y = start;
+                    return;
+                }
+            }
+            o.groundObject = c.b;
+            render3DRiderAdd(c.b, o);
+            v.y = c.b.velocity3D.y;
             grid && render3DGridPlace(grid, o);
             return;
         }
@@ -995,11 +1040,19 @@ function render3DSettleFixed(o, pusher, from)
         render3DBounceOff(o, 1, b, push.normalize(), max(o.restitution, b.restitution));
     }
     // and out of the level, the voxel and height maps, from where it was before the push, or from where a callback
-    // asked here sent it, so a move of the game's own, a respawn, is not swept across the level from where it was
+    // asked here sent it, so a move of the game's own, a respawn, is not swept across the level from where it was;
+    // a place after the level shapes moved, so a MeshCollider lift's move is not added to it again
     if (o.collideLevel && o.mass)
-        render3DCollideLevel(o, from, undefined);
+    {
+        render3DSettlingLevel = true;
+        try { render3DCollideLevel(o, from, undefined); }
+        finally { render3DSettlingLevel = false; }
+    }
     return moved;
 }
+
+// while a settle collides a body with the level, from a place after the level shapes moved this pass
+let render3DSettlingLevel = false;
 
 // what moves shape a back clear of shape b to the side it came from: along an axis the two were clear on where they
 // came from, the least of those, as 2D resolves it from where the object was; undefined when they overlapped on every

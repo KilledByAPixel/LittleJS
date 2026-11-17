@@ -454,6 +454,11 @@ function buildText3D(text, size=1, depth=.2, font=engineImageFont)
  *   .7; the slope a walkable ramp could still rise before its middle reaches the edge is allowed too, so a seam on a
  *   slope between two maps and a ramp onto one are walked; a body moving away from it or falling beside it is left
  *   alone
+ * - To be a lift, it moves by its velocity3D, which moves it before the objects and carries what stands on it; one
+ *   moved by setting pos3D, or in its own update, leaves a rider behind, a fast one dropping it through
+ * - A body walking down over a crest keeps the ground from one level shape onto another and from one solid onto
+ *   another, but from a level shape onto a solid ramp going down, or a solid onto one, it hops down, in the air for
+ *   a few frames; join a slope to a level shape with a level shape
  * @extends EngineObject3D
  * @memberof Render3D
  * @example
@@ -966,6 +971,11 @@ class HeightMap extends EngineObject3D
  *   one wide enough, or its sides gentle enough, that a body is not pushed into a side to cross it
  * - A gap that closes on an object, a V floor rising under a ceiling, squeezes it through one or the other, as no
  *   collider can hold a body in less room than it has; leave a level room for its bodies
+ * - To be a lift, it moves by its velocity3D, which moves it before the objects and carries what stands on it; one
+ *   moved by setting pos3D, or in its own update, leaves a rider behind, a fast one dropping it through
+ * - A body walking down over a crest keeps the ground from one level shape onto another and from one solid onto
+ *   another, but from a level shape onto a solid ramp going down, or a solid onto one, it hops down, in the air for
+ *   a few frames; join a slope to a level shape with a level shape
  * @extends EngineObject3D
  * @memberof Render3D
  * @example
@@ -1542,7 +1552,8 @@ function meshColliderCollide(collider, o, oldPos, wasOn, fromOther)
     if (!(radius > 0)) return;
     // swept from where it was, carried by the collider's own move this pass, a lift's, which moved before it, so the
     // sweep is its move on the collider and a fast lift does not throw it off or take it through
-    const p = o.pos3D, moved = collider.movedPass === engineObjectsUpdateCount ? collider.movedBy : undefined;
+    const p = o.pos3D, moved = collider.movedPass === engineObjectsUpdateCount && !render3DSettlingLevel ?
+        collider.movedBy : undefined;
     const from = oldPos ? moved ? oldPos.add(moved) : oldPos : p;
     const mx = p.x - from.x, my = p.y - from.y, mz = p.z - from.z, move = hypot(mx, my, mz);
     // nothing near where it went or came from, which is most objects most of the time; one that stood on another

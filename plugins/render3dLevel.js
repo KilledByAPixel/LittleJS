@@ -52,6 +52,9 @@ function level3DOffsetOf(o, rotation=o.rotation3D)
  *    what was made; a property the type has no default for is in properties and is not set
  *  - An object default, plain or of a class, takes a level's object member by member, so a member the level leaves
  *    out keeps the default's and {} is the whole default, as 2D's class properties are
+ *  - A list over a list default is read item by item as the default's item there, its last past its end, so a list
+ *    of vectors or Colors needs a default with one item of that kind, [vec3()], and an empty default, [], takes the
+ *    items as written, a vector as a plain array
  *  - Give a class a constructor of its own that takes the position: one that hands every argument on to
  *    EngineObject3D would hand it the properties as its mesh
  *  - An EngineObject3D then gets the object's rotation, and its scale times the scale it was made with
@@ -112,6 +115,8 @@ function level3DAddMesh(name, mesh, tileInfo, color=WHITE, meshCollision=false)
  *  - What a file written by hand gets wrong uses the default: a value that is not of its default's type
  *  - An object over an object default is merged into it member by member, so {} is the whole default, and a vector
  *    member in it is written as an array too
+ *  - A list over a list default is read item by item as the default's item there, its last past its end, an item of
+ *    another kind keeping the default's with a warning; an empty default takes the items as written
  *  - An object its type can not make is skipped with an error in debug builds, where asserts throw, and the rest
  *    of the level is made
  *  - A level may hold a map of blocks, in a voxels block: pos, its corner, size, its cells along x, y and z, and
@@ -600,7 +605,7 @@ function level3DMakeAt(object, pos, rotation, scale)
  *    or written as a level file has it, a hex string or an array; a value not of its default's type keeps the default;
  *    each is copied for the object, a list or a plain object with what is in it, as a level file's are, so the object
  *    has its own and not the one passed; a plain object over an object default is merged into it member by member,
- *    as a level file's is, and an instance of a class, at any depth, is copied with its copy method, or shared when
+ *    and a list over a list default item by item, as a level file's are, and an instance of a class, at any depth, is copied with its copy method, or shared when
  *    it has none
  *  @return {any} - What the type made, a Prefab3D for a prefab, undefined when there is no such type or it made no
  *    object of the game's

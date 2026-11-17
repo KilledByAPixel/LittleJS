@@ -191,7 +191,7 @@ A bare `'littlejsengine'` like this needs a bundler to find the package. A brows
 <script type=importmap>{"imports": {"littlejsengine": "./node_modules/littlejsengine/dist/littlejs.esm.js"}}</script>
 ```
 
-[examples/typescript/](examples/typescript/) has one. Without a bundler or a map, import the engine file by its path instead, as [examples/module/](examples/module/) does (`'../../dist/littlejs.esm.js'`), which its build rewrites for the zip; keep that path there, since its build only rewrites a path to `littlejs.esm.js`. The Vite section below shows the full bundler-based setup.
+[examples/typescript/](examples/typescript/) has one. Without a bundler or a map, import the engine file by its path instead, as [examples/module/](examples/module/) does (`'../../dist/littlejs.esm.js'`), which its build rewrites for the zip, whatever the import takes from it, so keep a path to `littlejs.esm.js` there. The Vite section below shows the full bundler-based setup.
 
 ### How do I use LittleJS with TypeScript?
 

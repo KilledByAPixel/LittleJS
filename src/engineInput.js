@@ -947,7 +947,7 @@ function inputUpdate()
         // keyboard: any non-mouse key down
         let keyboardActive = false;
         for (const k in inputData[0])
-            if (isNaN(+k) && (inputData[0][k] & 1))
+            if (isNaN(+k) && keyIsDown(k)) // as the game reads it, so not while the input is captured
             {
                 keyboardActive = true;
                 break;
@@ -1088,7 +1088,7 @@ function inputUpdate()
         // like the one Firefox returns after the highest numbered gamepad disconnects
         const maxGamepads = 8;
         const gamepads = gamepadsEnable ? inputGetGamepads() : []; // disabled lets go of them like unplugged
-        const primaryBefore = gamepadPrimary;
+        const primaryBefore = gamepadPrimary, hadInputBefore = [...gamepadHadInput];
         for (let i=0; i<maxGamepads; ++i)
         {
             // get or create gamepad data
@@ -1188,8 +1188,8 @@ function inputUpdate()
         }
 
         // a primary pad lost as another took over in the same poll lets its held buttons go on the one the game
-        // reads now, as the touch gamepad's are
-        if (gamepadPrimary !== primaryBefore && gamepadLettingGo[primaryBefore])
+        // reads now, as the touch gamepad's are, unless that pad was in use already, another player's
+        if (gamepadPrimary !== primaryBefore && gamepadLettingGo[primaryBefore] && !hadInputBefore[gamepadPrimary])
             inputData[primaryBefore + 1].forEach((v, k)=> v === 4 && touchGamepadHeldAtHandover.push(k));
 
         // the touch buttons held when a real gamepad took over are released on the pad the game reads now, which

@@ -569,7 +569,7 @@ class SoundInstance
         /** @property {number} - How much to scale volume by */
         this.volume = max(audioFinite(volume, 0), 0);
         /** @property {number} - The playback rate to use */
-        this.rate = audioFinite(rate, 1);
+        this.rate = max(audioFinite(rate, 1), 0); // below 0 would run its clock backward
         /** @property {number} - How much to apply stereo panning */
         this.pan = audioFinite(pan, 0);
         /** @property {boolean} - Should the sound loop */
@@ -692,7 +692,7 @@ class SoundInstance
             this.startOffset = this.getCurrentTime();
             this.startTime = audioContext.currentTime;
         }
-        this.rate = rate = audioFinite(rate, 1);
+        this.rate = rate = max(audioFinite(rate, 1), 0);
         if (this.source)
             this.source.playbackRate.value = rate;
     }

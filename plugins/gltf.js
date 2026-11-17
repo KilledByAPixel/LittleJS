@@ -370,8 +370,14 @@ class GLTFObject extends EngineObject3D
 
     /** Play an animation from its start, at once or cross-faded from the pose it is in
      *  - A play with a blend of the animation already playing goes on with it, so state code may call it each
-     *    frame, and so does one of an animation that played to its end and stopped while it was called each
-     *    frame, a death held on its last pose; without a blend it starts the animation again
+     *    update, and so does one of an animation that played to its end and stopped while it was called each
+     *    update, a death held on its last pose; without a blend it starts the animation again
+     *  - Each update means from update code, every update: one called from render, or missed for an update, starts it
+     *    again with the fade
+     *  - Called each update with a loop or speed that moves the held pose, played backward from its end or set to
+     *    loop, it goes on from there, a door closing; the same way again holds it, so an attack held down plays
+     *    once, and plays again on a play without a blend or after an update with no play. After stop() it starts
+     *    again
      *  @param {string|number|GLTFAnimation} [animation] - Its name, its number in model.animations, or itself
      *  @param {boolean} [loop] - Start again at the end, or stop there
      *  @param {number} [speed] - 1 is as made, negative plays it backward from its end
@@ -387,6 +393,9 @@ class GLTFObject extends EngineObject3D
         this.blendPlayFrame = blend > 0 ? frame : -2;
         if (blend > 0 && found === this.animation && going)
         {
+            // held at an end, it goes on when the loop or speed now moves it from there
+            const t = this.animationTime;
+            this.animationPlaying ||= loop || (speed < 0 ? t > 0 : speed > 0 && t < found.duration);
             this.animationLoop = loop, this.animationSpeed = speed;
             return;
         }
@@ -409,7 +418,7 @@ class GLTFObject extends EngineObject3D
     }
 
     /** Stop the animation where it is, the parts hold that pose; a cross-fade going on stops too, holding the mix */
-    stop() { this.animationPlaying = false; this.blendFrom = undefined; }
+    stop() { this.animationPlaying = false; this.blendFrom = undefined; this.blendPlayFrame = -2; }
 
     /** Put the parts where the animation has them at a time, playing or not
      *  @param {number} time - Seconds into the animation */

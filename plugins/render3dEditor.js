@@ -1364,15 +1364,25 @@ function editor3DValueProblem(value, fallback)
     }
 }
 
-// whether a plain object has every member of an object default, and of each member that is an object itself, since
-// the load merges it into the default and a member left out would be the default's; a member the default holds as
-// undefined, a class field declared with no value, or a function, is not in a file either, so may be left out
+// whether a plain object has every member of an object default, at any depth, through lists too, each item against
+// the default's item there or its last, since the load merges it into the default and a member left out would be the
+// default's; a member the default holds as undefined, a class field declared with no value, or a function, is not in
+// a file either, so may be left out, and so may every field of an instance of a class with an accessor, which may
+// write a field of its own that the value gives through the accessor, as the object made of the merge holds
 function editor3DCoversDefault(defaultValue, value)
 {
-    const object = (v)=> !!v && typeof v === 'object' && !isArray(v);
-    return Object.keys(defaultValue).every((key)=> (defaultValue[key] === undefined ||
-        typeof defaultValue[key] == 'function' || Object.hasOwn(value, key)) &&
-        (!object(defaultValue[key]) || !object(value[key]) || editor3DCoversDefault(defaultValue[key], value[key])));
+    if (isArray(defaultValue) && isArray(value))
+        return !defaultValue.length || value.every((item, i)=>
+            editor3DCoversDefault(defaultValue[min(i, defaultValue.length - 1)], item));
+    if (!defaultValue || typeof defaultValue != 'object' || isArray(defaultValue) || !objectPropertyPlain(value))
+        return true;
+    let accessors = false;
+    for (let p = Object.getPrototypeOf(defaultValue); p && p !== Object.prototype && !accessors;
+        p = Object.getPrototypeOf(p))
+        accessors = Object.values(Object.getOwnPropertyDescriptors(p)).some((d)=> !!(d.get || d.set));
+    return (accessors || Object.keys(defaultValue).every((key)=> defaultValue[key] === undefined ||
+        typeof defaultValue[key] == 'function' || Object.hasOwn(value, key))) &&
+        Object.keys(value).every((key)=> editor3DCoversDefault(objectPropertyMember(defaultValue, key), value[key]));
 }
 
 // add an object of a type at a position, selected; its id, or undefined when the level can not be edited
@@ -2080,8 +2090,8 @@ const editor3DEdit =
             typeof value === typeof d && value !== null && isArray(value) === isArray(d));
         const why = problem && !vector ? problem :
             !sameKind ? `can not be ${kind(value)}, its default is ${kind(d)}` :
-            merges && objectPropertyPlain(value) && !editor3DCoversDefault(d, value) ? 'leaves out a member of its ' +
-                'default, which the load would put back' :
+            (merges && objectPropertyPlain(value) || isArray(d) && isArray(value)) && !editor3DCoversDefault(d, value) ?
+                'leaves out a member of its default, which the load would put back' :
             dropped ? 'has a member the load would not read: ' + dropped : undefined;
         ASSERT(!!editor3DChanging?.includes(object),
             'setProperty works on an object of the list change gives, inside change');
@@ -2166,12 +2176,15 @@ function editor3DToolUpdate(ray, idle, shift, ctrl)
     }
     else if (idle && mouseWasPressed(0))
     {
-        // a held press let go and pressed again within one frame is released first, its own undo
+        // a held press let go and pressed again within one frame is released first, its own undo, and the new
+        // press is not made if that release put the tool down or closed the editor
         if (editor3DToolHeld)
         {
             editor3DToolHeld = false;
             try { tool.onRelease?.(at); }
             finally { editor3DStrokeEnd(); }
+            if (levelEditor.tool !== editor3DToolName || !editor3DIsOpen)
+                return true;
         }
         // a press that is not held, as one returning false, throwing or closing the editor, ends the stroke it made,
         // so the next press's edit is not one undo with it

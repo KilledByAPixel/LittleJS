@@ -413,6 +413,10 @@ function loadAtlas(imageSrc, jsonSrc, padding=textureSheetPadding)
             // a sheet each, can not make hundreds of sheets
             const budget = max(16 * w * h, 8 * textureSheetSize ** 2), sheetsBefore = textureSheets.length;
             let spent = 0;
+            // each frame name given so far, as which frame of which group, so a sprite that has the name is said
+            const frameNames = new Map;
+            const nameTaken = (name, frameName, i)=> console.warn(`loadAtlas: frame ${i} of ${frameName} is named ` +
+                `${name} as another sprite is, which that name gives; read it as ${frameName}.frame(${i})`);
             const isSize = (n)=> Number.isFinite(n) && n > 0;
             const inImage = (f)=> f.pos.x >= 0 && f.pos.y >= 0 && isSize(f.sourceSize.x) && isSize(f.sourceSize.y) &&
                 f.pos.x + (f.rotated ? f.size.y : f.size.x) <= w && f.pos.y + (f.rotated ? f.size.x : f.size.y) <= h &&
@@ -469,13 +473,18 @@ function loadAtlas(imageSrc, jsonSrc, padding=textureSheetPadding)
                             x, y, f.size.x, f.size.y);
                 });
                 sheet.glDirty = true;
-                // as its own, a frame named __proto__ too, which assigned would set the atlas's prototype
+                // as its own, a frame named __proto__ too, which assigned would set the atlas's prototype; a sprite
+                // packed after a frame took its name takes it back
+                const frameOf = frameNames.get(group.name);
+                frameOf && nameTaken(group.name, ...frameOf);
+                frameNames.delete(group.name);
                 objectPropertySet(atlas, group.name, tile);
                 // each frame of a group made from names under its own name too, gem1 of gem1, gem2 and gem3, separate
                 // sprites in a pack exported by file name, unless a sprite of that name is in the atlas
                 if (group.named)
-                    group.frames.forEach((f, i)=> Object.hasOwn(atlas, f.name) ||
-                        objectPropertySet(atlas, f.name, tile.frame(i)));
+                    group.frames.forEach((f, i)=> f.name === group.name ? 0 :
+                        Object.hasOwn(atlas, f.name) ? nameTaken(f.name, group.name, i) :
+                        (objectPropertySet(atlas, f.name, tile.frame(i)), frameNames.set(f.name, [group.name, i])));
             }
         }
         else
@@ -649,18 +658,13 @@ function parseAtlas(data)
 }
 
 // an atlas's groups, with a warning for each name two of them have, as a sprite is looked up by name and the second
-// takes the first's place, and for a frame of a group made from names whose own name another group has, as that
-// group is what the name gives, the frame only through its group's frame()
+// takes the first's place; a frame whose own name another sprite has is said by loadAtlas, which knows what it packed
 function parseAtlasNamesCheck(groups)
 {
     const names = new Set;
     for (const {name} of groups)
         names.has(name) ? console.warn(`parseAtlas: two sprites are named ${name}, the second takes the first's place`) :
             names.add(name);
-    for (const {name, frames, named} of groups)
-        named && frames.forEach((f, i)=> f.name !== name && names.has(f.name) &&
-            console.warn(`parseAtlas: frame ${i} of ${name} is named ${f.name} as another sprite is, which that name ` +
-            `gives; read it as ${name}.frame(${i})`));
     return groups;
 }
 

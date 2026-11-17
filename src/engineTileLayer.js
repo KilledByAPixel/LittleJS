@@ -723,7 +723,8 @@ function objectLayersAddType(name, make, defaults={}, tileInfo)
  *  - A class property, a custom type in Tiled, is merged over its default member by member, since Tiled writes only
  *    the members set on that object, a Color or Vector2 member read from Tiled's text as at the top level; a value
  *    or member of another kind than its default keeps the default, with a warning in debug builds, a default of
- *    null or undefined taking any value, and members named __proto__, constructor or prototype are left out
+ *    null or undefined taking any value, and members named __proto__, constructor or prototype are left out; a list
+ *    member is read item by item as the default's item there, its last past its end
  *  - An object whose type was not added is skipped, with a warning in debug builds
  *  - Tiled templates are not read: an object placed from one has its type only in the template's file, so export
  *    the map with Tiled's Detach templates option
@@ -953,7 +954,7 @@ function objectLayersMergeClass(fallback, value, warn, path='', shared, fromText
             {
                 warn?.(`${name} is ${objectPropertyKindName(item)}, its default ${objectPropertyKindName(before)}, ` +
                     'the default is kept');
-                return objectPropertyCopy(before);
+                return objectPropertyCopy(before, shared, name);
             }
             return objectLayersMergeClass(before, item, warn, name, shared, fromText);
         });
