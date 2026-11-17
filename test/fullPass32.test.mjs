@@ -159,8 +159,9 @@ test('a class default whose copy gives nothing is said when shared, and Object\'
     run(`globalThis.Look = class { hp = 1; copy() {} }; globalThis.Plain = class { hp = 1; }`);
     const shared = loadMob(run, `{look: new Look}`, `[]`);
     assert.equal(shared.shared, true);
-    assert.deepEqual(shared.warned, ['objectLayersLoad: the default look has a copy method that gives back no object, ' +
-        'so every object shares the one default']);
+    // pass 33 O1, O2: said by its type, for the objects that leave it alone
+    assert.deepEqual(shared.warned, ['objectLayersLoad: Mob\'s default look has a copy method that gives back no new ' +
+        'object, so the objects that leave it alone share it']);
     const named = loadMob(run, `{stats: new Plain}`, `[{name: 'stats', type: 'class', value: {toString: 4, valueOf: 2,
         hp: 3}}]`);
     assert.equal(run('typeof made.stats.toString + typeof made.stats.valueOf + made.stats.hp + String(made.stats)'),

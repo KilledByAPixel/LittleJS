@@ -148,7 +148,7 @@ test('Tiled class members: text through a copied class\'s setter, a copy that gi
         // O2: a copy method that gives back nothing is as none, with a warning, and the map loads
         const empty = loadMob(run, `{stats: new Empty}`, `[{name: 'stats', type: 'class', value: {hp: 5}}]`);
         assert.equal(run('made.stats.hp'), 5, file);
-        file === 'littlejs.js' && assert.match(empty.warned[0], /copy method that gives back no object/);
+        file === 'littlejs.js' && assert.match(empty.warned[0], /copy method that gives back no new object/);
         // pass 32 O1: with no member set every object shares the default, which is said too, once
         assert.equal(loadMob(run, `{stats: new Empty}`, `[]`).warned.length, file === 'littlejs.js' ? 1 : 0,
             file + ': no member set, shared, said');
