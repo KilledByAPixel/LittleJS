@@ -1911,9 +1911,13 @@ function editor3DRestart()
             if (editor3DRestartRunning !== token) return;
             editor3DRestartRunning = undefined;
             editor3DPrefabMessage === EDITOR3D_RESTART_WAIT && (editor3DPrefabMessage = '');
+            // with no debug key the editor comes back now the restart is done; open, it makes what it skipped
+            // while the restart ran, a level whose restart failed after the game destroyed it
+            debugKey ? editor3DIsOpen && editor3DRestore() : editor3DSession && editor3DSetOpen(true);
         };
         try { result.then(settled, (error)=> { settled(); throw error; }); }
         catch (error) { settled(); throw error; } // a thenable whose then throws is taken as a reject
+        return; // with no debug key the game plays till it settles, as a restart that fades in needs its frames
     }
     debugKey || editor3DSetOpen(true); // with no debug key nothing would come back, so it stays in the editor
 }

@@ -460,7 +460,7 @@ function tileLayersLoad(tileMapData, tileInfo=tileLayerDefaultTile(), renderOrde
         collisionLayer = layers.findIndex((l)=> l.color && l.dataLayer.name === name);
         collisionLayer < 0 && console.error('tileLayersLoad: no tile layer is named ' + name + ', none is solid');
     }
-    else if (collisionLayer !== undefined && !layers[collisionLayer]?.color)
+    else if (collisionLayer != null && !layers[collisionLayer]?.color)
         console.error('tileLayersLoad: layer ' + collisionLayer + ' is not a tile layer, none is solid');
 
     // create tile layers and fill with data, every layer's tiles checked first, so a bad one leaves none made
@@ -689,6 +689,8 @@ const objectLayersTypes = new Map;
  *  - A class, or any function with a prototype, is made with new make(pos); an arrow function is called as
  *    make(pos), for what is not an object, like a player start
  *  - The defaults, and then the properties the object has in Tiled, are set on what it made
+ *  - Each object gets a copy of an array or plain object default; a default that is an instance of a class of the
+ *    game's own is copied with its copy method, so give the class one, or every object shares the one instance
  *  - Adding a name again replaces it
  *  @param {string} name - The type the objects have in Tiled
  *  @param {(function(Vector2): unknown)|(function(new: unknown, Vector2))} make - A class made at each object's
@@ -880,13 +882,17 @@ const objectPropertyDefault = (defaults, key)=>
 function objectLayersMergeClass(fallback, value, warn, path='')
 {
     const plain = (o)=> !!o && typeof o === 'object' && !isArray(o);
-    if (!plain(fallback) || !plain(value) || isColor(fallback) || isVector2(fallback))
+    if (!plain(fallback) || !plain(value))
         return objectPropertyCopy(value);
-    // a new object for each, of the default's own class when it is an instance of one, so the type's default,
-    // shared by every object of the type, is never written into
-    const merged = Object.create(Object.getPrototypeOf(fallback));
-    for (const key of Object.keys(fallback))
-        objectPropertySet(merged, key, objectPropertyCopy(fallback[key]));
+    // a new object for each, so the type's default, shared by every object of the type, is never written into: an
+    // instance of a class with a copy method, a Color, a Vector2 or the game's own, is its copy, which keeps what
+    // the class keeps to itself, and the members are assigned so its setters run; one with no copy method is a new
+    // object of its class with the default's members, without its private fields
+    const own = Object.getPrototypeOf(fallback) !== Object.prototype, copied = own && typeof fallback.copy == 'function';
+    const merged = copied ? fallback.copy() : Object.create(Object.getPrototypeOf(fallback));
+    if (!copied)
+        for (const key of Object.keys(fallback))
+            objectPropertySet(merged, key, objectPropertyCopy(fallback[key]));
     for (const key of Object.keys(value))
     {
         const name = path + '.' + key;
@@ -908,7 +914,8 @@ function objectLayersMergeClass(fallback, value, warn, path='')
                 'the default is kept');
             continue;
         }
-        objectPropertySet(merged, key, objectLayersMergeClass(before, member, warn, name));
+        const result = objectLayersMergeClass(before, member, warn, name);
+        own ? objectPropertyAssign(merged, key, result, 'a class member') : objectPropertySet(merged, key, result);
     }
     return merged;
 }
@@ -927,14 +934,15 @@ function objectLayersProperties(type, object, tileMapData)
     for (const property of list)
     {
         const {name, value} = property;
-        if (property.type === 'color')
+        const fallback = objectPropertyDefault(type.defaults, name);
+        if (property.type === 'color' && (fallback == null || isColor(fallback)))
         {
             const hex = typeof value == 'string' && /^#([0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})$/i.test(value);
             value && !hex && debug && console.warn(`objectLayersLoad: object ${object.id}'s color ${name} is not a ` +
                 'hex color, left out');
             hex && set(name, tileLayersColor(value)); // an empty color is unset
         }
-        else if (isVector2(objectPropertyDefault(type.defaults, name)))
+        else if (isVector2(fallback) && typeof value != 'object')
         {
             // Tiled has no Vector2, one is the string x,y, and one it can not read keeps the default
             const read = objectPropertyFromText(String(value), objectPropertyDefault(type.defaults, name));
@@ -943,8 +951,8 @@ function objectLayersProperties(type, object, tileMapData)
         else
         {
             // a value of another kind than its type's default, the text '5' over a number or over a Color, keeps the
-            // default, as the 3D loader does, so a game never gets '5' + 1
-            const fallback = objectPropertyDefault(type.defaults, name);
+            // default, as the 3D loader does, so a game never gets '5' + 1; a color over a default that is no Color
+            // is its text, and said the same way; a Color or Vector2 written as an object is its members, read below
             if (fallback != null && objectPropertyKind(fallback) !== objectPropertyKind(value))
             {
                 const said = object.id + ' ' + name, map = tileMapData ?? objectLayersKindSaid; // once for each

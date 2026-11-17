@@ -795,9 +795,10 @@ function inputInit()
                 // zone's box but on none of its controls is the game's, decided as it lands
                 const inZone = (t)=>
                     touchGamepadSideZones.includes(t.target) || t.target === touchGamepadZoneC;
-                if (e.type === 'touchstart')
+                if (e.type === 'touchstart') // each landing decided again, an id a lost touchend left forgotten
                     for (const t of changed)
-                        inZone(t) && !touchGamepadTakes(t) && touchGamepadGameTouches.add(t.identifier);
+                        inZone(t) && !touchGamepadTakes(t) ? touchGamepadGameTouches.add(t.identifier) :
+                            touchGamepadGameTouches.delete(t.identifier);
                 const isGamepadTouch = (t)=> inZone(t) && !touchGamepadGameTouches.has(t.identifier);
                 const gameTouches = [];
                 for (const t of e.touches)
@@ -1514,7 +1515,7 @@ function touchGamepadRender()
     const dbg = debug && debugGamepads;
     const layout = [touchGamepadButtonCount, touchGamepadLeftButtonCount, touchGamepadLeftStick,
         touchGamepadRightStick, touchGamepadAnalog, touchGamepadSize, touchGamepadFloating,
-        touchGamepadCenterButtonSize, paused, dbg].join();
+        touchGamepadCenterButtonSize, touchGamepadPassthrough, paused, dbg].join();
     if (layout !== touchGamepadLastLayout)
     {
         touchGamepadLastLayout = layout;
@@ -1686,6 +1687,8 @@ function touchGamepadPointerDown(e, zone)
     // the browser refuses a capture while the pointer is locked, or for a pointer it no longer counts as active,
     // as Chrome's device mode can; the zone still takes the touch, it only stops following a finger that slides off
     try { zone.setPointerCapture(e.pointerId); } catch { }
+    // with passthrough a finger on none of the controls is the game's, a tap on its UI, which wakes no gamepad
+    if (touchGamepadPassthrough && !touchGamepadTakes(e)) return;
     touchGamepadTimer.set();
     touchGamepadHandedOver = false;
 

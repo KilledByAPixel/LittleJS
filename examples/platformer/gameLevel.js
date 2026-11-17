@@ -77,8 +77,9 @@ function loadLevelData()
     // load the level data
     const tileMapData = Game.gameLevelData;
     // the Front layer is solid, found by its name, so the layers can be put in
-    // any order in Tiled; an object layer's slot is empty, left out here
-    tileLayers = LJS.tileLayersLoad(tileMapData, tile(0,16,1), 0, 'Front')
+    // any order in Tiled; an object layer's slot is empty, left out here; not
+    // drawn yet, they are drawn once below, after their tiles are set up
+    tileLayers = LJS.tileLayersLoad(tileMapData, tile(0,16,1), 0, 'Front', false)
         .filter(Boolean);
     levelSize = vec2(tileMapData.width, tileMapData.height);
     playerStartPos = vec2(0, levelSize.y); // default player start

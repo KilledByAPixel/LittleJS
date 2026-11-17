@@ -76,7 +76,8 @@
  *    layer's objects; false when nothing changed
  *  @property {function(TiledObject, string, number|boolean|string|Color|Vector2): void} setProperty - Write a property
  *    on an object of the list given to changeObjects as Tiled keeps it, a Color as #AARRGGBB and a Vector2 as x,y,
- *    left out of the map when it is the type's default
+ *    left out of the map when it is the type's default; a value not of the default's kind is not written, with an
+ *    assert, as the load would drop it
  *  @property {function(): void} strokeEnd - End the edit: one undo step, and the autosave
  *  @property {function(): void} strokeCancel - Take the edit being made back
  *  @property {function(function(): void): void} bulk - Many paints with one redraw a layer
@@ -233,10 +234,10 @@ class LevelEditor
      *  which calls it after switching to play
      *  - It may be async: till its promise settles, every action that starts a restart waits, with a note at the
      *    mouse: Restart, and in the 2D editor a resize, its undo and redo, and Apply or Reset of another size, an
-     *    Apply of the same size going in as any edit; the
+     *    Apply of the same size going in as any edit, and the 3D editor takes no edit, undo or Reset; the
      *    game is held still while the editor is open, so one that waits for its frames, a fade, finishes once the editor
-     *    closes, which Play and Escape do then with no player put at the mouse; a promise that never settles makes
-     *    restarts wait till the page reloads
+     *    closes, which Play and Escape do then with no player put at the mouse, and with no debug key the 3D editor
+     *    stays closed till it settles; a promise that never settles makes restarts wait till the page reloads
      *  @return {void|Promise<void>} */
     onRestart() {}
 
@@ -1703,8 +1704,8 @@ function editorChangeObjects(layer, change)
 }
 
 // set an object's property as Tiled keeps it, only where it differs from its type's default, a color as #AARRGGBB
-// and a Vector2 as the string x,y; a number is kept as typed, an int when it and the default are whole, a float
-// otherwise, since a default of 2 may be a float the game scales by
+// and a Vector2 as the string x,y; a number is kept as typed, an int when it and the default are whole or there is
+// no default, as an object link, a float otherwise, since a default of 2 may be a float the game scales by
 function editorObjectSetProperty(object, name, value, defaultValue)
 {
     const list = object.properties ?? [], at = list.findIndex((property)=> property.name === name), old = list[at];
@@ -1716,7 +1717,7 @@ function editorObjectSetProperty(object, name, value, defaultValue)
         const property = hex ? {name, type: 'color', value: '#' + hex.slice(7, 9) + hex.slice(1, 7)} :
             isVector2(value) ? {name, type: 'string', value: text(value)} :
             {name, type: typeof value === 'boolean' ? 'bool' : typeof value === 'string' ? 'string' :
-            Number.isInteger(defaultValue) && Number.isInteger(value) ? 'int' : 'float', value};
+            (defaultValue == null || Number.isInteger(defaultValue)) && Number.isInteger(value) ? 'int' : 'float', value};
 
         // one the map had keeps its place and its kind where the value fits it, a file stays a file, an object an object
         if (old?.type === 'file' && property.type === 'string' || old?.type === 'object' && property.type === 'int' ||
@@ -3407,7 +3408,14 @@ const editorEdit2D =
     setProperty(object, name, value)
     {
         const type = objectLayersTypes.get(object.type || object.class);
-        editorObjectSetProperty(object, name, value, type && objectPropertyDefault(type.defaults, name));
+        const defaultValue = type && objectPropertyDefault(type.defaults, name);
+        // a value the map can keep, of its default's kind, as the properties box takes, or the load would drop it
+        const fits = isColor(defaultValue) ? isColor(value) : isVector2(defaultValue) ? isVector2(value) :
+            defaultValue == null ? isColor(value) || isVector2(value) || /^(number|boolean|string)$/.test(typeof value) :
+            typeof defaultValue != 'object' && typeof value === typeof defaultValue;
+        ASSERT(fits, `setProperty: ${name} can not be ${objectPropertyKindName(value)}, its default is ` +
+            objectPropertyKindName(defaultValue));
+        fits && editorObjectSetProperty(object, name, value, defaultValue);
     },
     strokeEnd() { editorStrokeEnd(); },
     strokeCancel() { editorStrokeCancel(); },

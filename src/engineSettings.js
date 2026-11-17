@@ -361,7 +361,8 @@ let mouseScreenTransform;
 
 /** Size of center button if touch gamepad should have start button in the center
  *  - Prevents activating when pressed near virtual stick or face buttons
- *  - When the game is paused, any touch will press the button
+ *  - When the game is paused, any touch will press the button, but with touchGamepadPassthrough only the button,
+ *    so the rest of the screen is the game's menu
  *  - Measured in viewport CSS pixels
  *  @type {number}
  *  @default
@@ -513,7 +514,11 @@ function setCameraPos(pos)
 /** Set angle of camera in world space
  *  @param {number} angle
  *  @memberof Settings */
-function setCameraAngle(angle) { cameraAngle = angle; }
+function setCameraAngle(angle)
+{
+    ASSERT(isNumber(angle) && Number.isFinite(angle), 'camera angle must be a finite number');
+    cameraAngle = angle;
+}
 
 /** Set scale of camera in world space
  *  @param {number} scale - Pixels per world unit, above 0
@@ -527,27 +532,40 @@ function setCameraScale(scale)
 /** Set how far a full camera shake moves the view, in world units
  *  @param {number} distance
  *  @memberof Settings */
-function setCameraShakeDistance(distance) { cameraShakeDistance = distance; }
+function setCameraShakeDistance(distance)
+{
+    ASSERT(isNumber(distance) && distance >= 0, 'camera shake distance must be 0 or more');
+    cameraShakeDistance = distance;
+}
 
 /** Set how far a full camera shake turns the view, in radians
  *  @param {number} angle
  *  @memberof Settings */
-function setCameraShakeAngle(angle) { cameraShakeAngle = angle; }
+function setCameraShakeAngle(angle)
+{
+    ASSERT(isNumber(angle) && angle >= 0, 'camera shake angle must be 0 or more');
+    cameraShakeAngle = angle;
+}
 
 /** Set how much camera shake fades each second
  *  @param {number} decay
  *  @memberof Settings */
-function setCameraShakeDecay(decay) { cameraShakeDecay = decay; }
+function setCameraShakeDecay(decay)
+{
+    ASSERT(isNumber(decay) && decay >= 0, 'camera shake decay must be 0 or more, below 0 it grows forever');
+    cameraShakeDecay = decay;
+}
 
 /** Set scale applied to engine time
  *  - 0 freezes the game like a pause, gameUpdatePost and input still run so the game can set it back
  *  - Above 1 the fixed step runs that many updates each frame, so a large scale costs as many updates
- *  @param {number} scale - 0 or more
+ *  @param {number} scale - 0 or more, finite
  *  @memberof Settings */
 function setTimeScale(scale)
 {
-    ASSERT(scale >= 0, 'time scale must be 0 or more');
-    timeScale = max(0, scale); // a negative scale would build a debt of time the game then waits out
+    ASSERT(scale >= 0 && scale < Infinity, 'time scale must be 0 or more and finite');
+    // a negative scale would build a debt of time the game then waits out, an endless one never end its frame
+    Number.isFinite(scale) && (timeScale = max(0, scale));
 }
 
 /** Set if tiles should be colorized when using canvas2d
@@ -754,7 +772,11 @@ function setTileDefaultPadding(padding) { tileDefaultPadding = padding; }
 /** Default amount of pixels smaller to draw tiles to prevent neighbor bleeding
  *  @param {number} bleed
  *  @memberof Settings */
-function setTileDefaultBleed(bleed) { tileDefaultBleed = bleed; }
+function setTileDefaultBleed(bleed)
+{
+    ASSERT(isNumber(bleed) && bleed >= 0, 'tile bleed must be 0 or more');
+    tileDefaultBleed = bleed;
+}
 
 /** Set if collisions are enabled, between objects and with tiles
  *  @param {boolean} enable
@@ -764,7 +786,11 @@ function setEnablePhysicsSolver(enable) { enablePhysicsSolver = enable; }
 /** Set default object mass for collision calculations
  *  @param {number} mass
  *  @memberof Settings */
-function setObjectDefaultMass(mass) { objectDefaultMass = mass; }
+function setObjectDefaultMass(mass)
+{
+    ASSERT(isNumber(mass) && mass >= 0, 'object mass must be 0 or more');
+    objectDefaultMass = mass;
+}
 
 /** Set the fraction of velocity objects keep each frame, 1 keeps all of it, 0 stops at once
  *  @param {number} damp
@@ -790,7 +816,11 @@ function setObjectDefaultAngleDamping(damp)
 /** Set how much to bounce when a collision occurs
  *  @param {number} restitution
  *  @memberof Settings */
-function setObjectDefaultRestitution(restitution) { objectDefaultRestitution = restitution; }
+function setObjectDefaultRestitution(restitution)
+{
+    ASSERT(isNumber(restitution) && restitution >= 0, 'object restitution must be 0 or more');
+    objectDefaultRestitution = restitution;
+}
 
 /** Set the fraction of sliding speed objects keep each frame on the ground, 1 is no friction, 0 stops at once
  *  @param {number} friction
@@ -822,7 +852,11 @@ function setGravity(newGravity)
 /** Set the scale for the emit rate of particles, 0 disables particle emitters
  *  @param {number} scale
  *  @memberof Settings */
-function setParticleEmitRateScale(scale) { particleEmitRateScale = scale; }
+function setParticleEmitRateScale(scale)
+{
+    ASSERT(isNumber(scale) && scale >= 0, 'particle emit rate scale must be 0 or more');
+    particleEmitRateScale = scale;
+}
 
 /** Set if gamepads are enabled
  *  @param {boolean} enable
@@ -879,7 +913,7 @@ function setTouchGamepadPassthrough(passthrough) { touchGamepadPassthrough = pas
 
 /** Set if touch gamepad should have start button in the center
  *  - Set size to enable the center button
- *  - When the game is paused, any touch will press the button
+ *  - When the game is paused, any touch will press the button, but with touchGamepadPassthrough only the button
  *  @param {number} size
  *  @memberof Settings */
 function setTouchGamepadCenterButtonSize(size) { touchGamepadCenterButtonSize = size; }
@@ -1002,12 +1036,12 @@ function setSoundDefaultTaper(taper) { soundDefaultTaper = taper; }
 /** Set if all sound pauses while the page is hidden, taking effect at once
  *  @param {boolean} pause
  *  @memberof Settings */
-function setSoundPauseWhenHidden(pause) { soundPauseWhenHidden = pause; audioPageChange(); }
+function setSoundPauseWhenHidden(pause) { soundPauseWhenHidden = pause; audioPageChange(); audioPageSettingChange?.(); }
 
 /** Set if all sound pauses while the window does not have focus, taking effect at once
  *  @param {boolean} pause
  *  @memberof Settings */
-function setSoundPauseWhenBlurred(pause) { soundPauseWhenBlurred = pause; audioPageChange(); }
+function setSoundPauseWhenBlurred(pause) { soundPauseWhenBlurred = pause; audioPageChange(); audioPageSettingChange?.(); }
 
 /** Set if watermark with FPS should be shown
  *  @param {boolean} show

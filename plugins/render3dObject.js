@@ -261,7 +261,9 @@ class EngineObject3D extends EngineObject
      *    fixed, and one pushed up lifts what stands on it; but each is resolved in turn, once a frame, so listed from
      *    the top down a stack's boxes keep a small speed down, and a game that zeroes the speed of what stands sinks
      *    it a little a level, as can a stack made touching on its first frames; more than two or three high wants
-     *    a full physics engine, as Box2D is in 2D; two that both move trade momentum by their masses
+     *    a full physics engine, as Box2D is in 2D; two that both move trade momentum by their masses; a row pushed
+     *    into a wall, a player shoving two crates, is the same: in some list orders the pusher ends a frame a little
+     *    inside the crate it pushes
      *  - A door or a lift that closes a gap on a body, against a fixed solid or the level, can not hold it in less room
      *    than it has: it stays in the one it is in, the door, and is not handed on into the wall, but a gap closed
      *    all the way, or a lift into a ceiling, can squeeze it into the floor or through; leave a body room
@@ -866,12 +868,15 @@ function render3DSettleInto(o, push, from, pusher, grid, fixed, reach)
     return false;
 }
 
+// settles a body pushed by a mover against the fixed solids and the level; true when a callback it asked moved the
+// body, a respawn or a portal, whose place is then the game's: the caller hands none of it on to another mover
 function render3DSettleFixed(o, pusher, from)
 {
-    if (o.destroyed || !o.collideSolidObjects) return;
+    if (o.destroyed || !o.collideSolidObjects) return false;
     let shape = render3DSolidShape(o), reachO = render3DSolidReach(o);
     // with many solids the ones near where it is, through the grid; the movers there are skipped below
     const grid = render3DSolidGrid(), fixed = render3DFixedSolids();
+    let moved = false;
     for (const b of grid ? render3DGridWalk(grid, ()=> reachO, ()=> shape.pos, Infinity) : fixed)
     {
         if (grid && !render3DFixed.set.has(b)) continue; // the fixed solids of the pass, as the list has them
@@ -885,10 +890,13 @@ function render3DSettleFixed(o, pusher, from)
         let push = render3DSolidPush(shape, shapeB);
         if (!push || push.lengthSquared() < 1e-12) continue;
         push = render3DPushFrom(shape, shapeB, o, b, push);
+        const x = o.pos3D.x, y = o.pos3D.y, z = o.pos3D.z;
         const resolve = render3DCollideAsk(o, b, push);
-        if (o.parent) return; // attached in the callback, it rides along with its parent
+        if (o.parent) return true; // attached in the callback, it rides along with its parent
         grid && (render3DGridPlace(grid, o), b.parent || render3DGridPlace(grid, b)); // a callback may have moved either
         shape = render3DSolidShape(o), reachO = render3DSolidReach(o); // or moved or resized this one
+        if (o.pos3D.x !== x || o.pos3D.y !== y || o.pos3D.z !== z)
+            moved = true, from = o.pos3D.copy(); // sent away by the game: met from where it was put
         if (!resolve || b.parent) continue;
         // standing as in a pair: a push off a face within its groundAngle of up holds it there, turned straight up
         const lengthSquared = push.lengthSquared(), up = push.y / lengthSquared ** .5;
@@ -901,21 +909,25 @@ function render3DSettleFixed(o, pusher, from)
         // a push that would put it into another fixed solid is not made: a body with less room than it has, a door
         // closing on it against a wall, stays in the one it is in, whatever the list order, and is not handed on
         // into the wall and through it; the one that pushed it is not counted, it goes back toward that one
+        const px = o.pos3D.x, py = o.pos3D.y, pz = o.pos3D.z;
         if (render3DSettleInto(o, push, b, pusher, grid, fixed, reachO))
         {
-            if (o.parent) return; // attached in a callback the settle asked
+            if (o.parent) return true; // attached in a callback the settle asked
             grid && render3DGridPlace(grid, o); // which may have moved it
             shape = render3DSolidShape(o), reachO = render3DSolidReach(o);
+            if (o.pos3D.x !== px || o.pos3D.y !== py || o.pos3D.z !== pz)
+                moved = true, from = o.pos3D.copy();
             continue;
         }
         o.pos3D = o.pos3D.add(push);
         shape = render3DSolidShape(o);
         render3DBounceOff(o, 1, b, push.normalize(), max(o.restitution, b.restitution));
     }
-    // and out of the level, the voxel and height maps, from where it was before the push, so a move of the game's own,
-    // as a collision callback that sends it away, is not swept back across the level
+    // and out of the level, the voxel and height maps, from where it was before the push, or from where a callback
+    // asked here sent it, so a move of the game's own, a respawn, is not swept across the level from where it was
     if (o.collideLevel && o.mass)
         render3DCollideLevel(o, from, undefined);
+    return moved;
 }
 
 // what moves shape a back clear of shape b to the side it came from: along an axis the two were clear on where they
@@ -1056,6 +1068,7 @@ function render3DCollideSolid(a)
             render3DSettleFixed(a, b, fromA);
             if (a.parent) return; // a callback in the settle attached it
         }
+        let movedA = false; // a callback sent a away, a respawn: its place is the game's, none of it is handed on
         if (weightA && weightB)
         {
             // a met the solids before it in the list already, the fixed ones among them, so a push from something
@@ -1063,9 +1076,9 @@ function render3DCollideSolid(a)
             // the part along this pair's push, since the settle also lifts a out of a floor gravity sank it into,
             // which is not b's to take, or two pushing over a floor listed after them hand that lift back and forth
             const pushed = a.pos3D.copy();
-            render3DSettleFixed(a, b, fromA);
+            movedA = render3DSettleFixed(a, b, fromA);
             if (a.parent) return; // a callback in the settle attached it, its place is an offset now
-            b.parent || (b.pos3D = b.pos3D.add(normal.scale(a.pos3D.subtract(pushed).dot(normal))));
+            movedA || b.parent || (b.pos3D = b.pos3D.add(normal.scale(a.pos3D.subtract(pushed).dot(normal))));
         }
         if (weightB)
         {
@@ -1073,10 +1086,10 @@ function render3DCollideSolid(a)
             // the frame in the wall, and a hard enough shove would carry it through; then a takes what b could not
             // move, as a pusher stops against a crate held by a wall, and is settled itself, squeezed at worst
             const pushed = b.pos3D.copy();
-            render3DSettleFixed(b, a, fromB);
+            const movedB = render3DSettleFixed(b, a, fromB);
             if (a.parent) return; // a callback in the settle attached either one: a child rides along with its parent
             const back = normal.scale(b.pos3D.subtract(pushed).dot(normal)); // along the push only, as above
-            if (weightA && !b.parent && (back.x || back.y || back.z))
+            if (weightA && !movedA && !movedB && !b.parent && (back.x || back.y || back.z))
             {
                 a.pos3D = a.pos3D.add(back);
                 render3DSettleFixed(a, b, fromA);

@@ -120,6 +120,8 @@ function isBlack(c) { return c.r <= 0 && c.g <= 0 && c.b <= 0 && c.a <= 0; }
 function tile(index=0, size=tileDefaultSize, texture=0, padding=tileDefaultPadding, bleed=tileDefaultBleed)
 {
     ASSERT(isVector2(index) || typeof index === 'number', 'index must be a vec2 or number');
+    ASSERT(typeof index !== 'number' || Number.isInteger(index), 'tile: index must be whole, a fraction slides the ' +
+        'sprite, use |0', index);
     ASSERT(isVector2(size) || typeof size === 'number', 'size must be a vec2 or number');
     ASSERT(isNumber(texture) || texture instanceof TextureInfo, 'texture must be a number or TextureInfo');
     ASSERT(isNumber(padding), 'padding must be a number');
@@ -214,7 +216,8 @@ class TileInfo
     */
     frame(frame)
     {
-        ASSERT(typeof frame === 'number' && frame >= 0, 'TileInfo.frame: frame must be a number, 0 or more', frame);
+        ASSERT(Number.isInteger(frame) && frame >= 0, 'TileInfo.frame: frame must be a whole number, 0 or more, a ' +
+            'fraction slides the sprite, use |0', frame);
         const w = this.size.x + this.padding*2;
         const h = this.size.y + this.padding*2;
         let x = (this.columns ? frame % this.columns : frame) * w;
@@ -659,7 +662,10 @@ const SHADER_VERTEX_NAMES = /* @__PURE__ */ new Set(['p', 'n', 't', 'c', 'm0', '
  * - Names in both renderers: iChannel0 the texture, iTime, iResolution, premultipliedTexture, and localUV, 0 to 1
  *   across the sprite or the mesh's own uv
  * - Names in 3D only: worldPos, worldNormal, cameraPos, sunDirection, sunColor, ambientColor, ambientGroundColor,
- *   lightCount, lights[i], lightColors[i] and shadow(), and viewProjection, the camera's matrix from the world to
+ *   lightCount, lights[i], lightColors[i], lightCones[i] (a spotlight's cone: clamp(dot(c.xyz, toPixel) - c.w, 0., 1.)
+ *   is 1 inside it and 0 past its edge, toPixel the unit way from the light, and 1 everywhere for a light with no
+ *   cone) and shadow(), the sun's shadow or render3D.shadowLight's when it is set,
+ *   and viewProjection, the camera's matrix from the world to
  *   the screen, for a snippet that sets its own depth: vec4 c = viewProjection * vec4(p, 1.); gl_FragDepth =
  *   c.z / c.w * .5 + .5 puts it at world point p; only on the screen, the shadow map and sceneDepth draw the mesh
  *   where it is

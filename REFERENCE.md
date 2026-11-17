@@ -590,7 +590,7 @@ inputClearKey(key, device=0, clearDown=true, clearPressed=true, clearReleased=tr
 
 // Mouse / Touch
 mousePos                              // World space mouse position
-mousePosScreen                        // Screen space mouse position
+mousePosScreen                        // Screen space mouse position, in canvas pixels, pixel n from n - .5 to n + .5
 mouseDelta                            // World space mouse movement delta
 mouseDeltaScreen                      // Screen space mouse movement delta
 mouseWheel                            // Delta mouse wheel this frame, a notch 1; a touch or trackpad pinch turns it
@@ -1638,7 +1638,10 @@ render3D.shader = undefined           // a Shader for the next draws, set from e
                                       // worldPos, worldNormal, cameraPos, sunDirection (toward the sun), sunColor,
                                       // ambientColor, ambientGroundColor, lightCount, lights[i] (xyz position, or
                                       // direction toward a directional one, w radius, negative when directional),
-                                      // lightColors[i] (rgb, a strength) and shadow(), the sun shadow 0 to 1 here;
+                                      // lightColors[i] (rgb, a strength), lightCones[i] (clamp(dot(c.xyz,
+                                      // toPixel) - c.w, 0., 1.) is 1 in a spotlight's cone, 0 past it, 1 always
+                                      // with no cone) and shadow(), the shadow 0 to 1 here, the
+                                      // sun's, or render3D.shadowLight's when it is set;
                                       // viewProjection, world to screen, for a snippet that sets gl_FragDepth,
                                       // which shadows and sceneDepth do not see
 render3D.cullBackFaces render3D.mirrored // set from each mesh as it draws: its doubleSided, and whether its
@@ -1812,8 +1815,8 @@ engineObjectsCollect3D(pos, size, objects, testCenters) // the EngineObject3D ob
                                            // size a vec3; no pos is every 3D object with a body (no lights,
                                            // emitters or instanced meshes); testCenters as in 2D
 engineObjectsCallback3D(pos, size, callback, objects, testCenters)
-engineObjectsRaycast3D(ray, objects)       // every object along the ray, nearest first, like engineObjectsRaycast in
-                                           // 2D; the ray has no end, use render3D.pick for just the nearest one;
+engineObjectsRaycast3D(ray, objects)       // every object along the ray, nearest first, where engineObjectsRaycast
+                                           // in 2D keeps the list's order; the ray has no end, use render3D.pick for just the nearest one;
                                            // a model or attached prefab in the list is given back for its parts
 obj.lookAt(target)                      // turn -Z toward a world space point: sets pitch and yaw, clears roll;
                                         // a child aims through its parent, since its rotation3D is local

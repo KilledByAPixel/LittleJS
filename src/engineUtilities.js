@@ -248,8 +248,9 @@ function shareURL(title, url, callback)
  *  - A top level value whose default is a vec2, a vec3 or a Color, a value with a copy method and only numbers,
  *    comes back as a new one, where JSON keeps only its numbers, a number not saved or not finite the default's;
  *    with nothing saved any value with a copy method is a copy of the default, so changing it leaves the default
- *  - A top level value whose default is a number comes back as the default when what was saved is not a number,
- *    as for Infinity, which JSON writes as null
+ *  - A value whose default is a number, at the top level or inside an array or object default, comes back as the
+ *    default when what was saved is not a number, as for Infinity, which JSON writes as null
+ *  - An array or object default not saved comes back as a copy, so changing it leaves the default
  *  @template {Object<string, any>} [T=any]
  *  @param {string} saveName - unique name for the game/save
  *  @param {T} [defaultSaveData] - default values, result is {...default, ...loaded} so this must be an object
@@ -280,6 +281,9 @@ function readSaveData(saveName, defaultSaveData)
     }
     catch { LOG('readSaveData: localStorage unavailable — using defaults'); }
     const result = { .../** @type {object} */ (defaultSaveData), ...loadedData };
+    // an array or plain object taken from the defaults is a copy, so the game's changes do not write into them
+    for (const key in defaultSaveData ?? {})
+        Object.prototype.hasOwnProperty.call(loadedData, key) || (result[key] = saveDataCopy(defaultSaveData[key]));
     // a vec2 or a Color written as JSON is only its numbers, made one again from a copy of its default, taking only
     // the numbers the copy has, so a saved key of another name, a null JSON wrote for Infinity, or a __proto__ key,
     // changes nothing; a value with more than numbers, a Matrix4, stays as JSON gave it; a saved value that is not
@@ -287,12 +291,12 @@ function readSaveData(saveName, defaultSaveData)
     for (const key in defaultSaveData ?? {})
     {
         const value = defaultSaveData[key];
-        if (typeof value === 'number')
+        if (typeof value === 'number' || saveDataPlain(value))
         {
             // a number saved as anything else, the null JSON writes for Infinity or NaN, is the default, so a best
-            // time of Infinity saved before the first win can still be beaten
-            Object.prototype.hasOwnProperty.call(loadedData, key) && typeof loadedData[key] !== 'number' &&
-                (result[key] = value);
+            // time of Infinity saved before the first win can still be beaten, in an array or object of them too
+            Object.prototype.hasOwnProperty.call(loadedData, key) &&
+                (result[key] = saveDataNumbers(value, loadedData[key]));
             continue;
         }
         if (!value || typeof value !== 'object' || typeof value.copy !== 'function') continue;
@@ -310,6 +314,35 @@ function readSaveData(saveName, defaultSaveData)
             result[key] = copy;
     }
     return result;
+}
+
+// an array or an object of plain values, as JSON makes, not a vec2 or a Color, which have a copy of their own
+const saveDataPlain = (v)=> isArray(v) ||
+    !!v && typeof v === 'object' && Object.getPrototypeOf(v) === Object.prototype;
+
+// a copy of a default's arrays and plain objects, all the way down; anything else is itself
+function saveDataCopy(value)
+{
+    if (isArray(value)) return value.map(saveDataCopy);
+    if (!saveDataPlain(value)) return value;
+    const copy = {};
+    for (const key of Object.keys(value))
+        key === '__proto__' || (copy[key] = saveDataCopy(value[key]));
+    return copy;
+}
+
+// a saved value over its default: where the default has a number, at the top or at an index or key inside it, a
+// saved value that is not one, the null JSON writes for Infinity, is the default's number; the rest is as saved
+function saveDataNumbers(fallback, saved)
+{
+    if (typeof fallback === 'number')
+        return typeof saved === 'number' ? saved : fallback;
+    if (!saveDataPlain(fallback) || !saved || typeof saved !== 'object' || isArray(fallback) !== isArray(saved))
+        return saved;
+    for (const key of Object.keys(saved))
+        key !== '__proto__' && Object.prototype.hasOwnProperty.call(fallback, key) &&
+            (saved[key] = saveDataNumbers(fallback[key], saved[key]));
+    return saved;
 }
 
 /** Write save data to local storage, an object as readSaveData gives it back

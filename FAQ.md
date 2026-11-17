@@ -302,7 +302,7 @@ Plugins are self-contained features that live alongside the engine but aren't pa
 | `tweakables.js` | A debug panel to change values live while the game runs, press 9 with the debug overlay open |
 | `medalSystem.js` | Achievement / medal tracking with popup notifications |
 | `newgrounds.js` | Newgrounds.io integration (medals held on the server, scoreboards, cloud saves, events) |
-| `wavedash.js` | Wavedash integration (achievements, leaderboards, cloud saves, stats, presence), the same shape as the Newgrounds one |
+| `wavedash.js` | Wavedash integration (achievements, leaderboards, cloud saves, stats, presence); medals and cloud saves the same shape as the Newgrounds one, scores its own |
 | `audioEffects.js` | Web Audio effects like filter, reverb, delay, distortion and compressor, for a group of sounds or everything |
 | `drawUtilities.js` | Higher-level drawing helpers like nine-slice and three-slice |
 | `render3dVoxels.js` | `VoxelMap`, a 3D grid of blocks that draws itself and that objects collide with |

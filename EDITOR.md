@@ -129,8 +129,8 @@ levelEditor.isOpen;                    // true while editing
 levelEditor.onRestart = ()=> buildLevel();         // adds a Restart button: load the level again; it may be async:
                                                    // till it settles Restart waits, in the 2D editor a resize,
                                                    // its undo and redo and Apply or Reset of another size too,
-                                                   // and Escape and Play play on, with no onPlayFrom, so a fade
-                                                   // can finish
+                                                   // the 3D editor takes no edit, undo or Reset, and Escape and
+                                                   // Play play on, with no onPlayFrom, so a fade can finish
 levelEditor.onPlayFrom = (pos)=> player.pos = pos; // adds "Play from mouse": put the player at the mouse
 levelEditor.onOpen = ()=> {};          // the editor opened
 levelEditor.onClose = ()=> {};         // it closed, the game plays on
@@ -365,16 +365,16 @@ The rules every customization follows. The headline of each is enough to start w
 | `selection` | A `Set` of the selected objects' ids, yours to add to and delete from |
 | `selected()` | The selected objects |
 | `made(id)` | What the game made for an object |
-| `change((list)=> {...})` | Edit a copy of the object list; false when nothing changed, or when the level can not be edited while its autosave waits for Apply or Drop |
+| `change((list)=> {...})` | Edit a copy of the object list; false when nothing changed, or when the level can not be edited while its autosave waits for Apply or Drop or an async `onRestart` runs |
 | `changePart(name, (part)=> newPart)` | Edit the level's `scene`, `voxels`, `terrain` or `prefabs` block; false as `change` gives it, and for any part inside Edit prefab, where a prefab is objects alone |
 | `strokeEnd()` | End the edit: one undo step, and the autosave |
 | `strokeCancel()` | Take the edit being made back |
-| `place(type, pos3D)` | Add an object of a type, selected; its id, or undefined when there is no such type, a prefab would hold itself, or the level can not be edited while its autosave waits |
+| `place(type, pos3D)` | Add an object of a type, selected; its id, or undefined when there is no such type, a prefab would hold itself, or the level can not be edited while its autosave waits or an async `onRestart` runs |
 | `setTransform(object, pos3D, rotation, scale3D)` | Inside `change`, on an object of its list: write a place, a rotation in degrees and a scale; leave one out to keep it |
 | `setProperty(object, name, value)` | Inside `change`, on an object of its list: write a property, left out of the file when it is the type's default |
 | `pos(object)`, `rotation(object)`, `scale(object)` | Read them as vectors, the rotation in degrees |
 | `mousePoint()` | Where the mouse is on the level or the ground, undefined while it is over the panel |
-| `undo(redo)` | Undo, or redo with true; false when there was nothing to undo |
+| `undo(redo)` | Undo, or redo with true; false when there was nothing to undo or it waits for a restart |
 | `toJSON()` | The level as the text Save writes |
 
 ### `levelEditor.edit2D`

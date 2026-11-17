@@ -1931,7 +1931,8 @@ const RENDER3D_SNIPPET_NAMES =
     '#define ambientGroundColor ambientGround.rgb\n' +
     '#define lightCount extraLightCount\n' +
     '#define lights extraLights\n' +
-    '#define lightColors extraLightColors\n';
+    '#define lightColors extraLightColors\n' +
+    '#define lightCones extraLightCones\n';
 
 // the fragment shader; given a Shader's snippet, its mainImage replaces the texture sample and all else is the same,
 // and a mainNormal in it bends the normal after the normal map, before all the lighting reads it

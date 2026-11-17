@@ -446,6 +446,8 @@ function buildText3D(text, size=1, depth=.2, font=engineImageFont)
  * - pos3D is the center of the map, its grid spans mapSize on X and Z around it, and a full value is height above it
  * - getHeight, getNormal, getColor and raycast are in world space, with the map's position taken off
  * - It stays upright and unscaled, its lookups do not turn with it
+ * - Its edges are not walls: a body walking on from off the map steps up to the edge's height, however high, so keep
+ *   the edge samples at the height of the ground around it, as a hill on a floor has a ring of the floor's height
  * @extends EngineObject3D
  * @memberof Render3D
  * @example

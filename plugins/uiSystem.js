@@ -1931,6 +1931,7 @@ class UIVideo extends UIObject
             document.addEventListener?.('visibilitychange', uiVideosPageChange);
             globalThis.addEventListener?.('blur', uiVideosPageChange);
             globalThis.addEventListener?.('focus', uiVideosPageChange);
+            audioPageSettingChange = uiVideosPageChange; // and soundPauseWhenHidden changed while hidden
         }
         uiVideosListening = true;
         autoplay && this.play();

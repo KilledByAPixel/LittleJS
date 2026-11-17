@@ -86,6 +86,9 @@ function audioSetSession()
 // the audio clock with it so every sound picks up exactly where it was; only a suspend made here is undone, not one
 // the browser holds until the first input
 let audioSuspendedByPage = false, audioSpeechPausedByPage = false;
+// a plugin's own sound that follows the page, the UI's videos, told when a setting changes, which is no page event
+/** @type {(function(): void)|undefined} */
+let audioPageSettingChange;
 function audioPageChange()
 {
     if (headlessMode) return;

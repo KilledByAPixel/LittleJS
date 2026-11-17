@@ -1,7 +1,7 @@
 /**
  * LittleJS Wavedash Plugin
- * - The Wavedash twin of the Newgrounds plugin: achievements, leaderboards and cloud saves, the same shape so a game
- *   can switch, and stats and presence of Wavedash's own
+ * - The Wavedash twin of the Newgrounds plugin: achievements and cloud saves the same shape, so a game can switch
+ *   those, leaderboards with their own arguments and results, and stats and presence of Wavedash's own
  * - Wavedash serves the game's page and puts its SDK in window.Wavedash before the game runs, so nothing is bundled;
  *   off Wavedash (local, itch, GitHub Pages) there is none, and every call does nothing
  * - Make the plugin when the game can draw, at the end of gameInit: Wavedash.init is called then, and until it is
