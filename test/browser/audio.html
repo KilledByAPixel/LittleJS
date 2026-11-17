@@ -25,27 +25,37 @@ smokeRun(async ()=>
     audioContext.state === 'running' || await audioContext.resume();
     check('the audio context runs', audioContext.state === 'running', audioContext.state);
 
-    // everything through an analyser, the loudest sample a play makes
+    // everything through an analyser, the loudest sample a play makes; the audio runs on its own thread, late on a
+    // busy machine, so a listen waits up to 2 seconds for a sound that should be heard, done once it is, and one
+    // that should be silent first waits for the bus to go quiet, so the last sound's tail is not taken for it
     const analyser = audioContext.createAnalyser();
     analyser.fftSize = 2048;
     setAudioMasterEffect(analyser);
-    const loudest = async (play)=>
+    const data = new Float32Array(analyser.fftSize);
+    const peakNow = ()=>
+    {
+        analyser.getFloatTimeDomainData(data);
+        let peak = 0;
+        for (const v of data) peak = Math.max(peak, Math.abs(v));
+        return peak;
+    };
+    const quiet = async ()=>
+    {
+        for (let start = performance.now(), still = 0; performance.now() - start < 3e3 && still < 5;)
+            await wait(20), still = peakNow() < 1e-5 ? still + 1 : 0;
+    };
+    const loudest = async (play, enough=Infinity, ms=2e3)=>
     {
         play();
         let peak = 0;
-        const data = new Float32Array(analyser.fftSize);
-        for (let i = 0; i < 10; ++i)
-        {
-            await wait(20);
-            analyser.getFloatTimeDomainData(data);
-            for (const v of data) peak = Math.max(peak, Math.abs(v));
-        }
+        for (let start = performance.now(), i = 0; (i++ < 10 || performance.now() - start < ms) && peak <= enough;)
+            await wait(20), peak = Math.max(peak, peakNow());
         return peak;
     };
     const sound = new Sound([1,,440,,.2,.2]); // a plain tone
-    check('a zzfx sound is heard', await loudest(()=> sound.play()) > .01);
-    await wait(300);
-    check('a negative volume is silent', await loudest(()=> playSamples(sound.sampleChannels, -1)) < 1e-4);
+    check('a zzfx sound is heard', await loudest(()=> sound.play(), .01) > .01);
+    await quiet();
+    check('a negative volume is silent', await loudest(()=> playSamples(sound.sampleChannels, -1), 1e-4, 400) < 1e-4);
 
     // each effect in the path, heard on an analyser only that effect reaches, so a sound that went round it to the
     // master is not heard there; fully wet, so the dry path does not carry it
@@ -87,8 +97,8 @@ smokeRun(async ()=>
     await wait(100);
     check('a loop plays', instance.isPlaying());
     instance.stop();
-    await wait(200);
-    check('and stops', !instance.isPlaying() && await loudest(()=> {}) < 1e-3);
+    await quiet();
+    check('and stops', !instance.isPlaying() && await loudest(()=> {}, 1e-3, 400) < 1e-3);
     setAudioMasterEffect();
 });
 </script>
