@@ -176,7 +176,8 @@ test('edit3D asserts on setTransform of the level\'s own object and on a change 
         return JSON.stringify({said: said.map((s)=> s.replace(/^Assert failed: /, '')), pos: level.objects[0].pos,
             ids: level.objects.map((o)=> o.id), moved, undo: editor3DUndoList.length});
     })()`));
-    assert.deepEqual(r.said, ['setTransform works on an object of the list change gives, inside change',
+    assert.deepEqual(r.said, ['setTransform works on an object of the list change gives, inside change: push a new one ' +
+        'into the list first',
         'change and place can not be called inside change, edit the list it gives instead']);
     assert.deepEqual(r.pos, [2, .5, .5]);
     assert.deepEqual(r.ids, [1], 'nothing placed');
@@ -253,14 +254,14 @@ test('a 3D class default is merged with the file\'s object and keeps its class; 
         let refused = '';
         try { edit.change((list)=> edit.setProperty(list[0], 'stats', new Stats)); }
         catch (e) { refused = e.message; }
-        const kept = edit.change((list)=> edit.setProperty(list[0], 'stats', {hp: 7}));
+        const kept = edit.change((list)=> edit.setProperty(list[0], 'stats', {hp: 7, armor: 2}));
         return JSON.stringify({loaded, refused: /an instance of a class/.test(refused), kept,
             saved: level.objects[0].properties.stats});
     })()`));
     assert.deepEqual(r.loaded, {stats: true, total: 7, plain: {a: 3, b: 2}});
     assert.equal(r.refused, true);
     assert.equal(r.kept, true);
-    assert.deepEqual(r.saved, {hp: 7});
+    assert.deepEqual(r.saved, {hp: 7, armor: 2});
 });
 
 test('a resized autosave with objects applied over a file with no object layer links the editor\'s Objects layer (E1)',
