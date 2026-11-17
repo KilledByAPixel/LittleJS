@@ -484,16 +484,14 @@ class HeightMap extends EngineObject3D
         /** @property {Array<Array<Color>>|undefined} - Vertex colors as [row][column], undefined for white
          *  @type {Array<Array<Color>>|undefined} */
         this.colors = /** @type {Array<Array<Color>>|undefined} */ (colors);
-        /** @property {Vector2} - World size along X and Z */
+        /** @property {Vector2} - World size along X and Z, rebuild() after changing it */
         this.mapSize = mapSize.copy();
-        /** @property {number} - World height of a full value */
+        /** @property {number} - World height of a full value, rebuild() after changing it */
         this.height = height;
         /** @type {Array<number>} the lowest and highest of the heights, kept by rebuild */
         this.heightRange = [0, 1];
         /** @property {boolean} - Smooth shading, rebuild() after changing it */
         this.smooth = !!smooth;
-        // its box, centered on pos3D, reaches a full height above and below, so it holds the surface rising from it
-        this.size3D = vec3(mapSize.x, 2 * abs(height), mapSize.y);
         this.rebuild();
         render3DLevel.push(this);
     }
@@ -638,7 +636,7 @@ class HeightMap extends EngineObject3D
             (x, z)=> this.getHeight(x + p.x, z + p.z) - p.y, smooth);
     }
 
-    /** Make the mesh again from the heights and colors, after changing them or smooth */
+    /** Make the mesh again from the heights and colors, after changing them, smooth, mapSize or height */
     rebuild()
     {
         // the lowest and highest values, which may be outside 0 to 1, for the raycast's box
@@ -647,6 +645,9 @@ class HeightMap extends EngineObject3D
             for (const value of row)
                 lo = min(lo, value), hi = max(hi, value);
         this.heightRange = [lo, hi];
+        // its box, centered on pos3D, reaches a full height above and below, or as far as a value outside 0 to 1, so
+        // it holds the surface rising from it, kept here so a map given a new size or height is found where it is
+        this.size3D = vec3(this.mapSize.x, 2 * abs(this.height) * max(1, abs(lo), abs(hi)), this.mapSize.y);
         this.setMesh(this.buildMesh(this.smooth));
     }
 
@@ -1625,7 +1626,8 @@ const render3DUIHasPress = (button=0)=> !!(button === 0 && uiSystem?.activeObjec
 /**
  * CameraControl3D - Drag to turn the camera around a point, roll the wheel to zoom
  * - An EngineObject3D, so move its pos3D to follow something, or parent it to an object
- * - A camera of the camera plugin: the newest made drives the view, after the objects move each update
+ * - A camera of the camera plugin: the newest made drives the view, after the objects move each update, and only
+ *   the one driving reads the mouse
  * - Destroy it to hand the camera back, and it stops driving the camera
  * - Set persistent to keep it when engineObjectsDestroy clears out a level
  * - Every part of it is a field, so a game can change the buttons, speeds and limits
@@ -1680,7 +1682,9 @@ class CameraControl3D extends EngineObject3D
     /** Read the mouse and turn the orbit, called automatically each frame */
     update()
     {
-        if (mouseIsDown(this.dragButton) && !render3DUIHasPress(this.dragButton))
+        // only the camera driving the view reads the mouse, so one under a newer camera keeps its orbit
+        const driving = cameraDriver() === this;
+        if (driving && mouseIsDown(this.dragButton) && !render3DUIHasPress(this.dragButton))
         {
             // the scene follows the drag
             this.yaw -= mouseDeltaScreen.x * this.dragSpeed;
@@ -1689,7 +1693,7 @@ class CameraControl3D extends EngineObject3D
         else
             this.yaw += this.idleSpin;
         this.pitch = clamp(this.pitch, this.pitchRange.x, this.pitchRange.y);
-        if (this.zoomSpeed && mouseWheel)
+        if (driving && this.zoomSpeed && mouseWheel)
             // by how far the wheel turned, a notch a step, a pinch a part of one each frame
             this.distance = clamp(this.distance * (1 + this.zoomSpeed) ** mouseWheel, this.zoomRange.x, this.zoomRange.y);
     }
@@ -1934,7 +1938,8 @@ class ThirdPersonCamera3D extends EngineObject3D
  * - An EngineObject3D that moves by velocity3D, so give it a size3D and call setCollision to walk into solid
  *   objects instead of through them; walking keeps velocity3D.y, so render3D.gravity can pull it down
  * - Starts from wherever render3D.camera is, so it can take over from another camera without a jump
- * - A camera of the camera plugin: the newest made drives the view, after the objects move each update
+ * - A camera of the camera plugin: the newest made drives the view, after the objects move each update; only the
+ *   one driving reads input, so under a newer camera, a cutscene's, it stands still and still falls
  * - As the child of an EngineObject3D, like a player on a ship, its yaw, pitch and walking are relative to the parent,
  *   so it turns and moves with it
  * - Destroy it to hand the camera back
@@ -2027,27 +2032,31 @@ class FirstPersonCamera3D extends EngineObject3D
         // only a root moves by its own physics, a child follows its parent, so gravity would still pull one that flies
         ASSERT(!this.fly || !this.parent, 'a flying FirstPersonCamera3D moves on its own, it cannot be a child');
 
+        // only the camera driving the view reads input, so one under a newer camera, a cutscene's, stands still and
+        // still falls
+        const driving = cameraDriver() === this;
+
         // a click captures the mouse, then it looks around while captured or while a button is held
-        if (this.lockPointer && mouseWasPressed(this.dragButton) && !render3DUIHasPress(this.dragButton))
+        if (driving && this.lockPointer && mouseWasPressed(this.dragButton) && !render3DUIHasPress(this.dragButton))
             pointerLockRequest();
-        if (pointerLockIsActive() || mouseIsDown(this.dragButton) && !render3DUIHasPress(this.dragButton))
+        if (driving && (pointerLockIsActive() || mouseIsDown(this.dragButton) && !render3DUIHasPress(this.dragButton)))
         {
             this.yaw -= mouseDeltaScreen.x * this.lookSpeed;
             this.pitch -= mouseDeltaScreen.y * this.lookSpeed;
         }
         // a gamepad stick looks too, the touch gamepad's included, its y up
-        const look = gamepadStick(this.stick);
+        const look = driving ? gamepadStick(this.stick) : vec2();
         this.yaw -= look.x * this.stickSpeed * timeDelta;
         this.pitch += look.y * this.stickSpeed * timeDelta;
         this.pitch = clamp(this.pitch, this.pitchRange.x, this.pitchRange.y);
 
         // the keys or a stick move it level, or the way it looks when flying, and walking keeps its fall
-        const input = keyDirection().add(gamepadStick(this.moveStick));
+        const input = driving ? keyDirection().add(gamepadStick(this.moveStick)) : vec2();
         const move = vec3(input.x, 0, -input.y).clampLength(1).scale(this.moveSpeed)
             .rotateX(this.fly ? this.pitch : 0).rotateY(this.yaw);
         this.velocity3D = this.fly ? move : vec3(move.x, this.velocity3D.y, move.z);
         // a jump from the ground, level collision sets what it stands on
-        if (this.jumpSpeed && !this.fly && this.groundObject && (keyWasPressed('Space') || gamepadWasPressed(0)))
+        if (driving && this.jumpSpeed && !this.fly && this.groundObject && (keyWasPressed('Space') || gamepadWasPressed(0)))
             this.velocity3D.y = this.jumpSpeed;
     }
 
@@ -2899,6 +2908,8 @@ class LensFlare3D extends EngineObject3D
          *  plain view, eased; the first update sets it at once, so a sun hidden from the start never shows */
         this.visible = 0;
         this.visibleFound = false; // the first update has found it
+        /** @type {Camera3D|undefined} */
+        this.visibleCamera = undefined; // the camera visible was last found from
         this.renderOrder = 1e9; // over the game's sprites, it is light in the lens
         this.madeKey = '';
         /** @type {Array<LensFlareElement>} */
@@ -3000,16 +3011,21 @@ class LensFlare3D extends EngineObject3D
      *      tileInfo: TileInfo|undefined, angle: number}>} */
     getScreenElements()
     {
-        // one made while the game is paused, as the 3D editor makes them, has had no update to find it, and while
-        // paused nothing updates it, so it is found at once each time it is drawn, as the camera turns
-        if (!this.visibleFound || paused)
+        // one made while the game is held, paused or under a level editor, as the 3D editor makes them, has had no
+        // update to find it, and while held nothing updates it, so it is found at once each time it is drawn, as the
+        // camera turns
+        if (!this.visibleFound || engineIsFrozen())
         {
             this.visibleFound = false;
             this.updateVisible(0);
         }
-        const look = this.visible > 0 && this.flareLook();
+        // drawn from another camera than the update judged it from, the free camera's, it is judged from that one
+        // for this draw, leaving the game's fade as it is
+        const visible = this.visibleCamera === render3D.camera ? this.visible :
+            +(!!this.flareLook() && !(this.occlusion && this.isHidden()));
+        const look = visible > 0 && this.flareLook();
         if (!look) return [];
-        const {sun, center, tint, height} = look, strength = look.strength * this.visible;
+        const {sun, center, tint, height} = look, strength = look.strength * visible;
         return this.getElements().map((e)=>
         {
             const c = e.color.multiply(tint);
@@ -3080,6 +3096,7 @@ class LensFlare3D extends EngineObject3D
         const step = this.fadeTime > 0 && this.visibleFound ? seconds / this.fadeTime : 1;
         this.visible = clamp(this.visible + (shows ? step : -step));
         this.visibleFound = true;
+        this.visibleCamera = render3D.camera;
     }
 
     /** Draw the flare over the 3D scene, added onto it, called automatically in the 2D pass */

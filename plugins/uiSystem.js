@@ -1775,8 +1775,9 @@ class UISlider extends UIObject
     }
     update()
     {
-        // held when the frame began, so a release in the same frame as the last move still reads it
-        const wasActive = this.isActiveObject();
+        // held when the frame began, so a release in the same frame as the last move still reads it, but not by a
+        // new press, after a release it missed, which is another widget's or none
+        const wasActive = this.isActiveObject() && !mouseWasPressed(0);
         super.update();
         if (!this.interactive || this.destroyed)
             return; // destroyed by its onUpdate, it no longer follows the mouse or calls onChange

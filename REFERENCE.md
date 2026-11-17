@@ -871,8 +871,9 @@ tileLayersFromLDtk(ldtk, level=0)                   // A Tiled map of an LDtk le
                                                     // see-through tile in a layer of its opacity; its entities
                                                     // objects with their fields as properties
 objectLayersAddType(name, make, defaults={}, tileInfo) // Name a type of object in a Tiled map: a class made
-                                                    // with new make(pos), or an arrow function called make(pos),
-                                                    // defaults set on what it made; tileInfo is an editor icon
+                                                    // with new make(pos), or an arrow function called
+                                                    // make(pos, properties), defaults set on what it made when
+                                                    // that is an object; tileInfo is an editor icon
 objectLayersLoad(tileMapData)                       // Make the objects of a map's object layers, returns them
 
 ```
@@ -1222,8 +1223,9 @@ new LightSystemPlugin(undefined, rgb(.1,.1,.15)) // Faint moonlight ambient
 // Tunables
 lightSystem.enabled       = true              // Skip the render pass entirely when false
 lightSystem.ambientColor  = rgb(0, 0, 0)      // Color of unlit areas
-lightSystem.textureSize   = vec2(320, 180)    // the lightmap's size, the canvas's unless one was given; set it later
-lightSystem.textureSizeAuto = false           // with this, and the lightmap is made again at it
+lightSystem.textureSize   = vec2(320, 180)    // the lightmap's size, the canvas's unless one was given; set later,
+                                              // the lightmap is made again at it and textureSizeAuto turns off
+lightSystem.textureSizeAuto = true            // follow the canvas's size again
 
 // Shadows: once a frame every object draws black into a shadow map, and each light's rays stop at them
 lightSystem.shadows          = false  // on for shadows; off costs nothing
@@ -2006,6 +2008,7 @@ collider.rebuild()                            // take the triangles from the mes
 // Voxel map - a 3D tile map, from the render3dVoxels plugin
 const map = new VoxelMap(pos3D=vec3(), mapSize=vec3(16), tileInfo=tile()) // a grid of blocks that draws itself and
         // that objects with collideLevel collide with; pos3D is its corner and a cell is 1 unit, it stays upright
+        // and its blocks are walls, with no step up onto one as a HeightMap or MeshCollider has
 map.setVoxel(cell, type) / map.getVoxel(cell) // type 1-255 shows that tile on every face, 0 is empty, a cell outside
                                               // the map is ignored and reads 0
 map.setBlockType(type, faces, {seeThrough, transparent, doubleSided}) // faces: a tile index, six (+x, -x, +y, -y,

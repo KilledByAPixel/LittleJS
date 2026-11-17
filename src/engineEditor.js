@@ -1775,6 +1775,9 @@ function editorRestoreObjects(map, saved, fromAutosave=false)
         group.objects = editorObjectsCopy(objects);
         fromAutosave && !objects.length && editorMadeGroups.delete(group);
     });
+    // the editor's own Objects layer of a map that had none is the group made for it, or it would make another
+    const made = editorObjectGroups(map.layers);
+    editorMapList.find((record)=> record.map === map)?.objectLayers?.forEach((layer, i)=> layer.group ||= made[i]);
     if (saved.nextobjectid > (map.nextobjectid ?? 1))
         map.nextobjectid = saved.nextobjectid;
 }
@@ -3437,6 +3440,10 @@ function editorToolUpdate(space)
     return true;
 }
 
+// the copy of an object list edit2D.changeObjects is editing, while it runs, for setProperty's assert
+/** @type {Array<TiledObject>|undefined} */
+let editorEdit2DChanging;
+
 // the 2D editor's edit functions, what levelEditor.edit2D gives a game's own keys, buttons and tools
 const editorEdit2D =
 {
@@ -3455,7 +3462,15 @@ const editorEdit2D =
         editorPaint(layer, vec2(x, y), tile < 0 ? 0 : editorTileToGid(tile, direction & 3, mirror));
         return true;
     },
-    changeObjects(change) { return editorChangeObjects(editorObjectLayer, change); },
+    changeObjects(change)
+    {
+        return editorChangeObjects(editorObjectLayer, (list)=>
+        {
+            editorEdit2DChanging = list;
+            try { change(list); }
+            finally { editorEdit2DChanging = undefined; }
+        });
+    },
     setProperty(object, name, value)
     {
         const type = objectLayersTypes.get(object.type || object.class);
@@ -3467,6 +3482,9 @@ const editorEdit2D =
             isVector2(defaultValue) ? isVector2(value) :
             defaultValue == null ? isColor(value) || /^(number|boolean|string)$/.test(typeof value) :
             typeof defaultValue != 'object' && typeof value === typeof defaultValue);
+        // outside changeObjects, or on an object not of its list, it would write into a copy, lost without a word
+        ASSERT(!!editorEdit2DChanging?.includes(object),
+            'setProperty works on an object of the list changeObjects gives, inside changeObjects');
         ASSERT(fits, `setProperty: ${name} can not be ${typeof value == 'number' ? value :
             objectPropertyKindName(value)}, its default is ` + objectPropertyKindName(defaultValue));
         fits && editorObjectSetProperty(object, name, value, defaultValue);

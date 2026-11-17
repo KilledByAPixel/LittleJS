@@ -687,22 +687,24 @@ const objectLayersTypes = new Map;
  *  - The name is the object's type in Tiled (its class in Tiled 1.9); it is a string because minified builds
  *    rename classes
  *  - A class, or any function with a prototype, is made with new make(pos); an arrow function is called as
- *    make(pos), for what is not an object, like a player start
- *  - The defaults, and then the properties the object has in Tiled, are set on what it made
+ *    make(pos, properties), for what is not an object, like a player start, which gets its properties there
+ *  - The defaults, and then the properties the object has in Tiled, are set on what it made, when that is an
+ *    object of the game's; a position or a Color given back is left out of the list objectLayersLoad gives
  *  - Each object gets a copy of an array or plain object default; a default that is an instance of a class of the
  *    game's own is copied with its copy method, so give the class one, or every object shares the one instance,
  *    and an object whose map sets one of its members gets a new instance of the class with none of its private
  *    fields, the members its own
  *  - Adding a name again replaces it
  *  @param {string} name - The type the objects have in Tiled
- *  @param {(function(Vector2): unknown)|(function(new: unknown, Vector2))} make - A class made at each object's
- *  position, or a function called with it
+ *  @param {(function(Vector2, ObjectProperties): unknown)|(function(new: unknown, Vector2))} make - A class made
+ *  at each object's position, or a function called with it and the object's properties
  *  @param {ObjectProperties} [defaults] - Properties set on each one made, the level editor shows inputs for them
  *  @param {TileInfo} [tileInfo] - An icon for the level editor
  *  @memberof TileLayers
  *  @example
  *  objectLayersAddType('Coin', Coin, {value: 1}, tile(5, 16));
- *  objectLayersAddType('PlayerStart', (pos)=> playerStartPos = pos); */
+ *  objectLayersAddType('PlayerStart', (pos, properties)=> { start = pos; facing = properties.facing; }, {facing: 1});
+ */
 function objectLayersAddType(name, make, defaults={}, tileInfo)
 {
     ASSERT(isStringLike(name), 'object type name must be a string');
@@ -906,8 +908,9 @@ const objectPropertyDefault = (defaults, key)=>
 // a Tiled class property's value over its default, each plain object member by member, so a member Tiled left out,
 // as it leaves out the ones not set, keeps the default's; a member of another kind than its default keeps the
 // default, said through warn with its path, as a property does; a member named __proto__, constructor or prototype
-// is left out, so a level a player made can not reach what every object shares
-function objectLayersMergeClass(fallback, value, warn, path='')
+// is left out, so a level a player made can not reach what every object shares; a default member the value leaves
+// alone, or gives of the wrong kind, whose copy method gives back no new object is said through shared with its path
+function objectLayersMergeClass(fallback, value, warn, path='', shared)
 {
     const plain = (o)=> !!o && typeof o === 'object' && !isArray(o);
     if (!plain(fallback) || !plain(value))
@@ -923,9 +926,15 @@ function objectLayersMergeClass(fallback, value, warn, path='')
         warn?.(`${path || ' default'} has a copy method that gives back no new object, its members taken as its own`);
     const copied = !!merged && typeof merged == 'object' && merged !== fallback;
     copied || (merged = Object.create(Object.getPrototypeOf(fallback)));
+    // the members copied from the default that hold one shared, said if the value does not take their place
+    const kept = [];
     if (!copied)
         for (const key of Object.keys(fallback))
-            objectPropertySet(merged, key, objectPropertyCopy(fallback[key]));
+        {
+            const paths = [], copy = objectPropertyCopy(fallback[key], (at)=> paths.push(at), path + '.' + key);
+            objectPropertySet(merged, key, copy);
+            paths.length && kept.push({key, copy, paths});
+        }
     for (const key of Object.keys(value))
     {
         const name = path + '.' + key;
@@ -957,7 +966,7 @@ function objectLayersMergeClass(fallback, value, warn, path='')
         }
         // assigned to a copy, so its setters run; one with no copy method has none of its class's private fields for
         // an accessor to read, it gets the member as its own
-        const result = objectLayersMergeClass(before, member, warn, name);
+        const result = objectLayersMergeClass(before, member, warn, name, shared);
         // its own would take the place of a method of the game's class, read by its descriptor so no getter runs
         // from the default itself, whose own field is data, through its class to Object's, toString and valueOf too
         let method = false;
@@ -971,6 +980,8 @@ function objectLayersMergeClass(fallback, value, warn, path='')
         else
             give(result);
     }
+    for (const {key, copy, paths} of kept)
+        Object.getOwnPropertyDescriptor(merged, key)?.value === copy && paths.forEach((at)=> shared?.(at));
     return merged;
 }
 
@@ -978,15 +989,12 @@ function objectLayersMergeClass(fallback, value, warn, path='')
 function objectLayersProperties(type, object, tileMapData)
 {
     const properties = {}, set = (key, value)=> objectPropertySet(properties, key, value);
-    const list = objectLayersPropertyList(object);
-    for (const [key, value] of Object.entries(type.defaults))
-    {
-        // a default of a class whose copy method gives back no new object, at any depth, is said by its type, and
-        // only for an object that leaves it alone, which then shares it; one the map sets gets its own
-        const typeName = object.type || object.class, given = list.some((property)=> property.name === key);
-        set(key, objectPropertyCopy(value, given ? undefined :
-            objectPropertySharedWarn(tileMapData, 'objectLayersLoad', typeName, key)));
-    }
+    const list = objectLayersPropertyList(object), typeName = object.type || object.class;
+    const shared = (key)=> objectPropertySharedWarn(tileMapData, 'objectLayersLoad', typeName, key);
+    // a default of a class whose copy method gives back no new object, at any depth, is said by its type, and only
+    // for an object that keeps it, which then shares it: one that leaves it alone, sets another member beside it,
+    // or gives it of the wrong kind; one the map sets gets its own
+    const kept = objectPropertyDefaults(type.defaults, set);
     // a list of {name, type, value}, as Tiled 1.2 and on write it, or an older map's object of them; an entry that is
     // not one, or a color that is not a hex string, is said and left out, read before the object is made
     isArray(object.properties) && list.length < object.properties.length && objectLayersWarnOnce(tileMapData,
@@ -1027,13 +1035,41 @@ function objectLayersProperties(type, object, tileMapData)
             }
             // a class property is the map's object over the type's default, member by member: Tiled writes only the
             // members set on that object, the rest are the class's defaults
-            set(name, objectLayersMergeClass(fallback, value, (text)=> say(text, text)));
+            set(name, objectLayersMergeClass(fallback, value, (text)=> say(text, text), '', shared(name)));
         }
     }
+    objectPropertySayShared(properties, kept, shared);
     return properties;
 }
 
+// each of a type's defaults copied for one object through set, giving back the ones that hold a default shared, a
+// class's whose copy method gives back no new object, with where in it, for objectPropertySayShared
+function objectPropertyDefaults(defaults, set)
+{
+    const kept = [];
+    for (const [key, value] of Object.entries(defaults))
+    {
+        const paths = [], copy = objectPropertyCopy(value, (at)=> paths.push(at));
+        set(key, copy);
+        paths.length && kept.push({key, copy, paths});
+    }
+    return kept;
+}
+
+// say the shared defaults of the ones the object kept, those still the copy objectPropertyDefaults made
+function objectPropertySayShared(properties, kept, shared)
+{
+    for (const {key, copy, paths} of kept)
+        Object.getOwnPropertyDescriptor(properties, key)?.value === copy && paths.forEach(shared(key));
+}
+
 // make one Tiled object from the type added for its name, undefined when there is no such type or it made nothing
+// what a type made is an object of the game's, kept in the loader's list; a marker's function, (pos)=> start = pos,
+// gives back the position, a value of the engine's, which is not, and a list unloaded by destroy would throw on it;
+// the 3D loader leaves a Vector3 out too
+function objectLayersIsMade(result)
+{ return !!result && typeof result === 'object' && !(result instanceof Vector2) && !(result instanceof Color); }
+
 function objectLayersMake(tileMapData, object)
 {
     const name = object.type || object.class, type = objectLayersTypes.get(name);
@@ -1051,10 +1087,10 @@ function objectLayersMake(tileMapData, object)
     const pos = vec2(object.x / tilewidth, height - object.y / tileheight);
     // its properties read first, so a map that can not be read stops before anything is made for it
     const properties = objectLayersProperties(type, object, tileMapData);
-    const {make} = type, result = make.prototype ? new make(pos) : make(pos);
-    // what it made is an object of the game's; a marker's function, (pos)=> start = pos, gives back the position, a
-    // value of the engine's, which is not, and a list unloaded by destroy would throw on it
-    if (!result || typeof result !== 'object' || result instanceof Vector2 || isColor(result)) return;
+    // a function is given the properties too, so a marker, (pos, properties)=> start = pos, has them; a class is
+    // given the position alone, as its constructor may take other things after it, and its properties are set
+    const {make} = type, result = make.prototype ? new make(pos) : make(pos, properties);
+    if (!objectLayersIsMade(result)) return;
     for (const [key, value] of Object.entries(properties))
         objectPropertyAssign(result, key, value, name, undefined, (why)=> objectLayersWarnOnce(tileMapData,
             object.id + ' ' + key + why, `objectLayersLoad: ${name} property ${key} ${why}, left out`));

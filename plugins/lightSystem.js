@@ -79,7 +79,8 @@ class LightSystemPlugin
         /** @property {Vector2|undefined} - Size of the lightmap texture, follows mainCanvasSize (css pixels, so it is not scaled by canvasPixelRatio) unless a size was passed; undefined until the system starts when none was; a new size set later makes the lightmap again at it, and turns textureSizeAuto off so the canvas does not set it back
          *  @type {Vector2|undefined} */
         this.textureSize = textureSize ? textureSize.copy() : undefined;
-        /** @property {boolean} - True when no size was passed, so the lightmap follows mainCanvasSize */
+        /** @property {boolean} - True when no size was passed, so the lightmap follows mainCanvasSize; a textureSize
+         *  set later turns it off, and setting it true again follows the canvas again */
         this.textureSizeAuto = !textureSize;
         /** @type {Vector2} */
         this.textureSizeAllocated = vec2(); // the size the lightmap was made at, it is made again when textureSize changes

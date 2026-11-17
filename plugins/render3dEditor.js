@@ -517,7 +517,6 @@ function editor3DHash(text)
 // puts in the edits it autosaved for the file, or keeps them waiting when the file changed since
 function editor3DLevelLoaded(level)
 {
-    editor3DAutosaveFlush(); // what the last level has waiting is written before this one reads the autosaves
     if (editor3DLevel !== level)
     {
         // another level, the selection, the edit being made and what was said of it were the last one's, and a drag
@@ -530,12 +529,16 @@ function editor3DLevelLoaded(level)
             old.objects.splice(0, old.objects.length, ...editor3DCopy(stroke.before));
             for (const name of editor3DLevelPartNames)
                 stroke.parts?.[name] ? old[name] = editor3DCopy(stroke.parts[name]) : delete old[name];
+            // and its autosave written again, which one written during the drag would have with the half move
+            editor3DAutosaveWaiting.add(old);
         }
         editor3DSelection.clear();
         editor3DStroke = undefined;
         editor3DPrefabMessage = '';
         editor3DDrag = editor3DHover = editor3DPlacedHeld = undefined;
     }
+    // what the last level has waiting is written before this one reads the autosaves, after it was put back
+    editor3DAutosaveFlush();
     if (!editor3DPrefabLevels.has(level) && editor3DPrefabStack.length)
     {
         // the game loaded a level while a prefab was open: what was open is gone with what it was opened from, the
@@ -704,17 +707,20 @@ function editor3DEditsWait()
 
 // change the level's objects as part of the edit being made: change edits a copy of the list; the changes until
 // editor3DStrokeEnd are one undo, so a drag is one undo; false when nothing changed
-let editor3DChanging = false;
+/** @type {Array<Level3DObject>|undefined} the copy a change is editing, while it runs */
+let editor3DChanging;
 function editor3DChange(change)
 {
-    if (!editor3DLevel || editor3DEditsWait()) return false; // its autosave or a restart waits first
+    // a change inside a change would be written over by the outer one's copy, lost, a place's id given back for an
+    // object the level does not have
+    ASSERT(!editor3DChanging, 'change and place can not be called inside change, edit the list it gives instead');
+    if (editor3DChanging || !editor3DLevel || editor3DEditsWait()) return false; // its autosave or a restart waits first
     const before = editor3DCopy(editor3DObjects()), after = editor3DCopy(before);
-    // while it runs, setTransform and setProperty write into its copy; outside it they would write into the level
-    // itself, with no undo, autosave or move
-    const was = editor3DChanging;
-    editor3DChanging = true;
+    // while it runs, setTransform and setProperty write into its copy, on an object of it; outside it, or on the
+    // level's own object, they would write into the level itself, with no undo, autosave or move
+    editor3DChanging = after;
     try { change(after); }
-    finally { editor3DChanging = was; }
+    finally { editor3DChanging = undefined; }
     // what is not an object, a null a game's change pushed, is dropped, as a level's own are when it loads
     for (let i = after.length; i--;)
         editor3DIsObject(after[i]) || after.splice(i, 1);
@@ -1979,7 +1985,8 @@ const editor3DEdit =
     setTransform(object, pos3D, rotation, scale3D)
     {
         // a place, a turn and a scale the file keeps, NaN would be saved as null and read back as 0
-        ASSERT(editor3DChanging, 'setTransform works on an object of the list change gives, inside change');
+        ASSERT(!!editor3DChanging?.includes(object),
+            'setTransform works on an object of the list change gives, inside change');
         const fine = (v)=> v === undefined || isVector3(v) && isFinite(v.x) && isFinite(v.y) && isFinite(v.z);
         ASSERT(fine(pos3D) && fine(rotation) && fine(scale3D), 'setTransform takes finite Vector3s', pos3D, rotation,
             scale3D);
@@ -1992,14 +1999,20 @@ const editor3DEdit =
         // default read as the load reads it, over null an object or a list, and a Color or a vector only over one
         const type = level3DTypes.get(object.type), d = type && objectPropertyDefault(type.defaults, name);
         const finite = typeof value != 'number' || isFinite(value);
-        const special = isColor(value) || isVector2(value) || isVector3(value);
+        // an object of a class of the game's would be saved as its members and come back a plain object, so an
+        // object is a plain one or a list, as a file has them
+        const special = isColor(value) || isVector2(value) || isVector3(value) || !!value &&
+            typeof value === 'object' && !isArray(value) && Object.getPrototypeOf(value) !== Object.prototype;
         const fits = finite && (isColor(d) ? isColor(value) : isVector3(d) ? isVector3(value) :
             isVector2(d) ? isVector2(value) : d === undefined ? !special :
             d === null ? !special && typeof value === 'object' :
             !special && typeof value === typeof d && value !== null && isArray(value) === isArray(d));
         const kind = (v)=> v === undefined ? 'none' : isColor(v) ? 'a Color' : isVector3(v) ? 'a Vector3' :
-            isVector2(v) ? 'a Vector2' : typeof v == 'number' ? String(v) : objectPropertyKindName(v);
-        ASSERT(editor3DChanging, 'setProperty works on an object of the list change gives, inside change');
+            isVector2(v) ? 'a Vector2' : typeof v == 'number' ? String(v) : !!v && typeof v === 'object' &&
+            !isArray(v) && Object.getPrototypeOf(v) !== Object.prototype ? 'an instance of a class' :
+            objectPropertyKindName(v);
+        ASSERT(!!editor3DChanging?.includes(object),
+            'setProperty works on an object of the list change gives, inside change');
         ASSERT(fits, `setProperty: ${name} can not be ${kind(value)}, its default is ${kind(d)}`);
         fits && editor3DSetProperty(object, name, value, d);
     },

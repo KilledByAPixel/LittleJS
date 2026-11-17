@@ -603,9 +603,10 @@ function render3DMove(o, cap)
 // ground is what it stood on last frame, which a height map keeps it on going down a slope
 function render3DCollideLevel(o, oldPos, ground)
 {
-    // each shape, the one it stood on last frame following it down a slope
+    // each shape, the one it stood on last frame following it down a slope unless a shape before it grounded it,
+    // so terrain does not pull a body down into a floor listed before it that the body walked onto from the terrain
     for (const level of render3DLevel)
-        level.destroyed || level.levelCollide3D(o, oldPos, level === ground);
+        level.destroyed || level.levelCollide3D(o, oldPos, level === ground && !o.groundObject);
     // then, only when none grounded it, the others follow it down too, as it stood on one level shape and so on each:
     // walking down from one map onto the next, a chunk of the same terrain, or onto a mesh, stays on the ground as on
     // one map; after every shape had its turn, so terrain under a floor laid just above it, a building's, does not

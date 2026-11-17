@@ -496,9 +496,8 @@ function level3DVector(value, fallback)
 function level3DProperties(type, object)
 {
     const properties = {}, own = object.properties, set = (key, value)=> objectPropertySet(properties, key, value);
-    for (const [key, value] of Object.entries(type.defaults))
-        set(key, objectPropertyCopy(value, own && typeof own === 'object' && Object.hasOwn(own, key) ? undefined :
-            objectPropertySharedWarn(undefined, 'level3DLoad', object.type, key)));
+    const shared = (key)=> objectPropertySharedWarn(undefined, 'level3DLoad', object.type, key);
+    const kept = objectPropertyDefaults(type.defaults, set); // a default shared said at the end, if the object kept it
     for (const [key, value] of Object.entries(own && typeof own === 'object' ? own : {}))
     {
         const d = objectPropertyDefault(type.defaults, key); // the type's own, not one every object has
@@ -512,11 +511,17 @@ function level3DProperties(type, object)
                 isArray(value) && value.length === 2 && value.every(level3DFinite) && set(key, vec2(value[0], value[1]));
         else if (typeof d === 'number')
             level3DFinite(value) && set(key, value);
+        else if (d && typeof d === 'object' && !isArray(d) && value && typeof value === 'object' && !isArray(value))
+            // an object over its default member by member, as 2D's class properties are, so an instance of the game's
+            // class stays one, with its methods, and a member the file left out keeps the default's
+            set(key, objectLayersMergeClass(d, value, (text)=> objectLayersWarnOnce(undefined, 'level3D ' + object.type +
+                ' ' + key + text, `level3DLoad: ${object.type} ${object.id}'s ${key}${text}`), '', shared(key)));
         else if (d === undefined ||
             typeof value === typeof d && (d === null || value !== null && isArray(value) === isArray(d)))
             set(key, objectPropertyCopy(value)); // null and a list are objects to typeof, but neither is a
                                                  // default's object, nor an object a default's list
     }
+    objectPropertySayShared(properties, kept, shared);
     return properties;
 }
 
@@ -552,9 +557,8 @@ function level3DMakeAt(object, pos, rotation, scale)
             o.destroy();
         return;
     }
-    // what it made is an object of the game's; a marker's function, (pos)=> start = pos, gives back the position, a
-    // value of the engine's, which is not, and a list unloaded by destroy would throw on it
-    if (!result || typeof result !== 'object' || isVector3(result) || result instanceof Vector2 || isColor(result))
+    // what it made is an object of the game's, and not a marker's position given back, as in 2D
+    if (!objectLayersIsMade(result) || result instanceof Vector3)
         return;
     if (result instanceof EngineObject3D)
     {

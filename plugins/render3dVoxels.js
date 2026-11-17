@@ -49,6 +49,8 @@ const RENDER3D_VOXEL_ORDER = [0, 1, 2, 3], RENDER3D_VOXEL_FLIPPED = [1, 3, 0, 2]
  *   when a block in or beside it changes
  * - Objects with collideLevel collide with it, see EngineObject3D.collideWithVoxel, and raycast finds the block a ray
  *   hits and the face it comes in through
+ * - Its blocks are walls: a body walking into one stops however low it stands over the ground beside it, there is no
+ *   step up onto it as a HeightMap or a MeshCollider has, so a game jumps onto blocks or lays its floors level
  * @extends EngineObject3D
  * @memberof Render3D
  * @example

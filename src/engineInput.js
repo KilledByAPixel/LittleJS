@@ -1768,7 +1768,9 @@ function touchGamepadPointerMove(e)
 function touchGamepadStickRelease(side)
 {
     touchGamepadStickPointerId[side] = undefined;
-    touchGamepadStickStale[side] && (touchGamepadStickAnchors[side] = undefined, touchGamepadStickStale[side] = 0);
+    // a stick held through a resize forgets its old anchor, and the layout is made again, which draws its ring home
+    touchGamepadStickStale[side] && (touchGamepadStickAnchors[side] = undefined, touchGamepadStickStale[side] = 0,
+        touchGamepadNeedRelayout = true);
 }
 
 function touchGamepadPointerUp(e)
