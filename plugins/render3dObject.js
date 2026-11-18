@@ -696,10 +696,21 @@ function render3DFollowSolid(o, ground, oldPos)
     const step = max(radius / 2, 1e-3), cos0 = cos(o.groundAngle);
     // last frame's first, then the solids that could be within the drop, nearest the list's order, through the grid
     // when there is one, and not one it is leaving upward
-    const reach = render3DSolidReach(o) + drop, grid = render3DSolidGrid(), at = o.pos3D.copy();
-    const near = (grid ? [...render3DGridWalk(grid, ()=> reach, ()=> at, Infinity)] : engineObjectsCollide)
-        .filter((b)=> b !== ground && b instanceof EngineObject3D && solid(b) && v.y <= b.velocity3D.y &&
-        b.pos3D.distanceSquared(at) <= (reach + render3DSolidReach(b)) ** 2);
+    const reach = render3DSolidReach(o) + drop, at = o.pos3D.copy();
+    const within = (b)=>
+    {
+        const q = b.pos3D, dx = at.x - q.x, dy = at.y - q.y, dz = at.z - q.z, r = reach + render3DSolidReach(b);
+        return dx*dx + dy*dy + dz*dz <= r*r;
+    };
+    // only where a box leans, a ramp: off the edge of a level box onto another level one it falls, as it always has,
+    // so a crowd of bodies on level floors, each with its floor after it in the list, does none of the work below
+    if (!render3DLeans(ground) && !render3DLeaningSolids().some((b)=> b !== o && within(b))) return;
+    const grid = render3DSolidGrid(), near = [];
+    for (const b of grid ? render3DGridWalk(grid, ()=> reach, ()=> at, Infinity) : engineObjectsCollide)
+    {
+        if (b === ground || !(b instanceof EngineObject3D)) continue;
+        within(b) && solid(b) && v.y <= b.velocity3D.y && near.push(b);
+    }
     // how deep each is at the start, so a landing never goes deeper into a side than that
     const candidates = [ground, ...near].map((b)=>
     {
@@ -782,6 +793,19 @@ function render3DFollowSolid(o, ground, oldPos)
         if (d >= drop) break;
     }
     o.pos3D.y = start;
+}
+
+// a box that leans, a ramp, and the solids of the engine's list that do, gathered once a pass for the follow-down
+const render3DLeans = (b)=> !b.collideAsSphere3D && !!(b.rotation3D.x || b.rotation3D.z);
+const render3DLeaning = /* @__PURE__ */ (()=> ({pass: -1, list: []}))();
+function render3DLeaningSolids()
+{
+    if (render3DLeaning.pass !== engineObjectsUpdateCount)
+    {
+        render3DLeaning.pass = engineObjectsUpdateCount;
+        render3DLeaning.list = engineObjectsCollide.filter((b)=> b instanceof EngineObject3D && render3DLeans(b));
+    }
+    return render3DLeaning.list;
 }
 
 // what it takes to move shape a clear of shape b, whichever pair of shapes they are, or undefined for no touch
