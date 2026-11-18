@@ -274,7 +274,13 @@ function uglifyModuleBuildStep(filename)
 function stripDebugCallsStep(filename)
 {
     const source = fs.readFileSync(filename, 'utf8');
-    fs.writeFileSync(filename, source.replace(/(?<!function )\b(ASSERT\w*|LOG)\(/g, 'false&&$1('), {flag: 'w+'});
+    // and what the release build's debug constant, false, guards: debug && warn(...), if (debug) and !debug, which
+    // the minifiers do not fold on their own, so every debug only warning and its text shipped in the min builds
+    const guarded = source.replace(/(?<!function )\b(ASSERT\w*|LOG)\(/g, 'false&&$1(')
+        .replace(/(?<![.\w$])debug(?=\s*&&)/g, 'false')
+        .replace(/\bif \(debug\)/g, 'if (false)')
+        .replace(/!debug\b(?![\w$])/g, '!false');
+    fs.writeFileSync(filename, guarded, {flag: 'w+'});
 }
 
 // Add license to top of file

@@ -568,8 +568,9 @@ class HeightMap extends EngineObject3D
      *    cell diagonal it crosses, and a hill it only grazes is still hit
      *  - A ray that starts under the ground crosses on its way out, so the hit is still on the surface
      *  @param {Ray3D} ray - From screenToRay, or any ray
+     *  @param {number} [maxDistance] - How far along the ray to look, in its own units, as far as the map by default
      *  @return {number|undefined} */
-    raycast(ray)
+    raycast(ray, maxDistance=Infinity)
     {
         // in the map's own space, its position taken off the ray
         const p = this.pos3D, origin = ray.origin.subtract(p), direction = ray.direction;
@@ -582,7 +583,8 @@ class HeightMap extends EngineObject3D
         const start = raycastBox(new Ray3D(origin, direction), vec3(0, (bottom + top) / 2, 0),
             vec3(size.x, top - bottom + 1e-3, size.y));
         if (start === undefined || !(size.x > 0 && size.y > 0)) return;
-        let end = start + hypot(size.x, size.y, top - bottom) / length;
+        if (start > maxDistance) return;
+        let end = min(maxDistance, start + hypot(size.x, size.y, top - bottom) / length);
         if (direction.x)
             end = min(end, (sign(direction.x) * size.x / 2 - origin.x) / direction.x);
         if (direction.z)
@@ -676,7 +678,8 @@ class HeightMap extends EngineObject3D
         if (from.y < this.getHeight(from.x, from.z)) return undefined; // under from the start, let go
         // the ground is flat in each triangle, not between the ends, so a ridge both ends are above is still met:
         // the exact raycast along the move, which walks every triangle it crosses, the first one it goes under
-        const distance = this.raycast(new Ray3D(from, to.subtract(from)));
+        // no further than the move, or a short one would be walked on across the whole map
+        const distance = this.raycast(new Ray3D(from, to.subtract(from)), 1);
         // over the move, and not a touch where it starts on the surface and leaves it
         if (distance === undefined || distance > 1 || !distance && to.y >= this.getHeight(to.x, to.z)) return undefined;
         return {distance, normal: this.getNormal(from.x + (to.x - from.x) * distance, from.z + (to.z - from.z) * distance)};
