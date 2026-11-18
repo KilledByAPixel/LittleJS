@@ -36,8 +36,8 @@
  *  @type {LightSystemPlugin}
  *  @memberof LightSystem */
 let lightSystem;
-// its hooks are added once: one made again in a release build, as in a scene's enter, takes the old one's place and
-// its hooks drive it
+// its hooks are added once; a game makes one light system, a debug build asserts on a second, which would take the
+// old one's place without giving back its textures
 let lightSystemPluginAdded = false;
 
 ///////////////////////////////////////////////////////////////////////////////

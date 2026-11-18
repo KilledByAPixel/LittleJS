@@ -195,7 +195,7 @@ function engineObjectChildPlaced(o)
  * The physics system used by objects is simple and fast with some caveats...
  * - Collision uses the axis aligned size, the object's rotation angle is only for rendering
  * - Objects are guaranteed to not intersect tile collision from physics
- * - If an object starts or is moved inside tile collision, it will not collide with that tile
+ * - If an object starts or is moved inside tile collision, it will not collide with tiles until it is out
  * - Collision for objects can be set to be solid to block other objects
  * - Objects may get pushed into overlapping other solid objects, if so they will push away
  * - A static solid (mass 0) moved by its velocity, like a door or an elevator, moves before the other objects and
@@ -684,19 +684,6 @@ class EngineObject
     /** @private */
     updatePhysicsTiles(oldPos, gravityY, wasFalling)
     {
-        // a place it snaps to is blocked when a one way tile blocks it judged from there or from where it was, so the
-        // snap never leaves it a hair inside one, less than the one way margin, nor takes it through one whose margin
-        // it rested in
-        const oneWay = tileCollisionLayers.some((layer)=> layer.oneWayTiles?.size); // only those judge by a place
-        const snapBlocked = (pos)=>
-        {
-            if (!oneWay) return tileCollisionTest(pos, this.size, this);
-            const fromPos = tileCollisionFromPos;
-            tileCollisionFromPos = pos;
-            try { return tileCollisionTest(pos, this.size, this) || (tileCollisionFromPos = fromPos,
-                tileCollisionTest(pos, this.size, this)); }
-            finally { tileCollisionFromPos = fromPos; }
-        };
         // the first test is where the move put it, so the tiles it asks about are hits; the tests after it only
         // try places to find which side it hit and where it can go
         tileCollisionHitObject = this;
@@ -709,6 +696,19 @@ class EngineObject
         tileCollisionStuckTest = false;
         if (hitLayer && !stuck)
         {
+            // a place it snaps to is blocked when a one way tile blocks it judged from there or from where it was, so the
+            // snap never leaves it a hair inside one, less than the one way margin, nor takes it through one whose margin
+            // it rested in
+            const oneWay = tileCollisionLayers.some((layer)=> layer.oneWayTiles?.size); // only those judge by a place
+            const snapBlocked = (pos)=>
+            {
+                if (!oneWay) return tileCollisionTest(pos, this.size, this);
+                const fromPos = tileCollisionFromPos;
+                tileCollisionFromPos = pos;
+                try { return tileCollisionTest(pos, this.size, this) || (tileCollisionFromPos = fromPos,
+                    tileCollisionTest(pos, this.size, this)); }
+                finally { tileCollisionFromPos = fromPos; }
+            };
             // test which side we bounced off (or both if a corner)
             const isBlockedX = tileCollisionTest(vec2(this.pos.x, oldPos.y), this.size, this);
             const isBlockedY = tileCollisionTest(vec2(oldPos.x, this.pos.y), this.size, this);

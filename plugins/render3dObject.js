@@ -272,7 +272,7 @@ class EngineObject3D extends EngineObject
      *    into a wall, a player shoving two crates, is the same: the pusher ends a frame a little inside the crate it
      *    pushes, in some list orders against a solid wall, in every order against a MeshCollider or VoxelMap wall
      *  - A door or a lift that closes a gap on a body, against a fixed solid or the level, can not hold it in less room
-     *    than it has: it is pushed out of each in turn and can end a little inside one of them, and a gap closed
+     *    than it has: between a still wall and a door that moves it ends in the door, never in the wall, and a gap closed
      *    all the way, or a lift into a ceiling, can squeeze it into the floor or through; leave a body room
      *  - A body made inside fixed solids is pushed out of each in turn, so one made deep inside a wall of two boxes
      *    side by side can stay inside one of them; place bodies clear of the level's solids
@@ -907,10 +907,6 @@ function render3DFixedSolids()
     return render3DFixed.list;
 }
 
-// push an object pushed by another out of the solids that do not move, mass 0, back to the side it came from;
-// they take the touch as any pair does, so a one way platform still lets it through; not the one that pushed it, which
-// already did, and a push of a rounding error is none, or a box on a turned ramp would be pushed along its slant;
-// from is where it was before the push
 // bounce an object a pair pushed, by its weight in the pair, off the other one along a normal pointing away from it,
 // when moving into it: relative to the other's velocity when that one does not move in the pair, a fixed solid or a
 // platform, so it keeps the platform's speed, as 2D does, or by its own velocity otherwise
@@ -990,7 +986,10 @@ function render3DMovedThisPass(o)
     return !!(v.x || v.y || v.z || p.x !== f.x || p.y !== f.y || p.z !== f.z);
 }
 
-// settles a body pushed by a mover against the fixed solids and the level; true when a callback it asked moved the
+// settles a body pushed by a mover against the fixed solids, mass 0, and the level: pushed out of each, back to the
+// side it came from, from where it was before the push; they take the touch as any pair does, so a one way platform
+// still lets it through; not the one that pushed it, which already did, and a push of a rounding error is none, or a
+// box on a turned ramp would be pushed along its slant; true when a callback it asked moved the
 // body, a respawn or a portal, whose place is then the game's: the caller hands none of it on to another mover
 function render3DSettleFixed(o, pusher, from)
 {

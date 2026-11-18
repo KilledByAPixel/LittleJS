@@ -343,6 +343,7 @@ Decided, documented where a user reads them, and not to be reported or fixed aga
 - A crest between a level shape and a solid hops; a V made of two MeshColliders gets no V rule; a walk across a steep V into one side bobs
 - A body walking onto a HeightMap from off its edge is set on the ground however high the edge; a VoxelMap's blocks have no step
 - A 2D body that starts a frame inside tiles, made, moved or grown there, meets no tiles till it is out, so one grown into the floor falls through; one grown on a one way platform falls through it
+- A 2D body exactly as tall as the gap between a one way platform and a ceiling over it, a whole tile, can catch in the platform for good, about one jump in 200; bodies are sized a little under whole tiles
 - A long chain of CSG cuts can drop part of a face
 - An async `onRestart` is waited on till it settles, both editors refusing edits meanwhile; one that never settles blocks restarts till a reload
 - Object property defaults are numbers, text, true or false, Colors, vectors, and lists and plain objects of those; a default of a class is copied and takes only its own fields from a level

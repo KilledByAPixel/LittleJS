@@ -1227,7 +1227,7 @@ function editorSaveValid(saved)
         (saved.objects === undefined || Array.isArray(saved.objects) &&
             saved.objects.every((list)=> Array.isArray(list) && list.every((o)=> plain(o) &&
                 isNumber(o.x) && isNumber(o.y) &&
-                (o.properties === undefined || Array.isArray(o.properties) && o.properties.every(plain))))) &&
+                objectLayersPropertyList(o).every(plain)))) &&
         whole(saved.width) && whole(saved.height) &&
         (saved.nextobjectid === undefined || Number.isInteger(saved.nextobjectid));
 }
@@ -1740,7 +1740,7 @@ function editorChangeObjects(layer, change)
 // no default, as an object link, a float otherwise, since a default of 2 may be a float the game scales by
 function editorObjectSetProperty(object, name, value, defaultValue)
 {
-    const list = object.properties ?? [], at = list.findIndex((property)=> property.name === name), old = list[at];
+    const list = objectLayersPropertyList(object), at = list.findIndex((property)=> property.name === name), old = list[at];
     const properties = list.filter((property)=> property.name !== name);
     const text = (v)=> isColor(v) ? v.toString() : isVector2(v) ? v.x + ',' + v.y : JSON.stringify(v);
     if (text(value) !== text(defaultValue))
