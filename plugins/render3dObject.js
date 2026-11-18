@@ -227,8 +227,10 @@ class EngineObject3D extends EngineObject
         if (this.collideSolidObjects && solve)
         {
             render3DCollideSolid(this);
-            // walking down a ramp of a turned solid box, it follows the box down, as the level shapes do theirs
-            oldPos && !this.groundObject && render3DFollowSolid(this, ground, oldPos);
+            // walking down a ramp of a turned solid box, it follows the box down, as the level shapes do theirs, but
+            // not once a pair callback attached it, destroyed it or turned its collision off, as the settles do not
+            oldPos && !this.groundObject && !this.parent && !this.destroyed && this.collideSolidObjects &&
+                render3DFollowSolid(this, ground, oldPos);
         }
     }
 
@@ -385,6 +387,7 @@ class EngineObject3D extends EngineObject
     {
         // a 3D child's offset is its pos3D, rotation3D and scale3D, set after, or attach, which keeps where it is
         ASSERT(!isVector3(localPos), "addChild takes a 2D offset, set a 3D child's pos3D after, or use attach");
+        if (engineObjectAttachRefused(this, child)) return child; // left as it was, as attach leaves it
         // addChild brings the child's transform up to date, which is not a step: it already moved this pass as
         // a root, or moves in the next one, so it must not move by its velocity again here
         if (child instanceof EngineObject3D)
@@ -711,7 +714,15 @@ function render3DFollowSolid(o, ground, oldPos)
         const x = o.pos3D.x, y = o.pos3D.y, z = o.pos3D.z, speed = o.velocity3D, vy = speed.y;
         const b = c.b, bx = b.pos3D.x, by = b.pos3D.y, bz = b.pos3D.z;
         const resolve = render3DCollideAsk(o, b, push);
-        if (o.parent || o.destroyed) return; // attached or destroyed in the callback
+        if (o.parent || o.destroyed)
+        {
+            // attached or destroyed in the callback: back up out of the lowered test place, under a parent it took
+            // by the parent's own axes, so it is held where it stood and not sunk into the solid
+            const lift = vec3(0, start - y, 0), parent = o.parent;
+            o.pos3D = o.pos3D.add(parent instanceof EngineObject3D ?
+                render3DObjectMatrix(parent).copy().invert().transformDirection(lift) : lift);
+            return;
+        }
         grid && !b.parent && render3DGridPlace(grid, b); // a callback may have moved it
         if (o.pos3D.x !== x || o.pos3D.y !== y || o.pos3D.z !== z)
         {
@@ -983,8 +994,12 @@ function render3DSettleInto(o, push, from, pusher, grid, fixed, reach)
         // moved or attached it, a portal or a respawn, has the last word, so the push, for where it was, is not made
         const into = render3DSolidPush(moved, render3DSolidShape(c));
         if (!into) continue;
-        const x = o.pos3D.x, y = o.pos3D.y, z = o.pos3D.z;
-        if (render3DCollideAsk(o, c, into) || o.parent || o.pos3D.x !== x || o.pos3D.y !== y || o.pos3D.z !== z)
+        const x = o.pos3D.x, y = o.pos3D.y, z = o.pos3D.z, cx = c.pos3D.x, cy = c.pos3D.y, cz = c.pos3D.z;
+        const resolve = render3DCollideAsk(o, c, into);
+        if (o.parent || o.pos3D.x !== x || o.pos3D.y !== y || o.pos3D.z !== z)
+            return true;
+        // one its own callback moved is no longer where it would be deeper into, as in the pair loop
+        if (resolve && !c.parent && c.pos3D.x === cx && c.pos3D.y === cy && c.pos3D.z === cz)
             return true;
     }
     return false;
@@ -1012,7 +1027,7 @@ function render3DSettleFixed(o, pusher, from)
         let push = render3DSolidPush(shape, shapeB);
         if (!push || push.lengthSquared() < 1e-12) continue;
         push = render3DPushFrom(shape, shapeB, o, b, push);
-        const x = o.pos3D.x, y = o.pos3D.y, z = o.pos3D.z;
+        const x = o.pos3D.x, y = o.pos3D.y, z = o.pos3D.z, bx = b.pos3D.x, by = b.pos3D.y, bz = b.pos3D.z;
         const resolve = render3DCollideAsk(o, b, push);
         if (o.parent) return true; // attached in the callback, it rides along with its parent
         grid && (render3DGridPlace(grid, o), b.parent || render3DGridPlace(grid, b)); // a callback may have moved either
@@ -1022,7 +1037,8 @@ function render3DSettleFixed(o, pusher, from)
             moved = true, from = o.pos3D.copy(); // sent away by the game: met from where it was put
             continue; // and the push, for where it was, is not made
         }
-        if (!resolve || b.parent) continue;
+        // a solid its own callback moved makes no push for where it was, as in the pair loop
+        if (!resolve || b.parent || b.pos3D.x !== bx || b.pos3D.y !== by || b.pos3D.z !== bz) continue;
         // standing as in a pair: a push off a face within its groundAngle of up holds it there, turned straight up
         const lengthSquared = push.lengthSquared(), up = push.y / lengthSquared ** .5;
         if (up > 0 && o.mass && up >= cos(o.groundAngle) && render3DOnFace(push, shapeB))

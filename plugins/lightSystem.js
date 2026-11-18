@@ -803,10 +803,12 @@ class LightSystemPlugin
                     if (o.destroyed) continue;
                     // not there until its image has loaded, flat till then; a TileInfo is its texture's
                     const map = o.normalMap, texture = (map instanceof TileInfo ? map.textureInfo : map)?.glTexture;
-                    // a debug build says once of a tile of a sheet, its own art's or one beside it, read whole
-                    if (debug && map instanceof TileInfo && !ls.normalTileWarned && map.textureInfo?.size &&
-                        (map.pos.x || map.pos.y || map.size.x !== map.textureInfo.size.x ||
-                        map.size.y !== map.textureInfo.size.y || o.tileInfo?.textureInfo === map.textureInfo))
+                    // a debug build says once of a tile of a sheet, its own art's or one beside it, read whole: by
+                    // its size, as a tile's padding moves its place, once its texture has loaded, and for 2D objects
+                    const sheet = map instanceof TileInfo && map.textureInfo?.size.x ? map.textureInfo : undefined;
+                    if (debug && sheet && !ls.normalTileWarned && !('pos3D' in o) &&
+                        (map.size.x !== sheet.size.x || map.size.y !== sheet.size.y ||
+                        o.tileInfo?.textureInfo === sheet))
                     {
                         ls.normalTileWarned = true;
                         console.warn('LightSystemPlugin: a normalMap given as a TileInfo is read as its whole ' +

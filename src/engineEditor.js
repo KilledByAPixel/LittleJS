@@ -3007,7 +3007,13 @@ function editorOnKeyDown(e)
     if (action && editorObjectDrag)
         e.preventDefault(); // the keys wait for a drag of objects to let go, an undo would be moved again
     else if (action && action(e.shiftKey) !== false)
+    {
         e.preventDefault();
+        // a key of the game's that closed the editor is not handed on to the engine's input, whose listener comes
+        // after this one, made at engineInit, so the game does not take the key that closed it, as the 3D editor's
+        // close clears it
+        editorIsOpen || e.stopImmediatePropagation?.();
+    }
 }
 
 // the wheel zooms toward the mouse by how far it moved; a trackpad pinch is a wheel with ctrlKey, the game's pinch
@@ -3684,9 +3690,13 @@ debug && engineAddPlugin(()=>
 // the game's gameUpdatePost does not take the click or key that closed it, as the editors' own close keys clear theirs
 function editorClearPressed()
 {
-    const keys = inputData[0];
-    for (const key in keys)
-        keys[key] & 2 && inputClearKey(key);
+    // every device, a gamepad's Start too, read up till it is let go
+    for (let device = 0; device < inputData.length; device++)
+    {
+        const keys = inputData[device];
+        for (const key in keys)
+            keys[key] & 2 && inputClearKey(key, device);
+    }
 }
 
 // the editor's own listeners for letter shortcuts and the wheel, the engine's input reads keys by position

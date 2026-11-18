@@ -121,11 +121,11 @@ function render3DCanDraw()
  *  @property {number} specular
  *  @property {boolean} pixelated
  *  @property {Shader|undefined} shader
- *  @property {TextureInfo|undefined} normalMap
+ *  @property {TextureInfo|TileInfo|undefined} normalMap
  *  @property {number} normalScale
  *  @property {number} shininess
  *  @property {number} reflectivity
- *  @property {TextureInfo|undefined} emissiveMap
+ *  @property {TextureInfo|TileInfo|undefined} emissiveMap
  *  @property {Color} emissiveMapColor
  *  @property {CubeMap|undefined} environmentMap
  *  @property {boolean} roundLighting
@@ -152,11 +152,11 @@ const RENDER3D_STATE_FIELDS = ['blend', 'additive', 'depthTest', 'depthWrite', '
  *  @property {number} specular
  *  @property {boolean} pixelated
  *  @property {Shader|undefined} shader
- *  @property {TextureInfo|undefined} normalMap
+ *  @property {TextureInfo|TileInfo|undefined} normalMap
  *  @property {number} normalScale
  *  @property {number} shininess
  *  @property {number} reflectivity
- *  @property {TextureInfo|undefined} emissiveMap
+ *  @property {TextureInfo|TileInfo|undefined} emissiveMap
  *  @property {Color} emissiveMapColor
  *  @property {CubeMap|undefined} environmentMap
  *  @property {boolean} roundLighting
@@ -917,7 +917,7 @@ class Render3DPlugin
     set shininess(v) { const d = this.drawState; d.shininess === v || (d.shininess = v, ++this.stateVersion); }
 
     /** Normal map for the next draws, set from each object's normalMap
-     *  @return {TextureInfo|undefined} */
+     *  @return {TextureInfo|TileInfo|undefined} */
     get normalMap() { return this.drawState.normalMap; }
     set normalMap(v) { const d = this.drawState; d.normalMap === v || (d.normalMap = v, ++this.stateVersion); }
 
@@ -932,7 +932,7 @@ class Render3DPlugin
     set reflectivity(v) { const d = this.drawState; d.reflectivity === v || (d.reflectivity = v, ++this.stateVersion); }
 
     /** Emissive map for the next draws, set from each object's emissiveMap
-     *  @return {TextureInfo|undefined} */
+     *  @return {TextureInfo|TileInfo|undefined} */
     get emissiveMap() { return this.drawState.emissiveMap; }
     set emissiveMap(v) { const d = this.drawState; d.emissiveMap === v || (d.emissiveMap = v, ++this.stateVersion); }
 

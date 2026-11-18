@@ -95,7 +95,7 @@ function moduleFixStep(filename)
 function uglifyBuildStep(filename)
 {
     console.log('Running uglify...');
-    runTool('uglify-js/bin/uglifyjs', [filename, '-c', '-m', '-o', filename]);
+    runTool('uglify-js/bin/uglifyjs', [filename, '--module', '-c', '-m', '-o', filename]);
 }
 
 function htmlBuildStep()

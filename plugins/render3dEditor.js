@@ -4129,11 +4129,14 @@ function editor3DUpdate()
     if (editor3DIsOpen)
     {
         editor3DAfterView = undefined;
-        inputCaptureRead(()=> editor3DWithView(()=> editor3DEditorUpdate(seconds)));
-        const after = editor3DAfterView;
-        editor3DAfterView = undefined;
-        after?.();
-        editor3DIsOpen || editorClearPressed(); // closed in its update, by a game's tool, key or onUpdate
+        try
+        {
+            inputCaptureRead(()=> editor3DWithView(()=> editor3DEditorUpdate(seconds)));
+            const after = editor3DAfterView;
+            editor3DAfterView = undefined;
+            after?.();
+        }
+        finally { editor3DIsOpen || editorClearPressed(); } // closed in its update, by a game's tool, key or onUpdate
         return;
     }
 
