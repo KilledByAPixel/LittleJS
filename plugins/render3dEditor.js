@@ -1333,53 +1333,6 @@ function editor3DEncode(value)
     return encoded;
 }
 
-// what in a value, at any depth, a level file would not bring back as it is, said, or undefined: a number that is not
-// finite, which it keeps as null, a Color or a vector where its default has none, which it brings back as text or a
-// list, and an object of a class, which it brings back a plain object
-function editor3DValueProblem(value, fallback)
-{
-    if (typeof value == 'number')
-        return isFinite(value) ? undefined : 'holds a number that is not finite, which the file keeps as null';
-    if (typeof value == 'function')
-        return 'holds a function, which the file can not keep';
-    if (!value || typeof value !== 'object') return;
-    if ((value instanceof Color || value instanceof Vector2 || value instanceof Vector3) &&
-        !isColor(value) && !isVector2(value) && !isVector3(value))
-        return 'holds a Color or a vector that is not valid, a number in it not finite';
-    if (isColor(value) || isVector3(value) || isVector2(value))
-        return (isColor(value) ? isColor(fallback) : isVector3(value) ? isVector3(fallback) : isVector2(fallback)) ?
-            undefined : 'holds a Color or a vector where its default has none, which the file brings back as text ' +
-            'or a list';
-    if (!isArray(value) && !objectPropertyPlain(value))
-        return 'can not be given an instance of a class, nor a value holding one, as the file brings it back a ' +
-            'plain object';
-    const object = !!fallback && typeof fallback == 'object';
-    for (const key of Object.keys(value))
-    {
-        const before = isArray(value) ? isArray(fallback) && fallback.length ?
-            fallback[min(+key, fallback.length - 1)] : undefined :
-            object && !isArray(fallback) ? objectPropertyDefault(fallback, key) : undefined;
-        const problem = editor3DValueProblem(value[key], before);
-        if (problem) return problem;
-    }
-}
-
-// whether a plain object has every member of an object default, at any depth, through lists too, each item against
-// the default's item there or its last, since the load merges it into the default and a member left out would be the
-// default's; a member the default holds as undefined, a class field declared with no value, or a function, is not in
-// a file either, so may be left out
-function editor3DCoversDefault(defaultValue, value)
-{
-    if (isArray(defaultValue) && isArray(value))
-        return !defaultValue.length || value.every((item, i)=>
-            editor3DCoversDefault(defaultValue[min(i, defaultValue.length - 1)], item));
-    if (!defaultValue || typeof defaultValue != 'object' || isArray(defaultValue) || !objectPropertyPlain(value))
-        return true;
-    return Object.keys(defaultValue).every((key)=> defaultValue[key] === undefined ||
-        typeof defaultValue[key] == 'function' || Object.hasOwn(value, key)) &&
-        Object.keys(value).every((key)=> editor3DCoversDefault(objectPropertyDefault(defaultValue, key), value[key]));
-}
-
 // add an object of a type at a position, selected; its id, or undefined when the level can not be edited
 function editor3DPlace(type, pos)
 {
@@ -2059,39 +2012,27 @@ const editor3DEdit =
     },
     setProperty(object, name, value)
     {
-        // a value the load reads back as it was given, as the 2D one takes, or the load would keep the default and
-        // the edit would be an undo step the game never sees: of its default's kind, every number in it finite, the
-        // type's own default read as the load reads it, over null an object or a list, a Color or a vector only
-        // where the default has one, given as one or as the file writes it, text or a list
         const type = level3DTypes.get(object.type), d = type && objectPropertyDefault(type.defaults, name);
         // the file's form of a Color or vector over one, as a value read back from edit3D.objects is
         value = isColor(d) && typeof value == 'string' ? level3DHexColor(value) ?? value :
             isVector3(d) && isArray(value) ? level3DVector(value, value) :
             isVector2(d) && isArray(value) && value.length === 2 && value.every(level3DFinite) ?
             vec2(value[0], value[1]) : value;
-        const vector = isColor(value) || isVector2(value) || isVector3(value);
-        const problem = editor3DValueProblem(value, d);
-        // an object over an object default is merged into it member by member when loaded, so one that leaves a
-        // member out would load with the default's, and so would a member the merge does not read
-        const merges = !!d && typeof d === 'object' && !isArray(d) && !isColor(d) && !isVector2(d) && !isVector3(d);
-        let dropped;
-        !problem && (merges && objectPropertyPlain(value) || isArray(d) && isArray(value)) &&
-            objectLayersMergeClass(d, editor3DEncode(value), (text)=>
-            /left out$|the default is kept$/.test(text) && (dropped ??= text.trim()), '', level3DFromText);
+        // a value of its default's kind, as the 2D one takes, or the load would keep the default: a Color or a vector
+        // only where the default is one, any other value over no default, an object or a list over null, and a
+        // number finite, as JSON keeps NaN and Infinity as null
+        const vector = (v)=> isColor(v) || isVector2(v) || isVector3(v);
         const kind = (v)=> v === undefined ? 'none' : isColor(v) ? 'a Color' : isVector3(v) ? 'a Vector3' :
-            isVector2(v) ? 'a Vector2' : typeof v == 'number' ? String(v) : objectPropertyKindName(v);
-        const sameKind = vector || isColor(d) || isVector2(d) || isVector3(d) ? vector && !problem :
+            isVector2(v) ? 'a Vector2' : objectPropertyKindName(v);
+        const fits = (typeof value != 'number' || isFinite(value)) &&
+            (vector(value) || vector(d) ? kind(value) === kind(d) :
             d === undefined || (d === null ? typeof value === 'object' :
-            typeof value === typeof d && value !== null && isArray(value) === isArray(d));
-        const why = problem && !vector ? problem :
-            !sameKind ? `can not be ${kind(value)}, its default is ${kind(d)}` :
-            (merges && objectPropertyPlain(value) || isArray(d) && isArray(value)) && !editor3DCoversDefault(d, value) ?
-                'leaves out a member of its default, which the load would put back' :
-            dropped ? 'has a member the load would not read: ' + dropped : undefined;
+            typeof value === typeof d && value !== null && isArray(value) === isArray(d)));
         ASSERT(!!editor3DChanging?.includes(object),
             'setProperty works on an object of the list change gives, inside change');
-        ASSERT(!why, `setProperty: ${name} ${why}`);
-        why || editor3DSetProperty(object, name, value, d);
+        ASSERT(fits, `setProperty: ${name} can not be ${typeof value == 'number' ? value : kind(value)}, ` +
+            `its default is ${kind(d)}`);
+        fits && editor3DSetProperty(object, name, value, d);
     },
     pos(object) { return editor3DPos(object); },
     rotation(object) { return editor3DRotation(object); },

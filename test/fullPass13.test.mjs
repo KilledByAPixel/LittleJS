@@ -216,23 +216,6 @@ function atlasEngine(size)
 const frame = (x, y, w, h, source)=> ({frame: {x, y, w, h}, rotated: false, trimmed: true,
     spriteSourceSize: {x: 0, y: 0, w, h}, sourceSize: {w: source, h: source}});
 
-test('loadAtlas keeps 100 trimmed glow sprites, a group too big for a sheet leaves the rest, a bad size is left out',
-    async ()=>
-{
-    const { run, warnings } = atlasEngine(1024);
-    const frames = {};
-    for (let i = 0; i < 100; ++i) frames['glow' + i + 'x'] = frame(i % 10 * 100, (i / 10 | 0) * 100, 96, 96, 256);
-    frames.huge = frame(0, 0, 10, 10, 5000);       // too big for any sheet
-    frames.bad = frame(0, 0, 10, 10, -1);           // no size
-    frames.after = frame(0, 0, 10, 10, 10);         // a group after them still loads
-    run(`var a = loadAtlas('a.png', ${JSON.stringify({frames})})`);
-    await run('spritesReady()');
-    const keys = JSON.parse(run('JSON.stringify(Object.keys(a))'));
-    assert.equal(keys.filter((k)=> k.startsWith('glow')).length, 100);
-    assert.ok(keys.includes('after') && !keys.includes('huge') && !keys.includes('bad'), keys.join());
-    assert.ok(warnings.some((w)=> w.includes('no size')));
-});
-
 
 async function engine2D(extra={})
 {
@@ -297,22 +280,6 @@ test('Ctrl with + or - does not change the debug time scale', async ()=>
     const ctrl = run('timeReal') - before;
     run('inputData[0].ControlLeft = 0; inputData[0].Equal = 0');
     assert.ok(ctrl < .05, 'one frame of real time, not ten: ' + ctrl);
-});
-
-test('old Tiled properties that are null are said as such, not as Tiled before 1.2', async ()=>
-{
-    const { run } = await engine2D();
-    const warnings = JSON.parse(run(`(()=>
-    {
-        const warnings = [];
-        console.warn = (...a)=> warnings.push(a.join(' '));
-        objectLayersAddType('Coin', class extends EngineObject {}, {value: 1});
-        objectLayersLoad({width: 4, height: 2, tilewidth: 16, tileheight: 16, layers: [{type: 'objectgroup',
-            name: 'o', objects: [{id: 1, type: 'Coin', x: 8, y: 8, properties: null}]}]});
-        return JSON.stringify(warnings);
-    })()`));
-    assert.ok(warnings.some((w)=> w.includes('neither a list nor an object')), warnings.join());
-    assert.ok(!warnings.some((w)=> w.includes('before 1.2')));
 });
 
 test('a pinch started on a UI button does not click it, and a trackpad pinch is the game\'s pinch', async ()=>

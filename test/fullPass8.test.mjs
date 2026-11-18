@@ -148,38 +148,6 @@ test('a video made while the window is already blurred is muted, and soundPauseW
     assert.deepEqual(JSON.parse(muted), [true, false, true]);
 });
 
-test('small files that would take huge memory are refused or capped: glTF zeros over all parts, LDtk cells over ' +
-    'all layers, prefab parts over a whole level, a 3D trail', async ()=>
-{
-    const { run } = loadEngine({}, '', 'littlejs.release.js');
-    run('setHeadlessMode(true); new Render3DPlugin');
-    // a glTF of eight parts each reading one accessor of 2^20 zeros
-    const gltf = {asset: {version: '2.0'}, accessors: [{count: (1 << 20) - 1, type: 'VEC3', componentType: 5126}],
-        meshes: [{primitives: Array.from({length: 8}, ()=> ({attributes: {POSITION: 0}}))}],
-        nodes: [{mesh: 0}], scenes: [{nodes: [0]}]};
-    const gltfResult = await run(`parseGLTF(${JSON.stringify(gltf)}).then(()=> 'loaded', (e)=> e.message)`);
-    assert.match(gltfResult, /past what a file may make/);
-    // an LDtk level whose four stacked tiles would make five whole 2048 by 2048 layers
-    const ldtk = run(`(()=> { try { tileLayersFromLDtk({defs: {tilesets: [{uid: 7, relPath: 't.png', pxWid: 32,
-        pxHei: 32, tileGridSize: 16, __cWid: 2, __cHei: 2}]}, levels: [{identifier: 'big', pxWid: 2048 * 16,
-        pxHei: 2048 * 16, layerInstances: [{__type: 'Tiles', __identifier: 'a', __cWid: 2048, __cHei: 2048,
-        __gridSize: 16, __tilesetDefUid: 7, gridTiles: [0, 1, 2, 3].map((t)=> ({px: [0, 0], t, f: 0}))}]}]});
-        return 'made'; } catch (e) { return e.message; } })()`);
-    assert.match(ldtk, /cells over its layers/);
-    // thirty instances of a prefab of 100 prefabs of 100 boxes, each held to 1e4 parts, which only the whole
-    // level's cap holds under 3e5
-    const parts = run(`let made = 0; level3DAddType('Leaf', ()=> { ++made; });
-        level3DAddPrefab('B', {objects: Array.from({length: 100}, (_, i)=> ({id: i + 1, type: 'Leaf'}))});
-        level3DAddPrefab('A', {objects: Array.from({length: 100}, (_, i)=> ({id: i + 1, type: 'B'}))});
-        level3DLoad({objects: Array.from({length: 30}, (_, i)=> ({id: i + 1, type: 'A', pos: [i, 0, 0]}))});
-        made`);
-    assert.ok(parts <= 1e5 && parts > 9e4, 'parts ' + parts);
-    // a trail of a huge trailScale is capped, and the emitter keeps updating
-    const trail = run(`const e = new ParticleEmitter3D(vec3()); e.trailTime = 1e9 / 60; e.update(); e.update();
-        e.trailMax`);
-    assert.equal(trail, 600);
-});
-
 test('loaders: a bad tileset margin, glTF indices past their points, an atlas frame ' +
     'named __proto__, an autosave object with no position', async ()=>
 {

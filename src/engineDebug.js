@@ -772,6 +772,52 @@ function debugRender()
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+// a Shader's uniform names, checked in debug builds only
+
+// the names in the 2D and 3D shader wrappers, and those the docs promise the snippets, that a Shader's uniform can
+// not take
+const SHADER_RESERVED_NAMES = /* @__PURE__ */ new Set(['main', 'mainImage', 'mainVertex', 'mainNormal', 'localUV',
+    'premultipliedTexture', 'cameraPos', 'cameraDir', 'modelMatrix', 'vertexColor', 'viewProjection', 'viewProj',
+    'lightViewProj', 'instanceData', 'instanceDataV', 'sceneDepth', 'worldPos', 'worldNormal', 'sunDirection',
+    'sunColor', 'ambientColor', 'ambientGroundColor', 'lightCount', 'lights', 'lightColors', 'lightCones', 'lightDir',
+    'lightColor', 'ambientFog', 'ambientGround', 'fogColor', 'fogFade', 'shadowParams', 'extraLights',
+    'extraLightColors', 'extraLightCones', 'extraLightCount', 'materialParams', 'emissiveTint', 'skyTop', 'skyHorizon', 'skyBottom',
+    'gelAxes', 'tex', 'normalTex', 'emissiveTex', 'gelTex', 'envMap', 'envParams', 'shadowMap', 'shadow', 'gel',
+    'normalMapNormal', 'roundNormal']);
+
+// the GLSL built-in functions and reserved words a uniform is most likely to be named, which would not compile or
+// would hide the function from the wrapper's own code after it; the GLSL compile error names any other
+const SHADER_GLSL_WORDS = /* @__PURE__ */ new Set((
+    'sample filter input output smooth flat common active half fixed sin cos tan pow exp log sqrt abs sign floor ' +
+    'ceil round fract mod min max clamp mix step smoothstep length distance dot cross normalize reflect refract ' +
+    'texture').split(' '));
+
+// the short names of the wrappers' inputs, outputs and uniforms, which a uniform can not take in a stage whose
+// snippet names it, where it would be declared: the 2D fragment's and the 3D fragment's, and the 3D vertex
+// stage's, its depth program's (cut, a float the engine sets, A) too; a name a snippet does not use is never declared
+const SHADER_FRAGMENT_NAMES = /* @__PURE__ */ new Set(['v', 'l', 'd', 'e', 'c', 'm', 'P', 'N', 'T', 'L', 'C', 'S',
+    'o']);
+const SHADER_VERTEX_NAMES = /* @__PURE__ */ new Set(['p', 'n', 't', 'c', 'm0', 'm1', 'm2', 'm3', 'tint', 'uvRect',
+    'P', 'N', 'T', 'L', 'C', 'S', 'A', 'cut']);
+
+// assert that a Shader's uniform has a name it can take, given the Shader's snippets, see the Shader constructor
+function debugShaderUniformName(name, fragmentCode, vertexCode)
+{
+    ASSERT(/^[A-Za-z_][A-Za-z0-9_]*$/.test(name) && !/^gl_/i.test(name) && !name.includes('__') &&
+        !SHADER_GLSL_WORDS.has(name),
+        'a Shader uniform is named as a GLSL variable is, not a GLSL word or built-in function', name);
+    // the wrappers' own names would be declared twice or turned into something else by their macros: i and a
+    // capital as iTime, the rest of the 2D and 3D wrappers' names, listed here since core can not read the
+    // plugin's, and their short names in a stage whose snippet names them
+    const names = (code)=> new RegExp('\\b' + name + '\\b').test(code);
+    ASSERT(!/^i[A-Z]/.test(name) && !SHADER_RESERVED_NAMES.has(name) &&
+        !(SHADER_FRAGMENT_NAMES.has(name) && names(fragmentCode)) &&
+        !(SHADER_VERTEX_NAMES.has(name) && names(vertexCode)),
+        'a Shader uniform has a name of its own, not one of the engine\'s nor i and a capital, kept for them',
+        name);
+}
+
+///////////////////////////////////////////////////////////////////////////////
 // debug utility functions
 
 // make color constants immutable with debug assertions

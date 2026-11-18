@@ -45,17 +45,6 @@ test('loadAtlas keeps a trimmed frame bigger untrimmed than its image, a turned 
     assert.equal(big.run('Object.keys(b).length'), 400);
 });
 
-test('loadAtlas stops a small json asking for huge cells at its sheet area budget', async ()=>
-{
-    const { run, warnings } = atlasEngine(64);
-    const frames = {};
-    for (let i = 0; i < 500; ++i) frames['f' + i] = frame(0, 0, 4, 4, 1000);
-    run(`var a = loadAtlas('a.png', ${JSON.stringify({frames})})`);
-    await run('spritesReady()');
-    assert.ok(run('Object.keys(a).length') < 10, 'only what the budget holds');
-    assert.ok(warnings.some((w)=> w.includes('more sheet area')));
-});
-
 async function engine2D(extra={})
 {
     const e = loadEngine({ location: { pathname: '/game/' }, ...extra });
@@ -188,55 +177,6 @@ test('a rider of a plain moving solid with no mass sits on it whatever order the
         return JSON.stringify(gaps);
     })()`));
     assert.deepEqual(gaps, [true, true]);
-});
-
-test('old Tiled properties are read, typed by propertytypes, and the game\'s map is left as it was in release',
-    async ()=>
-{
-    for (const file of [undefined, 'littlejs.release.js'])
-    {
-        const { run } = loadEngine({ location: { pathname: '/game/' } }, '', file);
-        run('setHeadlessMode(true)');
-        await run('setEngineManualStep(true); engineInit(()=> {}, ()=> {}, ()=> {}, ()=> {}, ()=> {})');
-        const result = JSON.parse(run(`(()=>
-        {
-            console.warn = ()=> {};
-            class Lamp extends EngineObject {}
-            objectLayersAddType('Lamp', Lamp, {tint: WHITE, radius: 1});
-            const map = {width: 4, height: 2, tilewidth: 16, tileheight: 16, layers: [
-                {type: 'objectgroup', name: 'o', objects: [{id: 1, type: 'Lamp', x: 8, y: 8,
-                    properties: {tint: '#ffff0000', radius: 3}, propertytypes: {tint: 'color', radius: 'float'}}]}]};
-            const made = objectLayersLoad(map);
-            return JSON.stringify({tint: made[0].tint instanceof Color && made[0].tint.toString(),
-                radius: made[0].radius, form: Array.isArray(map.layers[0].objects[0].properties)});
-        })()`));
-        assert.deepEqual(result, {tint: '#ff0000ff', radius: 3, form: !file}, file ?? 'littlejs.js');
-    }
-});
-
-test('odd object property shapes are cleaned up at load, so the 2D editor\'s autosave stays valid', async ()=>
-{
-    const items = {};
-    const { run } = await engine2D({ localStorage: { getItem: (k)=> items[k] ?? null,
-        setItem: (k, v)=> { items[k] = String(v); }, removeItem: (k)=> { delete items[k]; } } });
-    const valid = run(`(()=>
-    {
-        console.warn = ()=> {};
-        class Coin extends EngineObject {}
-        objectLayersAddType('Coin', Coin, {value: 1});
-        const map = {width: 4, height: 2, tilewidth: 16, tileheight: 16, nextobjectid: 4, layers: [
-            {type: 'tilelayer', id: 1, name: 'g', width: 4, height: 2, data: [0, 0, 0, 0, 1, 1, 1, 1]},
-            {type: 'objectgroup', id: 2, name: 'o', objects: [{id: 1, type: 'Coin', x: 8, y: 8, properties: null},
-                {id: 2, type: 'Coin', x: 24, y: 8, properties: 'odd'},
-                {id: 3, type: 'Coin', x: 40, y: 8, properties: [5, {name: 'value', type: 'int', value: 2}]}]}]};
-        editorJSONFetched('levels/odd.json', map);
-        const layers = tileLayersLoad(map, undefined, 0, 0);
-        objectLayersLoad(map);
-        const ground = editorLayerRecord(layers[0]);
-        editorPaint(ground, vec2(0, 1), 3); editorStrokeEnd();
-        return editorSaveValid(editorSaves()[ground.record.key]);
-    })()`);
-    assert.equal(valid, true);
 });
 
 test('a game tool\'s lastCell is cleared by a frame off the map and at each press', async ()=>
@@ -405,14 +345,4 @@ test('a body walking into a HeightMap or MeshCollider slope steeper than its gro
         assert.ok(peak(kind, 60) < 2, kind + ' stops at 60 degrees');
         assert.ok(peak(kind, 75) < 2, kind + ' stops at 75 degrees');
     }
-});
-
-test('glTF node numbers that are Infinity are a file error', async ()=>
-{
-    const { run } = loadEngine({ atob, btoa, Response });
-    run('setHeadlessMode(true)');
-    await run('setEngineManualStep(true); engineInit(()=> { new Render3DPlugin }, ()=> {}, ()=> {}, ()=> {}, ()=> {})');
-    const message = await run(`parseGLTF({asset: {version: '2.0'}, nodes: [{translation: [1, 1e999, 0]}],
-        scenes: [{nodes: [0]}]}).then(()=> 'loaded', (e)=> e.message)`);
-    assert.match(message, /node 0 has a translation/);
 });

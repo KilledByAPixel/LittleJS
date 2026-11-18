@@ -17,55 +17,6 @@ async function engine2D(extra={})
     return e;
 }
 
-test('a Tiled map with properties as an object is read as the list form, so the editor edits it and keeps its ' +
-    'autosave', async ()=>
-{
-    const items = {};
-    const storage = { getItem: (k)=> items[k] ?? null, setItem: (k, v)=> { items[k] = String(v); },
-        removeItem: (k)=> { delete items[k]; } };
-    const code = `
-        class Coin extends EngineObject { constructor(pos) { super(pos, vec2(1)); } }
-        objectLayersAddType('Coin', Coin, { value: 1 });
-        var map = { width: 4, height: 2, tilewidth: 16, tileheight: 16, nextobjectid: 3, layers: [
-            { type: 'tilelayer', id: 1, name: 'ground', width: 4, height: 2, data: [0, 0, 0, 0, 1, 1, 1, 1] },
-            { type: 'objectgroup', id: 2, name: 'Objects', objects: [
-                { id: 1, type: 'Coin', point: true, x: 8, y: 8 },
-                { id: 2, type: 'Coin', point: true, x: 40, y: 8, properties: { value: 5 } }] }] };
-        editorJSONFetched('levels/a.json', map);
-        var layers = tileLayersLoad(map, undefined, 0, 0), made = objectLayersLoad(map);
-        var ground = editorLayerRecord(layers[0]), objects = editorObjectLayers(ground.record)[0];`;
-    let { run } = await engine2D({ localStorage: storage });
-    run(code);
-    assert.deepEqual(JSON.parse(run('JSON.stringify([made[1].value, map.layers[1].objects[1].properties])')),
-        [5, [{name: 'value', type: 'int', value: 5}]]);
-    run(`editorChangeObjects(objects, (l)=> editorObjectSetProperty(l[1], 'value', 7, 1)); editorStrokeEnd();
-        editorPaint(ground, vec2(0, 1), 3); editorStrokeEnd();`);
-    assert.equal(run('editorSaveValid(editorSaves()[ground.record.key])'), true);
-    ({ run } = await engine2D({ localStorage: storage }));
-    run(code);
-    assert.deepEqual(JSON.parse(run('JSON.stringify([map.layers[0].data[0], made[1].value])')), [3, 7],
-        'the autosave brought back');
-});
-
-test('a Tiled object\'s property entries are checked before it is made: a null entry and a color that is no hex ' +
-    'are left out, and the object is made', async ()=>
-{
-    const { run } = await engine2D();
-    const result = JSON.parse(run(`(()=>
-    {
-        const warnings = [];
-        console.warn = (...a)=> warnings.push(a.join(' '));
-        class Thing extends EngineObject {}
-        objectLayersAddType('Thing', Thing, {speed: 2, tint: WHITE});
-        const made = objectLayersLoad({width: 4, height: 2, tilewidth: 16, tileheight: 16, layers: [
-            {type: 'objectgroup', name: 'things', objects: [{id: 1, type: 'Thing', x: 16, y: 16, properties: [null,
-                {name: 'tint', type: 'color', value: 5}, {name: 'speed', type: 'int', value: 3}]}]}]});
-        return JSON.stringify({count: made.length, speed: made[0]?.speed, tint: made[0]?.tint.toString(),
-            warned: warnings.length});
-    })()`));
-    assert.deepEqual(result, {count: 1, speed: 3, tint: '#ffffffff', warned: 2});
-});
-
 test('several setScene calls in one Box2D step enter the scene once, the last asked for', async ()=>
 {
     const { run } = await engine2D();

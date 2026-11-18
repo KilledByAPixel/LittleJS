@@ -221,27 +221,3 @@ test('a game\'s own levelEditor.close() in the 3D editor closes at once, inside 
     })()`));
     assert.deepEqual(result, {closed: [false, false], reopened: true});
 });
-
-test('parseAtlas leaves out an entry whose numbers are not numbers, and warns of split layers by their names', ()=>
-{
-    const warnings = [];
-    const { run } = loadEngine({ console: { ...console, warn: (...a)=> warnings.push(a.join(' ')) } });
-    const names = JSON.parse(run(`JSON.stringify(parseAtlas({frames: {
-        good: {frame: {x: 0, y: 0, w: 8, h: 8}},
-        noX: {frame: {y: 0, w: 8, h: 8}},
-        word: {frame: {x: 0, y: 0, w: '8', h: 8}},
-        badSize: {frame: {x: 0, y: 0, w: 8, h: 8}, sourceSize: {w: 'x', h: 8}}}}).map((g)=> g.name))`));
-    assert.deepEqual(names, ['good']);
-    const split = (layers, entries)=>
-    {
-        warnings.length = 0;
-        run(`parseAtlas(${JSON.stringify({frames: entries.map((filename, i)=>
-            ({filename, frame: {x: i * 8, y: 0, w: 8, h: 8}})),
-            meta: {frameTags: [{name: 'run', from: 0, to: 0}], ...(layers && {layers})}})})`);
-        return warnings.some((w)=> w.includes('split layers'));
-    };
-    assert.equal(split(undefined, ['p (body) 0.aseprite', 'p (hat) 0.aseprite']), true, 'no layers listed');
-    assert.equal(split([{name: 'fx'}, {name: 'base'}], ['boom (fx) 0.aseprite', 'boom (fx) 1.aseprite']), false,
-        'a bracket in the title');
-    assert.equal(split([{name: 'body'}, {name: 'hat'}], ['p (body) 0.aseprite', 'p (hat) 0.aseprite']), true);
-});

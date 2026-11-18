@@ -205,35 +205,6 @@ test('a 2D function type is called with its properties, and a class still gets t
     assert.deepEqual(r, {start: [1, 2], facing: -1, speed: 2, list: ['Coin 5']});
 });
 
-test('a 3D class default is merged with the file\'s object and keeps its class; setProperty refuses an instance (O3)',
-    async ()=>
-{
-    const { run } = await engine({}, true);
-    const r = JSON.parse(run(`(()=>
-    {
-        class Stats { hp = 1; armor = 2; copy() { const s = new Stats; s.hp = this.hp; s.armor = this.armor; return s; }
-            total() { return this.hp + this.armor; } }
-        level3DAddType('S', class extends EngineObject3D { constructor(pos) { super(pos); } }, {stats: new Stats,
-            plain: {a: 1, b: 2}});
-        const level = {littlejs3D: 1, objects: [{id: 1, type: 'S', pos: [0, 0, 0],
-            properties: {stats: {hp: 5}, plain: {a: 3}}}]};
-        const [made] = level3DLoad(level);
-        const loaded = {stats: made.stats instanceof Stats, total: made.stats.total(), plain: made.plain};
-        engineStep(2); levelEditor.open();
-        const edit = levelEditor.edit3D;
-        let refused = '';
-        try { edit.change((list)=> edit.setProperty(list[0], 'stats', new Stats)); }
-        catch (e) { refused = e.message; }
-        const kept = edit.change((list)=> edit.setProperty(list[0], 'stats', {hp: 7, armor: 2}));
-        return JSON.stringify({loaded, refused: /an instance of a class/.test(refused), kept,
-            saved: level.objects[0].properties.stats});
-    })()`));
-    assert.deepEqual(r.loaded, {stats: true, total: 7, plain: {a: 3, b: 2}});
-    assert.equal(r.refused, true);
-    assert.equal(r.kept, true);
-    assert.deepEqual(r.saved, {hp: 7, armor: 2});
-});
-
 test('a resized autosave with objects applied over a file with no object layer links the editor\'s Objects layer (E1)',
     async ()=>
 {

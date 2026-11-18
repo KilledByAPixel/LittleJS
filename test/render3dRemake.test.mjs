@@ -44,39 +44,6 @@ function makeGL()
     return {gl, made, deleted};
 }
 
-test('a LightSystemPlugin made again deletes every GPU object the old one held, and keeps the sun', ()=>
-{
-    const {gl, made, deleted} = makeGL();
-    const { run } = loadEngine({gl, WebGLTexture: Object, WebGLProgram: Object, WebGLVertexArrayObject: Object,
-        WebGLFramebuffer: Object, WebGLBuffer: Object}, '', 'littlejs.release.js');
-    run(`setHeadlessMode(false); engineInitialized = true; glEnable = true; glContext = gl;
-        glCanvas = {width: 800, height: 600}; mainCanvasSize = vec2(800, 600); glMaxTextureSize = 4096;
-        glArrayBuffer = {kind: 'arrayBuffer'};`);
-    // the fake's objects stand for every kind, so each one held is told by its kind
-    run(`WebGLTexture = WebGLProgram = WebGLVertexArrayObject = WebGLFramebuffer = WebGLBuffer = undefined;
-        const kinds = {texture: 'WebGLTexture', program: 'WebGLProgram', vertexArray: 'WebGLVertexArrayObject',
-            framebuffer: 'WebGLFramebuffer', buffer: 'WebGLBuffer'};
-        for (const [kind, name] of Object.entries(kinds))
-            globalThis[name] = {[Symbol.hasInstance]: (o)=> o?.kind === kind};
-        createCanvasContext = ()=> ({canvas: {}}); // its Canvas2D stand in, no GPU object
-        new LightSystemPlugin; var sun = new DirectionalLight();`);
-    const held = run(`(()=>
-    {
-        const held = [], look = (value)=> value && typeof value === 'object' && 'kind' in value && 'id' in value &&
-            held.push(value);
-        for (const value of Object.values(lightSystem)) look(value);
-        for (const program of Object.values(lightSystem.directionalPrograms ?? {}))
-            for (const value of Object.values(program ?? {})) look(value);
-        return held;
-    })()`);
-    assert.ok(held.length > 2, 'the plugin made its objects: ' + held.length);
-    assert.ok(Array.from(held).every((o)=> made.has(o)));
-    run('new LightSystemPlugin');
-    const left = Array.from(held).filter((o)=> !deleted.has(o)).map((o)=> o.kind + ' ' + o.id); // an array of this realm
-    assert.deepEqual(left, [], 'every one is deleted');
-    assert.equal(run('lightSystem.directionalLight === sun'), true);
-});
-
 test('a Render3DPlugin made again deletes every GPU object the old one held, and keeps its pending captures', ()=>
 {
     const {gl, made, deleted} = makeGL();

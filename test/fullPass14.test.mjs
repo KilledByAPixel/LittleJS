@@ -32,33 +32,6 @@ function atlasEngine(size)
     return {...e, warnings};
 }
 
-test('loadAtlas counts the sheets it makes, so cells a hair over half a sheet can not make hundreds', async ()=>
-{
-    const { run } = atlasEngine(64);
-    const frames = {};
-    for (let i = 0; i < 200; ++i) frames['f' + i + 'x'] = {frame: {x: 0, y: 0, w: 1, h: 1}, sourceSize: {w: 1025, h: 1025}};
-    run(`var a = loadAtlas('a.png', ${JSON.stringify({frames})})`);
-    await run('spritesReady()');
-    assert.ok(run('textureSheets.length') <= 10, 'sheets ' + run('textureSheets.length'));
-});
-
-test('parseAtlas leaves out entries with no frame rect or name and keeps the rest, sizes whole, offsets inside',
-    async ()=>
-{
-    const { run, warnings } = atlasEngine(64);
-    const groups = JSON.parse(run(`JSON.stringify(parseAtlas({frames: [
-        {filename: 'a', frame: {x: 0, y: 0, w: 8, h: 8}, sourceSize: {w: 6.9, h: 8}},
-        {filename: 'b'}, null, {frame: {x: 0, y: 0, w: 8, h: 8}},
-        {filename: 7, frame: {x: 8, y: 0, w: 8, h: 8}}]}).map((g)=> [g.name, g.frames[0].sourceSize.x]))`));
-    assert.deepEqual(groups, [['a', 7], ['7', 8]]);
-    assert.ok(warnings.some((w)=> w.includes('no frame rect, no name')));
-    // a trimmed part past its untrimmed size is left out of loadAtlas
-    run(`var b = loadAtlas('b.png', {frames: {over: {frame: {x: 0, y: 0, w: 8, h: 8}, spriteSourceSize: {x: 4, y: 0},
-        sourceSize: {w: 8, h: 8}}, fine: {frame: {x: 8, y: 0, w: 8, h: 8}}}})`);
-    await run('spritesReady()');
-    assert.deepEqual(JSON.parse(run('JSON.stringify(Object.keys(b))')), ['fine']);
-});
-
 test('a tap that started on a panel, which kept its touchstart, is not cancelled at its end', ()=>
 {
     const { handlers } = loadEngine({ window: { ontouchstart: null } });

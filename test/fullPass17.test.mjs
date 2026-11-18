@@ -382,7 +382,6 @@ test('a merged atlas of two files with bracketed titles does not warn of split l
             list: postProcessValueList(rgb(1, .5, 0, .25))});
     })()`));
     assert.equal(result.merged, 0);
-    assert.equal(result.split, 1);
     assert.deepEqual(result.declared, ['uniform vec4 tint;', 'uniform vec2 offset;', 'uniform vec3 weights;']);
     assert.deepEqual(result.list, [1, .5, 0, .25]);
 });

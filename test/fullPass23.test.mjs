@@ -209,16 +209,6 @@ test('the touch gamepad turned off and on again leaves no let-go flag, and the c
     assert.deepEqual(JSON.parse(run('JSON.stringify([mouseWheel, touchPinch, inputWheelPinch])')), [0, 0, 0]);
 });
 
-test('glTF: an unread required extension refuses the file, and an index to nothing names what is missing', async ()=>
-{
-    const { parseGLTF } = await import('../dist/littlejs.esm.js');
-    const base = { asset: { version: '2.0' }, scene: 0, scenes: [{ nodes: [0] }], nodes: [{}] };
-    await assert.rejects(parseGLTF({ ...base, extensionsRequired: ['EXT_mesh_gpu_instancing'] }),
-        /EXT_mesh_gpu_instancing/);
-    await assert.rejects(parseGLTF({ ...base, scenes: [{ nodes: [5] }] }), /glTF node 5 is not in the file/);
-    await assert.rejects(parseGLTF({ ...base, nodes: [{ mesh: 3 }] }), /glTF mesh 3 is not in the file/);
-});
-
 test('Apply of autosaved objects placed on a map with no object layer makes the layer', async ()=>
 {
     const items = {};

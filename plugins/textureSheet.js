@@ -355,8 +355,7 @@ function loadTiles(sources, tileSize=tileDefaultSize, padding=textureSheetPaddin
  *  - Trimmed frames are restored to their full source size when packed
  *  - Rotated frames are rotated back upright when packed
  *  - A group of nine frames, panel_0 to panel_8, is packed as a 3 by 3 block, so it is a drawNineSlice start tile
- *  - A frame outside the image or with no size is left out, and one load packs at most 16 times the image's area,
- *    or 8 sheets', of untrimmed frames, the rest left out with a warning
+ *  - A frame outside the image is left out, with a warning
  *  - The same atlas loaded again by its paths, with the same padding, gives back what the first load did, packed
  *    once, unless that load failed
  *  @param {string} imageSrc - Atlas image path
@@ -404,50 +403,26 @@ function loadAtlas(imageSrc, jsonSrc, padding=textureSheetPadding)
         await imagePromise;
         if (image.width && data)
         {
-            // a frame's rect lies in the image, turned when it is stored turned, and its untrimmed size is a size;
-            // that may be bigger than the image, a glow trimmed down, so it is not bound by the image, but the cells
-            // one load packs are, by area, well past any real atlas, 16 times the image's or 8 sheets', so a small
-            // json can not ask for a thousand sheets of empty cells
+            // a frame's rect lies in the image, turned when it is stored turned
             const w = image.width, h = image.height;
-            // charged by cells and by whole sheets made, the more of the two, so cells a hair over half a sheet,
-            // a sheet each, can not make hundreds of sheets
-            const budget = max(16 * w * h, 8 * textureSheetSize ** 2), sheetsBefore = textureSheets.length;
-            let spent = 0;
-            // each frame name given so far, as which frame of which group, so a sprite that has the name is said
-            const frameNames = new Map;
-            const nameTaken = (name, frameName, i)=> console.warn(`loadAtlas: frame ${i} of ${frameName} is named ` +
-                `${name} as another sprite is, which that name gives; read it as ${frameName}.frame(${i})`);
-            const isSize = (n)=> Number.isFinite(n) && n > 0;
-            const inImage = (f)=> f.pos.x >= 0 && f.pos.y >= 0 && isSize(f.sourceSize.x) && isSize(f.sourceSize.y) &&
-                f.pos.x + (f.rotated ? f.size.y : f.size.x) <= w && f.pos.y + (f.rotated ? f.size.x : f.size.y) <= h &&
-                // and its trimmed part inside its untrimmed size, or it draws into the next sprite's cell
-                f.offset.x >= 0 && f.offset.y >= 0 && f.offset.x + f.size.x <= f.sourceSize.x &&
-                f.offset.y + f.size.y <= f.sourceSize.y;
+            const inImage = (f)=> f.pos.x >= 0 && f.pos.y >= 0 &&
+                f.pos.x + (f.rotated ? f.size.y : f.size.x) <= w && f.pos.y + (f.rotated ? f.size.x : f.size.y) <= h;
             for (const group of parseAtlas(data))
             {
                 // reserve a block of full size cells, one per frame
                 if (!group.frames.length) continue; // a tag with no frames, the groups after it still load
                 if (!group.frames.every(inImage))
                 {
-                    console.warn('loadAtlas frames lie outside the image or have no size, left out:', group.name);
+                    console.warn('loadAtlas frames lie outside the image, left out:', group.name);
                     continue;
                 }
                 const sourceSize = group.frames[0].sourceSize;
-                const area = (sourceSize.x + padding*2) * (sourceSize.y + padding*2) * group.frames.length;
-                if (spent + area > budget)
-                {
-                    console.warn('loadAtlas frames would take more sheet area than 16 times the image or 8 sheets, ' +
-                        'left out:', group.name);
-                    continue;
-                }
                 const added = textureSheetAddGroup(group.frames.length, sourceSize, padding);
                 if (!added)
                 {
                     console.warn('loadAtlas frames are too large to fit on a texture sheet:', group.name);
                     continue;
                 }
-                // only what was packed counts, by its cells or the sheets made so far, whichever is more
-                spent = max(spent + area, (textureSheets.length - sheetsBefore) * textureSheetSize ** 2);
                 const {sheet, tile} = added;
 
                 // draw each frame untrimmed into its cell
@@ -475,16 +450,12 @@ function loadAtlas(imageSrc, jsonSrc, padding=textureSheetPadding)
                 sheet.glDirty = true;
                 // as its own, a frame named __proto__ too, which assigned would set the atlas's prototype; a sprite
                 // packed after a frame took its name takes it back
-                const frameOf = frameNames.get(group.name);
-                frameOf && nameTaken(group.name, ...frameOf);
-                frameNames.delete(group.name);
                 objectPropertySet(atlas, group.name, tile);
                 // each frame of a group made from names under its own name too, gem1 of gem1, gem2 and gem3, separate
                 // sprites in a pack exported by file name, unless a sprite of that name is in the atlas
                 if (group.named)
-                    group.frames.forEach((f, i)=> f.name === group.name ? 0 :
-                        Object.hasOwn(atlas, f.name) ? nameTaken(f.name, group.name, i) :
-                        (objectPropertySet(atlas, f.name, tile.frame(i)), frameNames.set(f.name, [group.name, i])));
+                    group.frames.forEach((f, i)=> f.name === group.name || Object.hasOwn(atlas, f.name) ||
+                        objectPropertySet(atlas, f.name, tile.frame(i)));
             }
         }
         else
@@ -601,30 +572,6 @@ function parseAtlas(data)
                 tagged.add(i);
         }
         frames.forEach((f, i)=> f && !tagged.has(i) && groups.push({name: f.name, frames: [f]}));
-        // a tag numbers frames, and Aseprite exported with split layers has an entry for each layer of each frame,
-        // so its tags would take the wrong entries; those entries are named with their layer in brackets, as
-        // "hero (body) 0.aseprite", two layers or more among them, while a merged export names no entry by a layer,
-        // or by one only, a title with a bracket; the layers listed, or with none listed one name under two brackets,
-        // as "hero (body) 0" and "hero (arm) 0", which a merged sheet of several files, each a title with a bracket
-        // of its own, never has
-        const listed = isArray(data.meta?.layers) && data.meta.layers.length;
-        const bracketsOf = new Map;
-        for (const f of frames)
-        {
-            // the last bracket, the layer's, Aseprite names a split entry "title (layer) frame", so a title with a
-            // bracket of its own, "hero (v2)", keeps it in the rest
-            const bracket = f?.name.match(/\([^()]+\)/g)?.pop();
-            if (!bracket) continue;
-            const at = f.name.lastIndexOf(bracket);
-            const rest = f.name.slice(0, at) + f.name.slice(at + bracket.length), set = bracketsOf.get(rest) ?? new Set;
-            bracketsOf.set(rest, set.add(bracket));
-        }
-        const split = listed ? data.meta.layers.map((layer)=> '(' + layer?.name + ')')
-            .filter((layer)=> frames.some((f)=> f?.name.includes(layer))).length > 1 :
-            [...bracketsOf.values()].some((set)=> set.size > 1);
-        split &&
-            console.warn('loadAtlas: the atlas looks exported with split layers, which its frame tags do not ' +
-            'number; export it with the layers merged');
         return parseAtlasNamesCheck(groups);
     }
 
@@ -658,7 +605,7 @@ function parseAtlas(data)
 }
 
 // an atlas's groups, with a warning for each name two of them have, as a sprite is looked up by name and the second
-// takes the first's place; a frame whose own name another sprite has is said by loadAtlas, which knows what it packed
+// takes the first's place
 function parseAtlasNamesCheck(groups)
 {
     const names = new Set;

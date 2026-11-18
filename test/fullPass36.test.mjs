@@ -164,44 +164,6 @@ test('a game tool whose press edits and then throws ends its stroke, in 2D and 3
     assert.deepEqual(r3, {both: [1, 2, 3], undone: [1, 2]}, '3D: one undo takes back only the second');
 });
 
-test('edit3D.setProperty refuses what the load would drop, takes a class field with no value left out, and says '
-    + 'what is wrong with the value (D1, D2, D4)', async ()=>
-{
-    const { run } = await engine({}, true);
-    const r = JSON.parse(run(`(()=>
-    {
-        class AI { target; speed = 1; copy() { const a = new AI; a.speed = this.speed; return a; } }
-        class Stats { hp = 3; }
-        level3DAddType('Chest', class extends EngineObject3D { constructor(pos) { super(pos); } },
-            {loot: {gold: 5, gem: {kind: 1}}, path: {to: vec3(1, 2, 3)}, ai: new AI});
-        const level = {littlejs3D: 1, objects: [{id: 1, type: 'Chest', pos: [0, 0, 0]}]};
-        level3DLoad(level); engineStep(2); levelEditor.open();
-        const edit = levelEditor.edit3D, said = [];
-        const tryIt = (name, value)=>
-        {
-            try { return edit.change((list)=> edit.setProperty(list[0], name, value)); }
-            catch (e) { said.push(e.message.replace(/^Assert failed: setProperty: /, '')); }
-        };
-        tryIt('loot', {gold: 'x', gem: {kind: 2}});
-        tryIt('loot', {gold: 2, gem: null});
-        tryIt('ai', {speed: 2, target: new Stats});
-        const path = tryIt('path', {to: [4, 5, 6]});
-        const ai = tryIt('ai', {...level.objects[0].properties?.ai, speed: 4});
-        edit.strokeEnd();
-        const made = editor3DInstances.get(1);
-        return JSON.stringify({said, path, ai, saved: level.objects[0].properties,
-            game: {to: [made.path.to.x, made.path.to.y, made.path.to.z], ai: made.ai instanceof AI, speed: made.ai.speed}});
-    })()`));
-    assert.deepEqual(r.said, [
-        'loot has a member the load would not read: .gold is a string, its default a number, the default is kept',
-        'loot has a member the load would not read: .gem is a null, its default an object, the default is kept',
-        'ai can not be given an instance of a class, nor a value holding one, as the file brings it back a plain object']);
-    assert.equal(r.path, true, 'a nested vector as a list is read');
-    assert.equal(r.ai, true, 'a class field with no value may be left out');
-    assert.deepEqual(r.saved, {path: {to: [4, 5, 6]}, ai: {speed: 4}});
-    assert.deepEqual(r.game, {to: [4, 5, 6], ai: true, speed: 4});
-});
-
 test('a class instance or a null prototype object inside a property, and a vector as a list in a file (O1, O2, O3, O4)',
     async ()=>
 {

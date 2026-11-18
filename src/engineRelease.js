@@ -42,6 +42,7 @@ function debugClear      (){}
 function debugScreenshot (){}
 function debugShowErrors(){}
 function setDebugOverlay(){}
+function debugShaderUniformName(){}
 function debugProtectConstant(o){ return Object.freeze(o); } // a color constant stays as it is, in release too
 
 // the tweakables and the level editor are debug only

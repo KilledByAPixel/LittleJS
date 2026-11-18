@@ -398,7 +398,6 @@ function tileLayersLoad(tileMapData, tileInfo=tileLayerDefaultTile(), renderOrde
         `tileLayersLoad: a map of ${tileMapData.orientation} orientation is read as orthogonal, square cells`);
 
     // the editor, in debug builds, keeps the map as the source of its edits and brings back autosaved ones
-    objectLayersListProperties(tileMapData);
     tileMapData = editorMapRestore(tileMapData);
 
     // validate the tile map data: a size that is not whole cells, or tiles that do not fill it, is said in any build,
@@ -566,9 +565,6 @@ function tileLayersFromLDtk(ldtk, level=0)
     const width = first?.__cWid || ceil(data.pxWid / grid), height = first?.__cHei || ceil(data.pxHei / grid);
     if (!(Number.isInteger(width) && Number.isInteger(height) && width > 0 && height > 0 && width * height <= 1 << 22))
         throw new Error('tileLayersFromLDtk: level ' + data.identifier + ' is ' + width + ' by ' + height + ' cells');
-    // the cells of every layer made, together, as a small file of many stacked tiles would make many whole layers;
-    // 1024 by 1024 cells in four layers, past which each layer's canvas is too big to draw anyway
-    let cells = 0;
     const map = {width, height, tilewidth: grid, tileheight: grid, orientation: 'orthogonal', renderorder: 'right-down',
         infinite: false, layers: [], nextlayerid: 1, nextobjectid: 1};
 
@@ -608,14 +604,7 @@ function tileLayersFromLDtk(ldtk, level=0)
             continue;
         }
         // an IntGrid layer's values, hidden, under its own name, for collision whatever its tiles do
-        const empty = ()=>
-        {
-            if ((cells += width * height) > 1 << 22)
-                throw new Error('tileLayersFromLDtk: level ' + data.identifier + ' makes more than ' + (1 << 22) +
-                    ' cells over its layers');
-            return new Array(width * height).fill(0);
-        };
-        const opacity = instance.__opacity ?? 1;
+        const empty = ()=> new Array(width * height).fill(0), opacity = instance.__opacity ?? 1;
         const values = instance.__type === 'IntGrid';
         if (values)
         {
@@ -735,7 +724,6 @@ function objectLayersAddType(name, make, defaults={}, tileInfo)
 function objectLayersLoad(tileMapData)
 {
     // the level editor, in debug builds, keeps the map and brings back its autosaved objects before they are made
-    objectLayersListProperties(tileMapData);
     tileMapData && editorMapRestore(tileMapData);
     const made = [];
     const addObjects = (dataLayers)=>
@@ -758,58 +746,8 @@ function objectLayersLoad(tileMapData)
     return made;
 }
 
-// an object's properties as the list of {name, type, value} Tiled writes now: properties written as an object of
-// names, by Tiled before 1.2 or by hand, typed by its propertytypes when it has them, and a list without the entries
-// that are not {name}; none for anything else, null or a string
-function objectLayersPropertyList(object)
-{
-    const properties = object?.properties;
-    if (isArray(properties))
-        return properties.filter((p)=> p && typeof p == 'object' && typeof p.name == 'string');
-    if (!properties || typeof properties != 'object') return [];
-    const types = object.propertytypes && typeof object.propertytypes == 'object' ? object.propertytypes : {};
-    return Object.keys(properties).map((name)=>
-    {
-        const value = properties[name], given = types[name];
-        const type = typeof given == 'string' ? given : typeof value == 'boolean' ? 'bool' :
-            typeof value == 'number' ? Number.isInteger(value) ? 'int' : 'float' :
-            value && typeof value == 'object' ? 'class' : 'string';
-        return {name, type, value};
-    });
-}
-
-// in debug builds, where the level editor edits the map the game gave it in place, its objects' properties made the
-// list form in the map, so the editor and its autosaves see one form, said once; a release build leaves the game's
-// map as it is and the loader reads either form
-function objectLayersListProperties(tileMapData)
-{
-    if (!debug) return;
-    let changed = 0, odd = 0;
-    const walk = (layers)=>
-    {
-        for (const layer of isArray(layers) ? layers : [])
-        {
-            layer?.type === 'group' && walk(layer.layers);
-            for (const object of layer?.type === 'objectgroup' && isArray(layer.objects) ? layer.objects : [])
-            {
-                if (!object || typeof object != 'object' || object.properties === undefined) continue;
-                const list = objectLayersPropertyList(object);
-                if (isArray(object.properties) && list.length === object.properties.length) continue;
-                const properties = object.properties;
-                isArray(properties) ? console.warn(`objectLayersLoad: object ${object.id} has a property ` +
-                    'that is not {name, value}, left out') : properties && typeof properties == 'object' ? ++changed :
-                    ++odd;
-                object.properties = list;
-                delete object.propertytypes;
-            }
-        }
-    };
-    walk(tileMapData?.layers);
-    changed && console.warn(`objectLayersLoad: ${changed} objects have properties written as an object, ` +
-        'as Tiled before 1.2 wrote them, read as a list; save the map again in a newer Tiled');
-    odd && console.warn(`objectLayersLoad: ${odd} objects have properties that are neither a list nor an ` +
-        'object, as null or text, read as none');
-}
+// an object's properties, the list of {name, type, value} Tiled writes
+const objectLayersPropertyList = (object)=> isArray(object?.properties) ? object.properties : [];
 
 // a property's value for one object of its own: an array or plain object copied with what is in it, so an object
 // that changes its list does not change every other object's, or the map's, and an instance of a class, a Color, a
@@ -966,10 +904,8 @@ function objectLayersProperties(type, object, tileMapData)
     const list = objectLayersPropertyList(object);
     for (const [key, value] of Object.entries(type.defaults))
         set(key, objectPropertyCopy(value));
-    // a list of {name, type, value}, as Tiled 1.2 and on write it, or an older map's object of them; an entry that is
-    // not one, or a color that is not a hex string, is said and left out, read before the object is made
-    isArray(object.properties) && list.length < object.properties.length && objectLayersWarnOnce(tileMapData,
-        object.id + ' not {name, value}', `objectLayersLoad: object ${object.id} has a property that is not {name, value}`);
+    // a list of {name, type, value}, as Tiled 1.2 and on write it; a color that is not a hex string is said and left
+    // out, read before the object is made
     const say = (about, text)=> objectLayersWarnOnce(tileMapData, object.id + ' ' + name + about,
         `objectLayersLoad: object ${object.id}'s ${name}${text}`);
     let name;

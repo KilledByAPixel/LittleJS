@@ -65,10 +65,6 @@ class LightSystemPlugin
         ASSERT(engineInitialized || headlessMode, 'create the plugin after engineInit, e.g. in gameInit');
         ASSERT(!lightSystem, 'LightSystemPlugin already initialized');
         ASSERT(!postProcess, 'LightSystemPlugin must be created before PostProcessPlugin');
-        // one made again in a release build, as in a scene's enter, takes the old one's place: what the old one made
-        // on the GPU is given back, and a sun still alive stays the sun
-        const old = lightSystem;
-        old && lightSystemFreeGL(old);
         lightSystem = this;
 
         /** @property {boolean} - When false, the render pass is skipped entirely */
@@ -154,7 +150,7 @@ class LightSystemPlugin
         this.shadowMapWorldSize = 0;
         /** @property {DirectionalLight|undefined} - The scene's directional light, a sun, or undefined, read only
          *  @type {DirectionalLight|undefined} */
-        this.directionalLight = old?.directionalLight?.destroyed ? undefined : old?.directionalLight;
+        this.directionalLight = undefined;
         /** @property {number} - Pixels across the square textures a directional light is built in, covering the
          *  shadow map's area; larger is sharper and slower; a power of two, as shadowMapSize, so their texels line up */
         this.directionalTextureSize = 512;
@@ -1444,24 +1440,4 @@ class DirectionalLight extends EngineObject
             lightSystem.directionalLight = undefined;
         super.destroy(immediate);
     }
-}
-
-// give back what a light system made on the GPU, when another takes its place: its textures, programs, vertex
-// arrays and framebuffers, the directional light's programs too, and its normal shader
-function lightSystemFreeGL(old)
-{
-    const gl = glContext;
-    if (headlessMode || !gl) return;
-    const free = (v)=>
-        v instanceof WebGLTexture ? gl.deleteTexture(v) :
-        v instanceof WebGLProgram ? gl.deleteProgram(v) :
-        v instanceof WebGLVertexArrayObject ? gl.deleteVertexArray(v) :
-        v instanceof WebGLFramebuffer ? gl.deleteFramebuffer(v) :
-        v instanceof WebGLBuffer ? gl.deleteBuffer(v) :
-        v instanceof Shader ? v.dispose() : undefined;
-    for (const value of Object.values(old))
-        free(value);
-    // its programs and their vertex arrays, kept by name in one object
-    for (const value of Object.values(old.directionalPrograms ?? {}))
-        free(value);
 }

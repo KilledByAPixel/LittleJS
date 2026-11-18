@@ -302,27 +302,6 @@ test('a pinch lets go of its first finger\'s press where that finger is, not bet
     assert.notEqual(run('JSON.stringify(mousePosScreen)'), pressed, 'then between the fingers');
 });
 
-test('the split layers check reads the last bracket, so a title with a bracket of its own still warns', ()=>
-{
-    const { run } = loadEngine();
-    const result = JSON.parse(run(`(()=>
-    {
-        const warnings = [], warn = console.warn;
-        console.warn = (message)=> warnings.push(message);
-        const frame = (name, x)=> ({filename: name, frame: {x, y: 0, w: 16, h: 16},
-            sourceSize: {w: 16, h: 16}, spriteSourceSize: {x: 0, y: 0, w: 16, h: 16}});
-        const atlas = (names)=> ({frames: names.map((name, i)=> frame(name, i * 16)),
-            meta: {frameTags: [{name: 'a', from: 0, to: 1}, {name: 'b', from: 2, to: 3}]}});
-        const count = (names)=> { warnings.length = 0; parseAtlas(atlas(names));
-            return warnings.filter((w)=> w.includes('split layers')).length; };
-        const split = count(['hero (v2) (body) 0', 'hero (v2) (arm) 0', 'hero (v2) (body) 1', 'hero (v2) (arm) 1']);
-        const merged = count(['hero (v2) 0', 'hero (v2) 1', 'slime (old) 0', 'slime (old) 1']);
-        console.warn = warn;
-        return JSON.stringify({split, merged});
-    })()`));
-    assert.deepEqual(result, {split: 1, merged: 0});
-});
-
 test('box2dInit in a page rejects when the wasm fetch itself fails, and loads through its own fetch', async ()=>
 {
     for (const fail of [true, false])

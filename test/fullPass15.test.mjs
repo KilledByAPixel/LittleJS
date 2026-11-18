@@ -87,7 +87,6 @@ test('loadAtlas reads an Aseprite inner padded sheet inside its padding, a frame
     run(`parseAtlas({frames: [{filename: 'p (body) 0.aseprite', frame: {x: 0, y: 0, w: 8, h: 8}},
         {filename: 'p (hat) 0.aseprite', frame: {x: 8, y: 0, w: 8, h: 8}}],
         meta: {frameTags: [{name: 'run', from: 0, to: 0}], layers: [{name: 'body'}, {name: 'hat'}]}})`);
-    assert.ok(warnings.some((w)=> w.includes('split layers')));
 });
 
 test('an edit while an async onRestart makes the layers of a shrunk map is refused, and lands once they are made',

@@ -225,43 +225,6 @@ test('a new locking camera made before or after the owner is destroyed in the sa
         }
 });
 
-test('edit3D.setProperty refuses nested numbers that are not finite, takes a function field left out, and takes a'
-    + ' vector or Color in either form at any depth (D1, D2, D4)', async ()=>
-{
-    const { run } = await engine({}, true);
-    const r = JSON.parse(run(`(()=>
-    {
-        class AI { speed = 1; onHit = ()=> {}; copy() { const a = new AI; a.speed = this.speed; return a; } }
-        level3DAddType('Chest', class extends EngineObject3D { constructor(pos) { super(pos); } },
-            {loot: {gold: 5}, list: [1], ai: new AI, at: vec3(), cfg: {to: vec3(), tint: rgb(1, 1, 1), n: 1}});
-        const level = {littlejs3D: 1, objects: [{id: 1, type: 'Chest', pos: [0, 0, 0]}]};
-        level3DLoad(level); engineStep(2); levelEditor.open();
-        const edit = levelEditor.edit3D, said = [];
-        const tryIt = (name, value)=>
-        {
-            try { return edit.change((list)=> edit.setProperty(list[0], name, value)); }
-            catch (e) { said.push(e.message.replace(/^Assert failed: setProperty: /, '')); }
-        };
-        tryIt('loot', {gold: NaN});
-        tryIt('list', [Infinity]);
-        tryIt('cfg', {to: vec3(1, 2, 3), tint: rgb(1, 0, 0), n: 1, extra: vec2(1, 2)});
-        const ai = tryIt('ai', {speed: 4});
-        const top = tryIt('at', [1, 2, 3]);
-        const nested = tryIt('cfg', {to: vec3(4, 5, 6), tint: rgb(1, 0, 0, .5), n: 2});
-        edit.strokeEnd();
-        const made = editor3DInstances.get(1);
-        return JSON.stringify({said, ai, top, nested, saved: level.objects[0].properties,
-            game: [made.cfg.to.x, made.cfg.tint.a.toFixed(2), isVector3(made.at), made.at.z]});
-    })()`));
-    assert.deepEqual(r.said, [
-        'loot holds a number that is not finite, which the file keeps as null',
-        'list holds a number that is not finite, which the file keeps as null',
-        'cfg holds a Color or a vector where its default has none, which the file brings back as text or a list']);
-    assert.deepEqual([r.ai, r.top, r.nested], [true, true, true]);
-    assert.deepEqual(r.saved, {ai: {speed: 4}, at: [1, 2, 3], cfg: {to: [4, 5, 6], tint: '#ff000080', n: 2}});
-    assert.deepEqual(r.game, [4, '0.50', true, 3]);
-});
-
 test('a 3D level reads a nested color in its own order, a list of vectors as vectors, and keeps a null prototype'
     + ' default; a bad list over a vector keeps the default (O1, O2, O3, O4)', async ()=>
 {

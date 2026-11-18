@@ -190,30 +190,6 @@ test('a body on a MeshCollider lift going down, pushed by a crate, keeps the gro
         }
 });
 
-test('edit3D.setProperty refuses a list item that leaves out a member of the default\'s (D1)', async ()=>
-{
-    const { run } = await engine({}, true);
-    const r = JSON.parse(run(`(()=>
-    {
-        level3DAddType('S', class extends EngineObject3D { constructor(pos) { super(pos); } },
-            {stops: [{at: vec3(), wait: 1}], cfg: {stops: [{wait: 1}]}});
-        const level = {littlejs3D: 1, objects: [{id: 1, type: 'S', pos: [0, 0, 0]}]};
-        level3DLoad(level); engineStep(2); levelEditor.open();
-        const edit = levelEditor.edit3D, said = [];
-        const tryIt = (name, value)=>
-        {
-            try { return edit.change((list)=> edit.setProperty(list[0], name, value)); }
-            catch (e) { said.push(e.message.replace(/^Assert failed: setProperty: /, '')); }
-        };
-        tryIt('stops', [{at: vec3(1, 2, 3)}]);
-        tryIt('cfg', {stops: [{}]});
-        edit.strokeEnd();
-        return JSON.stringify({said});
-    })()`));
-    assert.deepEqual(r.said, ['stops leaves out a member of its default, which the load would put back',
-        'cfg leaves out a member of its default, which the load would put back']);
-});
-
 test('a 2D tool press taken back by the right button or Escape, or released first, gives the brush none of it (E3,'
     + ' E4)', async ()=>
 {
@@ -261,34 +237,6 @@ test('a 2D tool press taken back by the right button or Escape, or released firs
     assert.equal(r.again, 'press,drag,release,press,release', 'the second press is given no last cell');
     assert.equal(r.putDown, 'press,drag,release', 'no press after a release that put the tool down');
     assert.equal(r.painted, '0000000000000000');
-});
-
-test('an atlas frame named as another sprite is said only for a sprite the atlas keeps (P1)', async ()=>
-{
-    const contextOf = (canvas)=> new Proxy({}, { get: (t, k)=> k === 'canvas' ? canvas :
-        typeof k === 'string' ? ()=> ({}) : undefined, set: ()=> true });
-    const { run } = loadEngine({
-        Image: class { set src(v) { this.width = this.height = 256; Promise.resolve().then(()=> this.onload()); } },
-        OffscreenCanvas: class { constructor(w, h) { this.width = w; this.height = h; } getContext()
-            { return contextOf(this); } },
-    });
-    run('glEnable = false; engineInitialized = true; var warns = []; console.warn = (...a)=> warns.push(a.join(" "));');
-    let x = 0, n = 0;
-    const frame = (out)=> ({frame: {x: out ? 300 : (x += 8) % 240, y: 0, w: 8, h: 8}, rotated: false,
-        spriteSourceSize: {x: 0, y: 0, w: 8, h: 8}, sourceSize: {w: 8, h: 8}});
-    const load = async (out)=>
-    {
-        const frames = {};
-        for (const name of ['run_0', 'run_1', 'run_2', 'run_1_0', 'run_1_1'])
-            frames[name] = frame(name === out);
-        run(`warns.length = 0; loadAtlas('b${n++}.png', ${JSON.stringify({frames})})`);
-        await run('spritesReady()');
-        return JSON.parse(run('JSON.stringify(warns.filter((w)=> w.includes("as another sprite is")))'));
-    };
-    assert.deepEqual(await load(), ['loadAtlas: frame 1 of run is named run_1 as another sprite is, which that name ' +
-        'gives; read it as run.frame(1)']);
-    assert.deepEqual(await load('run_1_1'), [], 'the other run_1 left out');
-    assert.deepEqual(await load('run_2'), [], 'run left out');
 });
 
 test('a release build keeps a sound rate below 0 as 0 (K2)', ()=>

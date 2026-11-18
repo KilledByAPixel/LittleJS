@@ -170,37 +170,6 @@ test('a 3D list of objects is read item by item, its vectors and Colors as the d
     assert.equal(r.warned, 1);
 });
 
-test('edit3D.setProperty takes a vector for a member of an object default, refuses a function and says a vector that is'
-    + ' not valid (D2, D3, D4)', async ()=>
-{
-    const { run } = await engine({}, true);
-    const r = JSON.parse(run(`(()=>
-    {
-        level3DAddType('S', class extends EngineObject3D { constructor(pos) { super(pos); } },
-            {spot: {at: vec3()}, cb: ()=> 1, at: vec3()});
-        const level = {littlejs3D: 1, objects: [{id: 1, type: 'S', pos: [0, 0, 0]}]};
-        level3DLoad(level); engineStep(2); levelEditor.open();
-        const edit = levelEditor.edit3D, said = [];
-        const tryIt = (name, value)=>
-        {
-            try { return edit.change((list)=> edit.setProperty(list[0], name, value)); }
-            catch (e) { said.push(e.message.replace(/^Assert failed: setProperty: /, '')); }
-        };
-        const spot = tryIt('spot', {at: vec3(1, 2, 3)});
-        tryIt('cb', ()=> 2);
-        const bad = vec3(); bad.x = NaN;
-        tryIt('at', bad);
-        edit.strokeEnd();
-        return JSON.stringify({spot, said, saved: level.objects[0].properties,
-            game: editor3DInstances.get(1).spot.at.z});
-    })()`));
-    assert.equal(r.spot, true);
-    assert.deepEqual(r.said, ['cb holds a function, which the file can not keep',
-        'at holds a Color or a vector that is not valid, a number in it not finite']);
-    assert.deepEqual(r.saved, {spot: {at: [1, 2, 3]}});
-    assert.equal(r.game, 3);
-});
-
 test('a 2D tool press that puts the tool down leaves the rest of the press unpainted, and a press let go and pressed'
     + ' again in one frame is released first (E1, E2)', async ()=>
 {

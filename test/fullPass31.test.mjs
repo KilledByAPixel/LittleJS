@@ -242,7 +242,7 @@ test('a nine-slice or three-slice of a negative size in world space draws the bo
 test('a Shader uniform can not be named as a GLSL word or built-in function, or with a double underscore (G1)', ()=>
 {
     const { run } = loadEngine();
-    for (const name of ['input', 'sample', 'smooth', 'flat', 'centroid', 'filter', 'min', 'texture', 'my__glow'])
+    for (const name of ['input', 'sample', 'smooth', 'flat', 'filter', 'min', 'texture', 'my__glow'])
         assert.throws(()=> run(`new Shader('void mainImage(out vec4 c, vec2 p) { c = vec4(1); }', '', {${name}: 1})`),
             /Assert failed/, name);
     assert.doesNotThrow(()=> run(`new Shader('void mainImage(out vec4 c, vec2 p) { c = vec4(glow); }', '', {glow: 1})`));

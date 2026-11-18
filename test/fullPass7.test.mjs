@@ -142,13 +142,6 @@ test('a property named like a member of every object is kept, and __proto__ is a
     assert.deepEqual(result.tiled, [true, 'p'], 'the object is still what it was made, its __proto__ a property');
 });
 
-test('a light system made again in a release build keeps the sun', ()=>
-{
-    const { run } = loadEngine({}, '', 'littlejs.release.js');
-    assert.equal(run(`setHeadlessMode(true); new LightSystemPlugin; const sun = new DirectionalLight();
-        new LightSystemPlugin; lightSystem.directionalLight === sun`), true);
-});
-
 // the improvements of the same pass
 
 test('restarting a game many times leaves every engine list the size it was after the first', async ()=>

@@ -84,41 +84,6 @@ test('level3DSpawn keeps an instance of a class given over a class or a plain de
     assert.deepEqual(r.file, [true, 9, {gold: 1}], 'a file\'s object still merges, {} the whole default');
 });
 
-test('edit3D.setProperty refuses a plain object that leaves out a default member and a class instance at any depth'
-    + ' (O2, D4)', async ()=>
-{
-    const { run } = await engine({}, true);
-    const r = JSON.parse(run(`(()=>
-    {
-        class Stats { hp = 3; }
-        level3DAddType('Chest', class extends EngineObject3D { constructor(pos) { super(pos); } },
-            {loot: {gold: 5, gem: {kind: 1, size: 2}}, extra: null});
-        const level = {littlejs3D: 1, objects: [{id: 1, type: 'Chest', pos: [0, 0, 0]}]};
-        level3DLoad(level); engineStep(2); levelEditor.open();
-        const edit = levelEditor.edit3D, said = [];
-        const tryIt = (value, name='loot')=>
-        {
-            try { return edit.change((list)=> edit.setProperty(list[0], name, value)); }
-            catch (e) { said.push(e.message.replace(/^Assert failed: setProperty: /, '')); }
-        };
-        tryIt({});
-        tryIt({gold: 2, gem: {kind: 3}});
-        tryIt({s: new Stats}, 'extra');
-        tryIt([{c: rgb(1, 0, 0)}], 'extra');
-        const written = tryIt({gold: 2, gem: {kind: 3, size: 2}});
-        edit.strokeEnd();
-        return JSON.stringify({said, written, saved: level.objects[0].properties, undo: editor3DUndoList.length});
-    })()`));
-    assert.deepEqual(r.said, [
-        'loot leaves out a member of its default, which the load would put back',
-        'loot leaves out a member of its default, which the load would put back',
-        'extra can not be given an instance of a class, nor a value holding one, as the file brings it back a plain object',
-        'extra holds a Color or a vector where its default has none, which the file brings back as text or a list']);
-    assert.equal(r.written, true);
-    assert.deepEqual(r.saved, {loot: {gold: 2, gem: {kind: 3, size: 2}}});
-    assert.equal(r.undo, 1, 'only the edit written is an undo');
-});
-
 test('edit3D undo and strokeCancel inside change assert and do nothing; edit2D changeObjects inside one too (D3, E1)',
     async ()=>
 {

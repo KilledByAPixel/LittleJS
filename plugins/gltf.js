@@ -572,27 +572,15 @@ async function parseGLTF(data, baseUrl='', files)
         throw new Error('only glTF 2.0 is read'); // a file problem, not a code one, so it throws in every build
     // compressed geometry has no plain accessors to read; a required extension the loader does not read refuses the
     // file, as the format says, or it would load wrong with nothing said, as one instanced copy for many
-    for (const name of isArray(json.extensionsRequired) ? json.extensionsRequired : [])
+    for (const name of json.extensionsRequired || [])
         if (name === 'KHR_draco_mesh_compression' || name === 'EXT_meshopt_compression')
             throw new Error(`glTF with ${name} is not read, export it uncompressed`);
         else if (name === 'KHR_texture_basisu')
             throw new Error('glTF with KHR_texture_basisu textures is not read, export them as png or jpeg');
         else if (!GLTF_EXTENSIONS_READ.includes(name))
             throw new Error(`glTF needs ${name}, which is not read, export without it`);
-    // each node's place, turn, scale and matrix numbers, the count each takes, or a release build bakes NaN into the
-    // pose or throws at every step; a file problem, so it throws in every build
-    (isArray(json.nodes) ? json.nodes : []).forEach((node, i)=>
-    {
-        for (const [key, count] of [['translation', 3], ['rotation', 4], ['scale', 3], ['matrix', 16]])
-        {
-            const value = node?.[key];
-            if (value !== undefined && !(isArray(value) && value.length === count && value.every(Number.isFinite)))
-                throw new Error(`glTF node ${i} has a ${key} that is not ${count} finite numbers`);
-        }
-    });
     // one that only may use them has other images to fall back on, or none: said, since it loads with them left out
-    const listed = (list)=> isArray(list) && list.includes('KHR_texture_basisu'); // a list, not an object
-    if (listed(json.extensionsUsed) && !listed(json.extensionsRequired))
+    if (json.extensionsUsed?.includes('KHR_texture_basisu') && !json.extensionsRequired?.includes('KHR_texture_basisu'))
         console.warn('glTF: KHR_texture_basisu textures are not read and are left out, export them as png or jpeg');
 
     // the buffers: the GLB's own, a data uri, or a file beside the model
@@ -657,7 +645,7 @@ async function parseGLTF(data, baseUrl='', files)
         if (visited.has(index))
             throw new Error('glTF node ' + index + ' is reached twice, nodes must form trees');
         visited.add(index);
-        const node = gltfAt(json.nodes, index, 'node'), local = gltfNodeMatrix(node);
+        const node = json.nodes[index], local = gltfNodeMatrix(node);
         let matrix = parentMatrix ? parentMatrix.copy().multiply(local) : local;
         let rest = parentRest && parentRest.copy().multiply(local); // where it rests, when that is not where it is baked
         if (!node.matrix && node.scale?.includes(0))
@@ -675,13 +663,11 @@ async function parseGLTF(data, baseUrl='', files)
             restPose[index] = rest.copy().multiply(restInverse[index]); // from where it is baked to where it rests
         if (node.mesh !== undefined)
         {
-            const mesh = gltfAt(json.meshes, node.mesh, 'mesh');
+            const mesh = json.meshes[node.mesh];
             // a skinned mesh is placed by its joints and not by its node, as the format says, so it is read as stored
             const skin = node.skin !== undefined ? json.skins?.[node.skin] : undefined;
-            if (!isArray(mesh.primitives)) throw new Error('glTF mesh ' + node.mesh + ' has no primitives');
             for (const primitive of mesh.primitives)
             {
-                if (!primitive?.attributes) throw new Error('glTF mesh ' + node.mesh + ' has a primitive with no attributes');
                 const skinned = skin?.joints?.length && primitive.attributes.JOINTS_0 !== undefined &&
                     primitive.attributes.WEIGHTS_0 !== undefined;
                 const part = gltfPart(json, buffers, textures, copies, primitive, skinned ? new Matrix4 : matrix,
@@ -715,22 +701,14 @@ async function parseGLTF(data, baseUrl='', files)
         // the animations: each channel that moves a node's translation, rotation or scale, with its keys; morph
         // weights are not read, and a node given as a matrix cannot be animated, the format says
         const animations = (json.animations || []).map((animation, i)=> new GLTFAnimation(animation.name || 'animation ' + i,
-            (isArray(animation.channels) ? animation.channels : []).filter(c=> c?.target?.node !== undefined &&
-                ['translation', 'rotation', 'scale'].includes(c.target.path) &&
-                !gltfAt(json.nodes, c.target.node, 'animation target node').matrix).map(c=>
+            animation.channels.filter(c=> c.target.node !== undefined &&
+                ['translation', 'rotation', 'scale'].includes(c.target.path) && !json.nodes[c.target.node].matrix).map(c=>
             {
-                const sampler = gltfAt(animation.samplers, c.sampler, 'animation sampler');
-                const interpolation = sampler.interpolation || 'LINEAR';
-                const times = gltfAccessor(json, buffers, sampler.input).data;
-                const values = gltfAccessor(json, buffers, sampler.output).data;
-                const components = c.target.path === 'rotation' ? 4 : 3;
-                // a value for each key, three with cubic spline's tangents, and times that are numbers, or the pose
-                // goes to NaN once the play passes the keys there are; a file problem, so it throws in every build
-                const keys = times.length, wanted = keys * components * (interpolation === 'CUBICSPLINE' ? 3 : 1);
-                if (!keys || values.length !== wanted || !times.every(isFinite))
-                    throw new Error(`glTF animation ${i} has ${keys} keys and ${values.length} values for ` +
-                        `${c.target.path}, ${wanted} were wanted, or a time that is not a number`);
-                return {node: c.target.node, path: c.target.path, interpolation, times, values, components};
+                const sampler = animation.samplers[c.sampler];
+                return {node: c.target.node, path: c.target.path, interpolation: sampler.interpolation || 'LINEAR',
+                    times: gltfAccessor(json, buffers, sampler.input).data,
+                    values: gltfAccessor(json, buffers, sampler.output).data,
+                    components: c.target.path === 'rotation' ? 4 : 3};
             })));
 
         // a skinned part rests as its joints place it, with nothing moved
@@ -760,7 +738,7 @@ async function parseGLTF(data, baseUrl='', files)
 function gltfPoseNodes(tree, animation, time)
 {
     const moved = new Map;
-    for (const channel of isArray(animation.channels) ? animation.channels : [])
+    for (const channel of animation.channels)
     {
         let node = moved.get(channel.node);
         node || moved.set(channel.node, node = gltfNodeTRS(tree.nodes[channel.node]));
@@ -1122,26 +1100,16 @@ function gltfNodeMatrix(node)
 
 // an accessor's values as floats, one row per element, normalized integer types brought to 0 to 1; a sparse one
 // starts from its bufferView, or from zeros without one, and then has the listed elements replaced
-// the elements with no buffer each parse of a file made so far, which cost nothing in the file, see gltfAccessor;
-// by the parse's list of buffers, its own, so parses of one json object at once count apart
-const gltfZeroCounts = /* @__PURE__ */ new WeakMap;
-
 // the extensions it reads, which a file may require
 // KHR_mesh_quantization is the small integer accessors gltfpack writes, which it lists as required
 const GLTF_EXTENSIONS_READ = ['KHR_mesh_quantization', 'KHR_materials_emissive_strength', 'KHR_materials_unlit',
     'KHR_texture_transform', 'KHR_materials_transmission', 'EXT_texture_webp', 'EXT_texture_avif'];
 
-// an entry of one of the file's lists by its index, a file problem naming what is missing when there is none
-function gltfAt(list, index, what)
-{
-    const entry = isArray(list) ? list[index] : undefined;
-    if (!entry || typeof entry !== 'object') throw new Error(`glTF ${what} ${index} is not in the file`);
-    return entry;
-}
-
 function gltfAccessor(json, buffers, index)
 {
-    const a = gltfAt(json.accessors, index, 'accessor'), view = json.bufferViews?.[a.bufferView];
+    const a = json.accessors?.[index];
+    if (!a) throw new Error('glTF accessor ' + index + ' is not in the file');
+    const view = json.bufferViews?.[a.bufferView];
     const components = {SCALAR: 1, VEC2: 2, VEC3: 3, VEC4: 4, MAT4: 16}[a.type];
     const types = {5120: Int8Array, 5121: Uint8Array, 5122: Int16Array, 5123: Uint16Array, 5125: Uint32Array, 5126: Float32Array};
     const Type = types[a.componentType];
@@ -1150,13 +1118,10 @@ function gltfAccessor(json, buffers, index)
     const size = Type.BYTES_PER_ELEMENT;
     const scales = /** @type {Array<[Object, number]>} */ ([[Int8Array, 127], [Uint8Array, 255], [Int16Array, 32767], [Uint16Array, 65535]]);
     const scale = a.normalized ? new Map(scales).get(Type) || 1 : 1;
-    // with a buffer under it the count is bounded by the buffer, without one it is all zeros and a sparse few, which
-    // no real model makes millions of; counted over the whole file, as many parts may read the same one
-    const zeros = view ? 0 : (gltfZeroCounts.get(buffers) ?? 0) + a.count;
-    if (!view && !(zeros <= 1 << 20))
-        throw new Error('glTF accessor ' + index + ' has no buffer and a count of ' + a.count +
-            ', past what a file may make of them');
-    view || gltfZeroCounts.set(buffers, zeros);
+    // with a buffer under it the count is bounded by the buffer, without one it is all zeros and a sparse few,
+    // which no real model makes millions of
+    if (!view && !(a.count <= 1 << 20))
+        throw new Error('glTF accessor ' + index + ' has no buffer and a count of ' + a.count);
     // its elements must lie in its buffer before so many floats are made for them
     const viewEnd = view && (buffers[view.buffer]?.byteLength ?? 0), stride = view?.byteStride || components * size;
     if (view && !((view.byteOffset || 0) + (a.byteOffset || 0) + (a.count - 1) * stride + components * size <= viewEnd))

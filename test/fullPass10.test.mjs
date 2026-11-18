@@ -196,42 +196,6 @@ test('one glTF object parsed several times at once gives each parse its own budg
     assert.equal(results, 'fulfilled,fulfilled,fulfilled,fulfilled');
 });
 
-test('a glTF animation whose values do not fit its keys, or with a time that is no number, is a file error',
-    async ()=>
-{
-    const { run } = await engine3D({ atob, btoa, Response });
-    const results = await run(`(async ()=>
-    {
-        const animated = (times, values, interpolation='LINEAR')=>
-        {
-            const pos = new Float32Array([0,0,0, 1,0,0, 1,1,0]), t = new Float32Array(times);
-            const v = new Float32Array(values), bytes = new Uint8Array(pos.byteLength + t.byteLength + v.byteLength);
-            bytes.set(new Uint8Array(pos.buffer), 0);
-            bytes.set(new Uint8Array(t.buffer), pos.byteLength);
-            bytes.set(new Uint8Array(v.buffer), pos.byteLength + t.byteLength);
-            let binary = '';
-            for (const b of bytes) binary += String.fromCharCode(b);
-            return {asset: {version: '2.0'},
-                buffers: [{byteLength: bytes.length, uri: 'data:application/octet-stream;base64,' + btoa(binary)}],
-                bufferViews: [{buffer: 0, byteOffset: 0, byteLength: pos.byteLength},
-                    {buffer: 0, byteOffset: pos.byteLength, byteLength: t.byteLength},
-                    {buffer: 0, byteOffset: pos.byteLength + t.byteLength, byteLength: v.byteLength}],
-                accessors: [{bufferView: 0, componentType: 5126, count: 3, type: 'VEC3'},
-                    {bufferView: 1, componentType: 5126, count: times.length, type: 'SCALAR'},
-                    {bufferView: 2, componentType: 5126, count: values.length / 3, type: 'VEC3'}],
-                meshes: [{primitives: [{attributes: {POSITION: 0}}]}], nodes: [{mesh: 0}], scenes: [{nodes: [0]}],
-                animations: [{channels: [{sampler: 0, target: {node: 0, path: 'translation'}}],
-                    samplers: [{input: 1, output: 2, interpolation}]}]};
-        };
-        const tryParse = (json)=> parseGLTF(json).then(()=> 'loaded', (error)=> error.message.slice(0, 20));
-        return [await tryParse(animated([0, 1, 2], [0,0,0, 1,1,1, 2,2,2])),
-            await tryParse(animated([0, 1, 2], [0,0,0, 1,1,1])),
-            await tryParse(animated([0, NaN, 2], [0,0,0, 1,1,1, 2,2,2])),
-            await tryParse(animated([0, 1], [0,0,0, 1,1,1], 'CUBICSPLINE'))].join('|');
-    })()`);
-    assert.equal(results, 'loaded|glTF animation 0 has|glTF animation 0 has|glTF animation 0 has');
-});
-
 function makePad() { return { mapping: 'standard', axes: [0, 0, 0, 0],
     buttons: Array.from({length: 17}, ()=> ({ pressed: false, value: 0 })) }; }
 function touchEngine(pads)
@@ -394,25 +358,6 @@ test('a sprite whose frames do not divide the image packs its whole frames in bo
             sheet.tryAdd(vec2(50, 16), vec2(16), 0).columns`);
         assert.equal(columns, 3, file ?? 'littlejs.js');
     }
-});
-
-test('Tiled object properties written as an object, by an older Tiled, are said and the object made', async ()=>
-{
-    const { run } = await editor2D();
-    const result = JSON.parse(run(`(()=>
-    {
-        const warnings = [];
-        console.warn = (...a)=> warnings.push(a.join(' '));
-        class Thing extends EngineObject {}
-        objectLayersAddType('Thing', Thing, {speed: 2});
-        const made = objectLayersLoad({width: 4, height: 2, tilewidth: 16, tileheight: 16, layers: [
-            {type: 'objectgroup', name: 'things', objects: [{id: 1, type: 'Thing', x: 16, y: 16, width: 16,
-                height: 16, properties: {speed: 5}}]}]});
-        return JSON.stringify({count: made.length, speed: made[0]?.speed,
-            warned: warnings.some((w)=> w.includes('written as an object'))});
-    })()`));
-    // read as the list Tiled writes now (pass 11)
-    assert.deepEqual(result, {count: 1, speed: 5, warned: true});
 });
 
 test('particle behaviors not known yet are kept once each, a few dozen at most, and clamped when they are added',

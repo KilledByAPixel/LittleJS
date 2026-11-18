@@ -34,24 +34,6 @@ test('the 2D palette reads a grid sheet to its last row, padded or not, by colum
     assert.equal(run('palette(new TileInfo(vec2(), vec2(16), image(32, 32), 0))'), '0@0,0 3@16,16');
 });
 
-test('glTF: KHR_mesh_quantization, which gltfpack requires, loads, and the last bare errors name themselves', async ()=>
-{
-    const { parseGLTF } = await import('../dist/littlejs.esm.js');
-    // one triangle of int16 positions, as gltfpack quantizes them
-    const bytes = new Int16Array([0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0]);
-    const uri = 'data:application/octet-stream;base64,' + Buffer.from(bytes.buffer).toString('base64');
-    const file = { asset: { version: '2.0' }, extensionsRequired: ['KHR_mesh_quantization'],
-        extensionsUsed: ['KHR_mesh_quantization'], scene: 0, scenes: [{ nodes: [0] }], nodes: [{ mesh: 0 }],
-        meshes: [{ primitives: [{ attributes: { POSITION: 0 } }] }], buffers: [{ uri, byteLength: 24 }],
-        bufferViews: [{ buffer: 0, byteLength: 24, byteStride: 8 }],
-        accessors: [{ bufferView: 0, componentType: 5122, count: 3, type: 'VEC3', min: [0, 0, 0], max: [1, 1, 0] }] };
-    const model = await parseGLTF(file);
-    assert.equal(model.parts.length, 1);
-    await assert.rejects(parseGLTF({ ...file, meshes: [{}] }), /glTF mesh 0 has no primitives/);
-    await assert.rejects(parseGLTF({ ...file, animations: [{ channels: [{ sampler: 0, target: { node: 9,
-        path: 'translation' } }], samplers: [{ input: 0, output: 0 }] }] }), /animation target node 9 is not in the file/);
-});
-
 test('a confirm dialog answered with the mouse gives no keyboard selection back', async ()=>
 {
     const { run } = await engine();
