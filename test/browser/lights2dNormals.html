@@ -66,6 +66,11 @@ smokeRun(async ()=>
     const tiled = leftRight();
     check('tile: a TileInfo normal map shades as its texture', Math.abs(tiled[0] - left) <= 2 &&
         Math.abs(tiled[1] - right) <= 2, [tiled, white]);
+    // nor with tile padding on, which moves the tile's place but not its size, as the example browser sets it
+    setTileDefaultPadding(1);
+    ramp.normalMap = tile(0, rampTexture.size, rampTexture);
+    setTileDefaultPadding(0);
+    engineStep(3);
     // a tile of the sheet, not its whole texture, is warned of once
     const whole = tileWarnings.length;
     ramp.normalMap = tile(0, rampTexture.size.scale(.5), rampTexture);

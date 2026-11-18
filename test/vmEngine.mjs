@@ -18,7 +18,14 @@ export function loadEngine(extra={}, setup='', file='littlejs.js') // setup runs
         document: { addEventListener(type, f)
         {
             (listeners[type] ||= []).push(f);
-            handlers[type] = (e)=> listeners[type].forEach(listener=> listener(e));
+            // a listener may stop the ones after it, as in a browser
+            handlers[type] = (e)=>
+            {
+                let stopped = false;
+                if (e && typeof e == 'object') e.stopImmediatePropagation = ()=> stopped = true;
+                for (const listener of listeners[type])
+                    if (listener(e), stopped) break;
+            };
         }, hasFocus: ()=> true, body: {}, hidden: false },
         navigator: {},
         addEventListener() {}, removeEventListener() {},
