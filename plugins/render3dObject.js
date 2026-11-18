@@ -272,7 +272,7 @@ class EngineObject3D extends EngineObject
      *    into a wall, a player shoving two crates, is the same: the pusher ends a frame a little inside the crate it
      *    pushes, in some list orders against a solid wall, in every order against a MeshCollider or VoxelMap wall
      *  - A door or a lift that closes a gap on a body, against a fixed solid or the level, can not hold it in less room
-     *    than it has: it stays in the one it is in, the door, and is not handed on into the wall, but a gap closed
+     *    than it has: it is pushed out of each in turn and can end a little inside one of them, and a gap closed
      *    all the way, or a lift into a ceiling, can squeeze it into the floor or through; leave a body room
      *  - A body made inside fixed solids is pushed out of each in turn, so one made deep inside a wall of two boxes
      *    side by side can stay inside one of them; place bodies clear of the level's solids
@@ -983,52 +983,6 @@ function render3DInAtStart(a, b)
     return !!push && push.lengthSquared() > 1e-6;
 }
 
-// whether a solid moved this pass: it has a velocity, or it is not where its turn began
-function render3DMovedThisPass(o)
-{
-    const v = o.velocity3D, p = o.pos3D, f = render3DCollideFrom(o);
-    return !!(v.x || v.y || v.z || p.x !== f.x || p.y !== f.y || p.z !== f.z);
-}
-
-// whether moving o by a push would put it deeper into one of the fixed solids near it, other than the one it is pushed
-// out of and the one that pushed it, than it is now: handed from a door into a wall, where a corner of two walls it is
-// in already is no deeper; a solid whose pair does not resolve, a trigger volume, does not count. And a still wall's
-// push makes no push out of a door that moves: the door's own pair settles the body against the wall
-function render3DSettleInto(o, push, from, pusher, grid, fixed, reach)
-{
-    if (pusher && !pusher.mass && from && !from.mass && !render3DMovedThisPass(pusher) && render3DMovedThisPass(from))
-        return true;
-    const was = o.pos3D, now = render3DSolidShape(o);
-    o.pos3D = was.add(push);
-    const moved = render3DSolidShape(o);
-    o.pos3D = was;
-    const depth = (shape, c)=> render3DSolidPush(shape, render3DSolidShape(c))?.length() ?? 0;
-    const center = moved.pos, size = reach + push.length();
-    for (const c of grid ? render3DGridWalk(grid, ()=> size, ()=> center, Infinity) : fixed)
-    {
-        if (c === o || c === from || c === pusher || c.mass || c.destroyed || c.parent || !o.isSolid && !c.isSolid ||
-            grid && !render3DFixed.set.has(c))
-            continue;
-        // a quick reject by distance before the exact tests
-        const p = center, q = c.pos3D, r = size + render3DSolidReach(c);
-        const dx = p.x - q.x, dy = p.y - q.y, dz = p.z - q.z;
-        if (dx*dx + dy*dy + dz*dz > r*r) continue;
-        if (depth(moved, c) <= depth(now, c) + 1e-3) continue;
-        // deeper into it: it counts only when the pair resolves, asked as the pair loop would; a callback that
-        // moved or attached it, a portal or a respawn, has the last word, so the push, for where it was, is not made
-        const into = render3DSolidPush(moved, render3DSolidShape(c));
-        if (!into) continue;
-        const x = o.pos3D.x, y = o.pos3D.y, z = o.pos3D.z, cx = c.pos3D.x, cy = c.pos3D.y, cz = c.pos3D.z;
-        const resolve = render3DCollideAsk(o, c, into);
-        if (o.parent || o.pos3D.x !== x || o.pos3D.y !== y || o.pos3D.z !== z)
-            return true;
-        // one its own callback moved is no longer where it would be deeper into, as in the pair loop
-        if (resolve && !c.parent && c.pos3D.x === cx && c.pos3D.y === cy && c.pos3D.z === cz)
-            return true;
-    }
-    return false;
-}
-
 // settles a body pushed by a mover against the fixed solids and the level; true when a callback it asked moved the
 // body, a respawn or a portal, whose place is then the game's: the caller hands none of it on to another mover
 function render3DSettleFixed(o, pusher, from)
@@ -1070,19 +1024,6 @@ function render3DSettleFixed(o, pusher, from)
             o.groundObject = b;
             if (push.x || push.z)
                 push = vec3(0, lengthSquared / push.y, 0);
-        }
-        // a push that would put it into another fixed solid is not made: a body with less room than it has, a door
-        // closing on it against a wall, stays in the one it is in, whatever the list order, and is not handed on
-        // into the wall and through it; the one that pushed it is not counted, it goes back toward that one
-        const px = o.pos3D.x, py = o.pos3D.y, pz = o.pos3D.z;
-        if (render3DSettleInto(o, push, b, pusher, grid, fixed, reachO))
-        {
-            if (o.parent) return true; // attached in a callback the settle asked
-            grid && render3DGridPlace(grid, o); // which may have moved it
-            shape = render3DSolidShape(o), reachO = render3DSolidReach(o);
-            if (o.pos3D.x !== px || o.pos3D.y !== py || o.pos3D.z !== pz)
-                moved = true, from = o.pos3D.copy();
-            continue;
         }
         o.pos3D = o.pos3D.add(push);
         shape = render3DSolidShape(o);
