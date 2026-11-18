@@ -187,26 +187,6 @@ test('a MeshCollider body stands still in a V whose floor slopes, and walks up a
     assert.equal(result.ground, true);
 });
 
-test('a grown body on one way tiles that the game moves to the side keeps standing on them', ()=>
-{
-    const { run } = loadEngine();
-    const result = JSON.parse(run(`(()=>
-    {
-        setHeadlessMode(true); setGravity(vec2(0, -.02));
-        const l = new TileCollisionLayer(vec2(0, 0), vec2(14, 10), tile(), 0, false);
-        for (let x = 0; x < 14; ++x) l.setCollisionData(vec2(x, 0), 1);
-        l.setOneWay(7);
-        for (let x = 2; x < 12; ++x) l.setData(vec2(x, 4), new TileLayerData(7)), l.setCollisionData(vec2(x, 4), 1);
-        const P = new EngineObject(vec2(5, 5.5), vec2(.6, .6)); P.setCollision();
-        for (let f = 0; f < 40; ++f) engineObjectsUpdate();
-        P.size = vec2(.6, .8); // grown about its center, sunk into the platform
-        for (let f = 0; f < 40; ++f) { P.pos.x += .02; engineObjectsUpdate(); }
-        return JSON.stringify({y: P.pos.y, ground: P.groundObject === l});
-    })()`));
-    assert.ok(result.y > 4.5, 'fell to ' + result.y);
-    assert.equal(result.ground, true);
-});
-
 test('an async Restart that destroys first: a map of objects alone waits, a second resize waits, a refused ' +
     'property says so', async ()=>
 {

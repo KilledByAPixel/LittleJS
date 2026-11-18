@@ -60,7 +60,7 @@ LittleJS is a modular HTML5 game engine with:
   - `setOneWay` keys by the tile a cell draws, since the loaders set every collision value to 1, and turns with the cell's art. The table is `oneWayTiles`; `oneWay` is the object's field
   - It blocks only what was wholly on its far side at the start of the frame, or what stood on it then
   - Massless solids that are one way or that move (an elevator) move first, so the outcome does not depend on render order
-  - An object that starts a frame inside tiles passes the tiles it was in and lands on the rest
+  - An object that starts a frame inside tiles meets no tiles till it is out, the pushed rule; do not grow it back
 - **Bullets**: `obj.isBullet` moves through the tiles with `engineObjectBulletSweep`, tiles asked about nearest first whatever the layer order. It stops 2e-3 off a surface, clear of the one way margin of 1e-3. A cell is solid to it when its collideWithTile takes it, asked with isHit false. [test/bullet.test.mjs](test/bullet.test.mjs)
 - **Level editor**: `src/engineEditor.js`, debug only; object layers (`objectLayersAddType`, `objectLayersLoad`) ship in `src/engineTileLayer.js`. See "Level editor" below
 - **Build system**: `src/engineBuild.mjs` (concatenates modules into distributable bundles)
@@ -186,7 +186,7 @@ The 3D API mirrors the 2D one, so the same rules hold unless a 3D reason overrid
 - Level collision in 3D: `HeightMap`, `VoxelMap` and `MeshCollider` join `render3DLevel` when made and leave it on destroy. An object with `collideLevel` (on by default in 3D `setCollision`) and a mass is resolved against them in `updatePhysics`, through each one's `levelCollide3D(o, oldPos, wasOn, fromOther)`, which sets `groundObject`. The details are in the comments beside the code; these are the rules a change must keep, and the tests that hold them:
   - **One slope rule, HeightMap and MeshCollider.** Ground steeper than `groundAngle` is not ground: `groundObject` is not set, so a jump can not climb it, and the body is pushed out along the normal, so it slides. A face steeper than both `groundAngle` and about 45 degrees is a wall where it rises past the body's step, and stops only the part of a move into it; a curb or a stair riser under the step is climbed. [test/meshCollider.test.mjs](test/meshCollider.test.mjs), [test/fullPass13.test.mjs](test/fullPass13.test.mjs) to 17
   - **HeightMap wall rule** (`wallAhead`, `faceNormal`, the ring of side samples in `levelCollide3D`): skipped whole on a map whose `steepestFace`, kept by `rebuild`, is not steep enough to be a wall, so rolling ground pays nothing. The sweep's raycast looks no further than the move
-  - **HeightMap raised edge**: to a body coming from off the map the edge is a wall above its step plus a slope and a crest allowance, about .46 for a 1x1x1, speed dependent just above that. Settled after passes 29 to 33: do not retune it
+  - **HeightMap edge**: no rule. A body that comes onto a map from off its edge is set on the ground; a game keeps its bodies on the map
   - **MeshCollider V rule** (`meshColliderResolve`): frozen. Any change is the owner's decision and must pass [test/meshColliderShapes.test.mjs](test/meshColliderShapes.test.mjs), which any change to a MeshCollider runs
   - **Order of shapes** (`render3DCollideLevel`): the shape stood on last frame first, with wasOn, then every other without it, then, only when none grounded the body, the others with wasOn and fromOther, so the result is the same in any list order. [test/levelCollideOrders.test.mjs](test/levelCollideOrders.test.mjs)
   - **Lifts**: a level shape moved by its velocity moves before the rest (`engineObjectsMovesFirst`) and lands a body relative to its own speed; one moved by pos3D is no lift
@@ -341,8 +341,8 @@ Decided, documented where a user reads them, and not to be reported or fixed aga
 - A gap closed all the way on a body, or a lift into a ceiling, can squeeze it into or through a solid; the door rule covers a door and a wall with room left
 - Stepping off a level box onto another a little lower falls for a frame; the follow-down is only for leaning boxes
 - A crest between a level shape and a solid hops; a V made of two MeshColliders gets no V rule; a walk across a steep V into one side bobs
-- A HeightMap edge just above .46 of a 1x1x1 is climbed or not by speed; a VoxelMap's blocks have no step
-- A 2D body made or grown into the floor stays sunk until it jumps
+- A body walking onto a HeightMap from off its edge is set on the ground however high the edge; a VoxelMap's blocks have no step
+- A 2D body that starts a frame inside tiles, made, moved or grown there, meets no tiles till it is out, so one grown into the floor falls through; one grown on a one way platform falls through it
 - A long chain of CSG cuts can drop part of a face
 - An async `onRestart` is waited on till it settles, both editors refusing edits meanwhile; one that never settles blocks restarts till a reload
 - Object property defaults are numbers, text, true or false, Colors, vectors, and lists and plain objects of those; a default of a class is copied and takes only its own fields from a level

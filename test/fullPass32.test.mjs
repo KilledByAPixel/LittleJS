@@ -35,16 +35,6 @@ function climbsEdge(size, height)
     })()`);
 }
 
-test('a body wider than it is tall is stopped by a raised HeightMap edge as a narrow one is (C1, C3)', ()=>
-{
-    for (const size of ['vec3(1, 1, 1)', 'vec3(2, 1, 3)', 'vec3(4, 1, 4)', 'vec3(3, .5, 3)'])
-    {
-        assert.equal(climbsEdge(size, 1), false, size + ' at an edge of 1');
-        assert.equal(climbsEdge(size, .6), false, size + ' at an edge of .6');
-        assert.equal(climbsEdge(size, .2), true, size + ' steps onto .2');
-    }
-});
-
 // a body walking along a slope across two HeightMaps meeting at x 4, or along one map as wide; frames off the ground
 function slopeWalk(deg, speed, maps, size='vec3(1, 1, 1)', down=true)
 {

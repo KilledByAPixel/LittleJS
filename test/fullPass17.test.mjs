@@ -219,17 +219,10 @@ test('a body the game moves onto a one way platform stands there, and one moved 
         P.pos = vec2(18, 1.4001); P.velocity = vec2();
         for (let f = 0; f < 10; ++f) engineObjectsUpdate();
         for (let f = 0; f < 80; ++f) { P.velocity.x = .05; engineObjectsUpdate(); }
-        // a layer with no one way tiles keeps no stood box
-        const plain = new TileCollisionLayer(vec2(40, 0), vec2(4, 4), tile(), 0, false);
-        for (let x = 0; x < 4; ++x) plain.setCollisionData(vec2(x, 0), 1);
-        const Q = new EngineObject(vec2(42, 1.4), vec2(.6, .8)); Q.setCollision();
-        for (let f = 0; f < 20; ++f) engineObjectsUpdate();
-        return JSON.stringify({up, x: P.pos.x, plainStood: tileCollisionStood.has(Q), plainOn: Q.groundObject === plain});
+        return JSON.stringify({up, x: P.pos.x});
     })()`));
     assert.ok(Math.abs(result.up - 4) < .01, 'bottom ' + result.up);
     assert.ok(result.x > 20.5, 'stopped at ' + result.x);
-    assert.equal(result.plainOn, true);
-    assert.equal(result.plainStood, false);
 });
 
 test('an async onRestart that destroys the level first: an undo across the resize writes the right cell, and an ' +

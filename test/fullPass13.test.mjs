@@ -117,31 +117,6 @@ function scene2D(cells, object, frames=120, each='')
     })()`));
 }
 
-test('a player stood up under a low ceiling, at any place along it, lands and walks out on the floor', ()=>
-{
-    // a ceiling over x 4 to 7 at row 2, its bottom at 2; the player 1.9 tall stands up from 1 tall
-    const ceiling = [[4, 2], [5, 2], [6, 2], [7, 2]];
-    for (const x of [5.5, 5.3, 5.1, 5, 4.9, 4.75])
-    {
-        const r = scene2D(ceiling, `const o = new EngineObject(vec2(${x}, 1.5), vec2(1)); o.size = vec2(1, 1.9);
-            o.pos.y = 1 + 1.9 / 2;`, 120, 'o.velocity.x = .1;');
-        assert.ok(Math.abs(r.bottom - 1) < 1e-2, `x ${x}: bottom ${r.bottom}`);
-    }
-});
-
-test('a tiny box with its center in a wall on a row line lands, and a box grown into the floor walks on it', ()=>
-{
-    const wall = [[10, 1], [10, 2], [10, 3], [10, 4], [10, 5]];
-    const tiny = scene2D(wall, 'const o = new EngineObject(vec2(10.02, 3), vec2(.1));');
-    assert.ok(tiny.y > 1 && tiny.y < 1.2, 'tiny: y ' + tiny.y);
-    for (const depth of [.3, .55, .7])
-    {
-        const r = scene2D([], `const o = new EngineObject(vec2(3, 1 + .75 - ${depth}), vec2(1, 1.5));`, 120,
-            'o.velocity.x = .1;');
-        assert.ok(r.bottom > 1 - depth - 1e-3 && r.x > 10, `grown ${depth} into the floor: ${JSON.stringify(r)}`);
-    }
-});
-
 test('a box resting in a one way tile\'s margin, or placed a hair under a platform\'s top, does not pass it', ()=>
 {
     const { run } = loadEngine();

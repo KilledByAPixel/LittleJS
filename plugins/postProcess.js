@@ -442,25 +442,10 @@ const postProcessNumber = (n)=> typeof n === 'string' ?
         n && abs(n) < .01 ? String(n) : n.toFixed(4)); // a small one keeps its digits, as 1.5e-7 or 0.00015
 
 // a GLSL name for a value or a setting, which no part of the shader uses already: not the engine's own, i and a
-// capital, nor those of mainImage or an effect's own locals, which start with an underscore, nor a GLSL word
-const postProcessGLSLWords = /* @__PURE__ */ new Set(('c uv p sceneDepth mainImage main ' +
-    // keywords and reserved words
-    'attribute const uniform varying layout centroid flat smooth noperspective patch sample break continue do for ' +
-    'while switch case default if else subroutine in out inout float double int void bool true false invariant ' +
-    'precise discard return lowp mediump highp precision struct common partition active asm class union enum ' +
-    'typedef template this resource goto inline noinline public static extern external interface long short half ' +
-    'fixed unsigned superp input output filter sizeof cast namespace using coherent volatile restrict readonly ' +
-    'writeonly atomic_uint uint mat2 mat3 mat4 vec2 vec3 vec4 ivec2 ivec3 ivec4 bvec2 bvec3 bvec4 uvec2 uvec3 uvec4 ' +
-    // built in functions
-    'radians degrees sin cos tan asin acos atan sinh cosh tanh asinh acosh atanh pow exp log exp2 log2 sqrt ' +
-    'inversesqrt abs sign floor trunc round roundEven ceil fract mod modf min max clamp mix step smoothstep isnan ' +
-    'isinf length distance dot cross normalize faceforward reflect refract matrixCompMult outerProduct transpose ' +
-    'determinant inverse lessThan lessThanEqual greaterThan greaterThanEqual equal notEqual any all not textureSize ' +
-    'texture textureProj textureLod textureOffset texelFetch texelFetchOffset textureProjOffset textureLodOffset ' +
-    'textureProjLod textureProjLodOffset textureGrad textureGradOffset textureProjGrad textureProjGradOffset dFdx ' +
-    'dFdy fwidth').split(' '));
+// capital, nor those of mainImage or an effect's own locals, which start with an underscore; a GLSL word is named
+// by the compile error
 const postProcessNameCheck = (name)=> /^[A-Za-z][A-Za-z0-9_]*$/.test(name) && !name.includes('__') &&
-    !/^(i[A-Z]|gl_|webgl_|GL_|mat[2-4]|[dfh]vec[2-4]|[iu]?(sampler|image)([123]D|Cube|Buffer|External))/.test(name) && !postProcessGLSLWords.has(name);
+    !/^(i[A-Z]|gl_|webgl_|GL_|(c|uv|p|sceneDepth|mainImage|main)$)/.test(name);
 
 /**
  * Join effects into one post process shader, in the order given, for PostProcessPlugin or setShaderCode

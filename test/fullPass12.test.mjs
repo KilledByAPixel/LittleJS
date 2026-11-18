@@ -98,28 +98,6 @@ test('a game tool whose onDraw throws is put down with a word, and the frame goe
     run('levelEditor.close()');
 });
 
-test('an object started a hair inside a wall still lands on the floor, passing only the tiles it was in', async ()=>
-{
-    const { run } = await engine2D();
-    const ys = JSON.parse(run(`(()=>
-    {
-        setGravity(vec2(0, -.02));
-        const layer = new TileCollisionLayer(vec2(), vec2(10, 10), tile(), 0, false);
-        for (let i = 0; i < 10; ++i) layer.setCollisionData(vec2(i, 0), 1), layer.setCollisionData(vec2(0, i), 1);
-        const ys = [];
-        for (const into of [0, .0005, .05, .4])
-        {
-            const o = new EngineObject(vec2(1.5 - into, 3), vec2(1));
-            o.setCollision();
-            for (let i = 0; i < 120; ++i) engineObjectsUpdate();
-            ys.push(+o.pos.y.toFixed(3));
-            o.destroy();
-        }
-        return JSON.stringify(ys);
-    })()`));
-    assert.deepEqual(ys, [1.5, 1.5, 1.5, 1.5]);
-});
-
 test('a box snapped against a wall beside a one way tile is not left inside it', async ()=>
 {
     const { run } = await engine2D();

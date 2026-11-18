@@ -148,37 +148,6 @@ test('an undo while an async onRestart makes a resized map\'s layers waits on it
     assert.equal(result.same, true);
 });
 
-test('a body standing on one way tiles that grows about its center stays on them, and one beside walks through',
-    ()=>
-{
-    const { run } = loadEngine({}, '', 'littlejs.js');
-    const result = JSON.parse(run(`(()=>
-    {
-        setHeadlessMode(true); setGravity(vec2(0, -.02));
-        const layer = new TileCollisionLayer(vec2(), vec2(14, 10), tile(), 0, false);
-        for (let x = 0; x < 14; ++x) layer.setCollisionData(vec2(x, 0), 1);
-        layer.setOneWay(7);
-        for (let x = 2; x < 9; ++x) layer.setData(vec2(x, 4), new TileLayerData(7)), layer.setCollisionData(vec2(x, 4), 1);
-        const grown = [];
-        for (const grow of [.003, .1, .4])
-        {
-            const o = new EngineObject(vec2(5, 5.5), vec2(.6)); o.setCollision();
-            for (let f = 0; f < 40; ++f) engineObjectsUpdate();
-            o.size = vec2(.6, .6 + grow * 2);
-            for (let f = 0; f < 60; ++f) engineObjectsUpdate();
-            grown.push(o.pos.y > 4.5 && !!o.groundObject);
-            o.destroy(); engineObjectsUpdate();
-        }
-        // walking on the floor into the platform's side, its top between its bottom and center, it walks through
-        const walker = new EngineObject(vec2(.5, 1.5), vec2(1, 8.2)); walker.setCollision();
-        for (let f = 0; f < 20; ++f) engineObjectsUpdate();
-        for (let f = 0; f < 60; ++f) { walker.velocity.x = .1; engineObjectsUpdate(); }
-        return JSON.stringify({grown, walked: walker.pos.x});
-    })()`));
-    assert.deepEqual(result.grown, [true, true, true]);
-    assert.ok(result.walked > 5, 'walked through: ' + result.walked);
-});
-
 test('SpriteAnimator.set each update with a flag its onEnd clears does not show the attack again', async ()=>
 {
     const { run } = await engine2D();

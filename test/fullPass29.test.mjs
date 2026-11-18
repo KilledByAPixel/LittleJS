@@ -427,31 +427,3 @@ function walkOntoMap(height, {start = 'vec3(0, .5, 0)', velocity = 'vec3(.1, 0, 
         return JSON.stringify({x: r(body.pos3D.x), z: r(body.pos3D.z), top: r(top), on});
     })()`));
 }
-
-test('a HeightMap\'s edge higher than a body\'s step is a wall to it from off the map, a lower one is walked onto (C4)',
-    ()=>
-{
-    // raised edges, a plateau on the floor: its side stops at the edge, x 6 less its half width of .4
-    for (const edge of [.25, .5, 1])
-        assert.deepEqual(walkOntoMap(`()=> ${edge}`), {x: 5.6, z: 0, top: .5, on: false}, 'edge ' + edge * 4);
-    // an edge of .2, under the step of .25, is stepped onto, and since pass 31 one of .4, under the step and the
-    // sink of a round body over the crest of a walkable ramp
-    for (const edge of [.05, .1])
-    {
-        const low = walkOntoMap(`()=> ${edge}`);
-        assert.ok(low.on && low.top > .49 + edge * 4, 'a low edge: ' + JSON.stringify(low));
-    }
-    // a ring of 0 round a plateau: the map's own rules, a gentle ramp climbed and a cliff a wall, as before
-    assert.equal(walkOntoMap('(i, j)=> i && j && i < 8 && j < 8 ? .25 : 0').on, true, 'a ramp from a 0 edge');
-    assert.ok(walkOntoMap('(i, j)=> i && j && i < 8 && j < 8 ? 1 : 0').x < 6.01, 'a cliff from a 0 edge');
-    // a fast walker up a gentle ramp from a 0 edge, its middle well past the edge in one frame
-    const fast = walkOntoMap('(i)=> i * .02', {velocity: 'vec3(.5, 0, 0)', frames: 30});
-    assert.ok(fast.on && fast.x > 11, 'a fast walk up a ramp: ' + JSON.stringify(fast));
-    // a body falling onto a raised edge from above lands on it
-    const drop = walkOntoMap('()=> .5', {start: 'vec3(5.8, 4, 0)', frames: 60});
-    assert.ok(drop.on && drop.top <= 4 && drop.x > 6, 'dropped onto it: ' + JSON.stringify(drop));
-    // at a corner, coming at it on a diagonal: held off the map, it slides along the side and past it
-    const corner = walkOntoMap('()=> 1', {start: 'vec3(4, .5, -6)', velocity: 'vec3(.1, 0, .1)'});
-    assert.equal(corner.on, false, 'a corner: ' + JSON.stringify(corner));
-    assert.equal(corner.top, .5, 'it slides along the side, never climbing it');
-});

@@ -71,12 +71,11 @@ test('a debug build still throws the compiler\'s log', ()=>
     assert.throws(()=> run(`glCreateProgram('#version 300 es\\nvoid main(){}', 'broken')`), /bad/);
 });
 
-test('an effect setting is checked as a value\'s name is: no names the shader keeps, no GLSL words', ()=>
+test('an effect setting is checked as a value\'s name is: no names the shader keeps', ()=>
 {
     const { run } = loadEngine();
     const value = (name)=> run(`postProcessFragmentSource('', {${name}: 1})`);
-    for (const name of ['uv', 'p', 'c', '_glow', '_r', 'iTime', 'gl_x', 'in', 'out', 'float', 'precision', 'flat',
-        'sample', 'input', 'filter', 'common', 'texture', 'mix', 'step', 'a__b', 'webgl_x', 'GL_ES', 'main'])
+    for (const name of ['uv', 'p', 'c', '_glow', '_r', 'iTime', 'gl_x', 'a__b', 'webgl_x', 'GL_ES', 'main'])
     {
         assert.throws(()=> LJS.postProcessNoise(.1, name), undefined, 'setting ' + name);
         assert.throws(()=> value(name), undefined, 'value ' + name);
