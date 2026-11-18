@@ -495,6 +495,8 @@ class HeightMap extends EngineObject3D
         this.height = height;
         /** @type {Array<number>} the lowest and highest of the heights, kept by rebuild */
         this.heightRange = [0, 1];
+        /** @type {number} the normal y of its steepest triangle, kept by rebuild */
+        this.steepestFace = 1;
         /** @property {boolean} - Smooth shading, rebuild() after changing it */
         this.smooth = !!smooth;
         this.rebuild();
@@ -652,6 +654,18 @@ class HeightMap extends EngineObject3D
             for (const value of row)
                 lo = min(lo, value), hi = max(hi, value);
         this.heightRange = [lo, hi];
+        // and the normal y of its steepest triangle, as faceNormal reads them, so a map with nothing steep enough to
+        // be a wall, rolling ground, does none of the wall rule's looking for every body that moves on it
+        const h = this.heights, kx = (this.columns - 1) / this.mapSize.x * this.height;
+        const kz = (this.rows - 1) / this.mapSize.y * this.height;
+        let slope = 0;
+        for (let j = 0; j < this.rows - 1; ++j)
+        for (let i = 0; i < this.columns - 1; ++i)
+        {
+            const a = h[j][i], b = h[j+1][i], c = h[j+1][i+1], d = h[j][i+1];
+            slope = max(slope, ((d - a) * kx) ** 2 + ((b - a) * kz) ** 2, ((c - b) * kx) ** 2 + ((c - d) * kz) ** 2);
+        }
+        this.steepestFace = (slope + 1) ** -.5;
         // its box, centered on pos3D, reaches a full height above and below, or as far as a value outside 0 to 1, so
         // it holds the surface rising from it, kept here so a map given a new size or height is found where it is
         this.size3D = vec3(this.mapSize.x, 2 * abs(this.height) * max(1, abs(lo), abs(hi)), this.mapSize.y);
@@ -796,7 +810,7 @@ class HeightMap extends EngineObject3D
         // a MeshCollider's step ray is, since at a corner or a move at an angle the slope where it ends faces across
         // the move, or is the flat top, and a slow walk rises less than its step each frame; one that slid along it
         // and still rises past the step, into an inside corner, goes only as far as its side reaches the wall
-        if (oldPos)
+        if (oldPos && this.steepestFace < min(cos(o.groundAngle), .7))
         {
             const foot = max(oldPos.y - half, this.getHeight(oldPos.x, oldPos.z)), step = half / 2;
             const cell = min(size.x / (this.columns - 1), size.y / (this.rows - 1));
