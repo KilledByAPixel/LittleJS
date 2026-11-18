@@ -205,36 +205,6 @@ test('a 2D function type is called with its properties, and a class still gets t
     assert.deepEqual(r, {start: [1, 2], facing: -1, speed: 2, list: ['Coin 5']});
 });
 
-test('the shared default warning for an object that keeps a nested default: beside a member set, inside a class with'
-    + ' no copy, given of the wrong kind, in 2D and 3D (O2)', async ()=>
-{
-    const { run } = await engine({}, true);
-    const r = JSON.parse(run(`(()=>
-    {
-        const warned = [], warn = console.warn;
-        console.warn = (text)=> warned.push(text);
-        class Look { hp = 1; copy() {} }
-        class Outer { inner = new Look; n = 1; }
-        class T extends EngineObject { constructor(pos) { super(pos, vec2(1)); } }
-        objectLayersAddType('T', T, {cfg: {inner: new Look, n: 1}, o: new Outer, look: new Look, own: {inner: new Look}});
-        objectLayersLoad({width: 4, height: 4, tilewidth: 16, tileheight: 16, layers: [{type: 'objectgroup', id: 1,
-            name: 'Objects', objects: [{id: 1, type: 'T', x: 0, y: 0, point: true, properties: [
-                {name: 'cfg', type: 'class', value: {n: 2}}, {name: 'o', type: 'class', value: {n: 2}},
-                {name: 'look', type: 'int', value: 5}, {name: 'own', type: 'class', value: {inner: {hp: 3}}}]}]}]});
-        const said2D = warned.filter((t)=> t.includes('share'));
-        warned.length = 0;
-        level3DAddType('L', class extends EngineObject3D { constructor(pos) { super(pos); } }, {look: new Look});
-        level3DLoad({littlejs3D: 1, objects: [{id: 1, type: 'L', pos: [0, 0, 0], properties: {look: 5}}]});
-        console.warn = warn;
-        return JSON.stringify({said2D, said3D: warned.filter((t)=> t.includes('share'))});
-    })()`));
-    const tail = ' has a copy method that gives back no new object, so the objects that leave it alone share it';
-    assert.deepEqual(r.said2D, [`objectLayersLoad: T's default cfg.inner${tail}`,
-        `objectLayersLoad: T's default o.inner${tail}`, `objectLayersLoad: T's default look${tail}`],
-        'own.inner, which the map sets, is not shared');
-    assert.deepEqual(r.said3D, [`level3DLoad: L's default look${tail}`]);
-});
-
 test('a 3D class default is merged with the file\'s object and keeps its class; setProperty refuses an instance (O3)',
     async ()=>
 {

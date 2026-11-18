@@ -115,57 +115,6 @@ test('a settle makes no push from a fixed solid whose own callback moved it (C3)
     assert.ok(Math.abs(r.y) < 1e-9, 'not pushed down from where the ceiling was, ' + r.y);
 });
 
-test('the merge over a class with no copy method writes a field over an accessor, leaves out a member that can only be'
-    + ' read and one its setter refuses, and the file, the live object and a reload agree (O1, O2, O3)', async ()=>
-{
-    const { run } = await engine(true);
-    const r = JSON.parse(run(`(()=>
-    {
-        class Base { constructor() { this._s = 1; } get speed() { return this._s; } set speed(v) { this._s = v; } }
-        class Sub extends Base { constructor() { super(); Object.defineProperty(this, 'speed', {value: 4,
-            enumerable: true, writable: true, configurable: true}); } }
-        class Ro { constructor() { this.x = 1; this.y = 2; } get total() { return (this.x + this.y) * 10; } }
-        class Hp { constructor() { this._hp = 5; } get hp() { return this._hp; }
-            set hp(v) { if (v < 0) throw Error('hp < 0'); this._hp = v; } }
-        class Private { #v = 1; get v() { return this.#v; } set v(x) { this.#v = x; } }
-        level3DAddType('M', class extends EngineObject3D { constructor(pos, p) { super(pos); this.p = p; } },
-            {sub: new Sub, ro: new Ro, hp: new Hp, priv: new Private});
-        const warns = [], warn = console.warn;
-        console.warn = (...a)=> warns.push(a.join(' '));
-        const loaded = level3DLoad({littlejs3D: 1, objects: [{id: 1, type: 'M', pos: [0, 0, 0],
-            properties: {ro: {x: 2, total: 50}, hp: {hp: -3}, priv: {v: 7}}}]}).find((o)=> o.p).p;
-        console.warn = warn;
-        const level = {littlejs3D: 1, objects: [{id: 1, type: 'M', pos: [0, 0, 0]}]};
-        level3DLoad(level); engineStep(2); levelEditor.open();
-        const edit = levelEditor.edit3D, said = [];
-        const tryIt = (name, value)=>
-        {
-            try { return edit.change((list)=> edit.setProperty(list[0], name, value)); }
-            catch (e) { said.push(e.message.replace(/^Assert failed: setProperty: /, '')); }
-        };
-        tryIt('sub', {speed: 9});
-        tryIt('ro', {x: 2, y: 2, total: 50});
-        tryIt('hp', {hp: -3});
-        edit.strokeEnd();
-        const live = editor3DInstances.get(1).p;
-        levelEditor.close();
-        const file = JSON.stringify(level.objects[0].properties);
-        const made = level3DLoad(JSON.parse(JSON.stringify(level))).find((o)=> o.p).p;
-        return JSON.stringify({warns, loaded: [loaded.ro.total, Object.hasOwn(loaded.ro, 'total'), loaded.hp.hp,
-            Object.hasOwn(loaded.hp, 'hp'), loaded.priv.v], said, file, live: live.sub.speed, reload: made.sub.speed});
-    })()`));
-    assert.deepEqual(r.loaded, [40, false, 5, false, 7], 'the getter reads, the refused value is left out, a ' +
-        'setter that reads a private field gets the member as its own');
-    assert.ok(r.warns.some((w)=> w.includes('total can only be read, left out')), r.warns.join('; '));
-    assert.ok(r.warns.some((w)=> w.includes('hp was refused by its setter, hp < 0, left out')), r.warns.join('; '));
-    assert.equal(r.said.length, 2, r.said.join('; '));
-    assert.ok(r.said[0].includes('total can only be read') && r.said[1].includes('refused by its setter'),
-        r.said.join('; '));
-    assert.equal(r.file, '{"sub":{"speed":9}}');
-    assert.equal(r.live, 9, 'the field over the accessor took the value');
-    assert.equal(r.reload, 9);
-});
-
 test('a refused 3D addChild leaves the child as it was (O4)', ()=>
 {
     for (const build of ['littlejs.js', 'littlejs.release.js'])

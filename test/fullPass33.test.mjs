@@ -160,44 +160,6 @@ test('a marker type\'s position is not in the list the loaders give back, so unl
         'a plain class of the game\'s is kept, a marker\'s position is not');
 });
 
-test('the shared default warning: by type, only for objects that leave it alone, nested, a copy giving back this, and'
-    + ' in 3D (O1-O4)', async ()=>
-{
-    const { run } = await engine({}, true);
-    const result = JSON.parse(run(`(()=>
-    {
-        const warned = [], warn = console.warn;
-        console.warn = (text)=> warned.push(text);
-        class Look { hp = 1; copy() {} }
-        class Self { hp = 1; copy() { return this; } }
-        class Mob extends EngineObject { constructor(pos) { super(pos, vec2(1)); } }
-        class Crate extends EngineObject { constructor(pos) { super(pos, vec2(1)); } }
-        objectLayersAddType('Mob', Mob, {look: new Look, cfg: {inner: new Look}, list: [new Self]});
-        objectLayersAddType('Crate', Crate, {look: new Look});
-        const said = [];
-        const load = (objects)=> { warned.length = 0; objectLayersLoad({width: 4, height: 4, tilewidth: 16,
-            tileheight: 16, layers: [{type: 'objectgroup', id: 1, name: 'Objects', objects}]}); said.push(warned.slice()); };
-        // every Mob sets look, cfg and list: only cfg.inner, which its cfg leaves alone, is shared (pass 34 O2)
-        load([{id: 1, type: 'Mob', x: 0, y: 0, point: true, properties: [{name: 'look', type: 'class', value: {hp: 2}},
-            {name: 'cfg', type: 'class', value: {}}, {name: 'list', type: 'class', value: []}]}]);
-        // a Mob and a Crate leaving theirs alone: each type said, nested and a copy giving back itself too
-        load([{id: 1, type: 'Mob', x: 0, y: 0, point: true}, {id: 2, type: 'Crate', x: 0, y: 0, point: true}]);
-        // and the 3D loader says it of a 3D type
-        warned.length = 0;
-        level3DAddType('Lamp', class extends EngineObject3D { constructor(pos) { super(pos); } }, {look: new Look});
-        level3DLoad({littlejs3D: 1, objects: [{id: 1, type: 'Lamp', pos: [0, 0, 0]}]});
-        said.push(warned.slice());
-        console.warn = warn;
-        return JSON.stringify(said);
-    })()`));
-    const tail = ' has a copy method that gives back no new object, so the objects that leave it alone share it';
-    assert.deepEqual(result[0].filter((t)=> t.includes('share')), [`objectLayersLoad: Mob's default cfg.inner${tail}`]);
-    assert.deepEqual(result[1], [`objectLayersLoad: Mob's default look${tail}`,
-        `objectLayersLoad: Mob's default cfg.inner${tail}`, `objectLayersLoad: Mob's default list[0]${tail}`,
-        `objectLayersLoad: Crate's default look${tail}`]);
-    assert.deepEqual(result[2], [`level3DLoad: Lamp's default look${tail}`]);
-});
-
 // a level with a Door in the 2D editor, its async restart waiting till released
 async function doorEditor(fileObjects=true)
 {

@@ -215,26 +215,6 @@ test('a Color or Vector2 written as an object is one, in a class member and at t
         'a color over a number default is said and the default kept');
 });
 
-test('a class property over a default of the game\'s own class with a copy method keeps its private fields and runs'
-    + ' its setters (O1)', async ()=>
-{
-    const { run } = await engine();
-    run(`globalThis.Stats = class
-    {
-        #secret = 7; hp = 10; set level(v) { this.hp = v * 10; }
-        get secret() { return this.#secret; }
-        copy() { const c = new Stats; c.hp = this.hp; return c; }
-    };
-    globalThis.shared = new Stats`);
-    loadMob(run, `{stats: shared}`, `[{name: 'stats', type: 'class', value: {level: 3}}]`);
-    const result = JSON.parse(run(`JSON.stringify({secret: made.stats.secret, hp: made.stats.hp,
-        own: made.stats !== shared, sharedHp: shared.hp})`));
-    assert.deepEqual(result, {secret: 7, hp: 30, own: true, sharedHp: 10});
-    // with nothing in the map the default is copied for each object too
-    loadMob(run, `{stats: shared}`, `[]`);
-    assert.equal(run('made.stats !== shared && made.stats.secret'), 7);
-});
-
 test('tileLayersLoad with a collision layer of null says nothing (O4)', async ()=>
 {
     const errors = [];

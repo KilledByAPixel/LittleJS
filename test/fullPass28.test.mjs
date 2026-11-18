@@ -273,20 +273,6 @@ test('a Tiled class property\'s Color and Vector2 members are read from Tiled\'s
         'objectLayersLoad: object 1\'s stats.list is an object, its default an array, the default is kept']);
 });
 
-test('a class property over a default of the game\'s own class never writes into it, and keeps its class (E1)', async ()=>
-{
-    const { run } = await engine();
-    run('globalThis.Stats = class { constructor() { this.hp = 10; this.speed = 1; } total() { return this.hp + this.speed; } };' +
-        'globalThis.shared = new Stats');
-    loadMob(run, `{stats: shared}`, `[{name: 'stats', type: 'class', value: {hp: 3}}]`);
-    const result = JSON.parse(run(`JSON.stringify({shared: [shared.hp, shared.speed], own: made.stats !== shared,
-        total: made.stats.total(), isStats: made.stats instanceof Stats})`));
-    assert.deepEqual(result, {shared: [10, 1], own: true, total: 4, isStats: true});
-    run('Object.freeze(shared)');
-    assert.doesNotThrow(()=> loadMob(run, `{stats: shared}`, `[{name: 'stats', type: 'class', value: {hp: 4}}]`));
-    assert.equal(run('made.stats.hp'), 4, 'a frozen default too');
-});
-
 test('a class member with no default leaves out __proto__, constructor and prototype; a null default takes any value'
     + ' (O4, E3)', async ()=>
 {

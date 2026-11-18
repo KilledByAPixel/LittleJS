@@ -1358,7 +1358,7 @@ function editor3DValueProblem(value, fallback)
     {
         const before = isArray(value) ? isArray(fallback) && fallback.length ?
             fallback[min(+key, fallback.length - 1)] : undefined :
-            object && !isArray(fallback) ? objectPropertyMember(fallback, key) : undefined;
+            object && !isArray(fallback) ? objectPropertyDefault(fallback, key) : undefined;
         const problem = editor3DValueProblem(value[key], before);
         if (problem) return problem;
     }
@@ -1367,8 +1367,7 @@ function editor3DValueProblem(value, fallback)
 // whether a plain object has every member of an object default, at any depth, through lists too, each item against
 // the default's item there or its last, since the load merges it into the default and a member left out would be the
 // default's; a member the default holds as undefined, a class field declared with no value, or a function, is not in
-// a file either, so may be left out, and so may every field of an instance of a class with an accessor, which may
-// write a field of its own that the value gives through the accessor, as the object made of the merge holds
+// a file either, so may be left out
 function editor3DCoversDefault(defaultValue, value)
 {
     if (isArray(defaultValue) && isArray(value))
@@ -1376,13 +1375,9 @@ function editor3DCoversDefault(defaultValue, value)
             editor3DCoversDefault(defaultValue[min(i, defaultValue.length - 1)], item));
     if (!defaultValue || typeof defaultValue != 'object' || isArray(defaultValue) || !objectPropertyPlain(value))
         return true;
-    let accessors = false;
-    for (let p = Object.getPrototypeOf(defaultValue); p && p !== Object.prototype && !accessors;
-        p = Object.getPrototypeOf(p))
-        accessors = Object.values(Object.getOwnPropertyDescriptors(p)).some((d)=> !!d.set);
-    return (accessors || Object.keys(defaultValue).every((key)=> defaultValue[key] === undefined ||
-        typeof defaultValue[key] == 'function' || Object.hasOwn(value, key))) &&
-        Object.keys(value).every((key)=> editor3DCoversDefault(objectPropertyMember(defaultValue, key), value[key]));
+    return Object.keys(defaultValue).every((key)=> defaultValue[key] === undefined ||
+        typeof defaultValue[key] == 'function' || Object.hasOwn(value, key)) &&
+        Object.keys(value).every((key)=> editor3DCoversDefault(objectPropertyDefault(defaultValue, key), value[key]));
 }
 
 // add an object of a type at a position, selected; its id, or undefined when the level can not be edited
@@ -2082,7 +2077,7 @@ const editor3DEdit =
         let dropped;
         !problem && (merges && objectPropertyPlain(value) || isArray(d) && isArray(value)) &&
             objectLayersMergeClass(d, editor3DEncode(value), (text)=>
-            /left out$|the default is kept$/.test(text) && (dropped ??= text.trim()), '', undefined, level3DFromText);
+            /left out$|the default is kept$/.test(text) && (dropped ??= text.trim()), '', level3DFromText);
         const kind = (v)=> v === undefined ? 'none' : isColor(v) ? 'a Color' : isVector3(v) ? 'a Vector3' :
             isVector2(v) ? 'a Vector2' : typeof v == 'number' ? String(v) : objectPropertyKindName(v);
         const sameKind = vector || isColor(d) || isVector2(d) || isVector3(d) ? vector && !problem :

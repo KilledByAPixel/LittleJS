@@ -172,3 +172,29 @@ test('a Tiled property named as a method of the object is left out, so update st
         file || assert.ok(warnings.some((w)=> /update/.test(w)), 'a debug build says why');
     }
 });
+
+test('an object default: a plain one merges member by member, a class with a copy method takes only its own fields,'
+    + ' one with none is kept', () =>
+{
+    const { run, warnings } = engine();
+    const r = JSON.parse(run(`(()=>
+    {
+        class Stat { constructor() { this.hp = 5; } get twice() { return this.hp * 2; }
+            copy() { const s = new Stat; s.hp = this.hp; return s; } }
+        class Bare { constructor() { this.n = 1; } }
+        const defaults = { cfg: { hp: 5, armor: 2 }, stat: new Stat, bare: new Bare, tint: hsl(0, 0, 1) };
+        objectLayersAddType('Unit', class { constructor(pos) { this.pos = pos; } }, defaults);
+        const [unit] = objectLayersLoad(${map([{ id: 1, type: 'Unit', x: 0, y: 0, properties: [
+            { name: 'cfg', type: 'class', value: { hp: 9 } },
+            { name: 'stat', type: 'class', value: { hp: 7, twice: 1, extra: 3 } },
+            { name: 'bare', type: 'class', value: { n: 4 } },
+            { name: 'tint', type: 'class', value: { r: .5 } }] }])});
+        return JSON.stringify({ cfg: unit.cfg, hp: unit.stat.hp, twice: unit.stat.twice, isStat: unit.stat instanceof Stat,
+            extra: 'extra' in unit.stat, own: unit.stat !== defaults.stat, kept: defaults.stat.hp,
+            bare: unit.bare.n, shared: unit.bare === defaults.bare, tint: [unit.tint.r, unit.tint.g],
+            color: unit.tint instanceof Color });
+    })()`));
+    assert.deepEqual(r, { cfg: { hp: 9, armor: 2 }, hp: 7, twice: 14, isStat: true, extra: false, own: true, kept: 5,
+        bare: 1, shared: true, tint: [.5, 1], color: true });
+    assert.ok(warnings.some((w)=> /twice is not a field/.test(w)) && warnings.some((w)=> /no copy method/.test(w)));
+});

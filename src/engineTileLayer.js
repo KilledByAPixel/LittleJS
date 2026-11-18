@@ -690,10 +690,10 @@ const objectLayersTypes = new Map;
  *    make(pos, properties), for what is not an object, like a player start, which gets its properties there
  *  - The defaults, and then the properties the object has in Tiled, are set on what it made, when that is an
  *    object of the game's; a position or a Color given back is left out of the list objectLayersLoad gives
- *  - Each object gets a copy of an array or plain object default; a default that is an instance of a class of the
- *    game's own is copied with its copy method, so give the class one, or every object shares the one instance,
- *    and an object whose map sets one of its members gets a new instance of the class with none of its private
- *    fields, the members its own
+ *  - Each object gets a copy of an array or plain object default, and a map's object over one sets the members it
+ *    gives; keep defaults to numbers, text, true or false, Colors, vectors, and lists and plain objects of those.
+ *    A default that is an instance of a class of the game's own is copied with its copy method, a map setting only
+ *    the fields that instance has of its own, and with no copy method every object shares it and no map sets it
  *  - Adding a name again replaces it
  *  @param {string} name - The type the objects have in Tiled
  *  @param {(function(Vector2, ObjectProperties): unknown)|(function(new: unknown, Vector2))} make - A class made
@@ -811,36 +811,24 @@ function objectLayersListProperties(tileMapData)
         'object, as null or text, read as none');
 }
 
-// a property's value for one object of its own: a Color or vector copied, and an array or plain object copied with
-// what is in it, so an object that changes its list does not change every other object's, or the map's; a Color or
-// vector is an instance of its class with a copy method, never a plain object, as a file's object may have a member
-// named copy, and every member of a plain object is copied as one but __proto__, constructor and prototype, which
-// are left out, so a level a player made can not reach what every object shares
-function objectPropertyCopy(value, shared, path='')
+// a property's value for one object of its own: an array or plain object copied with what is in it, so an object
+// that changes its list does not change every other object's, or the map's, and an instance of a class, a Color, a
+// vector or the game's own, by its copy method, or shared when it has none; every member of a plain object is copied
+// but __proto__, constructor and prototype, so a level a player made can not reach what every object shares
+function objectPropertyCopy(value)
 {
-    if (isArray(value)) return value.map((item, i)=> objectPropertyCopy(item, shared, path + '[' + i + ']'));
+    if (isArray(value)) return value.map(objectPropertyCopy);
     if (!value || typeof value != 'object') return value;
     if (!objectPropertyPlain(value))
     {
-        // a copy method that gives back no new object is as none, the value itself, said through shared with where
-        // it is, at any depth, as every object that leaves it alone shares the one value
         const copy = typeof value.copy == 'function' ? value.copy() : undefined;
-        if (copy && typeof copy == 'object' && copy !== value) return copy;
-        typeof value.copy == 'function' && shared?.(path);
-        return value;
+        return copy && typeof copy == 'object' ? copy : value;
     }
     const copy = Object.getPrototypeOf(value) === null ? Object.create(null) : {}; // as the merge makes it
     for (const key of Object.keys(value))
-        objectPropertyShared(key) || Object.defineProperty(copy, key,
-            {value: objectPropertyCopy(value[key], shared, path + '.' + key), enumerable: true, writable: true,
-            configurable: true});
+        objectPropertyShared(key) || objectPropertySet(copy, key, objectPropertyCopy(value[key]));
     return copy;
 }
-
-// a warning for a default of a class whose copy method gives back no new object, once for each type and place
-const objectPropertySharedWarn = (map, who, typeName, key)=> (path)=> objectLayersWarnOnce(map,
-    'copy ' + typeName + ' ' + key + path, `${who}: ${typeName}'s default ${key}${path} has a copy method that ` +
-    'gives back no new object, so the objects that leave it alone share it');
 
 // an object of members alone, as JSON makes, one made with Object.create(null) too, not a list or of a class
 const objectPropertyPlain = (v)=> !!v && typeof v == 'object' && !isArray(v) &&
@@ -919,155 +907,65 @@ function objectLayersWarnOnce(tileMapData, about, text)
 // editor makes an object again from a copy as it is dragged, so it is the map's ids, not the objects
 const objectLayersKindSaid = /* @__PURE__ */ new WeakMap;
 
-// the accessor a class instance has for a key through its class, not Object's, or undefined; one its own field
-// takes the place of, a subclass's field over a base class's accessor, is none, the field is what reads back
-function objectPropertyAccessor(object, key)
-{
-    if (Object.prototype.hasOwnProperty.call(object, key)) return;
-    for (let p = Object.getPrototypeOf(object); p && p !== Object.prototype; p = Object.getPrototypeOf(p))
-    {
-        const found = Object.getOwnPropertyDescriptor(p, key);
-        if (found) return found.get || found.set ? found : undefined;
-    }
-}
-
 // a type's default for a property, its own, not one every object has, like constructor or toString
 const objectPropertyDefault = (defaults, key)=>
     Object.prototype.hasOwnProperty.call(defaults, key) ? defaults[key] : undefined;
 
-// an object default's member as a merge reads it: its own, or for an instance of a class one behind an accessor of its
-// class, read from the default, which its class made; not a method
-function objectPropertyMember(fallback, key)
+// a level's value over its type's default: a plain object member by member, so a member the file left out, as Tiled
+// leaves out the ones not set, keeps the default's, and a list item by item, each read as the default's item there,
+// or its last; a member named __proto__, constructor or prototype is left out, so a level a player made can not reach
+// what every object shares. A default of a class, a Color, a vector or the game's own, is its copy with the fields
+// of its own that the value gives, and one with no copy method is not a level's to set, the default is kept
+function objectLayersMergeClass(fallback, value, warn, path='', fromText=objectPropertyFromText)
 {
-    let member = objectPropertyDefault(fallback, key);
-    if (member === undefined && !objectPropertyPlain(fallback) && key in fallback)
-        try { typeof fallback[key] != 'function' && (member = fallback[key]); } catch { }
-    return member;
-}
-
-// a Tiled class property's value over its default, each plain object member by member, so a member Tiled left out,
-// as it leaves out the ones not set, keeps the default's; a member of another kind than its default keeps the
-// default, said through warn with its path, as a property does; a member named __proto__, constructor or prototype
-// is left out, so a level a player made can not reach what every object shares; a default member the value leaves
-// alone, or gives of the wrong kind, whose copy method gives back no new object is said through shared with its path
-function objectLayersMergeClass(fallback, value, warn, path='', shared, fromText=objectPropertyFromText)
-{
-    // a list over a list, each of its items read as the default's item there is, or its last, as a member is: a
-    // vector as a list and a color as text, an object or a list merged into it, so a 3D level file's list of vectors or
-    // of objects comes back as the default has them, and an item of another kind keeps the default's, said
     if (isArray(fallback) && isArray(value))
-        return value.map((item, i)=>
-        {
-            const before = fallback[min(i, fallback.length - 1)], name = path + '[' + i + ']';
-            if (before === undefined) return objectPropertyCopy(item);
-            const read = fromText(item, before) || objectPropertyFromArray(item, before);
-            if (read) return read;
-            if (before !== null && objectPropertyKind(before) !== objectPropertyKind(item))
-            {
-                warn?.(`${name} is ${objectPropertyKindName(item)}, its default ${objectPropertyKindName(before)}, ` +
-                    'the default is kept');
-                return objectPropertyCopy(before, shared, name);
-            }
-            return objectLayersMergeClass(before, item, warn, name, shared, fromText);
-        });
-    // a value of the game's class, given from code, is copied as itself, never made the default's class
+        return value.map((item, i)=> objectLayersMergeMember(fallback[min(i, fallback.length - 1)], item, warn,
+            path + '[' + i + ']', fromText));
+    // a value of the game's class, given from code, is copied as itself
     if (!fallback || typeof fallback !== 'object' || isArray(fallback) || !objectPropertyPlain(value))
         return objectPropertyCopy(value);
-    // a new object for each, so the type's default, shared by every object of the type, is never written into: an
-    // instance of a class with a copy method, a Color, a Vector2 or the game's own, is its copy, which keeps what
-    // the class keeps to itself, and the members are assigned so its setters run; one with no copy method is a new
-    // object of its class with the default's members, without its private fields
-    const own = !objectPropertyPlain(fallback);
-    let merged = own && typeof fallback.copy == 'function' ? fallback.copy() : undefined;
-    // one that gives back no new object, nothing or the default itself, would be written into, so is as none
-    if (own && typeof fallback.copy == 'function' && (!merged || typeof merged != 'object' || merged === fallback))
-        warn?.(`${path || ' default'} has a copy method that gives back no new object, its members taken as its own`);
-    const copied = !!merged && typeof merged == 'object' && merged !== fallback;
-    copied || (merged = Object.create(Object.getPrototypeOf(fallback)));
-    // the members copied from the default that hold one shared, said if the value does not take their place
-    const kept = [];
-    if (!copied)
-        for (const key of Object.keys(fallback))
-        {
-            const paths = [], copy = objectPropertyCopy(fallback[key], (at)=> paths.push(at), path + '.' + key);
-            objectPropertySet(merged, key, copy);
-            paths.length && kept.push({key, copy, paths});
-        }
+    const plain = objectPropertyPlain(fallback), merged = objectPropertyCopy(fallback);
+    if (merged === fallback)
+    {
+        warn?.(`${path || ' default'} is of a class with no copy method, the default is kept`);
+        return merged;
+    }
     for (const key of Object.keys(value))
     {
         const name = path + '.' + key;
         if (objectPropertyShared(key))
-        {
             warn?.(`${name} is a name every object has, left out`);
-            continue;
-        }
-        // the default's member, one behind an accessor of its class too, read from the default, which its class made
-        const before = objectPropertyMember(fallback, key);
-        const member = value[key];
-        // a Color or Vector2 member as Tiled writes it, or a vector as a list, as a 3D level file writes it
-        const read = fromText(member, before) || objectPropertyFromArray(member, before);
-        // given as every member is: assigned to a copy, its setter run, and to one with no copy method through an
-        // accessor of its class too, which writes the fields copied from the default: one with no setter can only be
-        // read and is left out, as for a copy; a setter that throws a TypeError, as it reads a private field that
-        // object has not, gets the member as its own, and any other throw, a value it refuses, leaves it out
-        const accessor = !copied && own && objectPropertyAccessor(fallback, key);
-        const give = (result)=>
-        {
-            if (copied)
-                return objectPropertyAssign(merged, key, result, '', '', (why)=> warn?.(`${name} ${why}, left out`));
-            if (accessor && !accessor.set)
-                return warn?.(`${name} can only be read, left out`);
-            if (accessor)
-                try { return accessor.set.call(merged, result); }
-                catch (error)
-                {
-                    if (!(error instanceof TypeError))
-                        return warn?.(`${name} was refused by its setter, ${error?.message ?? error}, left out`);
-                }
-            objectPropertySet(merged, key, result);
-        };
-        if (read)
-        {
-            give(read);
-            continue;
-        }
-        if (before != null && objectPropertyKind(before) !== objectPropertyKind(member))
-        {
-            warn?.(`${name} is ${objectPropertyKindName(member)}, its default ${objectPropertyKindName(before)}, ` +
-                'the default is kept');
-            continue;
-        }
-        // assigned to a copy, so its setters run; one with no copy method has none of its class's private fields for
-        // an accessor to read, it gets the member as its own
-        const result = objectLayersMergeClass(before, member, warn, name, shared, fromText);
-        // its own would take the place of a method of the game's class, read by its descriptor so no getter runs
-        // from the default itself, whose own field is data, through its class to Object's, toString and valueOf too
-        let method = false;
-        for (let p = fallback; !copied && own && p; p = Object.getPrototypeOf(p))
-        {
-            const found = Object.getOwnPropertyDescriptor(p, key);
-            if (found) { method = p !== fallback && !found.get && !found.set && typeof found.value == 'function'; break; }
-        }
-        if (method && typeof result != 'function')
-            warn?.(`${name} has a method's name, left out`);
+        else if (!plain && !Object.prototype.hasOwnProperty.call(fallback, key))
+            warn?.(`${name} is not a field of its default, left out`);
         else
-            give(result);
+            objectPropertySet(merged, key, objectLayersMergeMember(objectPropertyDefault(fallback, key), value[key],
+                warn, name, fromText));
     }
-    for (const {key, copy, paths} of kept)
-        Object.getOwnPropertyDescriptor(merged, key)?.value === copy && paths.forEach((at)=> shared?.(at));
     return merged;
+}
+
+// one member or list item of a level's value, read as its default is: a Color or Vector2 from text, a vector from a
+// list, and one of another kind than its default keeps the default, said through warn with its path
+function objectLayersMergeMember(before, member, warn, name, fromText)
+{
+    const read = fromText(member, before) || objectPropertyFromArray(member, before);
+    if (read) return read;
+    if (before != null && objectPropertyKind(before) !== objectPropertyKind(member))
+    {
+        warn?.(`${name} is ${objectPropertyKindName(member)}, its default ${objectPropertyKindName(before)}, ` +
+            'the default is kept');
+        return objectPropertyCopy(before);
+    }
+    return objectLayersMergeClass(before, member, warn, name, fromText);
 }
 
 // the defaults of an object's type, each copied for it, then its properties in Tiled over them
 function objectLayersProperties(type, object, tileMapData)
 {
     const properties = {}, set = (key, value)=> objectPropertySet(properties, key, value);
-    const list = objectLayersPropertyList(object), typeName = object.type || object.class;
-    const shared = (key)=> objectPropertySharedWarn(tileMapData, 'objectLayersLoad', typeName, key);
-    // a default of a class whose copy method gives back no new object, at any depth, is said by its type, and only
-    // for an object that keeps it, which then shares it: one that leaves it alone, sets another member beside it,
-    // or gives it of the wrong kind; one the map sets gets its own
-    const kept = objectPropertyDefaults(type.defaults, set);
+    const list = objectLayersPropertyList(object);
+    for (const [key, value] of Object.entries(type.defaults))
+        set(key, objectPropertyCopy(value));
     // a list of {name, type, value}, as Tiled 1.2 and on write it, or an older map's object of them; an entry that is
     // not one, or a color that is not a hex string, is said and left out, read before the object is made
     isArray(object.properties) && list.length < object.properties.length && objectLayersWarnOnce(tileMapData,
@@ -1108,32 +1006,10 @@ function objectLayersProperties(type, object, tileMapData)
             }
             // a class property is the map's object over the type's default, member by member: Tiled writes only the
             // members set on that object, the rest are the class's defaults
-            set(name, objectLayersMergeClass(fallback, value, (text)=> say(text, text), '', shared(name)));
+            set(name, objectLayersMergeClass(fallback, value, (text)=> say(text, text)));
         }
     }
-    objectPropertySayShared(properties, kept, shared);
     return properties;
-}
-
-// each of a type's defaults copied for one object through set, giving back the ones that hold a default shared, a
-// class's whose copy method gives back no new object, with where in it, for objectPropertySayShared
-function objectPropertyDefaults(defaults, set)
-{
-    const kept = [];
-    for (const [key, value] of Object.entries(defaults))
-    {
-        const paths = [], copy = objectPropertyCopy(value, (at)=> paths.push(at));
-        set(key, copy);
-        paths.length && kept.push({key, copy, paths});
-    }
-    return kept;
-}
-
-// say the shared defaults of the ones the object kept, those still the copy objectPropertyDefaults made
-function objectPropertySayShared(properties, kept, shared)
-{
-    for (const {key, copy, paths} of kept)
-        Object.getOwnPropertyDescriptor(properties, key)?.value === copy && paths.forEach(shared(key));
 }
 
 // make one Tiled object from the type added for its name, undefined when there is no such type or it made nothing

@@ -190,19 +190,13 @@ test('a body on a MeshCollider lift going down, pushed by a crate, keeps the gro
         }
 });
 
-test('edit3D.setProperty refuses a list item that leaves out a member of the default\'s, takes a class with an'
-    + ' accessor given through it, and a wrong list item\'s shared default is said (D1, D2, O3)', async ()=>
+test('edit3D.setProperty refuses a list item that leaves out a member of the default\'s (D1)', async ()=>
 {
     const { run } = await engine({}, true);
     const r = JSON.parse(run(`(()=>
     {
-        const warned = [], warn = console.warn;
-        console.warn = (text)=> warned.push(text);
-        class Speed { constructor() { this._s = 3; } get speed() { return this._s; } set speed(v) { this._s = v; }
-            copy() { const s = new Speed; s._s = this._s; return s; } }
-        class Same { constructor() { this.n = 1; } copy() { return this; } }
         level3DAddType('S', class extends EngineObject3D { constructor(pos) { super(pos); } },
-            {stops: [{at: vec3(), wait: 1}], cfg: {stops: [{wait: 1}]}, acc: new Speed, same: [new Same]});
+            {stops: [{at: vec3(), wait: 1}], cfg: {stops: [{wait: 1}]}});
         const level = {littlejs3D: 1, objects: [{id: 1, type: 'S', pos: [0, 0, 0]}]};
         level3DLoad(level); engineStep(2); levelEditor.open();
         const edit = levelEditor.edit3D, said = [];
@@ -213,20 +207,11 @@ test('edit3D.setProperty refuses a list item that leaves out a member of the def
         };
         tryIt('stops', [{at: vec3(1, 2, 3)}]);
         tryIt('cfg', {stops: [{}]});
-        const acc = tryIt('acc', {speed: 9});
         edit.strokeEnd();
-        const game = editor3DInstances.get(1).acc.speed;
-        levelEditor.close();
-        level3DLoad({littlejs3D: 1, objects: [{id: 2, type: 'S', pos: [0, 0, 0], properties: {same: ['x']}}]});
-        console.warn = warn;
-        return JSON.stringify({said, acc, game, shared: warned.filter((w)=> w.includes('same[0]') &&
-            w.includes('gives back no new object')).length});
+        return JSON.stringify({said});
     })()`));
     assert.deepEqual(r.said, ['stops leaves out a member of its default, which the load would put back',
         'cfg leaves out a member of its default, which the load would put back']);
-    assert.equal(r.acc, true);
-    assert.equal(r.game, 9);
-    assert.equal(r.shared, 1);
 });
 
 test('a 2D tool press taken back by the right button or Escape, or released first, gives the brush none of it (E3,'

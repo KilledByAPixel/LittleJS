@@ -125,41 +125,6 @@ function loadMob(run, defaults, properties)
     })()`));
 }
 
-test('Tiled class members: text through a copied class\'s setter, a copy that gives nothing, a method\'s name with no'
-    + ' copy (O1, O2, O3)', ()=>
-{
-    for (const file of ['littlejs.js', 'littlejs.release.js'])
-    {
-        const { run } = loadEngine({}, '', file);
-        run('setHeadlessMode(true)');
-        run(`globalThis.Look = class { #tint = rgb(1, 0, 0); #at = vec2(0, 0);
-            get tint() { return this.#tint; } set tint(v) { this.#tint = v; }
-            get at() { return this.#at; } set at(v) { this.#at = v; } get fixed() { return 1; }
-            copy() { const c = new Look; c.tint = this.tint.copy(); c.at = this.at.copy(); return c; } };
-            globalThis.Empty = class { hp = 1; copy() {} };
-            globalThis.Plain = class { hp = 1; heal() { return 'heal'; } };`);
-        // O1: Tiled's text for a Color and a Vector2 goes through the setters, into the private fields
-        const said = loadMob(run, `{look: new Look}`,
-            `[{name: 'look', type: 'class', value: {tint: '#ff00ff00', at: '3,4', fixed: 2}}]`);
-        assert.equal(run(`[made.look.tint.toString(), made.look.at.toString(0),
-            Object.keys(made.look).length].join()`), '#00ff00ff,( 3, 4 ),0', file);
-        if (file === 'littlejs.js')
-            assert.deepEqual(said.warned, ['objectLayersLoad: object 1\'s look.fixed can only be read, left out']);
-        // O2: a copy method that gives back nothing is as none, with a warning, and the map loads
-        const empty = loadMob(run, `{stats: new Empty}`, `[{name: 'stats', type: 'class', value: {hp: 5}}]`);
-        assert.equal(run('made.stats.hp'), 5, file);
-        file === 'littlejs.js' && assert.match(empty.warned[0], /copy method that gives back no new object/);
-        // pass 32 O1: with no member set every object shares the default, which is said too, once
-        assert.equal(loadMob(run, `{stats: new Empty}`, `[]`).warned.length, file === 'littlejs.js' ? 1 : 0,
-            file + ': no member set, shared, said');
-        // O3: with no copy, a member named as a method of the class is left out, said
-        const plain = loadMob(run, `{stats: new Plain}`, `[{name: 'stats', type: 'class', value: {heal: 3, hp: 2}}]`);
-        assert.equal(run(`[made.stats.heal(), made.stats.hp].join()`), 'heal,2', file);
-        file === 'littlejs.js' && assert.deepEqual(plain.warned,
-            ['objectLayersLoad: object 1\'s stats.heal has a method\'s name, left out']);
-    }
-});
-
 test('the 2D editor takes no object edit or its undo while an async onRestart waits, so nothing is made twice (E1)',
     async ()=>
 {

@@ -93,40 +93,6 @@ test('the follow-down does not land on a solid where its callback moved it from 
     assert.equal(r.landedOnMoved, 0);
 });
 
-test('setProperty refuses a field left out of a class with only a getter, and the merge gives a member through a'
-    + ' setter of a class with no copy method (D1)', async ()=>
-{
-    const { run } = await engine(true);
-    const r = JSON.parse(run(`(()=>
-    {
-        class Ro { constructor() { this.x = 1; this.y = 2; } get len() { return this.x + this.y; }
-            copy() { const r = new Ro; r.x = this.x; r.y = this.y; return r; } }
-        class Speed { constructor() { this._s = 3; } get speed() { return this._s; } set speed(v) { this._s = v; }
-            twice() { return this._s * 2; } }
-        level3DAddType('S', class extends EngineObject3D { constructor(pos, p) { super(pos); this.p = p; } },
-            {ro: new Ro, acc: new Speed});
-        const level = {littlejs3D: 1, objects: [{id: 1, type: 'S', pos: [0, 0, 0]}]};
-        level3DLoad(level); engineStep(2); levelEditor.open();
-        const edit = levelEditor.edit3D, said = [];
-        const tryIt = (name, value)=>
-        {
-            try { return edit.change((list)=> edit.setProperty(list[0], name, value)); }
-            catch (e) { said.push(e.message.replace(/^Assert failed: setProperty: /, '')); }
-        };
-        tryIt('ro', {x: 5});
-        const took = tryIt('acc', {speed: 9});
-        edit.strokeEnd();
-        const live = editor3DInstances.get(1).p.acc;
-        levelEditor.close();
-        const made = level3DLoad(JSON.parse(JSON.stringify(level))).find((o)=> o.p).p.acc;
-        return JSON.stringify({said, took, live: [live.twice(), Object.hasOwn(live, 'speed')], reloaded: made.twice()});
-    })()`));
-    assert.deepEqual(r.said, ['ro leaves out a member of its default, which the load would put back']);
-    assert.equal(r.took, true);
-    assert.deepEqual(r.live, [18, false], 'the setter ran, no own member hides it');
-    assert.equal(r.reloaded, 18);
-});
-
 test('an editor closed by a game tool\'s press, a game key or the game\'s onUpdate gives the game none of that'
     + ' frame\'s input, and the 2D editor edits nothing after (D2, E1)', async ()=>
 {

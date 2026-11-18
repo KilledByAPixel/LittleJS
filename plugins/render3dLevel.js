@@ -509,8 +509,8 @@ function level3DVector(value, fallback)
 function level3DProperties(type, object)
 {
     const properties = {}, own = object.properties, set = (key, value)=> objectPropertySet(properties, key, value);
-    const shared = (key)=> objectPropertySharedWarn(undefined, 'level3DLoad', object.type, key);
-    const kept = objectPropertyDefaults(type.defaults, set); // a default shared said at the end, if the object kept it
+    for (const [key, value] of Object.entries(type.defaults))
+        set(key, objectPropertyCopy(value));
     for (const [key, value] of Object.entries(own && typeof own === 'object' ? own : {}))
     {
         const d = objectPropertyDefault(type.defaults, key); // the type's own, not one every object has
@@ -525,19 +525,17 @@ function level3DProperties(type, object)
         else if (typeof d === 'number')
             level3DFinite(value) && set(key, value);
         else if (d && typeof d === 'object' && (isArray(d) ? isArray(value) : objectPropertyPlain(value)))
-            // a plain object, as a file has, over its default member by member, as 2D's class properties are, so an
-            // instance of the game's class stays one, with its methods, and a member the file left out keeps the
-            // default's; an instance given from code, to level3DSpawn, is copied as itself below; a list over a list
-            // with each item read as the default's, so a list of vectors comes back vectors
+            // a plain object, as a file has, over its default member by member, as 2D's class properties are, so a
+            // member the file left out keeps the default's; an instance given from code, to level3DSpawn, is copied
+            // as itself below; a list over a list with each item read as the default's, so a list of vectors comes
+            // back vectors
             set(key, objectLayersMergeClass(d, value, (text)=> objectLayersWarnOnce(undefined, 'level3D ' + object.type +
-                ' ' + key + text, `level3DLoad: ${object.type} ${object.id}'s ${key}${text}`), '', shared(key),
-                level3DFromText));
+                ' ' + key + text, `level3DLoad: ${object.type} ${object.id}'s ${key}${text}`), '', level3DFromText));
         else if (d === undefined ||
             typeof value === typeof d && (d === null || value !== null && isArray(value) === isArray(d)))
             set(key, objectPropertyCopy(value)); // null and a list are objects to typeof, but neither is a
                                                  // default's object, nor an object a default's list
     }
-    objectPropertySayShared(properties, kept, shared);
     return properties;
 }
 
@@ -606,7 +604,8 @@ function level3DMakeAt(object, pos, rotation, scale)
  *    each is copied for the object, a list or a plain object with what is in it, as a level file's are, so the object
  *    has its own and not the one passed; a plain object over an object default is merged into it member by member,
  *    and a list over a list default item by item, as a level file's are, and an instance of a class, at any depth,
- *    is copied with its copy method, or shared when it has none
+ *    is copied with its copy method, or shared when it has none; keep defaults to numbers, text, true or false,
+ *    Colors, vectors, and lists and plain objects of those
  *  @return {any} - What the type made, a Prefab3D for a prefab, undefined when there is no such type or it made no
  *    object of the game's
  *  @memberof Level3D

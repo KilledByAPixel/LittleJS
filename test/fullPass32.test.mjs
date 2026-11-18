@@ -152,24 +152,6 @@ function loadMob(run, defaults, properties)
     })()`));
 }
 
-test('a class default whose copy gives nothing is said when shared, and Object\'s method names are left out with no'
-    + ' copy (O1, O2)', async ()=>
-{
-    const { run } = await engine();
-    run(`globalThis.Look = class { hp = 1; copy() {} }; globalThis.Plain = class { hp = 1; }`);
-    const shared = loadMob(run, `{look: new Look}`, `[]`);
-    assert.equal(shared.shared, true);
-    // pass 33 O1, O2: said by its type, for the objects that leave it alone
-    assert.deepEqual(shared.warned, ['objectLayersLoad: Mob\'s default look has a copy method that gives back no new ' +
-        'object, so the objects that leave it alone share it']);
-    const named = loadMob(run, `{stats: new Plain}`, `[{name: 'stats', type: 'class', value: {toString: 4, valueOf: 2,
-        hp: 3}}]`);
-    assert.equal(run('typeof made.stats.toString + typeof made.stats.valueOf + made.stats.hp + String(made.stats)'),
-        'functionfunction3[object Object]');
-    assert.deepEqual(named.warned, ['objectLayersLoad: object 1\'s stats.toString has a method\'s name, left out',
-        'objectLayersLoad: object 1\'s stats.valueOf has a method\'s name, left out']);
-});
-
 // a level with one Door and a painted tile, in the 2D editor, its restart async and waiting till released
 async function doorEditor()
 {

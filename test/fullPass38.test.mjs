@@ -170,16 +170,14 @@ test('a 3D list of objects is read item by item, its vectors and Colors as the d
     assert.equal(r.warned, 1);
 });
 
-test('edit3D.setProperty takes a vector for a member behind an accessor, refuses a function and says a vector that is'
+test('edit3D.setProperty takes a vector for a member of an object default, refuses a function and says a vector that is'
     + ' not valid (D2, D3, D4)', async ()=>
 {
     const { run } = await engine({}, true);
     const r = JSON.parse(run(`(()=>
     {
-        class Spot { #at = vec3(); get at() { return this.#at; } set at(v) { this.#at = v.copy(); }
-            copy() { const s = new Spot; s.at = this.at; return s; } }
         level3DAddType('S', class extends EngineObject3D { constructor(pos) { super(pos); } },
-            {spot: new Spot, cb: ()=> 1, at: vec3()});
+            {spot: {at: vec3()}, cb: ()=> 1, at: vec3()});
         const level = {littlejs3D: 1, objects: [{id: 1, type: 'S', pos: [0, 0, 0]}]};
         level3DLoad(level); engineStep(2); levelEditor.open();
         const edit = levelEditor.edit3D, said = [];

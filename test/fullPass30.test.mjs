@@ -115,36 +115,6 @@ function loadMob(run, defaults, properties, map='')
     })()`));
 }
 
-test('a class default with no copy method takes the map\'s members as its own, an accessor over a private field too'
-    + ' (O1, O5)', async ()=>
-{
-    for (const file of ['littlejs.js', 'littlejs.release.js'])
-    {
-        const { run } = loadEngine({}, '', file);
-        run('setHeadlessMode(true)');
-        run(`globalThis.Stats = class { #hp = 10; mp = 4; get hp() { return this.#hp; } set hp(v) { this.#hp = v; } };
-            globalThis.shared = new Stats`);
-        const said = loadMob(run, `{stats: shared}`, `[{name: 'stats', type: 'class', value: {hp: 3, mp: 5}}]`);
-        assert.deepEqual(said.warned, [], file);
-        assert.deepEqual(JSON.parse(run(`JSON.stringify([made.stats.hp, made.stats.mp, made.stats instanceof Stats,
-            shared.hp, shared.mp])`)), [3, 5, true, 10, 4], file);
-    }
-});
-
-test('an accessor member of a class default is read from Tiled\'s text and checked for its kind (O2)', async ()=>
-{
-    const { run } = await engine();
-    run(`globalThis.Look = class { #tint = rgb(1, 0, 0); get tint() { return this.#tint; }
-        set tint(v) { this.#tint = v; } copy() { const c = new Look; c.tint = this.tint.copy(); return c; } };
-        globalThis.look = new Look`);
-    loadMob(run, `{look}`, `[{name: 'look', type: 'class', value: {tint: '#ff00ff00'}}]`);
-    assert.equal(run('made.look.tint instanceof Color && made.look.tint.toString()'), '#00ff00ff');
-    const said = loadMob(run, `{look}`, `[{name: 'look', type: 'class', value: {tint: 5}}]`);
-    assert.equal(run('made.look.tint.toString()'), '#ff0000ff', 'a number keeps the default');
-    assert.deepEqual(said.warned, ['objectLayersLoad: object 1\'s look.tint is a number, its default an object, ' +
-        'the default is kept']);
-});
-
 test('what can not be read as a Vector2 over a Vector2 default is said, a color or a number too (O3, E5)', async ()=>
 {
     const { run } = await engine();
@@ -157,24 +127,6 @@ test('what can not be read as a Vector2 over a Vector2 default is said, a color 
         'objectLayersLoad: object 1\'s at is 5, not x,y, its default a Vector2, the default is kept',
         'objectLayersLoad: object 1\'s to is "#ff00ff00", not x,y, its default a Vector2, the default is kept',
         'objectLayersLoad: object 1\'s by is "3;4", not x,y, its default a Vector2, the default is kept']);
-});
-
-test('a class member that can only be read or has a method\'s name is said once for each map, with its object and'
-    + ' path (O4, E4)', async ()=>
-{
-    const { run } = await engine();
-    run(`globalThis.Kit = class { #s = 7; hp = 10; get secret() { return this.#s; } update() {}
-        copy() { const c = new Kit; c.hp = this.hp; return c; } }; globalThis.kit = new Kit;
-        globalThis.kitMap = {width: 4, height: 4, tilewidth: 16, tileheight: 16, layers: [{type: 'objectgroup', id: 1,
-            name: 'Objects', objects: [{id: 3, type: 'Mob', x: 16, y: 16, point: true, properties: [
-            {name: 'kit', type: 'class', value: {update: 1, secret: 2, hp: 4}}]}]}]}`);
-    const first = loadMob(run, `{kit}`, '', 'kitMap');
-    const again = loadMob(run, `{kit}`, '', 'kitMap');
-    assert.deepEqual(first.warned, [
-        'objectLayersLoad: object 3\'s kit.update has a method\'s name, left out',
-        'objectLayersLoad: object 3\'s kit.secret can only be read, left out']);
-    assert.deepEqual(again.warned, [], 'the same map again says nothing');
-    assert.equal(run('made.kit.hp + made.kit.secret'), 11);
 });
 
 // a level with one Door of a class whose state is private, in the 2D editor
@@ -198,17 +150,6 @@ async function doorEditor()
         var edit = levelEditor.edit2D, door = ()=> editorObjectLayers(rec)[0].instances.get(1);`);
     return run;
 }
-
-test('a class member the editor changes reaches the live object when its class keeps its state private (E1)',
-    async ()=>
-{
-    const run = await doorEditor();
-    assert.equal(run('door().vault.code'), 5);
-    run('edit.changeObjects((list)=> { list[0].properties[0].value.code = 9; }); edit.strokeEnd()');
-    assert.equal(run('door().vault.code'), 9);
-    run('editorUndo()');
-    assert.equal(run('door().vault.code'), 5, 'and back on undo');
-});
 
 test('edit2D.setProperty refuses a Vector2 over no default and a number that is not finite (E2, E3)', async ()=>
 {
