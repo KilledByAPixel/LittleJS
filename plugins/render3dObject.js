@@ -983,6 +983,13 @@ function render3DInAtStart(a, b)
     return !!push && push.lengthSquared() > 1e-6;
 }
 
+// whether a solid moved this pass: it has a velocity, or it is not where its turn began
+function render3DMovedThisPass(o)
+{
+    const v = o.velocity3D, p = o.pos3D, f = render3DCollideFrom(o);
+    return !!(v.x || v.y || v.z || p.x !== f.x || p.y !== f.y || p.z !== f.z);
+}
+
 // settles a body pushed by a mover against the fixed solids and the level; true when a callback it asked moved the
 // body, a respawn or a portal, whose place is then the game's: the caller hands none of it on to another mover
 function render3DSettleFixed(o, pusher, from)
@@ -992,9 +999,13 @@ function render3DSettleFixed(o, pusher, from)
     // with many solids the ones near where it is, through the grid; the movers there are skipped below
     const grid = render3DSolidGrid(), fixed = render3DFixedSolids();
     let moved = false;
+    // the door rule: a body squeezed between a wall and a door ends in the door, never in the wall, as a door can
+    // open again and a wall can not, so one a still wall pushed is not pushed back out of a fixed solid that moves
+    const byWall = !!pusher && !pusher.mass && !render3DMovedThisPass(pusher);
     for (const b of grid ? render3DGridWalk(grid, ()=> reachO, ()=> shape.pos, Infinity) : fixed)
     {
         if (grid && !render3DFixed.set.has(b)) continue; // the fixed solids of the pass, as the list has them
+        if (byWall && !b.mass && render3DMovedThisPass(b)) continue;
         // a pair where neither is solid passes through, as in the pair loop; a solid against one that is not still meets
         if (b === o || b === pusher || b.mass || b.destroyed || b.parent || !o.isSolid && !b.isSolid)
             continue; // and one a callback attached since the pass's list was made, it rides along with its parent

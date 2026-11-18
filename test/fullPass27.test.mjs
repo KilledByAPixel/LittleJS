@@ -67,6 +67,17 @@ test('a door crushing a body against a wall, a trigger volume around them, leave
     }
 });
 
+test('a fast door closing on a body at rest near a still wall leaves it out of the wall in every order', ()=>
+{
+    for (const wall of [.5, .2])
+    for (const order of ['wpb', 'wbp', 'pwb', 'pbw', 'bwp', 'bpw'])
+    {
+        // the body's face .5 from the wall, the door's face stopping .2 short of the wall, short of the body's room
+        const result = crush({order, wall, bodyX: 2, stop: 1.7});
+        assert.ok(result.deepest < 1e-6 && !result.through, `wall ${wall} ${order}: ${JSON.stringify(result)}`);
+    }
+});
+
 test('a block map or terrain the 3D editor makes again takes the old one\'s place in level3DLoad\'s list', async ()=>
 {
     for (const edit of ['editor3DVoxelResize(vec3(10, 4, 10))', 'editor3DTerrainRemove(); editor3DTerrainAdd()'])
