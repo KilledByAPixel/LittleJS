@@ -795,7 +795,6 @@ class HeightMap extends EngineObject3D
                 const corner = this.wallAhead(oldPos, p, foot, step, steep, half / 2, side), g = corner ? upTo(corner) : 1;
                 if (g < 1)
                     p.x = oldPos.x + (p.x - oldPos.x) * g, p.z = oldPos.z + (p.z - oldPos.z) * g;
-                ground = this.getHeight(p.x, p.z);
                 // the speed into it is taken back once it reached the wall, not while the wall is only ahead of a
                 // move it made whole, as a body coasting toward a cliff does
                 const v = o.velocity3D, vInto = v.x * nx + v.z * nz, cut = f < 1 || into < 0 || g < 1;

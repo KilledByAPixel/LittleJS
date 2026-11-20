@@ -529,7 +529,7 @@ async function runSeed(seed, opCount)
     };
     const storage = makeStorage();
     let fileText = JSON.stringify(variantMap());
-    let { engine, warnings } = await newEngine(storage, fileText, seed);
+    let { engine } = await newEngine(storage, fileText, seed);
     const failures = [], trail = [], stats = {};
     for (let i = 0; i < opCount && failures.length < 5; ++i)
     {
@@ -541,7 +541,7 @@ async function runSeed(seed, opCount)
             variant === 'big' && engine.run('editorAutosaveFlush()'); // the page hides
             const before = engine.run('fuzzSnap()');
             if (changed) fileText = changeFile(fileText, rand);
-            ({ engine, warnings } = await newEngine(storage, fileText, seed * 1000 + i));
+            ({ engine } = await newEngine(storage, fileText, seed * 1000 + i));
             const pending = engine.run('!!fuzzRecord().pending');
             trail.push(`${i} reload${changed ? ' changed file' : ''}${pending ? ' -> pending' : ''}`);
             const sr = stats[pending ? 'reloadPending' : 'reload'] ??= [0, 0]; ++sr[0];

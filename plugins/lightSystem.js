@@ -878,7 +878,7 @@ class LightSystemPlugin
             const size = lightSystem.textureSize, made = lightSystem.textureSizeAllocated;
             // while automatic the size is always the one made, so one that differs the game set: it is the game's
             // now, as textureSizeAuto false, where the lights drew into a corner of a texture of the canvas's size
-            if (lightSystem.textureSizeAuto && size && made?.x && (size.x !== made.x || size.y !== made.y))
+            if (lightSystem.textureSizeAuto && size && made.x && (size.x !== made.x || size.y !== made.y))
                 lightSystem.textureSizeAuto = false;
             const auto = lightSystem.textureSizeAuto;
             const wantX = glClampTextureSize(auto ? mainCanvasSize.x : size.x); // to what the device makes
