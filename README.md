@@ -233,8 +233,12 @@ Here are a few of the many amazing games created with LittleJS...
 - [Bug&Bee](https://itch.io/jam/littlejs-game-jam-2025/results) - Low fi shoot em up with co-op gameplay. LittleJS Jam 1st place! by [eoinmcg](https://eoinmcg.itch.io/)
 - [Little Platformer](https://psemo.itch.io/little-platformer) - Platformer with many mechanics. LittleJS Jam 2nd place! by [PSEMO](https://psemo.itch.io/), [Solita666](https://itch.io/profile/solita666), [GabrielRG](https://gabrielrg.itch.io/), [Nate](https://natesassoon.itch.io/)
 - [Alien Escape Pinball](https://focaccai.itch.io/alien-pinball) - Pinball game with physics and aliens. by [Focaccai](https://www.focaccai.com/)
+- [Chime Drop](https://reedarcade.itch.io/chime-drop) - A musical marble run. by [Jordan Reed](https://reedarcade.itch.io/)
+- [ZZZZHANG ON!](https://lanthanum.itch.io/zzzzhang-on) - Hang on to the side of a speeding train. by [Lanthanum](https://lanthanum.itch.io/)
+- [Bike Survivors](https://nanophageresearch.itch.io/bike-survivors) - A demon, a motorcycle, and the road out of hell. by [nanophage research](https://nanophageresearch.itch.io/)
 - [LittleJS Jam 2024 Results](https://itch.io/jam/littlejs-jam-2024/results) - All the games from the first LittleJS Game Jam.
 - [LittleJS Jam 2025 Results](https://itch.io/jam/littlejs-game-jam-2025/results) - All the games from the second LittleJS Game Jam.
+- [LittleJS Jam 2026 Results](https://itch.io/jam/littlejs-jam/results) - All the games from the third LittleJS Game Jam.
 
 ![A collage of screenshots from games made with LittleJS](examples/games.jpg)
 
