@@ -708,8 +708,8 @@ function editor3DEditsWait()
 
 // change the level's objects as part of the edit being made: change edits a copy of the list; the changes until
 // editor3DStrokeEnd are one undo, so a drag is one undo; false when nothing changed
-/** @type {Array<Level3DObject>|undefined} the copy a change is editing, while it runs */
-let editor3DChanging;
+/** @type {Array<Level3DObject>|undefined} */
+let editor3DChanging; // the copy a change is editing, while it runs
 function editor3DChange(change)
 {
     // a change inside a change would be written over by the outer one's copy, lost, a place's id given back for an

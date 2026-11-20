@@ -166,9 +166,8 @@ class NewgroundsPlugin
         this.scoreboards = [];
         /** @type {Map<number, 'failed'|'notSave'>} */
         this.loadFailures = new Map; // why each slot's last load gave undefined, see loadFailure
-        /** @type {Map<number, Promise<void>>} - each slot's last save or load, the next waits for it, so they land in
-         *  order */
-        this.slotChains = new Map;
+        /** @type {Map<number, Promise<void>>} */
+        this.slotChains = new Map; // each slot's last save or load, the next waits for it, so they land in order
         /** @property {{id: number, name: string, url: string, supporter: boolean}|null} - The logged in player once ready, null when not logged in
          *  @type {{id: number, name: string, url: string, supporter: boolean}|null} */
         this.user = null;

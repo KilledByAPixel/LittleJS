@@ -487,10 +487,10 @@ class HeightMap extends EngineObject3D
         this.mapSize = mapSize.copy();
         /** @property {number} - World height of a full value, rebuild() after changing it */
         this.height = height;
-        /** @type {Array<number>} the lowest and highest of the heights, kept by rebuild */
-        this.heightRange = [0, 1];
-        /** @type {number} the normal y of its steepest triangle, kept by rebuild */
-        this.steepestFace = 1;
+        /** @type {Array<number>} */
+        this.heightRange = [0, 1]; // the lowest and highest of the heights, kept by rebuild
+        /** @type {number} */
+        this.steepestFace = 1; // the normal y of its steepest triangle, kept by rebuild
         /** @property {boolean} - Smooth shading, rebuild() after changing it */
         this.smooth = !!smooth;
         this.rebuild();

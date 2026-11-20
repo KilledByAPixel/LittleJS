@@ -5,6 +5,10 @@ What changed in each release, newest first. Releases before 1.20.0 are on the
 
 ## Unreleased
 
+Nothing yet.
+
+## 1.31.0 - 2026-11-19
+
 ### New Changes
 - 3D: a `HeightMap`, `MeshCollider` or `VoxelMap` moved by its velocity is a lift: it moves before what stands on it and a body lands on it relative to its speed, so it is ridden up and down in any list order; one moved by setting `pos3D` is no lift
 - 3D: a body walking down a ramp made of a turned solid box, or onto one from a flat top, follows it down and keeps the ground, so a jump pressed there works

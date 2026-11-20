@@ -35,7 +35,7 @@ const engineName = 'LittleJS';
  *  @type {string}
  *  @default
  *  @memberof Engine */
-const engineVersion = '1.30.1';
+const engineVersion = '1.31.0';
 
 /** Frames per second to update
  *  @type {number}
@@ -86,6 +86,10 @@ let timeReal = 0;
  *  @memberof Engine */
 let paused = false;
 
+// the game is held still: paused, or a level editor is open, which a game that unpauses itself on a key, from
+// gameUpdatePost as pausing is done, can not undo while the designer paints
+const enginePausedNow = ()=> paused || levelEditor.isOpen;
+
 /** Get if game is paused
  *  @return {boolean}
  *  @memberof Engine */
@@ -98,6 +102,13 @@ function setPaused(isPaused=true) { paused = isPaused; }
 
 // the update running now is frozen, paused or at a time scale of 0, so what follows game time holds
 let engineFrozenTick = false;
+
+/** Get if the game is held still in this update: paused, at a time scale of 0, or with a level editor open, which
+ *  holds the game whatever it sets paused to; a plugin's update that moves the game, a physics step or a camera,
+ *  returns while it is true
+ *  @return {boolean}
+ *  @memberof Engine */
+function engineIsFrozen() { return paused || engineFrozenTick; }
 
 /** Display frames per second, the browser's animation frames whether or not one drew, smoothed over about a
  *  third of a second, in release builds too
@@ -178,6 +189,7 @@ function engineFrameFit(unitMS)
 let timeFixedStart = 0, frameFixedStart = 0;
 let windowWidthLast = 0, windowHeightLast = 0, windowPixelRatioLast = 0;
 let engineUpdateInternal; // assigned by engineInit so engineStep can drive it
+let engineUpdating = false; // an update is running, engineStep is refused inside one
 let engineFrameScheduled = false; // a frame of the loop is asked for and has not run yet
 let engineFrameErrorLast; // the last error a release build's loop went on past, as text
 
@@ -210,6 +222,10 @@ let engineObjectsPhysicsRunning = false;
 // called with each object once its updatePhysics is done, by a plugin that keeps solids of its own in a grid, as
 // the 3D plugin does, so a solid an override moved after the engine's physics is found where it is
 let engineObjectsPhysicsDone;
+// a plugin's own objects that move before the rest each update, as a solid with no mass that moves does: the 3D
+// level shapes moved by their velocity, so what stands on one sees it where it is now, whatever the list order
+/** @type {(()=> Iterable<EngineObject>)|undefined} */
+let engineObjectsMovesFirst;
 
 // where each object that collides with solids was before this frame's moves, kept only when a one way solid is among
 // them, so a one way test goes by where both were whichever of the two updates first
@@ -363,7 +379,8 @@ class EnginePlugin
  */
 
 /** Add a new update function for a plugin
- *  - update runs on every fixed tick, paused and timeScale 0 included; a plugin that simulates should skip those
+ *  - update runs on every fixed tick, or once a display frame with setEngineVariableStep, paused, timeScale 0 and
+ *    an open level editor included; a plugin that simulates should skip those, as engineIsFrozen() says
  *  @param {PluginCallback} [update]
  *  @param {PluginCallback} [render]
  *  @param {PluginCallback} [glContextLost]
@@ -459,6 +476,9 @@ function engineLoadingScreenDraw(elapsed)
  */
 
 /** Startup LittleJS engine with your callback functions
+ *  - In a release build an error in a frame is logged, once until another comes, and the next frame goes on, so an
+ *    error now and then is passed over; a frame whose update fails draws nothing, its 2D canvas already cleared, so
+ *    the screen blinks, or stays blank when every frame fails, in Canvas2D, and the HUD blinks in WebGL
  *  @param {GameInitCallback} [gameInit] - Called once after the engine starts up, can be async for loading
  *  @param {GameCallback} [gameUpdate] - Called every frame before objects are updated (60fps), use for game logic
  *  @param {GameCallback} [gameUpdatePost] - Called after physics and objects are updated, even when paused, use for UI updates
@@ -537,10 +557,10 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
         if (!manualStepAtStart)
             frameTimeDeltaMS = engineSmoothDelta(frameTimeDeltaMS);
         audioUpdateVolume();
-        // the time keys work while the debug overlay is open, or always when debugKeysAlways is set
-        const debugKeys = debug && (debugOverlay || debugKeysAlways);
-        const debugSpeedUp   = debugKeys && keyIsDown('Equal'); // +
-        const debugSpeedDown = debugKeys && keyIsDown('Minus'); // -
+        // the time keys work as the other debug keys do, see debugKeysActive
+        const debugKeys = false && debugKeysActive();
+        const debugSpeedUp   = debugKeys && (keyIsDown('Equal') || keyIsDown('NumpadAdd')); // +, the numpad's too
+        const debugSpeedDown = debugKeys && (keyIsDown('Minus') || keyIsDown('NumpadSubtract')); // -
         const debugScale = debugSpeedUp ? 10 : debugSpeedDown ? .1 : 1;
 
         // apply time deltas
@@ -556,7 +576,7 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
             if (frameTimeDeltaUnscaledMS > 0 || manualStepAtStart)
             {
                 // frozen stands still as in the fixed step, and timeDelta keeps the last update's
-                const frozenTick = paused || !combinedScale;
+                const frozenTick = enginePausedNow() || !combinedScale;
                 if (!frozenTick)
                 {
                     timeDelta = manualStepAtStart ? combinedScale / frameRate :
@@ -571,9 +591,11 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
         {
             // paused or a time scale of 0 is frozen: it ticks on unscaled time, so the update rate stays fixed instead
             // of following however fast the display refreshes, and gameUpdatePost and input still run to leave it
-            const frozen = paused || !combinedScale;
+            const frozen = enginePausedNow() || !combinedScale;
             frameTimeBufferMS += frozen ? frameTimeDeltaUnscaledMS : frameTimeDeltaMS;
-            frameTimeBufferMS = min(frameTimeBufferMS, 50 * (frozen ? 1 : max(1, combinedScale))); // clamp min framerate
+            // clamp min framerate, and the scale's catch up at 100 times, about 300 updates a frame, so a huge scale
+            // runs behind it rather than freezing the page on millions of updates
+            frameTimeBufferMS = min(frameTimeBufferMS, 50 * (frozen ? 1 : clamp(combinedScale, 1, 100)));
 
             // apply time delta smoothing, improves smoothness of framerate in some browsers; engineStep's frames are
             // exact and wait for no refresh, held back they would leave a step under a time scale a tick short
@@ -594,12 +616,15 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
                     try
                     {
                         // read again each tick, so a pause set by the game stops the rest of this frame's catch-up ticks
-                        const frozenTick = paused || !(timeScale * debugScale);
+                        const frozenTick = enginePausedNow() || !(timeScale * debugScale);
 
                         // increment frame and update time, frozen does not advance time
                         if (!frozenTick)
                             time = timeFixedStart + (frame++ - frameFixedStart) / frameRate;
                         engineTick(frozenTick);
+                        // frozen by the game mid catch-up, the rest of the frame's ticks are dropped, one frozen
+                        // tick is enough, where a big time scale would run a hundred more
+                        frozenTick && !frozen && (frameTimeBufferMS = min(frameTimeBufferMS, 1e3 / frameRate - 1e-9));
                     }
                     finally { frameTimeBufferMS -= 1e3 / frameRate; }
                 }
@@ -704,7 +729,12 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
     }
 
     // skip setup if headless
-    if (headlessMode) return engineInitDone = startEngine([]);
+    if (headlessMode)
+    {
+        // the engine's font with no texture, so text drawn with it does nothing, as the other draws do
+        engineImageFont ||= new ImageFont(new TileInfo(vec2(), vec2(8)));
+        return engineInitDone = startEngine([]);
+    }
 
     // ensure body exists for minimal HTML where the script runs before <body> is parsed
     if (!document.body)
@@ -796,10 +826,17 @@ async function engineInit(gameInit, gameUpdate, gameUpdatePost, gameRender, game
         await engineWaitForLoads();
         engineLoads = undefined;
         await init;
-        engineUpdateInternal = engineUpdate; // engineStep only runs once the game is set up
+        // engineStep only runs once the game is set up, and not from inside an update, which would run the engine
+        // inside itself, a key held down calling it again each time till the stack runs out
+        engineUpdateInternal = (frameTimeMS)=>
+        {
+            engineUpdating = true;
+            try { engineUpdate(frameTimeMS); }
+            finally { engineUpdating = false; }
+        };
         if (engineManualStep) return;
-        if (debug) return engineUpdate(); // a debug build stops at an error, the first frame's as any
-        try { engineUpdate(); }
+        if (false) return engineUpdateInternal(); // a debug build stops at an error, the first frame's as any
+        try { engineUpdateInternal(); }
         catch (error) { engineFrameFailed(error); } // a release build goes on past it, as on any later frame
     }
 }
@@ -820,8 +857,11 @@ function engineUpdateCanvas()
         // set canvas fixed size
         mainCanvasSize.set(canvasFixedSize.x, canvasFixedSize.y);
 
-        // fit to window using css width and height
-        const innerAspect = innerWidth / innerHeight;
+        // fit to what holds it using css width and height: the box its percentages fill, its offset parent, the
+        // root element given to engineInit when that is positioned, by its own shape, the window when it is the body
+        const parent = mainCanvas.offsetParent, own = parent && parent !== document.body &&
+            parent.clientWidth > 0 && parent.clientHeight > 0;
+        const innerAspect = own ? parent.clientWidth / parent.clientHeight : innerWidth / innerHeight;
         const fixedAspect = canvasFixedSize.x / canvasFixedSize.y;
         const w = innerAspect < fixedAspect ? '100%' : '';
         const h = innerAspect < fixedAspect ? '' : '100%';
@@ -906,7 +946,8 @@ function engineUpdateCanvas()
 }
 
 // a release build goes on past an error in a frame, a frozen game is the worst a player can get; an error is logged
-// when it is not the last one again, one every frame would flood the console
+// when it is not the last one again, one every frame would flood the console; one every frame still leaves the
+// screen as it was, the frame that failed not drawn, which engineInit's doc says
 function engineFrameFailed(error)
 {
     const text = String(error);
@@ -932,7 +973,7 @@ function engineScheduleFrame()
     {
         engineFrameScheduled = false;
         if (engineManualStep) return;
-        if (debug) return engineUpdateInternal(frameTimeMS); // a debug build stops at an error, where it shows it
+        if (false) return engineUpdateInternal(frameTimeMS); // a debug build stops at an error, where it shows it
         try { engineUpdateInternal(frameTimeMS); }
         catch (error) { engineFrameFailed(error); }
     };
@@ -951,6 +992,8 @@ const engineStepMaxFrames = 36000;
  *  Respects paused exactly as the normal update loop does
  *  Does nothing until the promise engineInit returns has resolved, which waits for the images, and the sounds
  *  gameInit made, to load; a test hook steps from that promise's then
+ *  - Not from inside a frame, its update, render or a plugin's callbacks, which would run the engine inside itself: a
+ *    debug build asserts and a release build does nothing; call it after, from a timer or a promise
  *  @param {number} [frames] - frames of 1/60 of a second to advance, max 36000; timeScale sets how many fixed
  *  updates they run, as in the normal loop, one each at timeScale 1
  *  @example
@@ -965,9 +1008,10 @@ function engineStep(frames=1)
     false&&ASSERT(engineManualStep,
         'engineStep requires setEngineManualStep(true)');
     false&&ASSERT(engineUpdateInternal, 'engineStep requires engineInit to complete');
+    false&&ASSERT(!engineUpdating, 'engineStep can not be called from inside an update or a render, call it after, as from a timer');
     // runtime guard so release builds (where the asserts are stripped) can't
-    // start a second requestAnimationFrame chain or call an undefined update
-    if (!engineManualStep || !engineUpdateInternal) return;
+    // start a second requestAnimationFrame chain, call an undefined update, or run one inside another
+    if (!engineManualStep || !engineUpdateInternal || engineUpdating) return;
     false&&ASSERT(Number.isInteger(frames) && frames >= 0 && frames <= engineStepMaxFrames,
         'engineStep requires a whole frame count from 0 to ' + engineStepMaxFrames);
     frames = min(frames, engineStepMaxFrames); // release has no asserts, don't freeze
@@ -1009,22 +1053,26 @@ function engineObjectsUpdate()
 
     // update physics before object update, each solid put where it moved to in the grid, for the movers after it;
     // the grid is let go even when a callback throws, so an updatePhysics called before the next update checks all
-    // a one way solid with no mass moves first, nothing pushes it, so what lands on it or passes up through it sees it
-    // where it is now and where it was, whatever the render order
-    const oneWayFirst = (o)=> o.oneWay && !o.mass;
+    // a solid with no mass that moves, an elevator, and a one way one, moves first, nothing pushes it, so what lands
+    // on it, rides it or passes up through it sees it where it is now and where it was, whatever the render order
+    const first = new Set(engineObjectsCollide.filter((o)=> !o.mass && !o.parent &&
+        (o.oneWay || o.isSolid && (o.velocity.x || o.velocity.y))));
+    if (engineObjectsMovesFirst)
+        for (const o of engineObjectsMovesFirst())
+            o.parent || first.add(o);
     engineObjectsPhysicsRunning = true;
     try
     {
-        if (engineObjectsOneWayStart)
+        if (first.size)
             for (const o of engineObjects)
-                if (!o.parent && !o.destroyed && oneWayFirst(o))
+                if (!o.parent && !o.destroyed && first.has(o))
                 {
                     o.updatePhysics();
                     engineCollideGrid?.built && engineCollideGridPlace(engineCollideGrid.built, o);
                     engineObjectsPhysicsDone?.(o);
                 }
         for (const o of engineObjects)
-            if (!o.parent && !o.destroyed && !(engineObjectsOneWayStart && oneWayFirst(o)))
+            if (!o.parent && !o.destroyed && !first.has(o))
             {
                 o.updatePhysics();
                 engineCollideGrid?.built && engineCollideGridPlace(engineCollideGrid.built, o);
@@ -1091,25 +1139,37 @@ function engineObjectsUpdate()
 // sorted and most frames change none
 function engineObjectsSort()
 {
+    // a renderOrder set to NaN after construction, as renderOrder = -pos.y can be, leaves the list unsorted
+    false&&ASSERT(!engineObjects.length || isNumber(engineObjects[0].renderOrder), 'an object renderOrder is not a number',
+        engineObjects[0]);
     for (let i = engineObjects.length; --i > 0;)
+    {
+        false&&ASSERT(isNumber(engineObjects[i].renderOrder), 'an object renderOrder is not a number', engineObjects[i]);
         if (engineObjects[i].renderOrder < engineObjects[i-1].renderOrder)
             return void engineObjects.sort((a,b)=> a.renderOrder - b.renderOrder);
+    }
 }
 
 /** Destroy and remove all objects
  *  - This can be used to clear out all objects when restarting a level
- *  - Objects with the persistent flag set are left alone, for things that outlive a level
+ *  - Objects with the persistent flag set are left alone, for things that outlive a level, but a child goes with a
+ *    parent that is not persistent, persistent or not: let go of it first to keep it
  *  - Objects can override their destroy function to do cleanup or stick around
+ *  - UI objects and tweens are not engine objects and stay; uiSystem.destroyObjects() and tweenStopAll() end them
  *  @param {boolean} [immediate] - true removes attached effects like particle emitters at once, false lets them finish first
  *  @memberof Engine */
 function engineObjectsDestroy(immediate=true)
 {
+    // a destroy that throws, a Box2D object whose endContact did, leaves the rest to go, its error thrown after
+    let error;
     for (const o of engineObjects)
-        o.parent || o.persistent || o.destroy(immediate);
+        try { o.parent || o.persistent || o.destroy(immediate); }
+        catch (e) { error ||= {e}; }
     engineObjects = engineObjects.filter(o=>!o.destroyed);
     // and the solid lists, so a pause menu that clears the world does not hold what it cleared until play goes on
     engineObjectsCollide = engineObjectsCollide.filter(o=>!o.destroyed);
     engineObjectsCollideStaticLast = engineObjectsCollideStaticLast.filter(o=>!o.destroyed);
+    if (error) throw error.e;
 }
 
 /** Collects all object within a given area
@@ -1119,7 +1179,8 @@ function engineObjectsDestroy(immediate=true)
  *  @param {Vector2|number} [size] - Diameter of a circle if a number, full size of a rectangle if a Vector2,
  *                                   left out or 0 the objects that overlap the point at pos
  *  @param {Array<EngineObject>} [objects=engineObjects] - List of objects to check
- *  @param {boolean} [testCenters] - Test only each object's center, a little faster, and ignores object sizes
+ *  @param {boolean} [testCenters] - Test only each object's center, a little faster, and ignores object sizes; it
+ *    needs an area, with no size it finds nothing, as no center is inside a point
  *  @return {Array<EngineObject>} - List of collected objects
  *  @memberof Engine */
 function engineObjectsCollect(pos, size, objects=engineObjects, testCenters=false)
@@ -1178,6 +1239,8 @@ function engineObjectsCallback(pos, size, callbackFunction, objects=engineObject
 
 /** Return a list of objects intersecting a ray, objects destroyed this frame left out
  *  - Only objects with collideRaycast set are hit, which setCollision turns on
+ *  - The hits are in the order of the list given, not by distance; sort them by distance from start for the
+ *    nearest, where engineObjectsRaycast3D gives them nearest first
  *  @param {Vector2} start
  *  @param {Vector2} end
  *  @param {Array<EngineObject>} [objects=engineObjects] - List of objects to check
@@ -1227,6 +1290,7 @@ function ASSERT          (){}
 function LOG             (){}
 function debugInit       (){}
 function debugUpdate     (){}
+function debugKeysActive (){ return false; }
 function debugRender     (){}
 function debugRect       (){}
 function debugPoly       (){}
@@ -1239,6 +1303,7 @@ function debugClear      (){}
 function debugScreenshot (){}
 function debugShowErrors(){}
 function setDebugOverlay(){}
+function debugShaderUniformName(){}
 function debugProtectConstant(o){ return Object.freeze(o); } // a color constant stays as it is, in release too
 
 // the tweakables and the level editor are debug only
@@ -1251,7 +1316,7 @@ function tweakEngineDefaults(){}
 const editorEdit2DRelease =
 {
     map: undefined, layer: undefined, hover: undefined, get objects() { return []; }, get selection() { return new Set; },
-    paint(){ return false; }, changeObjects(){ return false; }, strokeEnd(){}, strokeCancel(){}, bulk(){},
+    paint(){ return false; }, changeObjects(){ return false; }, setProperty(){}, strokeEnd(){}, strokeCancel(){}, bulk(){},
     undo(){ return false; }, toJSON(){ return ''; },
 };
 class LevelEditor
@@ -1295,6 +1360,7 @@ function editor3DCameraBegin(){}
 function editor3DCameraEnd(){}
 function editor3DLevelLoaded(){}
 function editor3DObjectMade(){}
+function editor3DLevelMade(){}
 
 /**
  * LittleJS Math Classes and Functions
@@ -1442,7 +1508,7 @@ function lerp(valueA, valueB, percent)
 function percentLerp(value, percentA, percentB, lerpA, lerpB)
 { return lerp(lerpA, lerpB, percent(value, percentA, percentB)); }
 
-/** Returns signed wrapped distance between the two values passed in
+/** Returns signed wrapped distance between the two values passed in, A minus B, the shortest way round
  *  @param {number} valueA
  *  @param {number} valueB
  *  @param {number} [wrapSize]
@@ -1465,7 +1531,7 @@ function distanceWrap(valueA, valueB, wrapSize=1)
 function lerpWrap(valueA, valueB, percent, wrapSize=1)
 { return valueA + clamp(percent) * distanceWrap(valueB, valueA, wrapSize); }
 
-/** Returns signed wrapped distance between the two angles passed in
+/** Returns signed wrapped distance between the two angles passed in, A minus B, the shortest way round
  *  @param {number} angleA
  *  @param {number} angleB
  *  @return {number}
@@ -1533,21 +1599,21 @@ function isOverlapping(posA, sizeA, posB, sizeB=vec2())
  *  @memberof Math */
 function isIntersecting(start, end, pos, size)
 {
-    // Liang-Barsky algorithm
-    const boxMin = pos.subtract(size.scale(.5));
-    const boxMax = boxMin.add(size);
-    const delta = end.subtract(start);
-    const a = start.subtract(boxMin);
-    const b = start.subtract(boxMax);
-    const p = [-delta.x, delta.x, -delta.y, delta.y];
-    const q = [a.x, -b.x, a.y, -b.y];
+    // Liang-Barsky algorithm, in plain numbers, as a raycast asks it of every object
+    const minX = pos.x - size.x * .5, minY = pos.y - size.y * .5;
+    const maxX = minX + size.x, maxY = minY + size.y;
+    const dx = end.x - start.x, dy = end.y - start.y;
+    const ax = start.x - minX, ay = start.y - minY, bx = start.x - maxX, by = start.y - maxY;
     let tMin = 0, tMax = 1;
+    // each side in turn, the last first as before, narrowing the part of the line inside
     for (let i = 4; i--;)
     {
-        if (p[i])
+        const p = i === 3 ? dy : i === 2 ? -dy : i === 1 ? dx : -dx;
+        const q = i === 3 ? -by : i === 2 ? ay : i === 1 ? -bx : ax;
+        if (p)
         {
-            const t = q[i] / p[i];
-            if (p[i] < 0)
+            const t = q / p;
+            if (p < 0)
             {
                 if (t > tMax) return false;
                 tMin = max(t, tMin);
@@ -1558,7 +1624,7 @@ function isIntersecting(start, end, pos, size)
                 tMax = min(t, tMax);
             }
         }
-        else if (q[i] < 0)
+        else if (q < 0)
             return false;
     }
 
@@ -1691,6 +1757,7 @@ function isArray(a) { return Array.isArray(a); }
 
 /**
  * Casts a ray and returns position of the first collision found, or undefined if none are found
+ * - A ray of no length tests the cell it starts in, and a hit there is its start, with a normal of 0
  * @param {Vector2} posStart
  * @param {Vector2} posEnd
  * @param {LineTestFunction} testFunction - Check if colliding
@@ -1708,7 +1775,14 @@ function lineTest(posStart, posEnd, testFunction, normal)
     const dx = posEnd.x - posStart.x;
     const dy = posEnd.y - posStart.y;
     const totalLength = (dx*dx + dy*dy)**.5;
-    if (!totalLength) return;
+    if (!totalLength)
+    {
+        // a ray of no length is where it starts, a hit in the cell it starts in, with no way it came from, as
+        // engineObjectsRaycast and 3D picking hit what they start in
+        if (!testFunction(posStart.floor())) return;
+        normal && normal.set(0, 0);
+        return posStart.copy();
+    }
 
     // current integer cell we are in, the one below a whole start heading down the grid, which it goes into
     const pos = posStart.floor();
@@ -1904,9 +1978,12 @@ function randColor(colorA=new Color, colorB=new Color(0,0,0,1), linear=false)
 class RandomGenerator
 {
     /** Create a random number generator with the seed passed in
-     *  @param {number} [seed] - Starting seed, 0 as an integer uses the default seed */
+     *  @param {number} [seed] - Starting seed, a whole number, 0 as an integer uses the default seed; a fraction is
+     *  cut to a whole number, so Math.random() is always 0, the default, use randInt(1e9) for a seed of chance */
     constructor(seed = 123456789)
     {
+        false&&ASSERT(!isNumber(seed) || seed % 1 === 0 || abs(seed) >= 1,
+            'RandomGenerator: a seed is a whole number, a fraction like Math.random() is always the same seed', seed);
         /** @property {number} - random seed, set it to reseed */
         this.seed = seed;
     }
@@ -2037,9 +2114,11 @@ class RandomGenerator
 function vec2(x=0, y) { return new Vector2(x, y ?? x); }
 
 /**
- * Check if object is a valid Vector2
+ * Check if object is a valid Vector2, a type guard in TypeScript
+ *  - One with a component that is not a number is not valid and reads as not one, and TypeScript takes it as not
+ *    one in the else branch too
  * @param {any} v
- * @return {boolean}
+ * @return {v is Vector2}
  * @memberof Math */
 function isVector2(v) { return v instanceof Vector2 && v.isValid(); }
 
@@ -2293,6 +2372,8 @@ class Vector2
 
 /**
  * Create a color object with RGBA values, white by default
+ *  - Each value is 0 to 1, not 0 to 255: rgb(1, .5, 0) is orange; 2D draws clamp each to 1, while a 3D tint or
+ *    light color above 1 is brighter
  * @param {number} [r=1] - red
  * @param {number} [g=1] - green
  * @param {number} [b=1] - blue
@@ -2302,7 +2383,7 @@ class Vector2
  */
 function rgb(r, g, b, a)
 {
-    debug && (r > 2 || g > 2 || b > 2) && colorRangeWarn('rgb(255, 0, 0) is rgb(1, 0, 0)');
+    false && (r > 2 || g > 2 || b > 2) && colorRangeWarn('rgb(255, 0, 0) is rgb(1, 0, 0)');
     return new Color(r, g, b, a);
 }
 
@@ -2318,22 +2399,26 @@ function colorRangeWarn(example)
 
 /**
  * Create a color object with HSLA values, white by default
- * @param {number} [h=0] - hue
- * @param {number} [s=0] - saturation
- * @param {number} [l=1] - lightness
- * @param {number} [a=1] - alpha
+ *  - Each value is 0 to 1, the hue too, not degrees or percents: hsl(1/3, 1, .5) is green, which CSS writes
+ *    hsl(120deg 100% 50%); the hue wraps around, so 1 is red again and 1.25 the same as .25
+ * @param {number} [h=0] - hue, 0 to 1 around the color wheel from red
+ * @param {number} [s=0] - saturation, 0 to 1
+ * @param {number} [l=1] - lightness, 0 to 1
+ * @param {number} [a=1] - alpha, 0 to 1
  * @return {Color}
  * @memberof Math */
 function hsl(h, s, l, a)
 {
-    debug && (s > 2 || l > 2) && colorRangeWarn('hsl(.5, 100, 50) is hsl(.5, 1, .5)');
+    false && (s > 2 || l > 2) && colorRangeWarn('hsl(.5, 100, 50) is hsl(.5, 1, .5)');
     return new Color().setHSLA(h, s, l, a);
 }
 
 /**
- * Check if object is a valid Color
+ * Check if object is a valid Color, a type guard in TypeScript
+ *  - One with a component that is not a number is not valid and reads as not one, and TypeScript takes it as not
+ *    one in the else branch too
  * @param {any} c
- * @return {boolean}
+ * @return {c is Color}
  * @memberof Math */
 function isColor(c) { return c instanceof Color && c.isValid(); }
 
@@ -2352,7 +2437,7 @@ function ASSERT_COLOR_VALID(c) { false&&ASSERT(isColor(c), 'expected a color', c
  */
 class Color
 {
-    /** Create a color with the rgba components passed in, white by default
+    /** Create a color with the rgba components passed in, white by default, each 0 to 1, as rgb takes them
      *  @param {number} [r] - red
      *  @param {number} [g] - green
      *  @param {number} [b] - blue
@@ -2457,11 +2542,12 @@ class Color
             c.a*p + this.a*(1-p));
     }
 
-    /** Sets this color given a hue, saturation, lightness, and alpha
-     * @param {number} [h] - hue
-     * @param {number} [s] - saturation
-     * @param {number} [l] - lightness
-     * @param {number} [a] - alpha
+    /** Sets this color given a hue, saturation, lightness, and alpha, each 0 to 1 as hsl takes them
+     *  - The hue is not degrees: setHSLA(1/3, 1, .5) is green, and it wraps around, so 120 is red
+     * @param {number} [h] - hue, 0 to 1 around the color wheel from red
+     * @param {number} [s] - saturation, 0 to 1
+     * @param {number} [l] - lightness, 0 to 1
+     * @param {number} [a] - alpha, 0 to 1
      * @return {Color} */
     setHSLA(h=0, s=0, l=1, a=1)
     {
@@ -2664,6 +2750,9 @@ const MAGENTA = debugProtectConstant(rgb(1,0,1));
  * @namespace Utilities
  */
 
+// how far a timer may be short of its end and count as elapsed, far below a frame, more than time's rounding
+const timerTolerance = 1e-6;
+
 /**
  * Timer object tracks how long has passed since it was set
  * @memberof Engine
@@ -2718,15 +2807,21 @@ class Timer
 
     /** Returns true if set and has not elapsed
      * @return {boolean} */
-    active() { return this.getGlobalTime() < this.time; }
+    active() { return this.getGlobalTime() + timerTolerance < this.time; }
 
-    /** Returns true if set and elapsed
+    /** Returns true if set and elapsed, on the frame it ends though the time it was set at and its seconds round
+     *  apart, so a timer of a whole number of frames takes that many
      * @return {boolean} */
-    elapsed() { return this.getGlobalTime() >= this.time; }
+    elapsed() { return this.getGlobalTime() + timerTolerance >= this.time; }
 
-    /** Get how long since elapsed, returns 0 if not set (returns negative if currently active)
+    /** Get how long since elapsed, returns 0 if not set (returns negative if currently active), 0 on the frame it
+     *  ends, as elapsed() reads it
      * @return {number} */
-    get() { return this.isSet()? this.getGlobalTime() - this.time : 0; }
+    get()
+    {
+        const since = this.isSet() ? this.getGlobalTime() - this.time : 0;
+        return abs(since) < timerTolerance ? 0 : since;
+    }
 
     /** Get percentage elapsed based on time it was set to, returns 0 if not set.
      *  Zero-duration timers report 1 (already elapsed).
@@ -2734,7 +2829,7 @@ class Timer
     getPercent()
     {
         if (!this.isSet()) return 0;
-        if (!(this.setTime > 0)) return 1;
+        if (!(this.setTime > 0) || this.elapsed()) return 1; // as elapsed() reads it, on the frame it ends
         if (this.setTime === Infinity) return 0; // a timer that never ends has not begun, not Infinity / Infinity
         return 1 - percent(this.time - this.getGlobalTime(), 0, this.setTime);
     }
@@ -2764,9 +2859,10 @@ class Timer
  *  @memberof Utilities */
 function formatTime(t)
 {
+    t = isFinite(t) ? t : 0; // no time shows 0:00
     const signStr = t <= -1 ? '-' : ''; // no sign when it shows 0:00
     t = Math.trunc(abs(t)); // not |0, which wraps past 2^31 seconds
-    return signStr + (t/60|0) + ':' + (t%60<10?'0':'') + t%60;
+    return signStr + Math.trunc(t/60) + ':' + (t%60<10?'0':'') + t%60;
 }
 
 /** Fetches a JSON file from a URL and returns the parsed JSON object. Must be used with await!
@@ -2896,6 +2992,19 @@ function shareURL(title, url, callback)
 
 /** Read save data from local storage
  *  - The result has the type of defaultSaveData, or any when there is none
+ *  - A top level value whose default is a vec2, a vec3 or a Color, a value with a copy method and only numbers,
+ *    comes back as a new one, where JSON keeps only its numbers, a number not saved or not finite the default's;
+ *    with nothing saved any value with a copy method is a copy of the default, so changing it leaves the default
+ *  - A value whose default is a number, at the top level or inside an array or object default, comes back as the
+ *    default when what was saved is not a number, as for Infinity, which JSON writes as null
+ *  - An array or object default not saved comes back as a copy, a vec2 or a Color in it too, so changing it leaves
+ *    the default; a key a nested object default has that the save has not, a setting added since, is the default's,
+ *    and a saved array is the array that was saved, shorter or longer than its default
+ *  - Inside an array or object a vec2 or a Color comes back as one too, from its saved numbers, and an object or
+ *    array default saved as anything that is not one, an older save's number or a null, comes back as the default, so
+ *    a value that may be none is best a default of null, but a vec2 or a Color, which over a null default comes back
+ *    as plain numbers with no methods, is best its own default with a flag beside it; a value of a
+ *    class with no copy method is the default's own when not saved, and as JSON gave it once saved
  *  @template {Object<string, any>} [T=any]
  *  @param {string} saveName - unique name for the game/save
  *  @param {T} [defaultSaveData] - default values, result is {...default, ...loaded} so this must be an object
@@ -2925,7 +3034,95 @@ function readSaveData(saveName, defaultSaveData)
         }
     }
     catch { false&&LOG('readSaveData: localStorage unavailable — using defaults'); }
-    return { .../** @type {object} */ (defaultSaveData), ...loadedData };
+    const result = { .../** @type {object} */ (defaultSaveData), ...loadedData };
+    // an array or plain object taken from the defaults is a copy, so the game's changes do not write into them
+    for (const key in defaultSaveData ?? {})
+        Object.prototype.hasOwnProperty.call(loadedData, key) || (result[key] = saveDataCopy(defaultSaveData[key]));
+    // a vec2 or a Color written as JSON is only its numbers, made one again from a copy of its default, taking only
+    // the numbers the copy has, so a saved key of another name, a null JSON wrote for Infinity, or a __proto__ key,
+    // changes nothing; a value with more than numbers, a Matrix4, stays as JSON gave it; a saved value that is not
+    // an object at all, a string or a number from an older save format, is the default, never handed back as it is
+    for (const key in defaultSaveData ?? {})
+    {
+        const value = defaultSaveData[key];
+        if (typeof value === 'number' || saveDataPlain(value))
+        {
+            // a number saved as anything else, the null JSON writes for Infinity or NaN, is the default, so a best
+            // time of Infinity saved before the first win can still be beaten, in an array or object of them too
+            Object.prototype.hasOwnProperty.call(loadedData, key) &&
+                (result[key] = saveDataNumbers(value, loadedData[key]));
+            continue;
+        }
+        if (!value || typeof value !== 'object' || typeof value.copy !== 'function') continue;
+        const copy = value.copy(), fields = Object.keys(copy), saved = loadedData[key];
+        if (!Object.prototype.hasOwnProperty.call(loadedData, key))
+            result[key] = copy; // the default's own object is the game's, or frozen like WHITE
+        else if (fields.every((field)=> typeof copy[field] === 'number') && saved && typeof saved === 'object' &&
+            Object.prototype.toString.call(saved) === '[object Object]')
+        {
+            for (const field of fields)
+                Number.isFinite(saved[field]) && (copy[field] = saved[field]);
+            result[key] = copy;
+        }
+        else if (!saved || typeof saved !== 'object' || isArray(saved))
+            result[key] = copy;
+    }
+    return result;
+}
+
+// an array or an object of plain values, as JSON makes, not a vec2 or a Color, which have a copy of their own
+const saveDataPlain = (v)=> isArray(v) ||
+    !!v && typeof v === 'object' && Object.getPrototypeOf(v) === Object.prototype;
+
+// a copy of a default's arrays and plain objects, all the way down, and of a value with a copy method in them, a
+// vec2 or a Color, frozen like WHITE too; anything else is itself
+function saveDataCopy(value)
+{
+    if (isArray(value)) return value.map(saveDataCopy);
+    if (!saveDataPlain(value))
+        return value && typeof value === 'object' && typeof value.copy === 'function' ? value.copy() : value;
+    const copy = {};
+    for (const key of Object.keys(value))
+        key === '__proto__' || (copy[key] = saveDataCopy(value[key]));
+    return copy;
+}
+
+// a saved value over its default: where the default has a number, at the top or at an index or key inside it, a
+// saved value that is not one, the null JSON writes for Infinity, is the default's number; a key a nested object's
+// default has and the save does not, a setting added after the save, is a copy of the default's; a saved array is
+// the array, as long as it was saved; the rest is as saved
+function saveDataNumbers(fallback, saved)
+{
+    if (typeof fallback === 'number')
+        return typeof saved === 'number' ? saved : fallback;
+    if (fallback && typeof fallback === 'object' && !saveDataPlain(fallback) && typeof fallback.copy === 'function')
+    {
+        // a vec2 or a Color in an array or object made one again from its numbers, as one at the top level is
+        const copy = fallback.copy();
+        if (!copy || typeof copy !== 'object') return saved;
+        const fields = Object.keys(copy);
+        if (saved && typeof saved === 'object' && !isArray(saved) && fields.every((f)=> typeof copy[f] === 'number'))
+            for (const field of fields)
+                Number.isFinite(saved[field]) && (copy[field] = saved[field]);
+        else if (saved && typeof saved === 'object' && !isArray(saved))
+            return saved; // one with more than numbers stays as JSON gave it
+        return copy; // and a list saved for it is the default, as at the top level
+    }
+    if (!saveDataPlain(fallback))
+        return saved;
+    // an object or array default saved as a number, a string or null, an older save's form, is the default
+    if (!saved || typeof saved !== 'object')
+        return saveDataCopy(fallback);
+    if (isArray(fallback) !== isArray(saved))
+        return saved;
+    for (const key of Object.keys(saved))
+        key !== '__proto__' && Object.prototype.hasOwnProperty.call(fallback, key) &&
+            (saved[key] = saveDataNumbers(fallback[key], saved[key]));
+    if (!isArray(fallback))
+        for (const key of Object.keys(fallback))
+            key === '__proto__' || Object.prototype.hasOwnProperty.call(saved, key) ||
+                (saved[key] = saveDataCopy(fallback[key]));
+    return saved;
 }
 
 /** Write save data to local storage, an object as readSaveData gives it back
@@ -3492,7 +3689,8 @@ let touchGamepadEnable = false;
 /** True if touches outside the gamepad controls should still drive mouse/touch input
  *  - When false (the default), enabling the touch gamepad suppresses touch-to-mouse input entirely
  *  - Set true to also pass touches outside the controls through to the game as mouse/touch input
- *  - Touches on the gamepad controls never drive the mouse regardless of this setting
+ *  - Touches on the gamepad controls never drive the mouse regardless of this setting; one beside a control, in the
+ *    corner around it, is the game's, and while paused only one on the center button presses start
  *  @type {boolean}
  *  @default
  *  @memberof Settings */
@@ -3501,7 +3699,8 @@ let touchGamepadPassthrough = false;
 /** True if a pinch of two fingers turns the mouse wheel: touchPinch is added to mouseWheel, so what zooms with
  *  the wheel zooms with a pinch, the mouse is between the two fingers, and a second finger lets go of the button
  *  the first pressed, since a pinch is not a drag; turn it off for a game with its own use for two fingers, the
- *  first finger stays the mouse and touchPinch can still be read
+ *  first finger stays the mouse and touchPinch can still be read; a trackpad pinch, a wheel with Ctrl, is a pinch
+ *  too while it is on, and the browser's zoom while it is off
  *  @type {boolean}
  *  @default
  *  @memberof Settings */
@@ -3517,6 +3716,8 @@ let mouseScreenTransform;
 
 /**
  * @callback MouseScreenTransform - Where on the screen the picture shown at a screen position is drawn
+ *  - It works in canvas pixels from the canvas's top left corner, before the half pixel mousePosScreen takes off
+ *    to be the pixel's number, so a pixel's middle is at its number plus .5
  * @param {Vector2} pos - The mouse or touch position on the screen
  * @return {Vector2}
  * @memberof Settings
@@ -3524,7 +3725,8 @@ let mouseScreenTransform;
 
 /** Size of center button if touch gamepad should have start button in the center
  *  - Prevents activating when pressed near virtual stick or face buttons
- *  - When the game is paused, any touch will press the button
+ *  - When the game is paused, any touch will press the button, but with touchGamepadPassthrough only the button,
+ *    so the rest of the screen is the game's menu
  *  - Measured in viewport CSS pixels
  *  @type {number}
  *  @default
@@ -3676,7 +3878,11 @@ function setCameraPos(pos)
 /** Set angle of camera in world space
  *  @param {number} angle
  *  @memberof Settings */
-function setCameraAngle(angle) { cameraAngle = angle; }
+function setCameraAngle(angle)
+{
+    false&&ASSERT(isNumber(angle) && Number.isFinite(angle), 'camera angle must be a finite number');
+    cameraAngle = angle;
+}
 
 /** Set scale of camera in world space
  *  @param {number} scale - Pixels per world unit, above 0
@@ -3690,27 +3896,42 @@ function setCameraScale(scale)
 /** Set how far a full camera shake moves the view, in world units
  *  @param {number} distance
  *  @memberof Settings */
-function setCameraShakeDistance(distance) { cameraShakeDistance = distance; }
+function setCameraShakeDistance(distance)
+{
+    false&&ASSERT(isNumber(distance) && distance >= 0, 'camera shake distance must be 0 or more');
+    cameraShakeDistance = distance;
+}
 
 /** Set how far a full camera shake turns the view, in radians
  *  @param {number} angle
  *  @memberof Settings */
-function setCameraShakeAngle(angle) { cameraShakeAngle = angle; }
+function setCameraShakeAngle(angle)
+{
+    false&&ASSERT(isNumber(angle) && angle >= 0, 'camera shake angle must be 0 or more');
+    cameraShakeAngle = angle;
+}
 
 /** Set how much camera shake fades each second
  *  @param {number} decay
  *  @memberof Settings */
-function setCameraShakeDecay(decay) { cameraShakeDecay = decay; }
+function setCameraShakeDecay(decay)
+{
+    false&&ASSERT(isNumber(decay) && decay >= 0, 'camera shake decay must be 0 or more, below 0 it grows forever');
+    cameraShakeDecay = decay;
+}
 
 /** Set scale applied to engine time
  *  - 0 freezes the game like a pause, gameUpdatePost and input still run so the game can set it back
- *  - Above 1 the fixed step runs that many updates each frame, so a large scale costs as many updates
- *  @param {number} scale - 0 or more
+ *  - Above 1 the fixed step runs that many updates each frame, so a large scale costs as many updates; past 100,
+ *    about 300 updates a frame, a frame that falls behind does not catch up, so the page never freezes on a huge one,
+ *    and a pause set during a catch up drops the rest of that frame's ticks
+ *  @param {number} scale - 0 or more, finite
  *  @memberof Settings */
 function setTimeScale(scale)
 {
-    false&&ASSERT(scale >= 0, 'time scale must be 0 or more');
-    timeScale = max(0, scale); // a negative scale would build a debt of time the game then waits out
+    false&&ASSERT(scale >= 0 && scale < Infinity, 'time scale must be 0 or more and finite');
+    // a negative scale would build a debt of time the game then waits out, an endless one never end its frame
+    Number.isFinite(scale) && (timeScale = max(0, scale));
 }
 
 /** Set if tiles should be colorized when using canvas2d
@@ -3895,8 +4116,9 @@ function setGLEnable(enable)
  *  @memberof Settings */
 function setGLCircleSides(sides)
 {
-    false&&ASSERT(isNumber(sides) && sides >= 3, 'circles need at least 3 sides');
-    glCircleSides = sides;
+    false&&ASSERT(isNumber(sides) && sides >= 3 && sides < Infinity, 'circles need at least 3 sides, and not Infinity');
+    // whole, as the rings are kept by their count, and more could not be seen, and Infinity would never finish
+    glCircleSides = clamp(round(sides), 3, 1e4);
 }
 
 /** Set default size of tiles in pixels
@@ -3916,7 +4138,11 @@ function setTileDefaultPadding(padding) { tileDefaultPadding = padding; }
 /** Default amount of pixels smaller to draw tiles to prevent neighbor bleeding
  *  @param {number} bleed
  *  @memberof Settings */
-function setTileDefaultBleed(bleed) { tileDefaultBleed = bleed; }
+function setTileDefaultBleed(bleed)
+{
+    false&&ASSERT(isNumber(bleed) && bleed >= 0, 'tile bleed must be 0 or more');
+    tileDefaultBleed = bleed;
+}
 
 /** Set if collisions are enabled, between objects and with tiles
  *  @param {boolean} enable
@@ -3926,7 +4152,11 @@ function setEnablePhysicsSolver(enable) { enablePhysicsSolver = enable; }
 /** Set default object mass for collision calculations
  *  @param {number} mass
  *  @memberof Settings */
-function setObjectDefaultMass(mass) { objectDefaultMass = mass; }
+function setObjectDefaultMass(mass)
+{
+    false&&ASSERT(isNumber(mass) && mass >= 0, 'object mass must be 0 or more');
+    objectDefaultMass = mass;
+}
 
 /** Set the fraction of velocity objects keep each frame, 1 keeps all of it, 0 stops at once
  *  @param {number} damp
@@ -3952,7 +4182,11 @@ function setObjectDefaultAngleDamping(damp)
 /** Set how much to bounce when a collision occurs
  *  @param {number} restitution
  *  @memberof Settings */
-function setObjectDefaultRestitution(restitution) { objectDefaultRestitution = restitution; }
+function setObjectDefaultRestitution(restitution)
+{
+    false&&ASSERT(isNumber(restitution) && restitution >= 0, 'object restitution must be 0 or more');
+    objectDefaultRestitution = restitution;
+}
 
 /** Set the fraction of sliding speed objects keep each frame on the ground, 1 is no friction, 0 stops at once
  *  @param {number} friction
@@ -3984,7 +4218,11 @@ function setGravity(newGravity)
 /** Set the scale for the emit rate of particles, 0 disables particle emitters
  *  @param {number} scale
  *  @memberof Settings */
-function setParticleEmitRateScale(scale) { particleEmitRateScale = scale; }
+function setParticleEmitRateScale(scale)
+{
+    false&&ASSERT(isNumber(scale) && scale >= 0, 'particle emit rate scale must be 0 or more');
+    particleEmitRateScale = scale;
+}
 
 /** Set if gamepads are enabled
  *  @param {boolean} enable
@@ -4041,7 +4279,7 @@ function setTouchGamepadPassthrough(passthrough) { touchGamepadPassthrough = pas
 
 /** Set if touch gamepad should have start button in the center
  *  - Set size to enable the center button
- *  - When the game is paused, any touch will press the button
+ *  - When the game is paused, any touch will press the button, but with touchGamepadPassthrough only the button
  *  @param {number} size
  *  @memberof Settings */
 function setTouchGamepadCenterButtonSize(size) { touchGamepadCenterButtonSize = size; }
@@ -4145,7 +4383,8 @@ function setSoundIgnoreSilentSwitch(ignore)
  *  @memberof Settings */
 function setSoundVolume(volume)
 {
-    false&&ASSERT(isNumber(volume) && abs(volume) < Infinity, 'setSoundVolume: volume must be a finite number, 1 is full', volume);
+    false&&ASSERT(isNumber(volume) && volume >= 0 && volume < Infinity,
+        'setSoundVolume: volume must be a finite number, 0 or more, 1 is full', volume);
     soundVolume = volume;
     audioUpdateVolume(); // update gain immediately, sound off or not
 }
@@ -4163,12 +4402,12 @@ function setSoundDefaultTaper(taper) { soundDefaultTaper = taper; }
 /** Set if all sound pauses while the page is hidden, taking effect at once
  *  @param {boolean} pause
  *  @memberof Settings */
-function setSoundPauseWhenHidden(pause) { soundPauseWhenHidden = pause; audioPageChange(); }
+function setSoundPauseWhenHidden(pause) { soundPauseWhenHidden = pause; audioPageChange(); audioPageSettingChange?.(); }
 
 /** Set if all sound pauses while the window does not have focus, taking effect at once
  *  @param {boolean} pause
  *  @memberof Settings */
-function setSoundPauseWhenBlurred(pause) { soundPauseWhenBlurred = pause; audioPageChange(); }
+function setSoundPauseWhenBlurred(pause) { soundPauseWhenBlurred = pause; audioPageChange(); audioPageSettingChange?.(); }
 
 /** Set if watermark with FPS should be shown
  *  @param {boolean} show
@@ -4180,10 +4419,16 @@ function setDebugWatermark(show) { debugWatermark = show; }
  *  @memberof Debug */
 function setDebugLineWidth(width) { debugLineWidth = width; }
 
-/** Set key code used to toggle debug mode, Esc by default
- *  @param {string} key
+/** Set key code used to toggle debug mode, Esc by default, '' for none
+ *  @param {string} key - A key code like 'Escape' or 'Backquote', with a capital, not a character like '`'
  *  @memberof Debug */
-function setDebugKey(key) { debugKey = key; }
+function setDebugKey(key)
+{
+    // asked here, where a game sets it, not at every frame's keyWasPressed, an engine line far from the mistake
+    false&&ASSERT(key === '' || typeof key === 'string' && key.length > 1 && key[0] >= 'A' && key[0] <= 'Z',
+        "setDebugKey: a key code like 'Escape' or 'Backquote', with a capital, or '' for none", key);
+    debugKey = key;
+}
 
 /** Set if the debug keys work while the overlay is closed, the number keys and the +/- time keys
  *  @param {boolean} [enable]
@@ -4218,14 +4463,34 @@ function engineObjectOneWayPass(solid, solidPos, from, fromSize)
 
 // where a move from start to end goes into the cell at its corner, the first point of it inside the cell's box, and
 // whether it goes in through a side, x, or the top or bottom, the axis whose slab it enters last; one starting on a
-// face is on that face, as its entry there is 0 and the other's is before it
+// face is on that face, as its entry there is 0 and the other's is before it; corner when it enters both at once,
+// within rounding, since a 45 degree move through a corner gives times an ulp apart
 function engineObjectRayEntry(start, end, cell)
 {
     const dx = end.x - start.x, dy = end.y - start.y;
     const tx = dx ? min((cell.x - start.x) / dx, (cell.x + 1 - start.x) / dx) : -Infinity;
     const ty = dy ? min((cell.y - start.y) / dy, (cell.y + 1 - start.y) / dy) : -Infinity;
     const t = clamp(max(tx, ty));
-    return {pos: vec2(start.x + dx*t, start.y + dy*t), side: tx >= ty};
+    return {pos: vec2(start.x + dx*t, start.y + dy*t), side: tx >= ty, corner: abs(tx - ty) < 1e-9};
+}
+
+// whether a cell of the world grid is solid in a solid collision layer for a bullet that was at from, a one way tile
+// it may pass not, and a tile its collideWithTile does not take not, asked as a place only tried, so a marker like a
+// ladder's negative value is not solid; a bullet its own hit destroyed is not asked, as the sweep asks it nothing
+// more, and its tiles are solid by their value
+function engineObjectBulletSolid(object, x, y, from)
+{
+    for (const layer of tileCollisionLayers)
+    {
+        if (!layer.isSolid) continue;
+        const lx = x - layer.pos.x, ly = y - layer.pos.y;
+        if (lx < 0 || ly < 0 || lx >= layer.size.x || ly >= layer.size.y) continue;
+        const data = layer.collisionData[ly*layer.size.x + lx];
+        if (data && !tileCollisionOneWayPass(layer, lx, ly, from.x, from.y) &&
+            (object.destroyed ? data > 0 : object.collideWithTile(data, vec2(x, y), false)))
+            return true;
+    }
+    return false;
 }
 
 // a bullet's move from one point to another through the tiles: the first tile its collideWithTile takes, nearest
@@ -4266,8 +4531,15 @@ function engineObjectBulletSweep(object, from, to)
                 if (object.destroyed) return false; // nor the other layers' tiles in this cell
                 continue;
             }
-            const normal = entry.side ? vec2(-sign(move.x), 0) : vec2(0, -sign(move.y));
-            hit = {pos: entry.pos, normal, layer};
+            // a move into a cell exactly at its corner goes in through the face with nothing solid outside it, the
+            // side of a wall's tile under a floor is no face
+            const side = entry.corner ? !engineObjectBulletSolid(object, cell.x - sign(move.x), cell.y, from) :
+                entry.side;
+            const normal = side ? vec2(-sign(move.x), 0) : vec2(0, -sign(move.y));
+            // exactly on that face, not an ulp inside the tile, or the stop a hair off it is inside it too
+            const pos = entry.pos.copy();
+            side ? pos.x = cell.x + (move.x < 0 ? 1 : 0) : pos.y = cell.y + (move.y < 0 ? 1 : 0);
+            hit = {pos, normal, layer};
             return true;
         }
         return false;
@@ -4300,7 +4572,9 @@ function engineObjectBulletSweep(object, from, to)
         let t1 = stretches[i][1];
         while (++i < stretches.length && stretches[i][0] <= t1)
             t1 = max(t1, stretches[i][1]);
-        lineTest(at(t0), at(t1), testCell);
+        // a hair past the move's end, so a move that ends exactly on a tile's face is stopped in that frame, the cell
+        // entered at the end tested too; where it stops is clamped to the move
+        lineTest(at(t0), t1 >= 1 ? to.add(move.normalize(1e-6)) : at(t1), testCell);
     }
     return hit;
 }
@@ -4340,7 +4614,7 @@ function engineObjectChildPlaced(o)
 {
     const placed = o.placedTransform || (o.placedTransform = []);
     placed[0] = o.pos.x, placed[1] = o.pos.y, placed[2] = o.angle;
-    if (debug)
+    if (false)
         placed[3] = o.localPos.x, placed[4] = o.localPos.y, placed[5] = o.localAngle;
 }
 
@@ -4360,10 +4634,11 @@ function engineObjectChildPlaced(o)
  * The physics system used by objects is simple and fast with some caveats...
  * - Collision uses the axis aligned size, the object's rotation angle is only for rendering
  * - Objects are guaranteed to not intersect tile collision from physics
- * - If an object starts or is moved inside tile collision, it will not collide with that tile
+ * - If an object starts or is moved inside tile collision, it will not collide with tiles until it is out
  * - Collision for objects can be set to be solid to block other objects
  * - Objects may get pushed into overlapping other solid objects, if so they will push away
- * - A static solid (mass 0) moved by its velocity, like a door or an elevator, pushes objects out of its way
+ * - A static solid (mass 0) moved by its velocity, like a door or an elevator, moves before the other objects and
+ *   pushes them out of its way, so what rides it sits on it whatever the order they update in
  * - Solid objects are more performance intensive and should be used sparingly
  * @memberof Engine
  * @example
@@ -4389,7 +4664,7 @@ class EngineObject
         false&&ASSERT(!tileInfo || tileInfo instanceof TileInfo, 'object tileInfo should be a TileInfo or undefined');
         false&&ASSERT(typeof angle === 'number' && isFinite(angle), 'object angle should be a number');
         false&&ASSERT(isColor(color), 'object color should be a valid rgba color');
-        false&&ASSERT(typeof renderOrder === 'number', 'object renderOrder should be a number');
+        false&&ASSERT(isNumber(renderOrder), 'object renderOrder should be a number, not NaN, which leaves the list unsorted');
 
         /** @property {Vector2} - World space position of the object, on a child too, where setting it moves the
          *  child there and its localPos follows */
@@ -4423,10 +4698,11 @@ class EngineObject
          *  renderEmissive, as 3D's emissive. Exact for solid pixels; a partly transparent one is self lit by its alpha
          *  too, so a half alpha pixel shows at a quarter and a fading emissive sprite fades a little faster */
         this.emissive = 0;
-        /** @property {TextureInfo|undefined} - With the light system's normalMaps on, a normal map the lights shade
-         *  it by: an image laid out like its tile sheet, read at the same place as whatever tile it draws, so an
-         *  animation's frames keep their normals, green up the image as 3D's normalMap has it
-         *  @type {TextureInfo|undefined} */
+        /** @property {TextureInfo|TileInfo|undefined} - With the light system's normalMaps on, a normal map the
+         *  lights shade it by: an image laid out like its tile sheet, read at the same place as whatever tile it
+         *  draws, so an animation's frames keep their normals, green up the image as 3D's normalMap has it; a
+         *  TileInfo is read as its whole texture, as 3D's is
+         *  @type {TextureInfo|TileInfo|undefined} */
         this.normalMap = undefined;
         /** @property {boolean} - Should the rendered tile flip along the y axis. Affects rendering and the local→world transform of attached children (a mirrored parent flips its children's localPos.x and localAngle). Does not affect this object's own physics, collision, or localToWorld/worldToLocal. */
         this.mirror = false;
@@ -4442,7 +4718,8 @@ class EngineObject
         this.damping = objectDefaultDamping;
         /** @property {number} - Fraction of angular velocity kept each frame, 1 keeps all of it, 0 stops at once */
         this.angleDamping = objectDefaultAngleDamping;
-        /** @property {number} - How bouncy the object is when colliding (0-1) */
+        /** @property {number} - How bouncy the object is when colliding, 0 to 1; above 1 adds speed off tiles and
+         *  static solids, a bumper or a bounce pad, while between two moving bodies it is held to 1 */
         this.restitution = objectDefaultRestitution;
         /** @property {number} - Fraction of sliding speed kept each frame on the ground, 1 is no friction, 0 stops at
          *  once, the more slippery of the object and its ground is used */
@@ -4641,6 +4918,14 @@ class EngineObject
                     const collide2 = o.collideWithObject(this);
                     // a callback may have moved either one, the grid follows
                     engineCollideGrid?.built && engineCollideGridPlace(engineCollideGrid.built, o);
+                    // a callback that attached either one, an arrow sticking or a crate picked up, ends the pair: a
+                    // child rides along with its parent, and one that is a child now meets no more solids or tiles
+                    if (this.parent) return;
+                    if (o.parent)
+                    {
+                        engineObjectsCollidePairAdd(this, o);
+                        continue;
+                    }
                     if (!collide1 || !collide2)
                     {
                         engineObjectsCollidePairAdd(this, o);
@@ -4694,6 +4979,17 @@ class EngineObject
                     engineObjectsCollidePairAdd(this, o);
 
                     debugPhysics && debugOverlap(this.pos, this.size, o.pos, o.size, '#f00', undefined, false);
+                    continue;
+                }
+
+                // one already standing on something does not move down for one with mass above it, which would push it
+                // back into what it stands on, as the middle of a stack on a rising lift was; the pair is left for the
+                // one above, which sees this one fixed and is pushed up; only one that was above it, not beside it,
+                // or a player on a crate would walk through the stack in front of it
+                if (this.groundObject && o.mass && (o.pos.y - this.pos.y) * gravityY < 0 &&
+                    abs(oldPos.y - o.pos.y)*2 >= this.size.y + o.size.y)
+                {
+                    engineObjectsCollidePairAdd(this, o, true);
                     continue;
                 }
 
@@ -4776,6 +5072,7 @@ class EngineObject
             {
                 tileCollisionFromObject = fromObject, tileCollisionFromPos = fromPos;
                 tileCollisionHitObject = hitObject;
+                tileCollisionStuckTest = false;
             }
         }
     }
@@ -4799,7 +5096,13 @@ class EngineObject
             // stop at the surface, a hair off it, more than a one way tile's margin, so going on along a ceiling a
             // one way tile it rose through lets it on; bounce off it by the more bouncy of it and the layer
             const {normal, layer} = hit, restitution = max(this.restitution, layer.restitution);
-            const stop = hit.pos.add(normal.scale(2e-3));
+            // one that started on the face it hit stays on it when a hair off it is inside a tile behind, but not one
+            // that started in that cell, as in a one way tile's margin or on its edge, which would stay on the face
+            // for good
+            let stop = hit.pos.add(normal.scale(2e-3));
+            const sx = floor(stop.x), sy = floor(stop.y);
+            (floor(from.x) !== sx || floor(from.y) !== sy) && engineObjectBulletSolid(this, sx, sy, from) &&
+                (stop = hit.pos);
             const into = this.velocity.dot(normal);
             if (into < 0)
                 this.velocity = this.velocity.subtract(normal.scale(into * (1 + restitution)));
@@ -4820,74 +5123,87 @@ class EngineObject
     /** @private */
     updatePhysicsTiles(oldPos, gravityY, wasFalling)
     {
-        // the first test is where the move put it, so the tiles it asks about are hits; the tests after it only try
-        // places to find which side it hit and where it can go
+        // the first test is where the move put it, so the tiles it asks about are hits; the tests after it only
+        // try places to find which side it hit and where it can go
         tileCollisionHitObject = this;
         const hitLayer = tileCollisionTest(this.pos, this.size, this);
         tileCollisionHitObject = undefined;
-        if (hitLayer)
+        // one that started its move inside tiles, made, moved or grown there, is left alone till it is out; a one way
+        // tile does not count, or one in a platform's margin would meet no tiles
+        tileCollisionStuckTest = !!hitLayer;
+        const stuck = hitLayer && tileCollisionTest(oldPos, this.size, this);
+        tileCollisionStuckTest = false;
+        if (hitLayer && !stuck)
         {
-            // if already was stuck in collision, don't do anything
-            // this should not happen unless something starts in collision
-            if (!tileCollisionTest(oldPos, this.size, this))
+            // a place it snaps to is blocked when a one way tile blocks it judged from there or from where it was, so the
+            // snap never leaves it a hair inside one, less than the one way margin, nor takes it through one whose margin
+            // it rested in
+            const oneWay = tileCollisionLayers.some((layer)=> layer.oneWayTiles?.size); // only those judge by a place
+            const snapBlocked = (pos)=>
             {
-                // test which side we bounced off (or both if a corner)
-                const isBlockedX = tileCollisionTest(vec2(this.pos.x, oldPos.y), this.size, this);
-                const isBlockedY = tileCollisionTest(vec2(oldPos.x, this.pos.y), this.size, this);
-                const restitution = max(this.restitution, hitLayer.restitution);
-                if (isBlockedX)
+                if (!oneWay) return tileCollisionTest(pos, this.size, this);
+                const fromPos = tileCollisionFromPos;
+                tileCollisionFromPos = pos;
+                try { return tileCollisionTest(pos, this.size, this) || (tileCollisionFromPos = fromPos,
+                    tileCollisionTest(pos, this.size, this)); }
+                finally { tileCollisionFromPos = fromPos; }
+            };
+            // test which side we bounced off (or both if a corner)
+            const isBlockedX = tileCollisionTest(vec2(this.pos.x, oldPos.y), this.size, this);
+            const isBlockedY = tileCollisionTest(vec2(oldPos.x, this.pos.y), this.size, this);
+            const restitution = max(this.restitution, hitLayer.restitution);
+            if (isBlockedX)
+            {
+                // a ledge caught less than maxMove below its top lifts the object onto it instead of stopping it,
+                // down off a ceiling ledge when gravity points up; zero gravity counts as down
+                const epsilon = 1e-3;
+                const maxMove = .1;
+                const y = gravityY > 0 ?
+                    ceil( oldPos.y+this.size.y/2-1) - this.size.y/2 - epsilon :
+                    floor(oldPos.y-this.size.y/2+1) + this.size.y/2 + epsilon;
+                if (abs(y - this.pos.y) < maxMove && !tileCollisionTest(vec2(this.pos.x, y), this.size, this))
                 {
-                    // a ledge caught less than maxMove below its top lifts the object onto it instead of stopping it,
-                    // down off a ceiling ledge when gravity points up; zero gravity counts as down
-                    const epsilon = 1e-3;
-                    const maxMove = .1;
-                    const y = gravityY > 0 ?
-                        ceil( oldPos.y+this.size.y/2-1) - this.size.y/2 - epsilon :
-                        floor(oldPos.y-this.size.y/2+1) + this.size.y/2 + epsilon;
-                    if (abs(y - this.pos.y) < maxMove && !tileCollisionTest(vec2(this.pos.x, y), this.size, this))
-                    {
-                        this.pos.y = y;
-                        debugPhysics && debugRect(this.pos, this.size, '#ff0', 0, 0, false, false);
-                        return;
-                    }
-
-                    // move against the wall and bounce, its side on the tile edge it moved toward, rounded in the
-                    // layer's space as its collision test is; back to its previous X when that spot is not clear
-                    const snapEpsilon = .0001, layerX = hitLayer.pos.x, offsetX = this.size.x/2 + snapEpsilon;
-                    // never back past where it was: a leading edge already on a grid line would step back by
-                    // the epsilon and take its trailing edge into the tile behind, which nothing tests, since
-                    // only X is blocked; between there and the wall it covers no column it did not cover before
-                    const movingLeft = this.pos.x < oldPos.x;
-                    const snap = layerX + (movingLeft ?
-                        floor(oldPos.x - layerX - this.size.x/2) + offsetX :
-                        ceil( oldPos.x - layerX + this.size.x/2) - offsetX);
-                    const x = movingLeft ? min(snap, oldPos.x) : max(snap, oldPos.x);
-                    this.pos.x = tileCollisionTest(vec2(x, oldPos.y), this.size, this) ? oldPos.x : x;
-                    this.velocity.x *= -restitution;
+                    this.pos.y = y;
+                    debugPhysics && debugRect(this.pos, this.size, '#ff0', 0, 0, false, false);
+                    return;
                 }
-                if (isBlockedY || !isBlockedX)
-                {
-                    // adjust position to slightly away from the nearest tile, the floor or the ceiling it moved
-                    // toward, which prevents a gap between them; rounded in the layer's space as its collision
-                    // test is, or a bottom a hair below a grid line would round to the row under it, inside the
-                    // floor, and fall through; back to its previous Y when that spot is not clear
-                    const epsilon = .0001;
-                    const offset = this.size.y/2 + epsilon;
-                    const layerY = hitLayer.pos.y;
-                    const y = layerY + (this.pos.y < oldPos.y ?
-                        floor(oldPos.y - layerY - this.size.y/2) + offset :
-                        ceil( oldPos.y - layerY + this.size.y/2) - offset);
-                    const isClear = this.pos.y !== oldPos.y && !tileCollisionTest(vec2(this.pos.x, y), this.size, this);
-                    this.pos.y = isClear ? y : oldPos.y;
 
-                    // set ground object for tile collision
-                    this.groundObject = wasFalling ? hitLayer : undefined;
-
-                    // bounce velocity
-                    this.velocity.y *= -restitution;
-                }
-                debugPhysics && debugRect(this.pos, this.size, '#f00', 0, 0, false, false);
+                // move against the wall and bounce, its side on the tile edge it moved toward, rounded in the
+                // layer's space as its collision test is; back to its previous X when that spot is not clear
+                const snapEpsilon = .0001, layerX = hitLayer.pos.x, offsetX = this.size.x/2 + snapEpsilon;
+                // never back past where it was: a leading edge already on a grid line would step back by
+                // the epsilon and take its trailing edge into the tile behind, which nothing tests, since
+                // only X is blocked; between there and the wall it covers no column it did not cover before
+                const movingLeft = this.pos.x < oldPos.x;
+                const snap = layerX + (movingLeft ?
+                    floor(oldPos.x - layerX - this.size.x/2) + offsetX :
+                    ceil( oldPos.x - layerX + this.size.x/2) - offsetX);
+                const x = movingLeft ? min(snap, oldPos.x) : max(snap, oldPos.x);
+                this.pos.x = snapBlocked(vec2(x, oldPos.y)) ? oldPos.x : x;
+                this.velocity.x *= -restitution;
             }
+            if (isBlockedY || !isBlockedX)
+            {
+                // adjust position to slightly away from the nearest tile, the floor or the ceiling it moved
+                // toward, which prevents a gap between them; rounded in the layer's space as its collision
+                // test is, or a bottom a hair below a grid line would round to the row under it, inside the
+                // floor, and fall through; back to its previous Y when that spot is not clear
+                const epsilon = .0001;
+                const offset = this.size.y/2 + epsilon;
+                const layerY = hitLayer.pos.y;
+                const y = layerY + (this.pos.y < oldPos.y ?
+                    floor(oldPos.y - layerY - this.size.y/2) + offset :
+                    ceil( oldPos.y - layerY + this.size.y/2) - offset);
+                const isClear = this.pos.y !== oldPos.y && !snapBlocked(vec2(this.pos.x, y));
+                this.pos.y = isClear ? y : oldPos.y;
+
+                // set ground object for tile collision
+                this.groundObject = wasFalling ? hitLayer : undefined;
+
+                // bounce velocity
+                this.velocity.y *= -restitution;
+            }
+            debugPhysics && debugRect(this.pos, this.size, '#f00', 0, 0, false, false);
         }
     }
 
@@ -4921,6 +5237,8 @@ class EngineObject
     renderNormal() { this.render(); }
 
     /** Destroy this object, destroy its children, detach its parent, and mark it for removal
+     *  - The children go in their order: one a child's destroy hands to another parent, attach or addChild, stays, when
+     *    it comes after that child, one before it is already gone
      *  @param {boolean} [immediate] - true removes attached effects like particle emitters at once, false lets them finish first */
     destroy(immediate=false)
     {
@@ -4929,11 +5247,14 @@ class EngineObject
         // disconnect from parent and destroy children
         this.destroyed = true;
         this.parent?.removeChild(this);
-        for (const child of this.children)
-        {
+        // the list is let go first, and every child's parent, so a child's callbacks this frame see it holds them no
+        // more, one that destroys a sibling too
+        const children = this.children;
+        this.children = [];
+        for (const child of children)
             child.parent = undefined;
-            child.destroy(immediate);
-        }
+        for (const child of children)
+            child.parent || child.destroy(immediate); // one a sibling handed to another parent meanwhile stays
     }
 
     /** Convert from local space to world space
@@ -5049,6 +5370,7 @@ class EngineObject
         false&&ASSERT(!child.parent && !this.children.includes(child), 'child already has a parent, removeChild it first or use attach');
         false&&ASSERT(child instanceof EngineObject, 'child must be an EngineObject');
         false&&ASSERT(!child.destroyed, 'cannot add a destroyed child');
+        if (child.destroyed) return child; // a release build leaves it out, it goes at the end of the frame
         for (let p = /** @type {EngineObject} */ (this); p; p = p.parent)
         {
             false&&ASSERT(p !== child, 'cannot add an object as a child of itself or of its own child');
@@ -5060,6 +5382,9 @@ class EngineObject
         child.localPos = localPos.copy();
         child.localAngle = localAngle;
         child.placedTransform = undefined; // where it is now is not kept, it is placed from the local transform given
+        // carried, it stands on nothing, so a jump check fails and one let go starts in the air, its one way
+        // platforms judged afresh
+        child.groundObject = undefined;
         child.updateTransforms();
         return child;
     }
@@ -5073,6 +5398,7 @@ class EngineObject
     {
         false&&ASSERT(child instanceof EngineObject, 'child must be an EngineObject');
         false&&ASSERT(/** @type {EngineObject} */ (child) !== this, 'cannot attach self');
+        if (engineObjectAttachRefused(this, child)) return child; // before it leaves its old parent
         child.parent?.removeChild(child);
         // the local values that updateTransforms turns back into the child's current pos and angle
         const mirror = this.getMirrorSign(), local = this.worldToLocal(child.pos);
@@ -5084,8 +5410,9 @@ class EngineObject
      *  @param {EngineObject} child */
     removeChild(child)
     {
-        false&&ASSERT(child.parent === this && this.children.includes(child), 'removeChild: that object is not a child of this one',
-            child);
+        // a parent being destroyed let go of its children already, so a child's callback dropping a sibling is fine
+        false&&ASSERT(this.destroyed && !child.parent || child.parent === this && this.children.includes(child),
+            'removeChild: that object is not a child of this one', child);
         const i = this.children.indexOf(child);
         if (i < 0) return; // not a child of this one, release has no assert
         this.children.splice(i, 1);
@@ -5106,6 +5433,8 @@ class EngineObject
     { return isOverlapping(this.pos, this.size, pos, size); }
 
     /** Set how this object collides
+     *  - Each object is resolved in turn, once a frame, so a stack of more than two or three with mass depends on
+     *    the order they update in, and may sink or come apart when what it stands on drops; Box2D stacks
      *  @param {boolean} [collideSolidObjects] - Does it collide with solid objects?
      *  @param {boolean} [isSolid]             - Does it collide with and block other objects? (expensive in large numbers)
      *  @param {boolean} [collideLevel]        - Does it collide with the level, its tile collision layers?
@@ -5140,7 +5469,7 @@ class EngineObject
     /** Render debug info for this object  */
     renderDebugInfo()
     {
-        if (!debug) return;
+        if (!false) return;
 
         // check if there is anything to show
         const hasPhysics = this.collideLevel || this.collideSolidObjects || this.isSolid;
@@ -5155,6 +5484,20 @@ class EngineObject
         this.parent && debugLine(this.pos, this.parent.pos, rgb(1,1,1,.5), .5, 0, false);
     }
 }
+
+// whether attach refuses a child, said in debug builds as addChild says it, checked before the child leaves its old
+// parent, so a refused one stays where it was: a destroyed parent or child, or a parent that is the child or its own
+function engineObjectAttachRefused(parent, child)
+{
+    false&&ASSERT(!parent.destroyed, 'cannot add child to destroyed object');
+    false&&ASSERT(!child.destroyed, 'cannot add a destroyed child');
+    let loop = false;
+    for (let p = parent; p && !loop; p = p.parent)
+        loop = p === child;
+    false&&ASSERT(!loop, 'cannot add an object as a child of itself or of its own child');
+    return parent.destroyed || child.destroyed || loop;
+}
+
 /**
  * LittleJS Drawing System
  * - Hybrid rendering with both Canvas2D and WebGL support
@@ -5275,6 +5618,8 @@ function isBlack(c) { return c.r <= 0 && c.g <= 0 && c.b <= 0 && c.a <= 0; }
 function tile(index=0, size=tileDefaultSize, texture=0, padding=tileDefaultPadding, bleed=tileDefaultBleed)
 {
     false&&ASSERT(isVector2(index) || typeof index === 'number', 'index must be a vec2 or number');
+    false&&ASSERT(typeof index !== 'number' || Number.isInteger(index), 'tile: index must be whole, a fraction slides the ' +
+        'sprite, use |0', index);
     false&&ASSERT(isVector2(size) || typeof size === 'number', 'size must be a vec2 or number');
     false&&ASSERT(isNumber(texture) || texture instanceof TextureInfo, 'texture must be a number or TextureInfo');
     false&&ASSERT(isNumber(padding), 'padding must be a number');
@@ -5315,6 +5660,7 @@ function tile(index=0, size=tileDefaultSize, texture=0, padding=tileDefaultPaddi
         y = index.y;
     }
     const pos = new Vector2(x*sizePaddedX + padding, y*sizePaddedY + padding);
+    false&&ASSERT(x >= 0 && y >= 0, 'tile: the index must not be negative', index);
     return new TileInfo(pos, size, textureInfo, padding, bleed);
 }
 
@@ -5368,7 +5714,8 @@ class TileInfo
     */
     frame(frame)
     {
-        false&&ASSERT(typeof frame === 'number', 'TileInfo.frame: frame must be a number', frame);
+        false&&ASSERT(Number.isInteger(frame) && frame >= 0, 'TileInfo.frame: frame must be a whole number, 0 or more, a ' +
+            'fraction slides the sprite, use |0', frame);
         const w = this.size.x + this.padding*2;
         const h = this.size.y + this.padding*2;
         let x = (this.columns ? frame % this.columns : frame) * w;
@@ -5638,7 +5985,12 @@ class SpriteAnimation
 
     /** How many frames have gone by since the start, fractional
      *  @return {number} */
-    get elapsedFrames() { return (time - this.startTime) * this.speed / this.frameTime; }
+    get elapsedFrames()
+    {
+        // time steps by 1/60, so a whole number of frames can come out a hair under it, snapped so each lasts the same
+        const f = (time - this.startTime) * this.speed / this.frameTime, r = round(f);
+        return abs(f - r) < 1e-6 ? r : f;
+    }
 
     /** The frame showing now, 0 to frameCount-1
      *  @return {number} */
@@ -5647,9 +5999,11 @@ class SpriteAnimation
         this.isDone; // a read after a play ends calls onEnd, which may start it over
         if (this.heldFrame !== undefined)
             return this.heldFrame;
-        const n = this.frameCount, f = floor(this.elapsedFrames);
+        // backward a frame shows from when the count reaches it until the next, as forward, so the first shows
+        // for as long as the rest
+        const n = this.frameCount, f = this.speed < 0 ? ceil(this.elapsedFrames) : floor(this.elapsedFrames);
         if (this.mode == 'once') // backward it counts down from the last frame, showing it from the start
-            return clamp(this.speed < 0 ? n - 1 + ceil(this.elapsedFrames) : f, 0, n - 1);
+            return clamp(this.speed < 0 ? n - 1 + f : f, 0, n - 1);
         if (this.mode == 'loop')
             return mod(f, n);
         const period = max(2 * n - 2, 1), k = mod(f, period); // there and back, the ends once each
@@ -5706,14 +6060,29 @@ class SpriteAnimator
     }
 
     /** Show a clip, starting it over in its own mode unless it is showing and has not ended
+     *  - On the update a play ends, before anything read it, set calls that play's onEnd and leaves what it did, so
+     *    a game setting the clip every update follows its onEnd; to start the same clip again then, on a press,
+     *    read isDone first, which calls the onEnd, after which set starts it over, or call clip.play(onEnd)
      *  @param {string} name - The clip's name
      *  @param {function():void} [onEnd] - Called once when a play clip ends, as with SpriteAnimation.play
      *  @return {SpriteAnimator} */
     set(name, onEnd)
     {
         false&&ASSERT(this.clips[name], 'no clip named ' + name);
-        if (name == this.name && !this.clip.isDone)
-            return this;
+        if (name == this.name)
+        {
+            // showing and not ended, it plays on, with the onEnd given now when there is one
+            const clip = this.clip, hadEnd = !!clip.onEnd;
+            if (!clip.isDone)
+            {
+                onEnd && (clip.onEnd = onEnd);
+                return this;
+            }
+            // it just ended and that check called its onEnd: what the onEnd did stands, a switch to another clip, a
+            // flag the next set reads, or this clip started again with a callback of its own, as a combo's next hit
+            if (hadEnd)
+                return this;
+        }
         this.name = name;
         this.clip.restart();
         this.clip.onEnd = onEnd;
@@ -5772,8 +6141,11 @@ class SpriteAnimator
  * - Names in both renderers: iChannel0 the texture, iTime, iResolution, premultipliedTexture, and localUV, 0 to 1
  *   across the sprite or the mesh's own uv
  * - Names in 3D only: worldPos, worldNormal, cameraPos, sunDirection, sunColor, ambientColor, ambientGroundColor,
- *   lightCount, lights[i], lightColors[i] and shadow(), and viewProjection, the camera's matrix from the world to
- *   the screen, for a snippet that sets its own depth: vec4 c = viewProjection * vec4(p, 1.); gl_FragDepth =
+ *   lightCount, lights[i], lightColors[i], lightCones[i] (a spotlight's cone: k = clamp(dot(c.xyz, toPixel) - c.w,
+ *   0., 1.) is 1 inside it and 0 past its edge, toPixel the unit way from the light, and 1 everywhere for a light
+ *   with no cone; the light is faded by k*k*(3.-2.*k), smoothstep, as the engine lights it) and shadow(), the
+ *   sun's shadow or render3D.shadowLight's when it is set, and viewProjection, the camera's matrix from the world
+ *   to the screen, for a snippet that sets its own depth: vec4 c = viewProjection * vec4(p, 1.); gl_FragDepth =
  *   c.z / c.w * .5 + .5 puts it at world point p; only on the screen, the shadow map and sceneDepth draw the mesh
  *   where it is
  * - In 3D the snippet may also define void mainNormal(inout vec3 n), given the normal facing the camera after the
@@ -5786,16 +6158,19 @@ class SpriteAnimator
  *   wobble; it runs in the shadow map and the camera's depth too, so a moved vertex casts and hides where it is
  *   drawn. Its names: iTime, iResolution, cameraPos, iChannel0 (texture or texelFetch in the vertex stage), localUV,
  *   modelMatrix, instanceData (the four numbers an InstancedMesh3D's setDataAt gives, the fragment code may read it
- *   too) and vertexColor, the vertex color times the tint, which it may change. The object's bounds are not
- *   moved with it, so one that moves vertices far needs room to be culled by, like a bigger radius
+ *   too) and vertexColor, the vertex color times the tint, which it may change. The culling sphere is the mesh's
+ *   own, so one that moves vertices far may be culled at the screen's edge: set mesh.radius larger after its first
+ *   draw, which measures it (kept until the mesh changes), or turn off render3D.frustumCulling
  * - A Shader of vertex code alone, new Shader('', vertexCode), keeps the 3D plugin's own look; in 2D a Shader's
  *   vertex code is not used
  * - Values of the game's own, uniforms, are given by name when it is made and read by name in the snippets, which
  *   need not declare them: new Shader(code, '', {glow: 1, tint: RED}), then shader.setUniform('glow', 2) as often as
  *   needed, with no recompile; each is declared in the snippets that use it, so one may share a name with an input
  *   of the engine's in the other stage, and is sent to a program only when it changed; a name the engine's shader
- *   uses already, like tint or lightColor, fails to compile with the GLSL error naming it; a matrix list is column
- *   by column; in 3D set a value outside the 3D pass, it holds for the frame
+ *   uses already, like lightColor, or tint in vertex code, a name of i and a capital, kept for the engine's, as
+ *   iTime, or a common GLSL built-in function or reserved word, as step, distance, sample or filter, which would
+ *   not compile, is refused by an assert in debug builds; a matrix list
+ *   is column by column; in 3D set a value outside the 3D pass, it holds for the frame
  * @example
  * const fade = new Shader(`
  * void mainImage(out vec4 c, vec2 uv)
@@ -5851,8 +6226,7 @@ class Shader
         this.uniformsVersion = 0;
         for (const name in uniforms)
         {
-            false&&ASSERT(/^[A-Za-z_][A-Za-z0-9_]*$/.test(name) && !name.startsWith('gl_'),
-                'a Shader uniform is named as a GLSL variable is', name);
+            false && debugShaderUniformName(name, fragmentCode, vertexCode); // a legal name, not the engine's
             const type = this.uniformTypes[name] = glUniformType(uniforms[name]);
             false&&ASSERT(!!type, 'a Shader uniform is a number, boolean, vector, Color, matrix or list of 2, 3, 4, 9 or 16 numbers',
                 name, uniforms[name]);
@@ -6187,6 +6561,8 @@ function drawTextureWrapped(pos, size, wrapCount, texture=0, color=WHITE,
 }
 
 /** Draw connected lines between a series of points
+ *  - WebGL draws one batch of at most about 41,000 vertices, so about 20,000 points; a longer list asserts in debug
+ *    builds and draws nothing in release, so draw it in parts, Canvas2D has no such cap
  *  @param {Array<Vector2>} points - In its own space, y up, in screen space too, where drawLine's ends go down
  *  @param {number}  [width]
  *  @param {Color}   [color=WHITE]
@@ -6258,6 +6634,8 @@ function drawLineList(points, width=.1, color=WHITE, wrap=false, pos=vec2(), ang
  *  @memberof Draw */
 function drawLine(posA, posB, width=.1, color=WHITE, pos=vec2(), angle=0, useWebGL=glEnable, screenSpace=drawScreenSpace, context)
 {
+    // the width comes before the color, a color there is a mistake the debug lines' order invites
+    false&&ASSERT(isNumber(width), 'drawLine: width must be a number, it comes before the color', width);
     const halfDelta = vec2((posB.x - posA.x)/2, (posB.y - posA.y)/2);
     const size = vec2(width, halfDelta.length()*2);
     const middle = posA.add(halfDelta);
@@ -6283,7 +6661,8 @@ function drawLine(posA, posB, width=.1, color=WHITE, pos=vec2(), angle=0, useWeb
 function drawRegularPoly(pos, size=vec2(1), sides=3, color=WHITE, lineWidth=0, lineColor=BLACK, angle=0, useWebGL=glEnable, screenSpace=drawScreenSpace, context)
 {
     false&&ASSERT(isVector2(size), 'size must be a vec2');
-    false&&ASSERT(isNumber(sides), 'sides must be a number');
+    false&&ASSERT(isNumber(sides) && sides < Infinity, 'sides must be a number, and not Infinity');
+    sides = min(sides, 1e4); // more could not be seen, and Infinity would loop until memory ran out
 
     // build regular polygon points, into vectors kept for the next, as drawPoly is done with them when it returns
     const points = drawRegularPolyPoints, pool = drawRegularPolyPool;
@@ -6304,6 +6683,8 @@ const drawRegularPolyPoints = [], drawRegularPolyPool = [];
 /** Draw colored polygon using passed in points
  *  - WebGL fills a polygon whose edges do not cross, concave or not; a self crossing one, like a star through its
  *    outer points, fills wrong there, so draw it as its simple outline or in parts
+ *  - WebGL draws one batch of at most about 41,000 vertices: about 41,000 points convex, 8,000 concave; more asserts
+ *    in debug builds and draws nothing in release, so draw it in parts, Canvas2D has no such cap
  *  @param {Array<Vector2>} points - In its own space, y up, in screen space too, where drawLine's ends go down
  *  @param {Color}   [color=WHITE]
  *  @param {number}  [lineWidth]
@@ -6393,7 +6774,7 @@ function drawEllipse(pos, size=vec2(1), color=WHITE, angle=0, lineWidth=0, lineC
 
     if (useWebGL && glEnable)
     {
-        const sides = glCircleSides;
+        const sides = clamp(round(glCircleSides), 3, 1e4); // the global set by hand too
         if (lineWidth > 0)
         {
             // draw as a regular polygon, the outline is made from the points at their size
@@ -6457,6 +6838,9 @@ function drawCircle(pos, size=1, color=WHITE, lineWidth=0, lineColor=BLACK, useW
 }
 
 let drawEllipseGradientOffset = 0;
+// the points and colors of drawEllipseGradient, and the rim's points, kept from call to call
+const drawEllipseGradientPoints = [], drawEllipseGradientColors = [], drawEllipseGradientRim = [];
+
 /** Draw an ellipse filled with a radial gradient from the center to the rim
  *  - Best when batched with other untextured polys
  *  - If drawing mostly textured sprites, bake the gradient into a texture and use drawTile instead
@@ -6492,27 +6876,29 @@ function drawEllipseGradient(pos, size=vec2(1), colorInner=WHITE, colorOuter=CLE
         // so back-to-back gradients at the same position have their hole
         // (from gpu edge-rule on the boundary line-degen) at different rim
         // verts and don't visibly stack
-        const sides = glCircleSides;
+        const sides = clamp(round(glCircleSides), 3, 1e4);
         const radiusX = size.x/2, radiusY = size.y/2;
         const innerInt = colorInner.rgbaInt();
         const outerInt = colorOuter.rgbaInt();
         const offset = drawEllipseGradientOffset++;
         const c = cos(-angle), s = sin(-angle);
-        const rim = (a) =>
+        // the rim's first point, then the center and the rim by turns, going round; in arrays kept from call to call,
+        // since the batch copies them at once
+        const n = sides*2 + 1, points = drawEllipseGradientPoints, colors = drawEllipseGradientColors;
+        points.length = colors.length = n;
+        for (let k = 0; k < n; ++k)
         {
+            if (k & 1)
+            {
+                points[k] = pos;
+                colors[k] = innerInt;
+                continue;
+            }
+            const i = k ? sides - k/2 : 0, a = ((i+offset)%sides)/sides*PI*2;
             const lx = sin(a)*radiusX, ly = cos(a)*radiusY;
-            return vec2(pos.x + lx*c - ly*s, pos.y + lx*s + ly*c);
-        };
-        const startA = (offset%sides)/sides*PI*2;
-        const points = [rim(startA)];
-        const colors = [outerInt];
-        for (let i=sides; i-- > 0;)
-        {
-            const a = ((i+offset)%sides)/sides*PI*2;
-            points.push(pos);
-            colors.push(innerInt);
-            points.push(rim(a));
-            colors.push(outerInt);
+            const p = points[k] = drawEllipseGradientRim[k] ||= vec2();
+            p.x = pos.x + lx*c - ly*s, p.y = pos.y + lx*s + ly*c;
+            colors[k] = outerInt;
         }
         glDrawColoredPoints(points, colors);
     }
@@ -6741,7 +7127,7 @@ function drawTextScreen(text, pos, size, color=WHITE, lineWidth=0, lineColor=BLA
         context.lineWidth = lineWidth;
         context.textAlign = textAlign;
         const fontText = fontStyle + ' ' + size + 'px '+ font;
-        debug && drawFontCheck(context, fontText, font, fontStyle);
+        false && drawFontCheck(context, fontText, font, fontStyle);
         context.font = fontText;
         context.textBaseline = 'middle';
         context.translate(pos.x + .5, pos.y + .5); // a screen position is the center of a pixel, as for every other draw
@@ -7096,8 +7482,10 @@ function cameraShake(amount=.5, direction=vec2(1))
 {
     false&&ASSERT(isNumber(amount) && amount >= 0, 'cameraShake: amount must be a number, 0 or more', amount);
     false&&ASSERT(isVector2(direction), 'cameraShake: direction must be a vec2', direction);
-    amount = min(amount, 1); // the shake is at most 1, and Infinity times an axis of 0 would be NaN
-    const x = abs(direction.x), y = abs(direction.y);
+    // the shake is at most 1, and Infinity times an axis of 0 would be NaN; in a release build NaN is no shake, and an
+    // axis that is not finite none, as one NaN would stop every shake after it
+    amount = amount === amount ? clamp(amount, 0, 1) : 0;
+    const axis = (v)=> isFinite(v) ? abs(v) : 0, x = axis(direction?.x), y = axis(direction?.y);
     cameraShakeAxes = vec2(min(1, cameraShakeAxes.x + amount * x), min(1, cameraShakeAxes.y + amount * y));
     cameraShakeTrauma = min(1, cameraShakeTrauma + amount * max(x, y));
 }
@@ -7211,6 +7599,9 @@ function setBackgroundCanvas(canvas) { backgroundCanvas = canvas; }
 
 /** Combines LittleJS canvases onto the main canvas
  *  This is necessary for things like screenshots and video
+ *  - Call it right after a frame is drawn, after engineStep or from a plugin's render added last: from gameUpdate or
+ *    a UI onClick the canvas is already cleared for the next frame, and from gameRenderPost the post process, the
+ *    lights and the UI are not drawn yet
  *  @memberof Draw */
 function combineCanvases()
 {
@@ -7579,7 +7970,7 @@ async function imageFontInit()
     });
     
     const tilePos=vec2(), tileSize=vec2(8), padding=1, bleed=0;
-    const textureInfo = new TextureInfo(image);
+    const textureInfo = new TextureInfo(image, true, false, true); // pixel art, hard edged in a smooth game too
     const tileInfo = new TileInfo(tilePos, tileSize, textureInfo, padding, bleed);
     engineImageFont = new ImageFont(tileInfo);
 }
@@ -7600,7 +7991,8 @@ async function imageFontInit()
  *  @memberof Input */
 let mousePos = vec2();
 
-/** Mouse pos in screen space
+/** Mouse pos in screen space, in canvas pixels counted as the draws count them: pixel n is n - .5 to n + .5, so
+ *  it runs from -.5 to the canvas size less .5, and is a pixel's number when the pointer is over that pixel's middle
  *  @type {Vector2}
  *  @memberof Input */
 let mousePosScreen = vec2();
@@ -7621,11 +8013,19 @@ let mouseDeltaScreen = vec2();
 let mouseWheel = 0;
 
 /** Touch pinch delta this frame, in the mouse wheel's units: two fingers moving apart are negative, as the wheel
- *  turned up is, and moving together positive, 1 for every 50 pixels; added to mouseWheel while touchPinchWheel
- *  is on, so a game that zooms with the wheel zooms with a pinch
+ *  turned up is, and moving together positive, 1 for every 50 pixels; a trackpad pinch too while touchPinchWheel
+ *  is on; added to mouseWheel while touchPinchWheel is on, so a game that zooms with the wheel zooms with a pinch
  *  @type {number}
  *  @memberof Input */
 let touchPinch = 0;
+
+// a release of the mouse button this frame made by a second finger starting a pinch, not by lifting a finger, so the
+// UI does not take it as a click
+let inputPinchReleased = false;
+
+// the part of touchPinch this frame that came from a trackpad pinch, a wheel with Ctrl, for the 2D editor, which
+// zooms a touch screen's pinch at a rate of its own
+let inputWheelPinch = 0;
 
 /** True if mouse was inside the document window, set to false when mouse leaves
  *  @type {boolean}
@@ -7717,11 +8117,21 @@ const inputArrowToWASD = {ArrowUp:'KeyW', ArrowDown:'KeyS', ArrowLeft:'KeyA', Ar
 const inputKeysHeld = new Set; // the keys physically down, since an arrow's slot is shared with its alias
 let inputPinch; // the two fingers pinching and how far apart they were, undefined with no pinch
 let inputWasTouching = 0, inputTouchIdentifier; // the touch driving the mouse, cleared with the input so only a new touch presses
+// the touches the game saw start, so one that began on a debug panel, which keeps its touchstart, is no game finger
+const inputTouchIds = /* @__PURE__ */ new Set;
 let inputLastTouchTime = -1e9; // when a touch event last came, the mouse events a browser makes from a tap follow it
+// if the last pointer used was a finger, not a mouse, for a touch screen laptop, where both are; a touch device starts
+// with it, and the UI goes by it for hover and touch sizes
+let inputTouchLast = isTouchDevice;
 
-// is this mouse event one the browser made from a touch, which the touch input already handled
+// is this mouse event one the browser made from a touch, which the touch input already handled: what the browser
+// says when it says, as Chrome does, so a real mouse on a touch screen laptop is never taken for one, and otherwise
+// one that came within half a second of a touch
 function inputIsTouchMouseEvent(e)
-{ return e.sourceCapabilities?.firesTouchEvents || performance.now() - inputLastTouchTime < 500; }
+{
+    const caps = e.sourceCapabilities;
+    return caps ? !!caps.firesTouchEvents : performance.now() - inputLastTouchTime < 500;
+}
 
 // is a real gamepad being used, a button down or a standard stick pushed, only read to hand over from the touch
 // gamepad, a non standard pad's axes may rest at full deflection so they are not trusted here
@@ -7767,7 +8177,7 @@ function inputClearDevices(keepGamepads=false)
     touchGamepadButtons.length = 0;
     touchGamepadButtonsPressed.length = 0;
     touchGamepadSticks.length = 0;
-    touchGamepadStickPointerId.length = 0; // release floating sticks so they re-anchor
+    touchGamepadStickRelease(0), touchGamepadStickRelease(1); // release floating sticks so they re-anchor
     gamepadStickData.length = 0;
     gamepadDpadData.length = 0;
     // gamepadButtonsLast and gamepadAxisCentered describe the pads, not input, so they are kept: a button held
@@ -7784,8 +8194,8 @@ function inputClearDevices(keepGamepads=false)
 function keyIsDown(key, device=0)
 {
     false&&ASSERT(isStringLike(key), 'keyIsDown: key must be a code like \'KeyA\' or a number', key);
-    false&&ASSERT(typeof key !== 'string' || key.length > 1,
-        "keyIsDown: keys are codes like 'KeyW' or 'Space', not characters", key);
+    false&&ASSERT(typeof key !== 'string' || !key || key.length > 1 && key[0] >= 'A' && key[0] <= 'Z',
+        "keyIsDown: keys are codes like 'KeyW' or 'Space', with a capital, not characters", key);
     false&&ASSERT(device > 0 || typeof key !== 'number' || key < 5,
         "keyIsDown: keyboard keys are codes like 'KeyA' or 'Space', the numbers 0 to 4 are mouse buttons", key);
     return !!(inputData[device]?.[key] & 1) && !inputCaptureHides(device);
@@ -7799,8 +8209,8 @@ function keyIsDown(key, device=0)
 function keyWasPressed(key, device=0)
 {
     false&&ASSERT(isStringLike(key), 'keyWasPressed: key must be a code like \'KeyA\' or a number', key);
-    false&&ASSERT(typeof key !== 'string' || key.length > 1,
-        "keyWasPressed: keys are codes like 'KeyW' or 'Space', not characters", key);
+    false&&ASSERT(typeof key !== 'string' || !key || key.length > 1 && key[0] >= 'A' && key[0] <= 'Z',
+        "keyWasPressed: keys are codes like 'KeyW' or 'Space', with a capital, not characters", key);
     false&&ASSERT(device > 0 || typeof key !== 'number' || key < 5,
         "keyWasPressed: keyboard keys are codes like 'KeyA' or 'Space', the numbers 0 to 4 are mouse buttons", key);
     return !!(inputData[device]?.[key] & 2) && !inputCaptureHides(device);
@@ -7814,8 +8224,8 @@ function keyWasPressed(key, device=0)
 function keyWasReleased(key, device=0)
 {
     false&&ASSERT(isStringLike(key), 'keyWasReleased: key must be a code like \'KeyA\' or a number', key);
-    false&&ASSERT(typeof key !== 'string' || key.length > 1,
-        "keyWasReleased: keys are codes like 'KeyW' or 'Space', not characters", key);
+    false&&ASSERT(typeof key !== 'string' || !key || key.length > 1 && key[0] >= 'A' && key[0] <= 'Z',
+        "keyWasReleased: keys are codes like 'KeyW' or 'Space', with a capital, not characters", key);
     false&&ASSERT(device > 0 || typeof key !== 'number' || key < 5,
         "keyWasReleased: keyboard keys are codes like 'KeyA' or 'Space', the numbers 0 to 4 are mouse buttons", key);
     return !!(inputData[device]?.[key] & 4) && !inputCaptureHides(device);
@@ -8010,7 +8420,8 @@ function vibrateStop() { vibrate(0); }
  *  @memberof Input */
 function pointerLockRequest()
 {
-    if (performance.now() - inputLastTouchTime < 500)
+    // a press a finger made, judged by the last pointer used too, so a real mouse's click right after a touch locks
+    if (inputTouchLast && performance.now() - inputLastTouchTime < 500)
         return;
 
     // newer browsers return a promise that rejects when the lock is refused, like just after Esc left it,
@@ -8045,6 +8456,21 @@ const gamepadStickData = [], gamepadDpadData = [], gamepadHadInput = [];
 // per gamepad, each button's raw pressed state from the last poll, kept through inputClear and cleared on
 // disconnect, so a button held through a clear is not newly pressed, and reads up until it is let go
 const gamepadButtonsLast = [];
+const gamepadLettingGo = []; // the pads gone this poll whose held buttons read released, cleared on the next
+
+// let go of a gamepad slot's held buttons this poll, so a game waiting for their release gets it, the slot cleared on
+// the next poll with no pad there; one holding nothing clears now
+function gamepadSlotLetGo(i)
+{
+    const held = inputData[i+1];
+    if (held && held.some((v)=> v & 1))
+    {
+        held.forEach((v, k)=> held[k] = v & 1 ? 4 : 0);
+        gamepadLettingGo[i] = true;
+    }
+    else
+        inputData[i+1] = gamepadLettingGo[i] = undefined;
+}
 // per gamepad, how many consecutive frames each axis has rested inside the
 // dead zone, used to tell stick axes from axes that rest at full deflection
 const gamepadAxisCentered = [];
@@ -8057,10 +8483,19 @@ const touchGamepadTimer = new Timer(undefined, true), touchGamepadButtons = [], 
 let touchGamepadHandedOver = false;
 // buttons pressed since the last poll, so a tap that lifts before the poll still counts
 const touchGamepadButtonsPressed = [];
+// whether each button was held at the last poll, as the finger has it, not the input data an inputClear may have
+// emptied, so a cleared button stays up until it is let go, as a key does
+const touchGamepadButtonsLast = [];
+// whether the touch gamepad had gamepad 0 at the last poll, so taking it over lets go of the real pads' buttons once
+let touchGamepadOwning = false;
+// the touch buttons held when a real gamepad took over, released on the pad the game reads once the poll is done
+let touchGamepadHeldAtHandover = [];
 // floating stick anchors (stage-local CSS pixels) and owning pointer ids, indexed by stick (0=left, 1=right)
-const touchGamepadStickAnchors = [], touchGamepadStickPointerId = [];
+const touchGamepadStickAnchors = [], touchGamepadStickPointerId = [], touchGamepadStickStale = [];
 // pointerId -> control role ('stick0', 'stick1', 'face<n>', or 'start')
 const touchGamepadPointerRole = new Map();
+// the fingers that landed in a touch gamepad zone's box but on none of its controls, with passthrough the game's
+const touchGamepadGameTouches = /* @__PURE__ */ new Set;
 // overlay DOM elements (created lazily on touch devices) and cached SVG shapes
 let touchGamepadOverlay, touchGamepadStage, touchGamepadSvg, touchGamepadSvgEls;
 let touchGamepadSideZones = [], touchGamepadZoneC;
@@ -8083,6 +8518,8 @@ function inputInit()
     document.addEventListener('wheel', onMouseWheel, { passive: false });
     document.addEventListener('contextmenu', onContextMenu);
     addEventListener('blur', onBlur); // the window's, the browser fires blur there and it does not bubble to the document
+    // and the page hidden, which a phone switching apps may say without a blur, so no key or finger is held after
+    document.addEventListener('visibilitychange', ()=> document.hidden && onBlur());
 
     // init touch input, its handler checks touchInputEnable itself, so turning it on later works too
     if (isTouchDevice)
@@ -8099,7 +8536,8 @@ function inputInit()
         const typing = isTextInput(e.target) || isTextInput(document.activeElement);
         // a key already held, a keydown the browser did not mark as a repeat, is not pressed again, but with Cmd down
         // it is: a Mac sends no keyup for a key let go while Cmd is held, so each tap of Cmd+Z comes as a keydown alone
-        if (!e.repeat && !typing && (!inputKeysHeld.has(e.code) || e.metaKey))
+        // an event with no code, as an Android soft keyboard sends, is no key, '' reads as none
+        if (e.code && !e.repeat && !typing && (!inputKeysHeld.has(e.code) || e.metaKey))
         {
             inputKeysHeld.add(e.code);
             // an arrow its alias already holds down is not pressed again, like its release waits for both; a release
@@ -8152,6 +8590,7 @@ function inputInit()
     }
     function onKeyUp(e)
     {
+        if (!e.code) return; // no key's code, as an Android soft keyboard sends, '' is no key
         inputKeysHeld.delete(e.code);
         // the key's own slot and the arrow slot an alias shares, each released only once nothing holds it:
         // an arrow held with its alias stays down until both are let go; a slot not down was never pressed as far
@@ -8177,7 +8616,9 @@ function inputInit()
     function onMouseDown(e)
     {
         // a mouse on a touchscreen laptop works, only the mouse events a tap makes are left to the touch input
-        if (touchInputEnable && inputIsTouchMouseEvent(e)) return;
+        const fromTouch = inputIsTouchMouseEvent(e);
+        if (touchInputEnable && fromTouch) return;
+        fromTouch || (inputTouchLast = false); // a tap's mouse event, with touch input off, is still a finger
 
         // fix stalled audio requiring user interaction
         if (soundEnable && !headlessMode && audioContext && !audioIsRunning())
@@ -8204,9 +8645,8 @@ function inputInit()
     }
     function onMouseUp(e)
     {
-        if (touchInputEnable && inputIsTouchMouseEvent(e)) return;
-
-        // released only if it was pressed, like a key or a touch
+        // released only if it was pressed, like a key or a touch, so a release the browser made from a tap, which
+        // the touch let go already, does nothing, and a real mouse's is never lost to a touch just before it
         if (inputData[0][e.button] & 1)
             inputData[0][e.button] = (inputData[0][e.button]&2) | 4;
 
@@ -8217,6 +8657,7 @@ function inputInit()
     function onMouseMove(e)
     {
         mouseInWindow = true;
+        inputIsTouchMouseEvent(e) || (inputTouchLast = false);
         const mousePosScreenLast = mousePosScreen;
         mousePosScreen = mouseEventToScreen(vec2(e.x,e.y));
 
@@ -8240,7 +8681,21 @@ function inputInit()
         const target = /** @type {HTMLElement} */ (e.target);
         if (target?.closest?.('input,textarea,select,[contenteditable]'))
             return;
-        if (!e.ctrlKey)
+        // a page without focus, an iframe before its first click, lets the wheel scroll the page around it, and
+        // the game reads none of it, as it reads no keys or buttons then
+        if (!document.hasFocus())
+            return;
+        if (e.ctrlKey)
+        {
+            // a trackpad pinch, or Ctrl with the wheel: the game's pinch while touchPinchWheel is on, as two fingers
+            // on a screen are, by how far it moved, 1 for every 50 pixels; off, it is the browser's zoom
+            if (!touchPinchWheel) return;
+            // a notch of a mouse wheel held with Ctrl is one, as a plain notch is: in lines or pages it is a wheel,
+            // since a trackpad sends pixels, and in pixels at most one
+            const delta = e.deltaMode ? sign(e.deltaY) : clamp(e.deltaY / 50, -1, 1);
+            touchPinch += delta, mouseWheel += delta, inputWheelPinch += delta;
+        }
+        else
             mouseWheel += sign(e.deltaY);
         if (inputPreventDefault && e.cancelable && document.hasFocus())
             e.preventDefault(); // prevent page scrolling
@@ -8275,30 +8730,54 @@ function inputInit()
                 audioResume();
             // a touch anywhere is the player back on the screen, so a touch gamepad always shown shows again
             e.type === 'touchstart' && (touchGamepadHandedOver = false);
+            // the game's fingers are the ones it saw start; an end of one it never saw, a tap on a panel's canvas, is
+            // left alone, not cancelled, so the panel gets its click
+            const changed = [...e.changedTouches], ending = e.type === 'touchend' || e.type === 'touchcancel';
+            e.type === 'touchstart' && changed.forEach((t)=> inputTouchIds.add(t.identifier));
+            const known = changed.some((t)=> inputTouchIds.has(t.identifier));
+            // a finger no longer on the screen is gone, the ones this event lifts and any lifted unseen
+            const down = new Set([...e.touches].map((t)=> t.identifier));
+            for (const id of [...inputTouchIds])
+                down.has(id) || inputTouchIds.delete(id);
+            for (const id of [...touchGamepadGameTouches])
+                down.has(id) || touchGamepadGameTouches.delete(id);
+            if (ending && !known) return true;
 
-            if (!touchInputEnable || touchGamepadEnable && !touchGamepadPassthrough)
+            // the touch gamepad hides under an open level editor, and touch is the editor's mouse then
+            const gamepadOwns = touchGamepadEnable && !touchGamepadPassthrough && !levelEditor.isOpen;
+            // a finger, whoever takes it, and when, so the mouse events a browser makes from a tap are known for
+            // what they are with touch input off too, as Firefox and Safari say nothing of where they came from
+            inputTouchLast = true;
+            inputLastTouchTime = performance.now();
+            if (!touchInputEnable || gamepadOwns)
             {
                 // off, or the touch gamepad owns touch: turned so mid touch, the finger that drove the mouse lets
                 // go of it, and the next touch to drive it presses
                 if (inputWasTouching && (inputData[0][0] & 1))
                     inputData[0][0] = inputData[0][0] & 2 | 4;
                 inputWasTouching = 0;
+                inputPinch = undefined; // a pinch made meanwhile is not the game's when it gets touch back
                 if (!touchInputEnable) return;
             }
-            inputLastTouchTime = performance.now();
 
             // when the touch gamepad is enabled it owns touch input: suppress the
             // touch->mouse passthrough entirely unless touchGamepadPassthrough is set
             // (its own zones drive gameplay via pointer events)
-            if (!touchGamepadEnable || touchGamepadPassthrough)
+            if (!gamepadOwns)
             {
-                // touches that landed on a virtual gamepad zone are owned by the gamepad
-                // (handled by its own pointer listeners) and must not drive the game mouse
-                const isGamepadTouch = (t)=>
+                // touches that landed on a control of the virtual gamepad are owned by the gamepad
+                // (handled by its own pointer listeners) and must not drive the game mouse; one in a
+                // zone's box but on none of its controls is the game's, decided as it lands
+                const inZone = (t)=>
                     touchGamepadSideZones.includes(t.target) || t.target === touchGamepadZoneC;
+                if (e.type === 'touchstart') // each landing decided again, an id a lost touchend left forgotten
+                    for (const t of changed)
+                        inZone(t) && !touchGamepadTakes(t) ? touchGamepadGameTouches.add(t.identifier) :
+                            touchGamepadGameTouches.delete(t.identifier);
+                const isGamepadTouch = (t)=> inZone(t) && !touchGamepadGameTouches.has(t.identifier);
                 const gameTouches = [];
                 for (const t of e.touches)
-                    if (!isGamepadTouch(t)) gameTouches.push(t);
+                    if (!isGamepadTouch(t) && inputTouchIds.has(t.identifier)) gameTouches.push(t);
 
                 // check if touching and pass to mouse events
                 const touching = gameTouches.length;
@@ -8319,7 +8798,8 @@ function inputInit()
                     {
                         const [a, b] = gameTouches, key = a.identifier + ' ' + b.identifier;
                         const distance = hypot(a.clientX - b.clientX, a.clientY - b.clientY);
-                        if (inputPinch && inputPinch.key === key)
+                        const going = inputPinch && inputPinch.key === key;
+                        if (going)
                         {
                             const delta = (inputPinch.distance - distance) / 50;
                             touchPinch += delta;
@@ -8327,7 +8807,9 @@ function inputInit()
                                 mouseWheel += delta;
                         }
                         inputPinch = {key, distance}; // other fingers start it over, with no jump
-                        if (pinching)
+                        // between the fingers from the pinch's next event on, so the press its second finger lets
+                        // go of is let go where the first finger was, and a piece dragged drops there
+                        if (pinching && going)
                             pos = vec2((a.clientX + b.clientX) / 2, (a.clientY + b.clientY) / 2);
                     }
                     else
@@ -8336,11 +8818,14 @@ function inputInit()
                     // set event pos and pass it along
                     const mousePosScreenLast = mousePosScreen;
                     mousePosScreen = mouseEventToScreen(pos);
+                    // a finger that drives the mouse puts it on the page, though the mouse left it, so a tap reaches
+                    // the UI; one the touch gamepad takes, its zones with passthrough on too, moves no mouse
+                    mouseInWindow = true;
                     if (pinching)
                     {
                         // a pinch is not a press or a drag, the finger that pressed lets go
                         if (inputData[0][button] & 1)
-                            inputData[0][button] = inputData[0][button] & 2 | 4;
+                            inputData[0][button] = inputData[0][button] & 2 | 4, inputPinchReleased = true;
                     }
                     else if (inputWasTouching && touch.identifier === inputTouchIdentifier)
                         mouseDeltaScreen = mouseDeltaScreen.add(mousePosScreen.subtract(mousePosScreenLast));
@@ -8385,14 +8870,18 @@ function inputInit()
 }
 
 // convert a point of the window, a mouse or touch event's, to screen space
-function mouseEventToScreen(mousePos)
+function mouseEventToScreen(mousePos, clamped=true)
 {
-    const rect = mainCanvas.getBoundingClientRect();
-    const px = percent(mousePos.x, rect.left, rect.right);
-    const py = percent(mousePos.y, rect.top, rect.bottom);
+    // kept on the canvas, or past it for a place that is not the mouse's, as a touch gamepad button in a letterbox bar
+    const rect = mainCanvas.getBoundingClientRect(), along = (v, a, b)=> clamped ? percent(v, a, b) : (v - a) / (b - a);
+    const px = along(mousePos.x, rect.left, rect.right);
+    const py = along(mousePos.y, rect.top, rect.bottom);
     const pos = vec2(px*mainCanvasSize.x, py*mainCanvasSize.y);
     // bent once, as it comes in, but not while a level editor is open, which draws over the bent picture flat
-    return mouseScreenTransform && !levelEditor.isOpen ? mouseScreenTransform(pos) : pos;
+    const bent = mouseScreenTransform && !levelEditor.isOpen ? mouseScreenTransform(pos) : pos;
+    // then in pixels as the draws take them, a pixel's index, which they draw at its middle, half a pixel on, so
+    // mousePos is under the pointer, a canvas pixel being many css pixels with canvasFixedSize scaled up
+    return vec2(bent.x - .5, bent.y - .5);
 }
 
 function inputUpdate()
@@ -8402,7 +8891,7 @@ function inputUpdate()
 
     // clear input when lost focus (prevent stuck keys)
     if (!(touchInputEnable && isTouchDevice) && !document.hasFocus())
-        inputClearDevices(debug && gamepadsEnable);
+        inputClearDevices(false && gamepadsEnable);
 
     // update mouse world space position and delta
     mousePos = screenToWorld(mousePosScreen);
@@ -8432,7 +8921,7 @@ function inputUpdate()
         // keyboard: any non-mouse key down
         let keyboardActive = false;
         for (const k in inputData[0])
-            if (isNaN(+k) && (inputData[0][k] & 1))
+            if (isNaN(+k) && keyIsDown(k)) // as the game reads it, so not while the input is captured
             {
                 keyboardActive = true;
                 break;
@@ -8469,9 +8958,36 @@ function inputUpdate()
             !touchGamepadTimer.isSet())
             touchGamepadTimer.set();
         if (touchGamepadEnable && isTouchDevice && touchGamepadTimer.isSet() && gamepadsEnable && inputRealGamepadUsed())
-            touchGamepadTimer.unset(), touchGamepadHandedOver = true;
+        {
+            // the real gamepad takes over: the fingers on the touch gamepad let go of it, and a button they held
+            // is released by the real gamepad's poll below, as one it saw held
+            touchGamepadTimer.unset(), touchGamepadHandedOver = true, touchGamepadOwning = false;
+            touchGamepadPointerRole.clear();
+            touchGamepadButtons.length = touchGamepadButtonsPressed.length = touchGamepadSticks.length = 0;
+            touchGamepadStickRelease(0), touchGamepadStickRelease(1);
+            touchGamepadHeldAtHandover = touchGamepadButtonsLast.flatMap((held, i)=> held ? [i] : []);
+            touchGamepadButtonsLast.length = 0;
+        }
         if (touchGamepadEnable && isTouchDevice && touchGamepadTimer.isSet())
         {
+            // taking over from the real gamepads, whichever slots they are in: their held buttons are let go, as
+            // they are not read while the touch gamepad has it; gamepad 0's are its own, read below
+            if (!touchGamepadOwning)
+            {
+                touchGamepadOwning = true;
+                gamepadLettingGo[0] = undefined; // a let-go of slot 0 from when it was off is over, the slot is its own
+                for (let k = 2; k < inputData.length; ++k)
+                for (const j in inputData[k] ?? [])
+                    inputData[k][j] = inputData[k][j] & 1 ? 4 : 0;
+                // and their sticks and dpads centered, as nothing reads them meanwhile, with new vectors, as the
+                // polls make, so one the game kept from an earlier frame keeps its value
+                for (let k = 1; k < gamepadStickData.length; ++k)
+                    gamepadStickData[k] &&= gamepadStickData[k].map(()=> vec2());
+                for (let k = 1; k < gamepadDpadData.length; ++k)
+                    gamepadDpadData[k] &&= vec2();
+                gamepadButtonsLast.length = 0;
+            }
+
             // read virtual analog stick
             gamepadPrimary = 0; // touch gamepad uses index 0
             const sticks = gamepadStickData[0] ?? (gamepadStickData[0] = []);
@@ -8489,8 +9005,10 @@ function inputUpdate()
                     sticks[out] = applyDeadZones(touchStick);
                 else if (touchStick.lengthSquared() > .3)
                 {
-                    const x = clamp(round(touchStick.x), -1, 1);
-                    const y = clamp(round(touchStick.y), -1, 1);
+                    // snapped to the nearest of 8 directions by its angle, so a diagonal reads at the same
+                    // push as a straight one, where each axis rounded alone needed a longer push
+                    const a = round(atan2(touchStick.y, touchStick.x) / (PI/4)) * PI/4;
+                    const x = round(cos(a)), y = round(sin(a));
                     sticks[out] = vec2(x, -y).clampLength(); // clamp to circle
                     if (!out) dpad.set(x, -y); // the primary (stick 0) also drives the dpad vector
                 }
@@ -8503,9 +9021,13 @@ function inputUpdate()
             const data = inputData[1] ?? (inputData[1] = []);
             for (let i=max(12, data.length); i--;)
             {
-                const wasDown = gamepadIsDown(i,0), isDown = touchGamepadButtons[i];
-                const pressed = touchGamepadButtonsPressed[i] || isDown && !wasDown;
-                data[i] = isDown ? pressed ? 3 : 1 : pressed ? 6 : wasDown ? 4 : 0;
+                // the first poll after taking over goes by what the data holds, the real gamepad's buttons
+                const wasHeld = touchGamepadButtonsLast[i] ?? !!(data[i] & 1);
+                const isDown = !!touchGamepadButtons[i], tapped = !!touchGamepadButtonsPressed[i];
+                touchGamepadButtonsLast[i] = isDown;
+                // one held that inputClearKey or inputClear let go stays up until it is let go, and only one
+                // that read down is released
+                data[i] = isDown ? tapped || !wasHeld ? 3 : data[i] & 1 : tapped ? 6 : wasHeld && data[i] & 1 ? 4 : 0;
 
                 // haptic tap when a face button or start button is first pressed
                 // skip stick touches (10, 11) so movement doesn't buzz
@@ -8519,10 +9041,20 @@ function inputUpdate()
             // real gamepads are not read while the touch gamepad is in use
             return;
         }
+        if (touchGamepadOwning)
+        {
+            // the touch gamepad was turned off since the last poll, from a page's own button: slot 0 is the real
+            // pads' again from this poll, so what a real pad 0 holds is read, not let go when the overlay hides
+            touchGamepadOwning = false;
+            gamepadSlotLetGo(0); // what the touch gamepad held is let go, read by the game this frame
+            gamepadLettingGo[0] && (gamepadLettingGo[0] = 1); // made in this poll, kept through the pad loop below
+            gamepadStickData[0] = gamepadDpadData[0] = undefined;
+            touchGamepadButtonsLast.length = 0; // turned on again, it takes over from the real pads afresh
+        }
 
         // only poll gamepads when focused or in debug mode;
         // what the last poll saw is forgotten meanwhile, a button let go while away is not released on return
-        if (gamepadsEnable && !debug && !document.hasFocus())
+        if (gamepadsEnable && !false && !document.hasFocus())
             return void (gamepadButtonsLast.length = 0);
 
         // poll gamepads; every slot is visited and a slot with no gamepad is cleared, so a refused or
@@ -8530,14 +9062,17 @@ function inputUpdate()
         // like the one Firefox returns after the highest numbered gamepad disconnects
         const maxGamepads = 8;
         const gamepads = gamepadsEnable ? inputGetGamepads() : []; // disabled lets go of them like unplugged
+        const primaryBefore = gamepadPrimary, hadInputBefore = [...gamepadHadInput];
         for (let i=0; i<maxGamepads; ++i)
         {
             // get or create gamepad data
             const gamepad = gamepads[i];
             if (!gamepad)
             {
-                // clear gamepad data if not connected
-                inputData[i+1] = undefined;
+                // a pad gone with buttons held, unplugged or gamepads turned off, lets them go this poll, so a
+                // release a game waits for comes, and its slot clears on the next
+                gamepadLettingGo[i] === 1 ? gamepadLettingGo[i] = true : // let go this poll, cleared on the next
+                gamepadLettingGo[i] ? inputData[i+1] = gamepadLettingGo[i] = undefined : gamepadSlotLetGo(i);
                 gamepadStickData[i] = undefined;
                 gamepadDpadData[i] = undefined;
                 gamepadHadInput[i] = undefined;
@@ -8546,6 +9081,9 @@ function inputUpdate()
                 continue;
             }
 
+            // what the touch gamepad let go of this poll stays released for the game, a real pad 0 not holding it
+            const letGo = gamepadLettingGo[i] === 1 && inputData[i+1]?.slice();
+            gamepadLettingGo[i] = undefined; // here again, a blip, so its next loss lets its buttons go too
             const data = inputData[i+1] ?? (inputData[i+1] = []);
             const buttonsLast = gamepadButtonsLast[i] ?? (gamepadButtonsLast[i] = []);
             const sticks = gamepadStickData[i] ?? (gamepadStickData[i] = []);
@@ -8595,6 +9133,7 @@ function inputUpdate()
                     hadInput = true;
             }
 
+            letGo && letGo.forEach((v, j)=> v === 4 && !(data[j] & 1) && (data[j] = 4));
             // a different gamepad in the same slot with fewer buttons or sticks holds none of the last one's
             data.length = buttonsLast.length = gamepad.buttons.length;
             sticks.length = gamepad.axes.length >> 1;
@@ -8622,6 +9161,18 @@ function inputUpdate()
                 sticks[0] = vec2();
         }
 
+        // a primary pad lost as another took over in the same poll lets its held buttons go on the one the game
+        // reads now, as the touch gamepad's are, unless that pad was in use already, another player's
+        if (gamepadPrimary !== primaryBefore && gamepadLettingGo[primaryBefore] && !hadInputBefore[gamepadPrimary])
+            inputData[primaryBefore + 1].forEach((v, k)=> v === 4 && touchGamepadHeldAtHandover.push(k));
+
+        // the touch buttons held when a real gamepad took over are released on the pad the game reads now, which
+        // may be in another slot or have fewer buttons, unless that pad holds the button itself
+        const primary = inputData[gamepadPrimary + 1];
+        for (const i of primary ? touchGamepadHeldAtHandover : [])
+            primary[i] & 1 || (primary[i] = 4);
+        touchGamepadHeldAtHandover = [];
+
         // disable touch gamepad if using real gamepad
         touchGamepadEnable && isUsingGamepad && touchGamepadTimer.unset();
     }
@@ -8635,7 +9186,8 @@ function inputUpdatePost()
     for (const deviceInputData of inputData)
     for (const i in deviceInputData)
         deviceInputData[i] &= 1;
-    mouseWheel = touchPinch = 0;
+    mouseWheel = touchPinch = inputWheelPinch = 0;
+    inputPinchReleased = false;
     mouseDelta = vec2();
     mouseDeltaScreen = vec2();
 }
@@ -8694,7 +9246,14 @@ function touchGamepadInit()
     touchGamepadSideZones[1] = makeZone(); // right
     touchGamepadZoneC = makeZone(); // center/start, appended last so it sits above the sides
 
-    addEventListener('resize', ()=> touchGamepadNeedRelayout = true);
+    // a resize lays the zones out again, and a floating stick no finger holds goes back to its side's place, as its
+    // last place is in the old stage's pixels, off a rotated one
+    addEventListener('resize', ()=>
+    {
+        touchGamepadNeedRelayout = true;
+        touchGamepadStickAnchors.forEach((a, side)=> touchGamepadStickPointerId[side] === undefined ?
+            touchGamepadStickAnchors[side] = undefined : touchGamepadStickStale[side] = 1); // held: forgot on release
+    });
     document.body.appendChild(overlay);
     touchGamepadNeedRelayout = true;
 }
@@ -8764,8 +9323,11 @@ function touchGamepadRelayout()
         for (const zone of touchGamepadSideZones) zone.style.display = 'none';
         if (touchGamepadCenterButtonSize)
         {
-            // any touch presses start
-            setZone(touchGamepadZoneC, 'inset:0');
+            // any touch presses start, or with passthrough only one on the start button, so the game's paused
+            // menu gets the rest
+            const c = touchGamepadCenterButtonSize;
+            setZone(touchGamepadZoneC, touchGamepadPassthrough ?
+                `left:50%;top:50%;width:${2*c}px;height:${2*c}px;transform:translate(-50%,-50%)` : 'inset:0');
             touchGamepadZoneC.style.display = '';
         }
         else
@@ -8777,7 +9339,6 @@ function touchGamepadRelayout()
         for (let side = 0; side < 2; side++)
         {
             const zone = touchGamepadSideZones[side], edge = side ? 'right' : 'left';
-            zone.style.display = touchGamepadSideHasControl(side) ? '' : 'none';
             if (touchGamepadFloating && touchGamepadSideStick(side))
             {
                 // bottom 60% grabs the stick; the top 40% passes through. A side with no
@@ -8787,11 +9348,13 @@ function touchGamepadRelayout()
             }
             else // fixed, and face buttons which never float: a compact box hugging the corner control
                 setZone(zone, `${edge}:0;bottom:0;width:${3*S}px;height:${3*S}px`);
+            // after the zone's place, which sets its whole style, so a side with no control takes no touch
+            zone.style.display = touchGamepadSideHasControl(side) ? '' : 'none';
         }
-        touchGamepadZoneC.style.display = touchGamepadCenterButtonSize ? '' : 'none';
         const c = touchGamepadCenterButtonSize;
         setZone(touchGamepadZoneC,
             `left:50%;top:50%;width:${2*c}px;height:${2*c}px;transform:translate(-50%,-50%)`);
+        touchGamepadZoneC.style.display = c ? '' : 'none';
     }
 
     touchGamepadBuildSvg(W, H);
@@ -8854,7 +9417,7 @@ function touchGamepadBuildSvg(W, H)
     }
 
     // debug: draw the proximity hit regions the hit-test actually uses
-    if (debug && debugGamepads) touchGamepadBuildDebug(W, H);
+    if (false && debugGamepads) touchGamepadBuildDebug(W, H);
 }
 
 // draw debug outlines of the touch control hit regions into the overlay svg
@@ -8909,33 +9472,33 @@ function touchGamepadRender()
 {
     if (!touchGamepadOverlay || headlessMode) return;
 
-    // hide and bail if disabled at runtime (overlay stays in the DOM for reuse)
+    // hide and bail if disabled at runtime or under an open level editor (overlay stays in the DOM for reuse)
     // display:none also takes the input zones out of hit-testing so touches are
-    // not silently captured away from the game while disabled
-    if (!touchGamepadEnable || !isTouchDevice)
+    // not silently captured away from the game or the editor
+    if (!touchGamepadEnable || !isTouchDevice || levelEditor.isOpen)
     {
         if (touchGamepadOverlay.style.display !== 'none')
         {
             // just disabled: hide the overlay and release any held controls, and the gamepad slot they
             // fed, which nothing else rewrites while real gamepads are off
             touchGamepadOverlay.style.display = 'none';
+            // the fingers let go of it; what they held is released by the next poll, which sees them lifted under
+            // an open editor, and lets go of slot 0 when turned off, a real pad that took slot 0 over keeping its own
             touchGamepadPointerRole.clear();
             touchGamepadButtons.length = 0;
             touchGamepadButtonsPressed.length = 0;
             touchGamepadSticks.length = 0;
-            touchGamepadStickPointerId.length = 0;
-            inputData[1] = undefined;
-            gamepadStickData[0] = gamepadDpadData[0] = undefined;
+            touchGamepadStickRelease(0), touchGamepadStickRelease(1);
         }
         return;
     }
     touchGamepadOverlay.style.display = '';
 
     // relayout when the paused state, a layout setting, or the debug view changes
-    const dbg = debug && debugGamepads;
+    const dbg = false && debugGamepads;
     const layout = [touchGamepadButtonCount, touchGamepadLeftButtonCount, touchGamepadLeftStick,
         touchGamepadRightStick, touchGamepadAnalog, touchGamepadSize, touchGamepadFloating,
-        touchGamepadCenterButtonSize, paused, dbg].join();
+        touchGamepadCenterButtonSize, touchGamepadPassthrough, paused, dbg].join();
     if (layout !== touchGamepadLastLayout)
     {
         touchGamepadLastLayout = layout;
@@ -8979,7 +9542,8 @@ function touchGamepadRender()
  *  @memberof Input */
 
 /** Returns where a button of the touch gamepad is on screen, to draw an icon of the game's own over it
- *  - Undefined when the touch gamepad is not showing that button: off, not a touch device, or no such button
+ *  - Undefined when the touch gamepad is not showing that button: off, not a touch device, or no such button, or
+ *    when its center is off the canvas, as in a letterbox bar with canvasFixedSize; one partly off it has its size
  *  - Buttons 0 to 3 are the right side's, 4 to 7 the left side's when it has buttons instead of a stick
  *  - Follows the layout, touchGamepadSize, the screen's safe area and setMouseScreenTransform
  *  @param {number} button
@@ -9002,7 +9566,10 @@ function touchGamepadButtonPos(button)
     // the circle drawn for it, in the stage's CSS pixels, the stage inset by the safe area
     const r = touchGamepadStageRect(), rr = +circle.getAttribute('r');
     const x = r.left + +circle.getAttribute('cx'), y = r.top + +circle.getAttribute('cy');
-    const pos = mouseEventToScreen(vec2(x, y)), edge = mouseEventToScreen(vec2(x + rr, y));
+    // not kept on the canvas, so one past its edge is its whole size, and one wholly off it, in a letterbox bar,
+    // is not on the screen the game draws
+    const pos = mouseEventToScreen(vec2(x, y), false), edge = mouseEventToScreen(vec2(x + rr, y), false);
+    if (pos.x < -.5 || pos.y < -.5 || pos.x > mainCanvasSize.x - .5 || pos.y > mainCanvasSize.y - .5) return;
     const alpha = +touchGamepadOverlay.style.opacity || 0;
     return {pos, size: 2*pos.distance(edge), alpha};
 }
@@ -9018,7 +9585,10 @@ function touchGamepadEventPos(e)
 // (stick 0 press = button 10, stick 1 press = button 11, following the output index)
 function touchGamepadApplyStick(side, p)
 {
-    const delta = p.subtract(touchGamepadStickAnchors[side]);
+    // a fixed stick reads against where its base is drawn now, a page resized while it is held too
+    const r = touchGamepadStageRect(), anchor = touchGamepadFloating ? touchGamepadStickAnchors[side] :
+        touchGamepadSideCenter(side, r.width, r.height);
+    const delta = p.subtract(anchor);
     touchGamepadSticks[side] = delta.scale(2/touchGamepadSize).clampLength();
     touchGamepadButtons[touchGamepadStickButton(side)] = 1;
 }
@@ -9083,6 +9653,15 @@ function touchGamepadStartBlockedAt(p, W, H)
             return true;
     return false;
 }
+// if the touch gamepad takes a finger that landed in one of its zones: one on a control, or while paused any on the
+// start zone; a finger in a zone's box but on none of its controls is not the gamepad's
+function touchGamepadTakes(t)
+{
+    if (paused) return t.target === touchGamepadZoneC;
+    const r = touchGamepadStageRect();
+    return !!touchGamepadControlAt(vec2(t.clientX - r.left, t.clientY - r.top), r.width, r.height);
+}
+
 function touchGamepadStartBlockSide(side)
 { return touchGamepadSideHasControl(side) && !(touchGamepadFloating && touchGamepadSideStick(side)); }
 
@@ -9094,6 +9673,8 @@ function touchGamepadPointerDown(e, zone)
     // the browser refuses a capture while the pointer is locked, or for a pointer it no longer counts as active,
     // as Chrome's device mode can; the zone still takes the touch, it only stops following a finger that slides off
     try { zone.setPointerCapture(e.pointerId); } catch { }
+    // with passthrough a finger on none of the controls is the game's, a tap on its UI, which wakes no gamepad
+    if (touchGamepadPassthrough && !touchGamepadTakes(e)) return;
     touchGamepadTimer.set();
     touchGamepadHandedOver = false;
 
@@ -9156,6 +9737,16 @@ function touchGamepadPointerMove(e)
     // face buttons & start are held until release (no slide-between this pass)
 }
 
+// a stick let go of, by its finger lifting or by a blur, a hidden page, a real gamepad or an editor taking over: one
+// held through a resize goes back to its side's place, its anchor in the old stage's pixels
+function touchGamepadStickRelease(side)
+{
+    touchGamepadStickPointerId[side] = undefined;
+    // a stick held through a resize forgets its old anchor, and the layout is made again, which draws its ring home
+    touchGamepadStickStale[side] && (touchGamepadStickAnchors[side] = undefined, touchGamepadStickStale[side] = 0,
+        touchGamepadNeedRelayout = true);
+}
+
 function touchGamepadPointerUp(e)
 {
     const role = touchGamepadPointerRole.get(e.pointerId);
@@ -9164,7 +9755,7 @@ function touchGamepadPointerUp(e)
     if (role === 'stick0' || role === 'stick1')
     {
         const side = role === 'stick1' ? 1 : 0;
-        touchGamepadStickPointerId[side] = undefined;
+        touchGamepadStickRelease(side);
         touchGamepadSticks[side] = vec2();
         delete touchGamepadButtons[touchGamepadStickButton(side)];
     }
@@ -9172,7 +9763,7 @@ function touchGamepadPointerUp(e)
         delete touchGamepadButtons[9];
     else // 'face<n>'
         delete touchGamepadButtons[+role.slice(4)];
-    touchGamepadTimer.set();
+    touchGamepadTimer.set(); // a finger lifted after a real gamepad took over has no role, and returned above
 }
 /**
  * LittleJS Audio System
@@ -9208,7 +9799,7 @@ let audioMasterVolume; // the soundVolume the master gain was last set to
 if (audioMasterGain)
 {
     audioMasterGain.connect(audioContext.destination);
-    audioMasterGain.gain.value = audioMasterVolume = soundVolume; // set starting value
+    audioMasterGain.gain.value = max(audioMasterVolume = soundVolume, 0); // set starting value, a negative is silence
     audioContext.addEventListener?.('statechange', audioStateChange);
 }
 
@@ -9217,7 +9808,7 @@ function audioUpdateVolume()
 {
     // a volume that is not a number, from a slider's text say, is not handed on, where every frame it would throw
     if (audioMasterGain && soundVolume !== audioMasterVolume && isFinite(soundVolume))
-        audioMasterGain.gain.value = audioMasterVolume = soundVolume;
+        audioMasterGain.gain.value = max(audioMasterVolume = soundVolume, 0); // a negative set directly is silence
 }
 
 // the current master effect, kept so setAudioMasterEffect can undo the route it made,
@@ -9237,12 +9828,14 @@ function audioIsRunning()
 
 function audioInit()
 {
-    if (!soundEnable || headlessMode) return;
+    if (headlessMode) return;
 
-    audioSetSession();
+    audioSetSession(); // the iPhone session, set with sound off too, as it may be turned on later
+    // the page's pause is listened for with sound off too, a game may turn it on later
     document.addEventListener('visibilitychange', audioPageChange);
     addEventListener('blur', audioPageChange); // the window's, focus moving to another window or the page's frame
     addEventListener('focus', audioPageChange);
+    audioPageChange(); // a page that starts hidden, opened in a background tab, starts paused
 }
 
 // on an iPhone the silent switch mutes the page's sound, unless soundIgnoreSilentSwitch has it play as media,
@@ -9257,25 +9850,35 @@ function audioSetSession()
 // a hidden page stops the game, so its sound stops too, and with soundPauseWhenBlurred a window without focus, and
 // the audio clock with it so every sound picks up exactly where it was; only a suspend made here is undone, not one
 // the browser holds until the first input
-let audioSuspendedByPage = false;
+let audioSuspendedByPage = false, audioSpeechPausedByPage = false;
+// a plugin's own sound that follows the page, the UI's videos, told when a setting changes, which is no page event
+/** @type {(function(): void)|undefined} */
+let audioPageSettingChange;
 function audioPageChange()
 {
-    if (!audioContext || headlessMode) return; // a browser with no audio has none to pause
-    const pause = soundPauseWhenHidden && document.hidden || soundPauseWhenBlurred && document.hasFocus?.() === false;
+    if (headlessMode) return;
+    const pause = audioPagePaused();
+    // speech is not in the audio context, so it pauses on its own, with no running context too
+    if (typeof speechSynthesis != 'undefined' && pause !== audioSpeechPausedByPage)
+        (audioSpeechPausedByPage = pause) ? speechSynthesis.pause() : speechSynthesis.resume();
+    if (!audioContext) return; // a browser with no audio has none to pause
     if (pause)
     {
         if (audioSuspendedByPage || audioContext.state != 'running') return;
         audioSuspendedByPage = true;
         audioContext.suspend();
-        typeof speechSynthesis != 'undefined' && speechSynthesis.pause(); // speech is not in the audio context
     }
     else if (audioSuspendedByPage)
     {
         audioSuspendedByPage = false;
         audioResume();
-        typeof speechSynthesis != 'undefined' && speechSynthesis.resume();
     }
 }
+
+// whether the page's sound should be paused now, hidden or blurred as soundPauseWhenHidden and soundPauseWhenBlurred
+// say, for the engine's audio, speech and a plugin's own, like a UIVideo's
+function audioPagePaused()
+{ return soundPauseWhenHidden && !!document.hidden || soundPauseWhenBlurred && document.hasFocus?.() === false; }
 
 // sound instances whose start failed only because the context was not running, like music started in gameInit
 // before the first input, each with the time it tried; they start once the context runs unless paused or stopped
@@ -9293,6 +9896,14 @@ function audioWaitingPrune(now=performance.now())
 function audioStateChange()
 {
     if (!audioIsRunning()) return;
+    // a context that starts running while the page is paused, its first input in a page hidden since, is suspended
+    // again, the waiting sounds kept for when the page shows
+    if (audioPagePaused() && !audioSuspendedByPage)
+    {
+        audioSuspendedByPage = true;
+        audioContext.suspend();
+        return;
+    }
     audioWaitingPrune();
     const instances = [...audioWaitingInstances.keys()];
     audioWaitingInstances.clear();
@@ -9373,7 +9984,7 @@ const audioFinite = (/** @type {number} */ value, /** @type {number} */ otherwis
 function audioParamRamp(param, value, fadeTime=0)
 {
     false&&ASSERT(fadeTime >= 0, 'fadeTime must be positive or zero');
-    value = audioFinite(value, 0), fadeTime = audioFinite(fadeTime, 0);
+    value = audioFinite(value, 0), fadeTime = max(audioFinite(fadeTime, 0), 0); // a negative time is at once
     const startTime = audioContext.currentTime;
     param.cancelScheduledValues(startTime);
     if (fadeTime)
@@ -9604,7 +10215,7 @@ class Sound
         const rate = pitch + pitch * this.randomness*randomnessScale*rand(-1,1);
         const instance = new SoundInstance(this, volume, rate, pan, loop, paused);
 
-        if (debug && debugSound && pos)
+        if (false && debugSound && pos)
         {
             // visualize where positioned sounds play and their falloff range
             debugCircle(pos, .5, '#0ff', .5, true, false);
@@ -9721,9 +10332,9 @@ class SoundInstance
         /** @property {Sound} - The sound object */
         this.sound = sound;
         /** @property {number} - How much to scale volume by */
-        this.volume = audioFinite(volume, 0);
+        this.volume = max(audioFinite(volume, 0), 0);
         /** @property {number} - The playback rate to use */
-        this.rate = audioFinite(rate, 1);
+        this.rate = max(audioFinite(rate, 1), 0); // below 0 would run its clock backward
         /** @property {number} - How much to apply stereo panning */
         this.pan = audioFinite(pan, 0);
         /** @property {boolean} - Should the sound loop */
@@ -9775,6 +10386,7 @@ class SoundInstance
     start(offset=0)
     {
         false&&ASSERT(offset >= 0, 'Sound start offset must be positive or zero');
+        offset = max(audioFinite(offset, 0), 0); // and kept as its clock, so a bad one in a release build is 0
         if (this.isPlaying())
             this.stop();
         this.gainNode = audioContext.createGain();
@@ -9817,7 +10429,7 @@ class SoundInstance
     {
         false&&ASSERT(volume >= 0, 'Sound volume must be positive or zero');
         false&&ASSERT(fadeTime >= 0, 'Sound fade time must be positive or zero');
-        this.volume = volume = audioFinite(volume, 0);
+        this.volume = volume = max(audioFinite(volume, 0), 0); // a negative one is silence, not inverted
         this.gainNode && audioParamRamp(this.gainNode.gain, volume, fadeTime);
     }
 
@@ -9845,7 +10457,7 @@ class SoundInstance
             this.startOffset = this.getCurrentTime();
             this.startTime = audioContext.currentTime;
         }
-        this.rate = rate = audioFinite(rate, 1);
+        this.rate = rate = max(audioFinite(rate, 1), 0);
         if (this.source)
             this.source.playbackRate.value = rate;
     }
@@ -9940,6 +10552,8 @@ class SoundInstance
 ///////////////////////////////////////////////////////////////////////////////
 
 /** Speak text with passed in settings
+ *  - While the page's sound is paused, hidden or blurred as soundPauseWhenHidden and soundPauseWhenBlurred say, it
+ *    says nothing, as a sound played then is not heard, where the browser would say it all at once on return
  *  @param {string} text - The text to speak
  *  @param {number} [volume] - How much to scale volume by
  *  @param {number} [rate] - How quickly to speak
@@ -9951,7 +10565,7 @@ function speak(text, volume=1, rate=1, pitch=1, language='')
 {
     false&&ASSERT(typeof volume !== 'string', 'speak() signature changed: language is now the last parameter, after pitch');
     if (!soundEnable || headlessMode) return;
-    if (typeof speechSynthesis === 'undefined') return;
+    if (typeof speechSynthesis === 'undefined' || audioPagePaused()) return;
 
     // common languages (not supported by all browsers)
     // en - english,  it - italian, fr - french,  de - german, es - spanish
@@ -9960,9 +10574,9 @@ function speak(text, volume=1, rate=1, pitch=1, language='')
     // build utterance and speak
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = language;
-    utterance.volume = audioFinite(clamp(volume*soundVolume), 0); // not a number is silence, not a throw
-    utterance.rate = rate;
-    utterance.pitch = pitch;
+    utterance.volume = audioFinite(clamp(max(volume, 0) * max(soundVolume, 0)), 0); // NaN or below 0 is silence
+    utterance.rate = audioFinite(rate, 1); // the browser throws on NaN or Infinity
+    utterance.pitch = audioFinite(pitch, 1);
     speechSynthesis.speak(utterance);
     return utterance;
 }
@@ -10064,7 +10678,8 @@ function playAudioBuffer(buffer, volume=1, rate=1, pan=0, loop=false, gainNode, 
         return;
     }
 
-    volume = audioFinite(volume, 0), rate = audioFinite(rate, 1), pan = audioFinite(pan, 0);
+    volume = max(audioFinite(volume, 0), 0), rate = audioFinite(rate, 1), pan = audioFinite(pan, 0);
+    offset = max(audioFinite(offset, 0), 0); // start throws on one not finite or below 0, after the nodes connected
 
     // setup source, many sources can share one buffer
     const source = audioContext.createBufferSource();
@@ -10095,7 +10710,7 @@ function playAudioBuffer(buffer, volume=1, rate=1, pan=0, loop=false, gainNode, 
     // play and return sound, the offset is a place in the buffer whatever the rate
     source.start(0, offset);
 
-    if (debug && debugSound)
+    if (false && debugSound)
         false&&LOG('sound', 'vol', volume.toFixed(2), 'rate', rate.toFixed(2), 'pan', pan.toFixed(2), loop ? 'loop' : '');
 
     return source;
@@ -10380,6 +10995,9 @@ let tileCollisionFromObject, tileCollisionFromPos;
 // the object whose tiles are asked about where its move put it, for collideWithTile's isHit
 let tileCollisionHitObject;
 
+// set while the physics asks if an object started its move inside tiles, which every one way tile lets pass
+let tileCollisionStuckTest = false;
+
 // a one way tile at a layer's cell lets a box at from pass, when the cell draws a tile set one way and the box was not
 // wholly on its solid side, the side it can be passed through toward; the way is turned and mirrored as the tile's
 // art is, mirror first, then its quarter turns clockwise; a point is a box of no size
@@ -10526,13 +11144,18 @@ function tileCollisionRaycast(posStart, posEnd, callbackObject, normal, solidOnl
 const tileLayersTiledFlips = [[0,0], [3,1], [2,1], [3,0], [0,1], [1,0], [2,0], [1,1]];
 
 // the tile info a layer's tile info gives a tile: a tile set's tile, a frame of a sheet read by its columns, or a
-// tile of its grid; undefined past the end of a tile set, or of a sheet read by its columns, as values kept only for
-// collision can be, which the level editor reads the same way
+// tile of its grid; undefined past the end of a tile set, a sheet read by its columns or its grid's image, as values
+// kept only for collision can be, which the level editor reads the same way
 function tileLayerTileInfo(t, tile)
 {
     if (!t) return;
     if (t.tiles) return t.tiles[tile];
-    if (!t.columns) return t.index(tile);
+    if (!t.columns)
+    {
+        // a tile of the grid past the image's bottom draws a smear in WebGL and nothing in Canvas2D, so it is none
+        const info = t.index(tile);
+        return t.textureInfo && info.pos.y + info.size.y > t.textureInfo.size.y ? undefined : info;
+    }
     if (t.textureInfo && t.pos.y + (tile / t.columns | 0) * (t.size.y + t.padding*2) + t.size.y > t.textureInfo.size.y)
         return;
     return t.frame(tile);
@@ -10569,6 +11192,9 @@ function tileLayersLoad(tileMapData, tileInfo=tileLayerDefaultTile(), renderOrde
         const s = 50;
         tileMapData = {width: s, height: s, layers: [{data: new Array(s*s).fill(0)}]};
     }
+    // an isometric, staggered or hexagonal map is read as a square grid, every tile somewhere else
+    false && tileMapData.orientation && tileMapData.orientation !== 'orthogonal' && console.warn(
+        `tileLayersLoad: a map of ${tileMapData.orientation} orientation is read as orthogonal, square cells`);
 
     // the editor, in debug builds, keeps the map as the source of its edits and brings back autosaved ones
     tileMapData = editorMapRestore(tileMapData);
@@ -10588,7 +11214,9 @@ function tileLayersLoad(tileMapData, tileInfo=tileLayerDefaultTile(), renderOrde
     const tileset = tileMapData.tilesets?.[0];
     if (tileInfo && !tileInfo.tiles && tileset && (tileset.margin > 0 || tileset.spacing > 0))
     {
-        const margin = tileset.margin || 0, spacing = tileset.spacing || 0, size = tileInfo.size;
+        // a margin or spacing that is not a number, written by hand, is none
+        const margin = isNumber(tileset.margin) ? tileset.margin : 0, spacing = isNumber(tileset.spacing) ?
+            tileset.spacing : 0, size = tileInfo.size;
         const width = tileInfo.textureInfo?.size.x || 0;
         const columns = tileset.columns || max(1, floor((width - margin*2 + spacing) / (size.x + spacing)));
         const origin = tileInfo.pos.subtract(vec2(tileInfo.padding)); // where the sheet starts, in an atlas too
@@ -10630,6 +11258,8 @@ function tileLayersLoad(tileMapData, tileInfo=tileLayerDefaultTile(), renderOrde
         collisionLayer = layers.findIndex((l)=> l.color && l.dataLayer.name === name);
         collisionLayer < 0 && console.error('tileLayersLoad: no tile layer is named ' + name + ', none is solid');
     }
+    else if (collisionLayer != null && !layers[collisionLayer]?.color)
+        console.error('tileLayersLoad: layer ' + collisionLayer + ' is not a tile layer, none is solid');
 
     // create tile layers and fill with data, every layer's tiles checked first, so a bad one leaves none made
     const tileLayers = [];
@@ -10640,7 +11270,8 @@ function tileLayersLoad(tileMapData, tileInfo=tileLayerDefaultTile(), renderOrde
         const tiles = dataLayer.data; // a list of gids, or a typed array of them
         if (color && (!(isArray(tiles) || ArrayBuffer.isView(tiles)) || dataLayer.data.length !== levelSize.area()))
             throw new Error(`tileLayersLoad: layer ${dataLayer.name ?? layerIndex} has ${dataLayer.data?.length} tiles for a map of ` +
-                `${levelSize.area()}; infinite maps and compressed layers are not read`);
+                `${levelSize.area()}; save the map with the CSV or array layer format, base64, compressed and infinite ` +
+                'maps are not read');
     }
     for (let layerIndex=layerCount; layerIndex--;)
     {
@@ -10731,7 +11362,7 @@ function tileLayersFromLDtk(ldtk, level=0)
     const first = instances.find((l)=> tiled(l) && l.__tilesetDefUid != undefined) || instances.find(tiled) || instances[0];
     const grid = first?.__gridSize || 16;
     const width = first?.__cWid || ceil(data.pxWid / grid), height = first?.__cHei || ceil(data.pxHei / grid);
-    if (!(width > 0 && height > 0 && width * height <= 1 << 22))
+    if (!(Number.isInteger(width) && Number.isInteger(height) && width > 0 && height > 0 && width * height <= 1 << 22))
         throw new Error('tileLayersFromLDtk: level ' + data.identifier + ' is ' + width + ' by ' + height + ' cells');
     const map = {width, height, tilewidth: grid, tileheight: grid, orientation: 'orthogonal', renderorder: 'right-down',
         infinite: false, layers: [], nextlayerid: 1, nextobjectid: 1};
@@ -10844,18 +11475,24 @@ const objectLayersTypes = new Map;
  *  - The name is the object's type in Tiled (its class in Tiled 1.9); it is a string because minified builds
  *    rename classes
  *  - A class, or any function with a prototype, is made with new make(pos); an arrow function is called as
- *    make(pos), for what is not an object, like a player start
- *  - The defaults, and then the properties the object has in Tiled, are set on what it made
+ *    make(pos, properties), for what is not an object, like a player start, which gets its properties there
+ *  - The defaults, and then the properties the object has in Tiled, are set on what it made, when that is an
+ *    object of the game's; a position or a Color given back is left out of the list objectLayersLoad gives
+ *  - Each object gets a copy of an array or plain object default, and a map's object over one sets the members it
+ *    gives; keep defaults to numbers, text, true or false, Colors, vectors, and lists and plain objects of those.
+ *    A default that is an instance of a class of the game's own is copied with its copy method, a map setting only
+ *    the fields that instance has of its own, and with no copy method every object shares it and no map sets it
  *  - Adding a name again replaces it
  *  @param {string} name - The type the objects have in Tiled
- *  @param {(function(Vector2): unknown)|(function(new: unknown, Vector2))} make - A class made at each object's
- *  position, or a function called with it
+ *  @param {(function(Vector2, ObjectProperties): unknown)|(function(new: unknown, Vector2))} make - A class made
+ *  at each object's position, or a function called with it and the object's properties
  *  @param {ObjectProperties} [defaults] - Properties set on each one made, the level editor shows inputs for them
  *  @param {TileInfo} [tileInfo] - An icon for the level editor
  *  @memberof TileLayers
  *  @example
  *  objectLayersAddType('Coin', Coin, {value: 1}, tile(5, 16));
- *  objectLayersAddType('PlayerStart', (pos)=> playerStartPos = pos); */
+ *  objectLayersAddType('PlayerStart', (pos, properties)=> { start = pos; facing = properties.facing; }, {facing: 1});
+ */
 function objectLayersAddType(name, make, defaults={}, tileInfo)
 {
     false&&ASSERT(isStringLike(name), 'object type name must be a string');
@@ -10866,13 +11503,22 @@ function objectLayersAddType(name, make, defaults={}, tileInfo)
 
 /** Make the objects in a map's object layers, each from the type added for its name with objectLayersAddType
  *  - An object is made at its position, the world y up as tileLayersLoad places the layers; layer offsets are
- *    not read, and a shape or tile object is made at its position too
+ *    not read, and a shape or tile object is made at its position too: Tiled's, the bottom left corner of a tile
+ *    object and the top left of a rectangle; its type is its Class in Tiled, not its Name
  *  - Group layers are flattened in order, as tileLayersLoad does
  *  - The object's properties in Tiled are set over the type's defaults: numbers, booleans, strings, and colors,
  *    and for a Vector2 default the string x,y
+ *  - A class property, a custom type in Tiled, is merged over its default member by member, since Tiled writes only
+ *    the members set on that object, a Color or Vector2 member read from Tiled's text as at the top level; a value
+ *    or member of another kind than its default keeps the default, with a warning in debug builds, a default of
+ *    null or undefined taking any value, and members named __proto__, constructor or prototype are left out; a list
+ *    member is read item by item as the default's item there, its last past its end
  *  - An object whose type was not added is skipped, with a warning in debug builds
+ *  - Tiled templates are not read: an object placed from one has its type only in the template's file, so export
+ *    the map with Tiled's Detach templates option
  *  @param {TiledMap} tileMapData - The same Tiled map given to tileLayersLoad
- *  @return {Array<any>} - What each object's type made, a function that made nothing is left out
+ *  @return {Array<any>} - What each object's type made, an object of the game's, so the level can be unloaded by
+ *    it; a function that made nothing, or gave back a value of the engine's, as a marker's position, is left out
  *  @memberof TileLayers */
 function objectLayersLoad(tileMapData)
 {
@@ -10899,65 +11545,239 @@ function objectLayersLoad(tileMapData)
     return made;
 }
 
-// a property's value for one object of its own: a Color or Vector2 copied, and an array or plain object copied with
-// what is in it, so an object that changes its list does not change every other object's, or the map's
+// an object's properties, the list of {name, type, value} Tiled writes
+const objectLayersPropertyList = (object)=> isArray(object?.properties) ? object.properties : [];
+
+// a property's value for one object of its own: an array or plain object copied with what is in it, so an object
+// that changes its list does not change every other object's, or the map's, and an instance of a class, a Color, a
+// vector or the game's own, by its copy method, or shared when it has none; every member of a plain object is copied
+// but __proto__, constructor and prototype, so a level a player made can not reach what every object shares
 function objectPropertyCopy(value)
 {
-    if (value?.copy) return value.copy();
     if (isArray(value)) return value.map(objectPropertyCopy);
-    if (!value || typeof value != 'object' || Object.getPrototypeOf(value) !== Object.prototype) return value;
-    const copy = {};
-    for (const key in value)
-        copy[key] = objectPropertyCopy(value[key]);
+    if (!value || typeof value != 'object') return value;
+    if (!objectPropertyPlain(value))
+    {
+        const copy = typeof value.copy == 'function' ? value.copy() : undefined;
+        return copy && typeof copy == 'object' ? copy : value;
+    }
+    const copy = Object.getPrototypeOf(value) === null ? Object.create(null) : {}; // as the merge makes it
+    for (const key of Object.keys(value))
+        objectPropertyShared(key) || objectPropertySet(copy, key, objectPropertyCopy(value[key]));
     return copy;
 }
 
-// the defaults of an object's type, each copied for it, then its properties in Tiled over them
-function objectLayersProperties(type, object)
+// an object of members alone, as JSON makes, one made with Object.create(null) too, not a list or of a class
+const objectPropertyPlain = (v)=> !!v && typeof v == 'object' && !isArray(v) &&
+    (Object.getPrototypeOf(v) === Object.prototype || Object.getPrototypeOf(v) === null);
+
+// a vector member written as a list of numbers, as a 3D level file writes one, read as the default's own kind: a copy
+// of it with the list's numbers, for a default whose members are x and y, or x, y and z; undefined for anything else
+function objectPropertyFromArray(value, fallback)
 {
-    const properties = {};
-    for (const [key, value] of Object.entries(type.defaults))
-        properties[key] = objectPropertyCopy(value);
-    for (const property of object.properties || [])
+    if (!isArray(value) || !fallback || typeof fallback != 'object' || typeof fallback.copy != 'function') return;
+    const axes = ['x', 'y', 'z'].slice(0, value.length);
+    if (value.length < 2 || Object.keys(fallback).join() !== axes.join() ||
+        !value.every((v)=> typeof v == 'number' && isFinite(v))) return;
+    const copy = fallback.copy();
+    axes.forEach((axis, i)=> copy[axis] = value[i]);
+    return copy;
+}
+
+// a name every object has, left out of what a map gives
+const objectPropertyShared = (key)=> key === '__proto__' || key === 'constructor' || key === 'prototype';
+
+// a value's kind for the kind checks, with its article
+const objectPropertyKind = (v)=> isArray(v) ? 'array' : v === null ? 'null' : typeof v;
+const objectPropertyKindName = (v)=> (/^[aeiou]/.test(objectPropertyKind(v)) ? 'an ' : 'a ') + objectPropertyKind(v);
+
+// Tiled's text for a Color, a hex color as #AARRGGBB, or for a Vector2, which Tiled does not have, x,y, made one
+// when the default is that kind; undefined when the value is not that text, so the default is kept
+function objectPropertyFromText(value, fallback)
+{
+    if (typeof value != 'string') return;
+    if (isColor(fallback))
+        return /^#([0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})$/i.test(value) ? tileLayersColor(value) : undefined;
+    if (isVector2(fallback))
     {
-        const {name, value} = property;
-        if (property.type === 'color')
-            value && (properties[name] = tileLayersColor(value)); // an empty color is unset
-        else if (isVector2(type.defaults[name]))
+        const parts = value.split(','), [x, y] = parts.map(Number);
+        return parts.length === 2 && parts.every((part)=> part.trim()) && isNumber(x) && isNumber(y) ?
+            vec2(x, y) : undefined;
+    }
+}
+
+// a property of an object's properties, set as one of its own whatever its name, __proto__ too, which assigned
+// would set the prototype
+function objectPropertySet(properties, key, value)
+{ Object.defineProperty(properties, key, {value, enumerable: true, writable: true, configurable: true}); }
+
+// a property given to an object a type made: assigned, so a setter of the game's class runs; __proto__ made its own,
+// assigned it would set the object's prototype; one named as a method of the object, like update, would take the
+// method's place, and one that can only be read, a getter with no setter, would throw, so both are left out, said
+// through say, which a load gives so it is said once for each map
+function objectPropertyAssign(target, key, value, name, who='objectLayersLoad',
+    say=(why)=> false && console.warn(`${who}: ${name} property ${key} ${why}, left out`))
+{
+    if (key === '__proto__') return objectPropertySet(target, key, value);
+    let found;
+    for (let o = target; o && !found; o = Object.getPrototypeOf(o))
+        found = Object.getOwnPropertyDescriptor(o, key);
+    if (found && !found.get && typeof found.value === 'function' && typeof value !== 'function')
+        say("has a method's name");
+    else if (found && (found.get || found.set ? !found.set : !found.writable))
+        say('can only be read');
+    else
+        target[key] = value;
+}
+
+// a warning said once for each map and what it is about, as the editor makes an object again as it is dragged
+function objectLayersWarnOnce(tileMapData, about, text)
+{
+    if (!false) return;
+    const map = tileMapData ?? objectLayersKindSaid;
+    objectLayersKindSaid.has(map) || objectLayersKindSaid.set(map, new Set);
+    const said = objectLayersKindSaid.get(map);
+    said.has(about) || (said.add(about), console.warn(text));
+}
+
+// for each map, the object ids and property names whose kind warning was said, see objectLayersProperties; the
+// editor makes an object again from a copy as it is dragged, so it is the map's ids, not the objects
+const objectLayersKindSaid = /* @__PURE__ */ new WeakMap;
+
+// a type's default for a property, its own, not one every object has, like constructor or toString
+const objectPropertyDefault = (defaults, key)=>
+    Object.prototype.hasOwnProperty.call(defaults, key) ? defaults[key] : undefined;
+
+// a level's value over its type's default: a plain object member by member, so a member the file left out, as Tiled
+// leaves out the ones not set, keeps the default's, and a list item by item, each read as the default's item there,
+// or its last; a member named __proto__, constructor or prototype is left out, so a level a player made can not reach
+// what every object shares. A default of a class, a Color, a vector or the game's own, is its copy with the fields
+// of its own that the value gives, and one with no copy method is not a level's to set, the default is kept
+function objectLayersMergeClass(fallback, value, warn, path='', fromText=objectPropertyFromText)
+{
+    if (isArray(fallback) && isArray(value))
+        return value.map((item, i)=> objectLayersMergeMember(fallback[min(i, fallback.length - 1)], item, warn,
+            path + '[' + i + ']', fromText));
+    // a value of the game's class, given from code, is copied as itself
+    if (!fallback || typeof fallback !== 'object' || isArray(fallback) || !objectPropertyPlain(value))
+        return objectPropertyCopy(value);
+    const plain = objectPropertyPlain(fallback), merged = objectPropertyCopy(fallback);
+    if (merged === fallback)
+    {
+        warn?.(`${path || ' default'} is of a class with no copy method, the default is kept`);
+        return merged;
+    }
+    for (const key of Object.keys(value))
+    {
+        const name = path + '.' + key;
+        if (objectPropertyShared(key))
+            warn?.(`${name} is a name every object has, left out`);
+        else if (!plain && !Object.prototype.hasOwnProperty.call(fallback, key))
+            warn?.(`${name} is not a field of its default, left out`);
+        else
+            objectPropertySet(merged, key, objectLayersMergeMember(objectPropertyDefault(fallback, key), value[key],
+                warn, name, fromText));
+    }
+    return merged;
+}
+
+// one member or list item of a level's value, read as its default is: a Color or Vector2 from text, a vector from a
+// list, and one of another kind than its default keeps the default, said through warn with its path
+function objectLayersMergeMember(before, member, warn, name, fromText)
+{
+    const read = fromText(member, before) || objectPropertyFromArray(member, before);
+    if (read) return read;
+    if (before != null && objectPropertyKind(before) !== objectPropertyKind(member))
+    {
+        warn?.(`${name} is ${objectPropertyKindName(member)}, its default ${objectPropertyKindName(before)}, ` +
+            'the default is kept');
+        return objectPropertyCopy(before);
+    }
+    return objectLayersMergeClass(before, member, warn, name, fromText);
+}
+
+// the defaults of an object's type, each copied for it, then its properties in Tiled over them
+function objectLayersProperties(type, object, tileMapData)
+{
+    const properties = {}, set = (key, value)=> objectPropertySet(properties, key, value);
+    const list = objectLayersPropertyList(object);
+    for (const [key, value] of Object.entries(type.defaults))
+        set(key, objectPropertyCopy(value));
+    // a list of {name, type, value}, as Tiled 1.2 and on write it; a color that is not a hex string is said and left
+    // out, read before the object is made
+    const say = (about, text)=> objectLayersWarnOnce(tileMapData, object.id + ' ' + name + about,
+        `objectLayersLoad: object ${object.id}'s ${name}${text}`);
+    let name;
+    for (const property of list)
+    {
+        const {value} = property;
+        name = property.name;
+        const fallback = objectPropertyDefault(type.defaults, name);
+        if (property.type === 'color' && (fallback == null || isColor(fallback)))
         {
-            // Tiled has no Vector2, one is the string x,y, and one it can not read keeps the default
-            const parts = String(value).split(','), [x, y] = parts.map(Number);
-            parts.length === 2 && parts.every((part)=> part.trim()) && isNumber(x) && isNumber(y) &&
-                (properties[name] = vec2(x, y));
+            const hex = typeof value == 'string' && /^#([0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})$/i.test(value);
+            value && !hex && objectLayersWarnOnce(tileMapData, object.id + ' ' + name + ' hex',
+                `objectLayersLoad: object ${object.id}'s color ${name} is not a hex color, left out`);
+            hex && set(name, tileLayersColor(value)); // an empty color is unset
+        }
+        else if (isVector2(fallback) && typeof value != 'object')
+        {
+            // Tiled has no Vector2, one is the string x,y, and one it can not read keeps the default, said, a color
+            // or a number too
+            const read = objectPropertyFromText(String(value), fallback);
+            read ? set(name, read) : value !== '' && value != null &&
+                say('', ` is ${JSON.stringify(value)}, not x,y, its default a Vector2, the default is kept`);
         }
         else
-            properties[name] = objectPropertyCopy(value); // a class property is the map's own object
+        {
+            // a value of another kind than its type's default, the text '5' over a number or over a Color, keeps the
+            // default, as the 3D loader does, so a game never gets '5' + 1; a color over a default that is no Color
+            // is its text, and said the same way; a Color or Vector2 written as an object is its members, read below
+            if (fallback != null && objectPropertyKind(fallback) !== objectPropertyKind(value))
+            {
+                say('', ` is ${objectPropertyKindName(value)}, its default ${objectPropertyKindName(fallback)}, ` +
+                    'the default is kept');
+                continue;
+            }
+            // a class property is the map's object over the type's default, member by member: Tiled writes only the
+            // members set on that object, the rest are the class's defaults
+            set(name, objectLayersMergeClass(fallback, value, (text)=> say(text, text)));
+        }
     }
     return properties;
 }
 
 // make one Tiled object from the type added for its name, undefined when there is no such type or it made nothing
+// what a type made is an object of the game's, kept in the loader's list; a marker's function, (pos)=> start = pos,
+// gives back the position, a value of the engine's, which is not, and a list unloaded by destroy would throw on it;
+// the 3D loader leaves a Vector3 out too
+function objectLayersIsMade(result)
+{ return !!result && typeof result === 'object' && !(result instanceof Vector2) && !(result instanceof Color); }
+
 function objectLayersMake(tileMapData, object)
 {
     const name = object.type || object.class, type = objectLayersTypes.get(name);
     if (!type)
     {
         // an object with no type, a shape or a text someone drew in Tiled, is not one a game makes
-        debug && name && console.warn(`objectLayersLoad: no type added for ${name}, skipped`);
+        false && name && console.warn(`objectLayersLoad: no type added for ${name}, skipped`);
+        false && !name && objectLayersTypes.has(object.name) && console.warn(`objectLayersLoad: object ${object.id} ` +
+            `is named ${object.name} with no class, skipped; put the type in Tiled's Class`);
+        false && !name && object.template && console.warn(`objectLayersLoad: object ${object.id} is placed from ` +
+            `the template ${object.template}, which is not read, skipped; export with Detach templates on`);
         return;
     }
     const {height=0, tilewidth=1, tileheight=1} = tileMapData;
     const pos = vec2(object.x / tilewidth, height - object.y / tileheight);
-    const {make} = type, result = make.prototype ? new make(pos) : make(pos);
-    if (!result || typeof result !== 'object') return;
-    for (const [key, value] of Object.entries(objectLayersProperties(type, object)))
-    {
-        // a property named as a method of the object, like update, would take the method's place, so it is left out
-        if (typeof result[key] === 'function' && typeof value !== 'function')
-            debug && console.warn(`objectLayersLoad: ${name} property ${key} has a method's name, left out`);
-        else
-            result[key] = value;
-    }
+    // its properties read first, so a map that can not be read stops before anything is made for it
+    const properties = objectLayersProperties(type, object, tileMapData);
+    // a function is given the properties too, so a marker, (pos, properties)=> start = pos, has them; a class is
+    // given the position alone, as its constructor may take other things after it, and its properties are set
+    const {make} = type, result = make.prototype ? new make(pos) : make(pos, properties);
+    if (!objectLayersIsMade(result)) return;
+    for (const [key, value] of Object.entries(properties))
+        objectPropertyAssign(result, key, value, name, undefined, (why)=> objectLayersWarnOnce(tileMapData,
+            object.id + ' ' + key + why, `objectLayersLoad: ${name} property ${key} ${why}, left out`));
     return result;
 }
 
@@ -11068,7 +11888,8 @@ class CanvasLayer extends EngineObject
     }
 
     /** Destroy this canvas layer
-     *  @param {boolean} [immediate] - Remove it now, as EngineObject.destroy does, children included */
+     *  @param {boolean} [immediate] - true removes attached effects like particle emitters at once, false lets
+     *  them finish first, as EngineObject.destroy does, children included */
     destroy(immediate=false)
     {
         if (this.destroyed) return;
@@ -11258,7 +12079,7 @@ class CanvasLayer extends EngineObject
             angle = -angle, mirror = !mirror;
         const drawSize = this.getLayerDrawSize();
         const pixels = vec2(this.canvas.width / drawSize.x, this.canvas.height / drawSize.y);
-        if (debug && !this.skewWarned && abs(sin(angle)) > 1e-6 && abs(pixels.x - pixels.y) > 1e-6 * pixels.x)
+        if (false && !this.skewWarned && abs(sin(angle)) > 1e-6 && abs(pixels.x - pixels.y) > 1e-6 * pixels.x)
         {
             // a tile turns in the layer's pixels, which this layer stretches on one axis more than the other
             console.warn('CanvasLayer: a turned draw comes out skewed, the layer has more pixels a unit on one axis ' +
@@ -11289,6 +12110,8 @@ class CanvasLayer extends EngineObject
             glSkipScreenSpace = false; // its screen space is the layer's own canvas
             useWebGL && glSetRenderTarget(this.textureInfo.glTexture);
             const drawContext = useWebGL ? undefined : this.context;
+            // a canvas drawn into outside redrawStart smooths as the images do, pixel art hard edged as in WebGL
+            drawContext && (drawContext.imageSmoothingEnabled = !tilesPixelated);
             drawTile(pos, size, tileInfo, color, angle, mirror, undefined, useWebGL, true, drawContext);
         }
         finally
@@ -11689,6 +12512,9 @@ class TileLayer extends CanvasLayer
  * Tile Collision Layer - a tile layer with collision
  * - adds collision data and functions to TileLayer
  * - there can be multiple tile collision layers
+ * - it is an object placed by its corner, and isSolid says its tiles block objects, so an area query,
+ *   engineObjectsCollect, tests a box of its size centered on that corner, not where it covers: leave it out of a
+ *   test for solid objects
  * - its pos must be whole numbers, so its cells line up with the world grid objects land on
  * @extends TileLayer
  * @memberof TileLayers
@@ -11786,14 +12612,15 @@ class TileCollisionLayer extends TileLayer
     }
 
     /** Destroy this tile layer
-     *  @param {boolean} [immediate] - Remove it now, as EngineObject.destroy does, children included */
+     *  @param {boolean} [immediate] - true removes attached effects like particle emitters at once, false lets
+     *  them finish first, as EngineObject.destroy does, children included */
     destroy(immediate=false)
     {
         if (this.destroyed) return;
 
         // remove from collision layers array and destroy
+        // one whose constructor failed after it was made an object was never listed, and still goes
         const index = tileCollisionLayers.indexOf(this);
-        false&&ASSERT(index >= 0, 'tile collision layer not found in array');
         index >= 0 && tileCollisionLayers.splice(index, 1);
         super.destroy(immediate);
     }
@@ -11849,6 +12676,7 @@ class TileCollisionLayer extends TileLayer
         const from = object && (object === tileCollisionFromObject ? tileCollisionFromPos : object.pos);
 
         // check any tiles in the area for collision
+        const wayX = tileCollisionStuckTest ? Infinity : size.x, wayY = tileCollisionStuckTest ? Infinity : size.y;
         const posX = pos.x - this.pos.x;
         const posY = pos.y - this.pos.y;
         // reject AABBs entirely past either edge; without this, the negative
@@ -11866,7 +12694,7 @@ class TileCollisionLayer extends TileLayer
         {
             // check if the object should collide with this tile, the callback gets its own vector, one it can keep
             const tileData = this.collisionData[y*this.size.x+x];
-            if (tileData && !(from && tileCollisionOneWayPass(this, x, y, from.x, from.y, size.x, size.y)) &&
+            if (tileData && !(from && tileCollisionOneWayPass(this, x, y, from.x, from.y, wayX, wayY)) &&
                 collisionTest(tileData, vec2(x+this.pos.x, y+this.pos.y)))
                 return true;
         }
@@ -12042,7 +12870,7 @@ class ParticleEmitter extends EngineObject
     )
     {
         super(pos, vec2(), tileInfo, angle, undefined, renderOrder);
-        if (debug)
+        if (false)
         {
             // the arguments come in a long row, so one out of place is named rather than emitting NaN particles
             false&&ASSERT(typeof emitSize === 'number' || isVector2(emitSize), 'ParticleEmitter: emitSize must be a number or vec2',
@@ -12143,7 +12971,9 @@ class ParticleEmitter extends EngineObject
          *  as engineObjectsDestroy does, which takes its particles with no particleDestroyCallback either
          *  @type {(function(ParticleEmitter): void)|undefined} */
         this.finishCallback = undefined;
-        /** @property {number} - Percentage of velocity to pass to particles (0-1) */
+        /** @property {number} - Percentage of velocity to pass to particles (0-1), the emitter's move since its last
+         *  update; a move past twice objectMaxSpeed and four times the one before is a teleport, passing none, so a fast
+         *  emitter's first move after standing still, or after a teleport, passes none either */
         this.velocityInheritance = 0;
         /** @property {number} - Particles owed to the emit rate, starts at one so the first comes out at once */
         this.emitTimeBuffer = 1;
@@ -12162,6 +12992,8 @@ class ParticleEmitter extends EngineObject
         // emitter spreads an update's particles along its move, where they came out in a clump where it is
         this.emitFrom = vec2();
         this.emitBehind = 0;
+        // how far it moved the update before, so a fast emitter moving steadily is told from one that jumped
+        this.previousMove = 0;
     }
 
     /** Update the emitter to spawn particles, called automatically by engine once each frame */
@@ -12177,13 +13009,19 @@ class ParticleEmitter extends EngineObject
             this.previousPos = this.pos.copy();
             this.previousAngle = this.angle;
         }
+        // a teleport or a respawn: a move further than objects move in a frame, twice objectMaxSpeed, and four
+        // times its move the update before, so a fast emitter moving steadily, a bullet's, is not one
+        const dx = this.pos.x - this.previousPos.x, dy = this.pos.y - this.previousPos.y, move = hypot(dx, dy);
+        const jumped = move > 2 * objectMaxSpeed && move > 4 * this.previousMove;
+        this.previousMove = move;
         if (this.velocityInheritance)
         {
-            // pass emitter velocity to particles
+            // pass emitter velocity to particles, none on a jump, and a turn the short way round, so an angle
+            // wrapping past a full turn is no spin
             const p = this.velocityInheritance;
-            this.velocity.x = p * (this.pos.x - this.previousPos.x);
-            this.velocity.y = p * (this.pos.y - this.previousPos.y);
-            this.angleVelocity = p * (this.angle - this.previousAngle);
+            this.velocity.x = jumped ? 0 : p * dx;
+            this.velocity.y = jumped ? 0 : p * dy;
+            this.angleVelocity = p * distanceAngle(this.angle, this.previousAngle); // A minus B, the short way
         }
         // tracked even while velocityInheritance is off, so turning it on does not jump
         this.previousAngle = this.angle;
@@ -12205,9 +13043,8 @@ class ParticleEmitter extends EngineObject
                 // counted in particles, so a new rate applies at once; the update that ends the emit time adds a
                 // hair, as the steps' sum comes out a rounding under it and lost the last particle
                 this.emitTimeBuffer += rate * step + (this.emitTime && this.emitElapsed >= this.emitTime ? 1e-6 : 0);
-                // spread along the move since the last update, the last one where it is now; a jump further than
-                // anything travels in an update, twice objectMaxSpeed, a teleport or a respawn, spreads nothing
-                const travelled = this.emitFrom && this.pos.distance(this.emitFrom) <= 2 * objectMaxSpeed;
+                // spread along the move since the last update, the last one where it is now; a jump spreads nothing
+                const travelled = !jumped;
                 const count = floor(this.emitTimeBuffer);
                 try
                 {
@@ -12394,6 +13231,12 @@ function particleTileSet(tileInfo)
 // where the particle being tested was before its move, which one way tiles go by
 let particleCollideFromX = 0, particleCollideFromY = 0;
 
+// the cell of a tile layer the collide callback last answered for in this particle's update, [x, y, data, answer], so
+// the bounce's side tests, which ask the same tile, do not call it again: once a hit, as the 3D emitter's is; never
+// the cell the particle was in, where a callback that decides by place (a half tile, a slope) can answer each test
+// its own way
+let particleCollideCell;
+
 // tests if a particle collides with tiles at x, y, through its emitter's collide callback if it has one
 function particleCollideTest(particle, collideCallback, x, y)
 {
@@ -12401,8 +13244,14 @@ function particleCollideTest(particle, collideCallback, x, y)
     if (!collideCallback)
         return data > 0;
 
-    // the callback gets its own vector, made only when there is a tile to decide on
-    return !!data && !!collideCallback(particle, data, vec2(x, y));
+    // the callback gets its own vector, made only when there is a tile to decide on, once a cell
+    if (!data) return false;
+    const cx = floor(x), cy = floor(y), c = particleCollideCell;
+    const inOld = cx === floor(particleCollideFromX) && cy === floor(particleCollideFromY);
+    if (!inOld && c && c[0] === cx && c[1] === cy && c[2] === data) return c[3];
+    const answer = !!collideCallback(particle, data, vec2(x, y));
+    particleCollideCell = [cx, cy, data, answer];
+    return answer;
 }
 
 /**
@@ -12529,9 +13378,10 @@ class Particle
 
         // check collision against tiles
         this.groundObject = undefined;
-        particleCollideFromX = oldX, particleCollideFromY = oldY;
+        particleCollideFromX = oldX, particleCollideFromY = oldY, particleCollideCell = undefined;
         if (particleCollideTest(this, collideCallback, this.pos.x, this.pos.y))
         {
+            if (this.destroyed) return; // its callback destroyed it, it has no bounce to make
             // the layer that stopped it, as the test found it, a one way layer it passes is not; if already was stuck
             // in collision, don't do anything
             const hitLayer = tileCollisionDataLayer;
@@ -12685,6 +13535,7 @@ let glContext;
  *  @type {number}
  *  @memberof WebGL */
 let glMaxTextureSize = 0;
+const glCanvasAsked = /* @__PURE__ */ new Vector2(-1, -1); // the size last asked of the canvas, it may be made smaller
 
 /** A texture size this device can make: the size asked for, or the largest it supports when that is smaller
  *  - The engine sizes the textures it makes itself through this, the shadow maps and the like, so a size a device
@@ -12986,14 +13837,21 @@ function glPreRender(clear=true)
     if (!glRenderTarget)
     {
         // set to same size as main canvas, only when it changes because
-        // setting it reallocates the drawing buffer and invalidates the frame
-        if (glCanvas.width !== bufferSizeX || glCanvas.height !== bufferSizeY)
+        // setting it reallocates the drawing buffer and invalidates the frame; a buffer the browser made smaller, a
+        // large canvas at a high pixel ratio, makes the canvas that size, so every reader of its size has the real one
+        if (glCanvasAsked.x !== bufferSizeX || glCanvasAsked.y !== bufferSizeY)
         {
+            glCanvasAsked.set(bufferSizeX, bufferSizeY);
             glCanvas.width = bufferSizeX;
             glCanvas.height = bufferSizeY;
+            const madeX = glContext.drawingBufferWidth, madeY = glContext.drawingBufferHeight;
+            if (madeX && madeY && (madeX < bufferSizeX || madeY < bufferSizeY))
+                glCanvas.width = madeX, glCanvas.height = madeY;
         }
     }
-    glContext.viewport(0, 0, bufferSizeX, bufferSizeY);
+    // the canvas, the buffer the browser made, which it clamps for a canvas too large; a render target is its own size
+    glRenderTarget ? glContext.viewport(0, 0, bufferSizeX, bufferSizeY) :
+        glContext.viewport(0, 0, glCanvas.width, glCanvas.height);
     clear && glClearCanvas();
 
     // build the transform matrix
@@ -13124,7 +13982,7 @@ function glCompileShader(source, type)
     glContext.compileShader(shader);
 
     // check for errors
-    if (debug && !glContext.getShaderParameter(shader, glContext.COMPILE_STATUS))
+    if (false && !glContext.getShaderParameter(shader, glContext.COMPILE_STATUS))
         throw glContext.getShaderInfoLog(shader);
     return shader;
 }
@@ -13152,11 +14010,14 @@ function glCreateProgram(vsSource, fsSource)
     {
         const log = glContext.getProgramInfoLog(program) + '\n' +
             glContext.getShaderInfoLog(vertexShader) + glContext.getShaderInfoLog(fragmentShader);
-        if (debug)
+        if (false)
             throw log;
         console.error('LittleJS: a shader failed to build\n' + log);
         glFailedPrograms.add(program);
     }
+    // the shaders live on in the program, deleted they go with it, so one made again leaves none behind
+    glContext.deleteShader(vertexShader);
+    glContext.deleteShader(fragmentShader);
     return program;
 }
 
@@ -13287,6 +14148,10 @@ function glCreateTexture(image, wrap=false, pixelated=tilesPixelated)
     let mipMap = false;
     if (image?.width)
     {
+        // past the GPU's limit the upload fails and every tile of it draws black, so it is said, as a failed load is
+        glMaxTextureSize && max(image.width, image.height) > glMaxTextureSize &&
+            console.warn('LittleJS: an image of ' + image.width + 'x' + image.height + ' is larger than this GPU\'s ' +
+                glMaxTextureSize + ' pixel textures, it draws black; split it or pack it smaller');
         glSetTextureData(texture, image, pixelated);
         glContext.bindTexture(glContext.TEXTURE_2D, texture);
         // WebGL2 makes mipmaps at any size, a texture that becomes a render target keeps them only at powers of two
@@ -13527,7 +14392,8 @@ function glCopyToContext(context)
     if (!glEnable || !glContext) return;
 
     glFlush();
-    context.drawImage(glCanvas, 0, 0);
+    // at the main canvas's size, which a buffer the browser clamped is smaller than
+    context.drawImage(glCanvas, 0, 0, mainCanvas.width, mainCanvas.height);
 }
 
 /** Set anti-aliasing for WebGL canvas
@@ -14518,6 +15384,8 @@ class NewgroundsPlugin
         this.scoreboards = [];
         /** @type {Map<number, 'failed'|'notSave'>} */
         this.loadFailures = new Map; // why each slot's last load gave undefined, see loadFailure
+        /** @type {Map<number, Promise<void>>} */
+        this.slotChains = new Map; // each slot's last save or load, the next waits for it, so they land in order
         /** @property {{id: number, name: string, url: string, supporter: boolean}|null} - The logged in player once ready, null when not logged in
          *  @type {{id: number, name: string, url: string, supporter: boolean}|null} */
         this.user = null;
@@ -14703,9 +15571,41 @@ class NewgroundsPlugin
         try { text = JSON.stringify(data); } catch (error) {}
         if (text === undefined)
             return console.warn('Newgrounds cloudSave: slot ' + slot + ' was given a value JSON can not hold'), false;
-        const response = await this.call('CloudSave.setData', {'id':slot, 'data':text});
-        newgroundsSessionLost(response) && this.dropSession();
-        return !!response?.result?.data?.['success'];
+        return this.slotInOrder(slot, async ()=>
+        {
+            if (!this.session_id) return false; // the session was lost while it waited, as a save before it found
+            const response = await this.call('CloudSave.setData', {'id':slot, 'data':text});
+            newgroundsSessionLost(response) && this.dropSession();
+            return !!response?.result?.data?.['success'];
+        });
+    }
+
+    /** Run a slot's save or load after the last one of that slot is done, so a save then a load reads what was
+     *  saved, and two saves land in the order they were made, as Newgrounds answers each call in its own time; one
+     *  that takes longer than the request timeout lets the next go, a stalled request where the browser has no
+     *  AbortSignal.timeout too, so a save that timed out may still land after a later one
+     *  @template T
+     *  @param {number} slot
+     *  @param {function(): Promise<T>} task
+     *  @param {number} [bound] - How long it may take once sent before the next goes, in ms: a load makes two
+     *  requests, so it waits twice the request timeout
+     *  @return {Promise<T>}
+     *  @ignore */
+    slotInOrder(slot, task, bound=newgroundsTimeoutMS + 1e3)
+    {
+        const key = +slot, previous = this.slotChains.get(key) ?? Promise.resolve();
+        const run = previous.then(task, task);
+        // its time starts when it is sent, once the one before it settled, not when it is queued, or a call behind
+        // a slow one would be let go while the slow one is still out and land before it
+        const done = previous.then(()=> new Promise((resolve)=>
+        {
+            const timer = setTimeout(resolve, bound);
+            /** @type {any} */ (timer)?.unref?.(); // a test's process is not kept open by it
+            run.then(resolve, resolve).finally(()=> clearTimeout(timer));
+        }));
+        this.slotChains.set(key, done);
+        done.then(()=> this.slotChains.get(key) === done && this.slotChains.delete(key));
+        return run;
     }
 
     /** Load the value a cloud save slot holds: null when Newgrounds says it holds none, undefined when it could not be
@@ -14720,7 +15620,7 @@ class NewgroundsPlugin
     async cloudLoad(slot)
     {
         false&&ASSERT(isNumber(slot), 'Newgrounds cloudLoad: slot must be a number', slot);
-        const {value, failure} = await this.loadSlot(slot);
+        const {value, failure} = await this.slotInOrder(slot, ()=> this.loadSlot(slot), 2 * newgroundsTimeoutMS + 1e3);
         failure ? this.loadFailures.set(+slot, failure) : this.loadFailures.delete(+slot);
         return value;
     }
@@ -14846,8 +15746,8 @@ class NewgroundsPlugin
 
 /**
  * LittleJS Wavedash Plugin
- * - The Wavedash twin of the Newgrounds plugin: achievements, leaderboards and cloud saves, the same shape so a game
- *   can switch, and stats and presence of Wavedash's own
+ * - The Wavedash twin of the Newgrounds plugin: achievements and cloud saves the same shape, so a game can switch
+ *   those, leaderboards with their own arguments and results, and stats and presence of Wavedash's own
  * - Wavedash serves the game's page and puts its SDK in window.Wavedash before the game runs, so nothing is bundled;
  *   off Wavedash (local, itch, GitHub Pages) there is none, and every call does nothing
  * - Make the plugin when the game can draw, at the end of gameInit: Wavedash.init is called then, and until it is
@@ -15159,7 +16059,9 @@ class WavedashPlugin
         const answer = await wavedashWait('cloudLoad', track(this.call('readLocalFile', path)));
         const bytes = answer instanceof Uint8Array || answer instanceof ArrayBuffer || typeof answer == 'string' ?
             answer : answer?.['data'];
-        const text = !bytes ? '' : typeof bytes == 'string' ? bytes : new TextDecoder().decode(bytes);
+        // bytes of another kind than a string or a buffer, if the SDK ever answers so, are a read that failed
+        const text = typeof bytes == 'string' ? bytes : ArrayBuffer.isView(bytes) || bytes instanceof ArrayBuffer ?
+            new TextDecoder().decode(bytes) : '';
         if (!text) return failed('could not read slot ' + slot);
         try { return {value: JSON.parse(text), failure: undefined}; }
         catch (error)
@@ -15358,7 +16260,10 @@ class PostProcessPlugin
         postProcess = this;
 
         // the options it was made with, read by the hooks from the one in place, as they are added once
+        /** @property {boolean} - Combine mainCanvas onto glCanvas, may be changed while it runs */
         this.includeMainCanvas = includeMainCanvas;
+        /** @property {boolean} - Pass the shader's own output from the previous frame as iChannel1, may be turned on
+         *  while it runs, the feedback texture made then */
         this.feedback = feedbackTexture;
 
         /** @property {string} - The shadertoy style mainImage code it shades with, see setShaderCode */
@@ -15374,14 +16279,15 @@ class PostProcessPlugin
          *  pass-through or a vignette does, looks the same either way */
         this.pixelated = false;
 
-        /** @property {Object<string, number|Array<number>>} - The game's own values for the shader, a uniform each
-         *  by its name, a number a float and a list of 2 to 4 numbers a vector, set every frame as they are; an
-         *  effect setting can be one of these names, so it changes every frame without making the shader again, all
-         *  but glow's size, which sets how many samples it takes; adding or removing a name makes the shader again,
-         *  and the shader is first made at the first render, so values set right after the plugin are in it; a name
-         *  is a GLSL name not starting with an underscore, which the effects keep for their own, nor i and a capital
-         *  or gl_, and not c, uv or p, the names mainImage works on
-         *  @type {Object<string, number|Array<number>>} */
+        /** @property {Object<string, PostProcessValue>} - The game's own values for the shader, a uniform each
+         *  by its name, a number a float and a list of 2 to 4 numbers a vector, as a Color is its four channels, a
+         *  vector its axes and a typed array its numbers, the forms Shader.setUniform takes, set every frame as they
+         *  are; an effect setting can be one of these names, so it changes every frame without making the shader
+         *  again, all but glow's size, which sets how many samples it takes; adding or removing a name makes the
+         *  shader again, and the shader is first made at the first render, so values set right after the plugin are
+         *  in it; a name is a GLSL name not starting with an underscore, which the effects keep for their own, nor i
+         *  and a capital or gl_, and not c, uv or p, the names mainImage works on
+         *  @type {Object<string, PostProcessValue>} */
         this.values = {};
         // the names of the values the shader was made with
         this.valueNames = '';
@@ -15410,15 +16316,8 @@ class PostProcessPlugin
         {
             if (headlessMode || !glEnable) return;
 
-            // create resources, the feedback starting black, as if the frame before the first were empty
-            if (postProcess.feedback)
-            {
-                postProcess.feedbackTexture = glCreateTexture();
-                glContext.bindTexture(glContext.TEXTURE_2D, postProcess.feedbackTexture);
-                glContext.texImage2D(glContext.TEXTURE_2D, 0, glContext.RGBA, 1, 1, 0, glContext.RGBA,
-                    glContext.UNSIGNED_BYTE, new Uint8Array([0, 0, 0, 255]));
-                glContext.bindTexture(glContext.TEXTURE_2D, glActiveTexture);
-            }
+            // create resources
+            postProcess.feedback && postProcessFeedbackMake();
             postProcess.texture = glCreateTexture();
             postProcess.shader = glCreateProgram(
                 '#version 300 es\n' +            // specify GLSL ES version
@@ -15462,6 +16361,8 @@ class PostProcessPlugin
         function postProcessRender()
         {
             if (headlessMode || !glEnable || !postProcess.enabled) return;
+            false&&ASSERT(!(postProcess.includeMainCanvas && postProcess.feedback),
+                'Post process cannot both include main canvas and use feedback texture'); // as made, or changed after
 
             // clear out the buffer, before anything here binds its own
             glFlush();
@@ -15490,6 +16391,13 @@ class PostProcessPlugin
             // a see-through pixel would come out at its full brightness instead of faded over the background
             glContext.pixelStorei(glContext.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true);
             glContext.disable(glContext.BLEND);
+
+            // feedback turned on after it was made: its texture is made now, before unit 0 holds the frame, which
+            // making it would rebind
+            postProcess.feedback && !postProcess.feedbackTexture && postProcessFeedbackMake();
+            // turned off, it lets go of its texture, so turned on again it starts black, not from a frame long gone
+            if (!postProcess.feedback && postProcess.feedbackTexture)
+                glContext.deleteTexture(postProcess.feedbackTexture), postProcess.feedbackTexture = undefined;
 
             // setup texture
             glContext.activeTexture(glContext.TEXTURE0);
@@ -15531,13 +16439,11 @@ class PostProcessPlugin
                 glContext.copyTexImage2D(glContext.TEXTURE_2D, 0, glContext.RGBA, 0, 0, glCanvas.width, glCanvas.height, 0);
             }
 
-            // the previous frame's output, on the second texture unit
-            if (postProcess.feedback)
-            {
-                glContext.activeTexture(glContext.TEXTURE1);
-                glContext.bindTexture(glContext.TEXTURE_2D, postProcess.feedbackTexture);
-                setFilter();
-            }
+            // the previous frame's output, on the second texture unit, nothing there without feedback, where a
+            // texture something else left would be read
+            glContext.activeTexture(glContext.TEXTURE1);
+            glContext.bindTexture(glContext.TEXTURE_2D, postProcess.feedback ? postProcess.feedbackTexture : null);
+            postProcess.feedback && setFilter();
 
             // the 3D depth, when render3D draws it, on the third texture unit, with what sceneDepth needs to read it
             const depth = typeof render3D != 'undefined' && render3D?.depthTexture ? render3D : undefined;
@@ -15555,10 +16461,11 @@ class PostProcessPlugin
             glContext.uniform1i(uniformLocation('iChannel1'), 1);
             glContext.uniform1i(uniformLocation('iChannel2'), 2);
             glContext.uniform1f(uniformLocation('iTime'), time);
-            glContext.uniform3f(uniformLocation('iResolution'), mainCanvas.width, mainCanvas.height, 1);
+            // the buffer's size, which a browser that clamped it made smaller than the main canvas
+            glContext.uniform3f(uniformLocation('iResolution'), glCanvas.width, glCanvas.height, 1);
             for (const name in postProcess.values)
             {
-                const value = postProcess.values[name], location = uniformLocation(name);
+                const value = postProcessValueList(postProcess.values[name]), location = uniformLocation(name);
                 if (isArray(value))
                     [, , glContext.uniform2fv, glContext.uniform3fv, glContext.uniform4fv][value.length]?.call(glContext, location, value);
                 else
@@ -15612,9 +16519,29 @@ class PostProcessPlugin
 
 ///////////////////////////////////////////////////////////////////////////////
 
+/** A value of postProcess.values: a number, a list of 2 to 4 numbers, a Color, a vector or a typed array
+ *  @typedef {number|Array<number>|Color|Vector2|Vector3|Float32Array} PostProcessValue
+ *  @memberof PostProcess */
+
+// a value as the shader takes it, a number or a list: a Color its four channels, a vector its axes, a typed array its
+// numbers
+function postProcessValueList(value)
+{
+    if (value instanceof Color) return [value.r, value.g, value.b, value.a];
+    if (value instanceof Vector2) return [value.x, value.y];
+    if (ArrayBuffer.isView(value)) return [.../** @type {Float32Array} */ (value)];
+    const v = /** @type {Vector3} */ (value);
+    if (v && typeof v === 'object' && isNumber(v.x) && isNumber(v.y) && isNumber(v.z)) return [v.x, v.y, v.z];
+    return value;
+}
+
 // what the shader declares of the game's values, each name and its length, so a value that changes either makes the
 // shader again
-const postProcessValueKey = (values)=> Object.entries(values).map(([name, v])=> name + ':' + (isArray(v) ? v.length : 1)).join();
+const postProcessValueKey = (values)=> Object.entries(values).map(([name, v])=>
+{
+    const value = postProcessValueList(v);
+    return name + ':' + (isArray(value) ? value.length : 1);
+}).join();
 
 // the code the pass shades with: none passes the frame through, and code with no mainImage of its own, an effect like
 // postProcessVignette() given alone, is a piece that postProcessEffects joins into one
@@ -15623,6 +16550,16 @@ function postProcessShaderCode(/** @type {string|undefined} */ shaderCode)
     false&&ASSERT(!shaderCode || typeof shaderCode === 'string', 'shader code must be a string');
     return !shaderCode ? postProcessEffects() :
         shaderCode.includes('mainImage') ? shaderCode : postProcessEffects(shaderCode);
+}
+
+// the feedback texture of the post process in place, starting black, as if the frame before the first were empty
+function postProcessFeedbackMake()
+{
+    postProcess.feedbackTexture = glCreateTexture();
+    glContext.bindTexture(glContext.TEXTURE_2D, postProcess.feedbackTexture);
+    glContext.texImage2D(glContext.TEXTURE_2D, 0, glContext.RGBA, 1, 1, 0, glContext.RGBA,
+        glContext.UNSIGNED_BYTE, new Uint8Array([0, 0, 0, 255]));
+    glContext.bindTexture(glContext.TEXTURE_2D, glActiveTexture);
 }
 
 // the fragment shader of the post process pass around its mainImage snippet: the frame on iChannel0, the last output
@@ -15634,9 +16571,10 @@ function postProcessFragmentSource(shaderCode, values={})
     let declared = '';
     for (const name in values)
     {
-        const value = values[name], length = isArray(value) ? value.length : 1;
+        const value = postProcessValueList(values[name]), length = isArray(value) ? value.length : 1;
         false&&ASSERT(postProcessNameCheck(name), 'a postProcess value needs a name GLSL takes that the shader does not use', name);
-        false&&ASSERT(!isArray(value) || length >= 2 && length <= 4, 'a postProcess value is a number or 2 to 4 of them', name);
+        false&&ASSERT(isArray(value) ? length >= 2 && length <= 4 : isNumber(value) || typeof value === 'boolean',
+            'a postProcess value is a number, 2 to 4 of them, a Color or a vector', name);
         declared += `uniform ${length > 1 ? 'vec' + length : 'float'} ${name};`;
     }
     return '#version 300 es\n' +        // specify GLSL ES version
@@ -15711,25 +16649,10 @@ const postProcessNumber = (n)=> typeof n === 'string' ?
         n && abs(n) < .01 ? String(n) : n.toFixed(4)); // a small one keeps its digits, as 1.5e-7 or 0.00015
 
 // a GLSL name for a value or a setting, which no part of the shader uses already: not the engine's own, i and a
-// capital, nor those of mainImage or an effect's own locals, which start with an underscore, nor a GLSL word
-const postProcessGLSLWords = /* @__PURE__ */ new Set(('c uv p sceneDepth mainImage main ' +
-    // keywords and reserved words
-    'attribute const uniform varying layout centroid flat smooth noperspective patch sample break continue do for ' +
-    'while switch case default if else subroutine in out inout float double int void bool true false invariant ' +
-    'precise discard return lowp mediump highp precision struct common partition active asm class union enum ' +
-    'typedef template this resource goto inline noinline public static extern external interface long short half ' +
-    'fixed unsigned superp input output filter sizeof cast namespace using coherent volatile restrict readonly ' +
-    'writeonly atomic_uint uint mat2 mat3 mat4 vec2 vec3 vec4 ivec2 ivec3 ivec4 bvec2 bvec3 bvec4 uvec2 uvec3 uvec4 ' +
-    // built in functions
-    'radians degrees sin cos tan asin acos atan sinh cosh tanh asinh acosh atanh pow exp log exp2 log2 sqrt ' +
-    'inversesqrt abs sign floor trunc round roundEven ceil fract mod modf min max clamp mix step smoothstep isnan ' +
-    'isinf length distance dot cross normalize faceforward reflect refract matrixCompMult outerProduct transpose ' +
-    'determinant inverse lessThan lessThanEqual greaterThan greaterThanEqual equal notEqual any all not textureSize ' +
-    'texture textureProj textureLod textureOffset texelFetch texelFetchOffset textureProjOffset textureLodOffset ' +
-    'textureProjLod textureProjLodOffset textureGrad textureGradOffset textureProjGrad textureProjGradOffset dFdx ' +
-    'dFdy fwidth').split(' '));
+// capital, nor those of mainImage or an effect's own locals, which start with an underscore; a GLSL word is named
+// by the compile error
 const postProcessNameCheck = (name)=> /^[A-Za-z][A-Za-z0-9_]*$/.test(name) && !name.includes('__') &&
-    !/^(i[A-Z]|gl_|webgl_|GL_|mat[2-4]|[dfh]vec[2-4]|[iu]?(sampler|image)([123]D|Cube|Buffer|External))/.test(name) && !postProcessGLSLWords.has(name);
+    !/^(i[A-Z]|gl_|webgl_|GL_|(c|uv|p|sceneDepth|mainImage|main)$)/.test(name);
 
 /**
  * Join effects into one post process shader, in the order given, for PostProcessPlugin or setShaderCode
@@ -16042,8 +16965,8 @@ function postProcessTV({noise=.1, scanlines=.5, scanlineSpacing=6, glow=.4, vign
  *  @type {LightSystemPlugin}
  *  @memberof LightSystem */
 let lightSystem;
-// its hooks are added once: one made again in a release build, as in a scene's enter, takes the old one's place and
-// its hooks drive it
+// its hooks are added once; a game makes one light system, a debug build asserts on a second, which would take the
+// old one's place without giving back its textures
 let lightSystemPluginAdded = false;
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -16078,10 +17001,11 @@ class LightSystemPlugin
         this.shadersFailed = false; // a shader did not build on this device, so the system draws nothing
         /** @property {Color} - Baseline color applied to unlit areas of the scene. Defaults to BLACK (pitch dark). Set to a small RGB for a faint ambient. The lightmap is cleared to this color each frame, then lights add on top, then the result multiplies the scene. */
         this.ambientColor = (ambientColor || BLACK).copy();
-        /** @property {Vector2|undefined} - Size of the lightmap texture, follows mainCanvasSize (css pixels, so it is not scaled by canvasPixelRatio) unless a size was passed; undefined until the system starts when none was; a new size set later makes the lightmap again at it, with textureSizeAuto false so the canvas does not set it back
+        /** @property {Vector2|undefined} - Size of the lightmap texture, follows mainCanvasSize (css pixels, so it is not scaled by canvasPixelRatio) unless a size was passed; undefined until the system starts when none was; a new size set later makes the lightmap again at it, and turns textureSizeAuto off so the canvas does not set it back
          *  @type {Vector2|undefined} */
         this.textureSize = textureSize ? textureSize.copy() : undefined;
-        /** @property {boolean} - True when no size was passed, so the lightmap follows mainCanvasSize */
+        /** @property {boolean} - True when no size was passed, so the lightmap follows mainCanvasSize; a textureSize
+         *  set later turns it off, and setting it true again follows the canvas again */
         this.textureSizeAuto = !textureSize;
         /** @type {Vector2} */
         this.textureSizeAllocated = vec2(); // the size the lightmap was made at, it is made again when textureSize changes
@@ -16180,6 +17104,7 @@ class LightSystemPlugin
          *  sprite's normals a little */
         this.normalMaps = false;
         this.normalMapsWarned = false; // a debug build has said a normalMap does nothing with normalMaps off
+        this.normalTileWarned = false; // and that a TileInfo normalMap is a tile of a sheet, read whole
         this.normalMapsChecks = 0;     // renders with normalMaps off, a debug build looks for one every 60
         /** @property {boolean} - True while the normal pass runs, read only, so a render() can skip parts */
         this.normalPass = false;
@@ -16801,7 +17726,20 @@ class LightSystemPlugin
                 for (const o of engineObjects)
                 {
                     if (o.destroyed) continue;
-                    const texture = o.normalMap?.glTexture; // not there until its image has loaded, flat till then
+                    // not there until its image has loaded, flat till then; a TileInfo is its texture's
+                    const map = o.normalMap, texture = (map instanceof TileInfo ? map.textureInfo : map)?.glTexture;
+                    // a debug build says once of a tile of a sheet, its own art's or one beside it, read whole: by
+                    // its size, as a tile's padding moves its place, once its texture has loaded, and for 2D objects
+                    const sheet = map instanceof TileInfo && map.textureInfo?.size.x ? map.textureInfo : undefined;
+                    if (false && sheet && !ls.normalTileWarned && !('pos3D' in o) &&
+                        (map.size.x !== sheet.size.x || map.size.y !== sheet.size.y ||
+                        o.tileInfo?.textureInfo === sheet))
+                    {
+                        ls.normalTileWarned = true;
+                        console.warn('LightSystemPlugin: a normalMap given as a TileInfo is read as its whole ' +
+                            'texture, at the place of the tile drawn, so give it a texture of its own laid out like ' +
+                            'the sheet, not a tile of a sheet');
+                    }
                     glColorMask = 0xff000000;                // only the draw's own alpha
                     glColorAdditive = 0xff8080;              // the flat normal, red in the low byte, for what has no texture
                     glTextureOverride = texture;
@@ -16867,6 +17805,10 @@ class LightSystemPlugin
             // an automatic size follows the canvas, and a size given may be set again, so reallocate the lightmap
             // when the size it should be is not the one it was made at, after the flush so the batch keeps its texture
             const size = lightSystem.textureSize, made = lightSystem.textureSizeAllocated;
+            // while automatic the size is always the one made, so one that differs the game set: it is the game's
+            // now, as textureSizeAuto false, where the lights drew into a corner of a texture of the canvas's size
+            if (lightSystem.textureSizeAuto && size && made.x && (size.x !== made.x || size.y !== made.y))
+                lightSystem.textureSizeAuto = false;
             const auto = lightSystem.textureSizeAuto;
             const wantX = glClampTextureSize(auto ? mainCanvasSize.x : size.x); // to what the device makes
             const wantY = glClampTextureSize(auto ? mainCanvasSize.y : size.y);
@@ -16896,7 +17838,7 @@ class LightSystemPlugin
                 }
                 // a normal map that does nothing says why, once, in a debug build, looked for once a second, not
                 // every frame; a 3D object's normalMap is its material's, which this does not draw
-                if (debug && !lightSystem.normalMapsWarned && !(lightSystem.normalMapsChecks++ % 60) &&
+                if (false && !lightSystem.normalMapsWarned && !(lightSystem.normalMapsChecks++ % 60) &&
                     engineObjects.some((o)=> o.normalMap && !('pos3D' in o) && !o.destroyed))
                 {
                     console.warn('LightSystemPlugin: an object has a normalMap, turn on lightSystem.normalMaps to see it');
@@ -17039,7 +17981,7 @@ class LightSystemPlugin
             const cs = lightSystem.compositeShader;
             glContext.uniform1i(glUniformLocation(cs, 's'), 0);
             glContext.uniform3f(glUniformLocation(cs, 'iResolution'),
-                mainCanvas.width, mainCanvas.height, 1);
+                glCanvas.width, glCanvas.height, 1); // the buffer's size, smaller when the browser clamped it
             glContext.blendFunc(glContext.DST_COLOR, glContext.ZERO);
             glContext.drawArrays(glContext.TRIANGLE_STRIP, 0, 4);
 
@@ -17458,7 +18400,7 @@ class AudioEffect
         false&&ASSERT(isNumber(mix), 'mix must be a number');
 
         /** @property {number} - Wet/dry balance, 0 is fully dry and 1 is fully wet */
-        this.mix = clamp(mix);
+        this.mix = clamp(audioFinite(mix, 1)); // not a number is fully wet, as setMix takes it
         if (!audioContext) return; // no audio outside a browser, where the engine runs headless
 
         /** @property {GainNode} - Connect sounds to this node */
@@ -17485,7 +18427,7 @@ class AudioEffect
     setMix(mix, fadeTime=0)
     {
         false&&ASSERT(isNumber(mix), 'mix must be a number');
-        this.mix = mix = clamp(mix);
+        this.mix = mix = clamp(audioFinite(mix, 1)); // not a number is fully wet, not silence
         if (!audioContext) return;
         this.rampParam(this.dryGain.gain, 1-mix, fadeTime);
         this.rampParam(this.wetGain.gain, mix, fadeTime);
@@ -17501,7 +18443,8 @@ class AudioEffect
     rampParam(param, value, fadeTime=0)
     {
         audioParamRamp(param, value, fadeTime);
-        if (!fadeTime) return;
+        fadeTime = audioFinite(fadeTime, 0); // not a number or endless is at once, as the ramp takes it
+        if (!(fadeTime > 0)) return;
         const keepAlive = new ConstantSourceNode(audioContext, { offset: 0 });
         keepAlive.connect(this.input);
         keepAlive.onended = ()=> keepAlive.disconnect();
@@ -17566,8 +18509,9 @@ class AudioFilter extends AudioEffect
         /** @property {BiquadFilterNode} - The filter node */
         this.node = audioContext.createBiquadFilter();
         this.node.type = type;
-        this.node.frequency.value = frequency;
-        this.node.Q.value = q;
+        // a value that is not finite throws in the browser, a release build past the asserts takes the default
+        this.node.frequency.value = audioFinite(frequency, 350);
+        this.node.Q.value = audioFinite(q, 1);
         this.connectEffect(this.node);
     }
 
@@ -17578,7 +18522,8 @@ class AudioFilter extends AudioEffect
     {
         false&&ASSERT(isNumber(frequency) && frequency >= 0, 'frequency must be positive or zero');
         if (!audioContext) return;
-        this.rampParam(this.node.frequency, frequency, fadeTime);
+        // not finite is the browser's default, 350 Hz, as the constructor takes it, not 0, which silences a lowpass
+        this.rampParam(this.node.frequency, audioFinite(frequency, 350), fadeTime);
     }
 
     /** Set the resonance at the cutoff
@@ -17627,6 +18572,8 @@ class AudioReverb extends AudioEffect
         false&&ASSERT(isNumber(duration) && duration > 0, 'duration must be positive');
         false&&ASSERT(isNumber(decay) && decay > 0, 'decay must be positive');
         if (!audioContext) return;
+        // a release build, past the asserts, builds a room of a second rather than one of NaN
+        duration = isFinite(duration) && duration > 0 ? duration : 1, decay = isFinite(decay) && decay > 0 ? decay : 2;
         this.node.buffer = this.createImpulse(duration, decay);
     }
 
@@ -17720,7 +18667,7 @@ class AudioDistortion extends AudioEffect
         super(mix);
 
         /** @property {number} - How hard the signal is driven, 0 is clean and 1 is crushed */
-        this.amount = clamp(amount);
+        this.amount = clamp(audioFinite(amount, 0)); // not a number is clean
         if (!audioContext) return; // no audio outside a browser, where the engine runs headless
 
         /** @property {WaveShaperNode} - The wave shaper node */
@@ -17735,7 +18682,7 @@ class AudioDistortion extends AudioEffect
     setAmount(amount)
     {
         false&&ASSERT(isNumber(amount), 'amount must be a number');
-        this.amount = amount = clamp(amount);
+        this.amount = amount = clamp(audioFinite(amount, 0)); // not a number is clean, not a curve of NaN
         if (!audioContext) return;
 
         // soft clip curve, drive grows with the square of amount so low values stay subtle
@@ -17777,8 +18724,8 @@ class AudioCompressor extends AudioEffect
 
         /** @property {DynamicsCompressorNode} - The compressor node */
         this.node = audioContext.createDynamicsCompressor();
-        this.node.threshold.value = threshold;
-        this.node.ratio.value = ratio;
+        this.node.threshold.value = audioFinite(threshold, -24);
+        this.node.ratio.value = audioFinite(ratio, 12);
         this.connectEffect(this.node);
     }
 
@@ -17823,7 +18770,8 @@ class AudioCompressor extends AudioEffect
  *  @type {UISystemPlugin}
  *  @memberof UISystem */
 let uiSystem;
-// its hooks are added once: one made again, as in a scene's enter, takes the old one's place and its hooks drive it
+// its hooks are added once; there is one UI system, made in gameInit, and a debug build asserts on a second, while
+// in a release build a second takes the first's place, the first's edit ended so its key listener lets go
 let uiSystemPluginAdded = false;
 
 /** Enable UI system debug drawing
@@ -17836,6 +18784,10 @@ let uiDebug = 0;
 // the active object's press was let go of in the frame it came, a tap, so it is clicked on the next with no release
 // then; a click needs a release, which the mouse let go of by a window losing focus is not
 let uiActiveReleased = false;
+
+// the mouse was pressed this frame, read before any object updates, since one that takes no press, disabled or not
+// interactive, still clears it, and a held object after it must still see the press that ended its hold
+let uiMousePressed = false;
 
 /** Enable UI system debug drawing
  *  0=off, 1=normal, 2=show invisible
@@ -17868,6 +18820,8 @@ class UISystemPlugin
     {
         false&&ASSERT(!uiSystem, 'UI system already initialized');
         false&&ASSERT(context || headlessMode, 'create the UISystemPlugin after engineInit, in gameInit');
+        const old = uiSystem?.keyInputObject; // a field the one replaced was editing stops, and its key listener
+        old instanceof UITextInput && !old.destroyed && old.stopEditing();
         uiSystem = this;
 
         // default settings
@@ -17949,6 +18903,9 @@ class UISystemPlugin
         /** @property {UIObject|undefined} - Hover object at start of update
          *  @type {UIObject|undefined} */
         this.lastHoverObject = undefined;
+        // for each mouse button, if its press held now began over the UI, see isPressOverUI
+        /** @type {Array<boolean>} */
+        this.pressesOverUI = [false, false, false];
         /** @property {UIObject|undefined} - Current confirm menu being shown
          *  @type {UIObject|undefined} */
         this.confirmDialog = undefined;
@@ -17966,6 +18923,16 @@ class UISystemPlugin
             // way whichever comes first
             const o = this._keyInputObject;
             if (!o || !uiObjectIsUsable(o) || uiObjectIsBehindDialog(o)) return;
+            // a key typed into a text field of the page is that field's: the edit ends; a slider, checkbox or button
+            // of the page that has the focus, as a click on the canvas leaves it, takes no typing and is passed by
+            const target = e.target, tag = target?.tagName;
+            const typing = target?.isContentEditable || tag === 'TEXTAREA' || tag === 'SELECT' || tag === 'INPUT' &&
+                !['button','checkbox','color','file','image','radio','range','reset','submit'].includes(target.type);
+            if (typing)
+            {
+                o instanceof UITextInput ? o.stopEditing() : this.keyInputObject = undefined;
+                return;
+            }
 
             // the field has the key, the game's input never sees it; browser shortcuts still work,
             // and only the keys a field uses lose their default, so F5, F11, F12 and the like still work
@@ -17996,7 +18963,7 @@ class UISystemPlugin
                 // anchor to canvas in native coords (handles nativeHeight if set)
                 targetPos = uiSystem.screenToNative(mainCanvasSize.scale(.5));
                 targetSize = uiSystem.nativeHeight
-                    ? vec2(mainCanvasSize.x * uiSystem.nativeHeight / mainCanvasSize.y,
+                    ? vec2(mainCanvasSize.x * uiSystem.nativeHeight / max(mainCanvasSize.y, 1),
                            uiSystem.nativeHeight)
                     : mainCanvasSize;
             }
@@ -18014,10 +18981,31 @@ class UISystemPlugin
         function uiUpdate()
         {
             ++updatePass;
+            uiMousePressed = mouseWasPressed(0);
+            // the level editor has the mouse and keys while it is open, so a click paints and does not also press
+            // the game's button under it: what was held lets go, what was hovered is left, an edit ends, and the
+            // objects still update, their onUpdate and a video's volume and mute, with no input
+            if (levelEditor.isOpen)
+            {
+                const held = uiSystem.activeObject, hover = uiSystem.hoverObject;
+                uiSystem.activeObject = uiSystem.hoverObject = uiSystem.lastHoverObject = undefined;
+                uiSystem.navigationObject = undefined;
+                const editing = uiSystem.keyInputObject;
+                editing instanceof UITextInput && !editing.destroyed && editing.stopEditing();
+                held && !held.destroyed && held !== editing && held.onRelease();
+                hover && !hover.destroyed && hover.onLeave();
+                const uiObjects = uiSystem.uiObjects;
+                for (let i = uiObjects.length; i--;)
+                    uiObjects[i].parent || updateObject(uiObjects[i]);
+                uiSystem.uiObjects = uiSystem.uiObjects.filter(o=>!o.destroyed);
+                return;
+            }
             // a held or focused object that can no longer be used, itself or through a parent, lets go,
             // and one that was hidden or disabled is still released, a destroyed one stays silent
+            // and one held when a confirm dialog opened over it lets go, so it does not follow the mouse behind it
             const activeObject = uiSystem.activeObject;
-            if (activeObject && !uiObjectIsUsable(activeObject))
+            if (activeObject && (!uiObjectIsUsable(activeObject) ||
+                activeObject !== uiSystem.keyInputObject && uiObjectIsBehindDialog(activeObject)))
             {
                 // a text field being edited is active without being held, it was released when the press ended
                 uiSystem.activeObject = undefined;
@@ -18053,6 +19041,14 @@ class UISystemPlugin
                 lastHoverObject.onLeave();
             }
 
+            // each button's press that began over the UI, before anything uses it up, till that button is up, the
+            // frame it is let go included, so a game acting on its release knows it began on the UI
+            for (let button = 0; button < 3; ++button)
+            {
+                mouseIsDown(button) || mouseWasReleased(button) || (uiSystem.pressesOverUI[button] = false);
+                mouseWasPressed(button) && (uiSystem.pressesOverUI[button] = uiSystem.isMouseOverUI());
+            }
+
             if (mouseWasPressed(0))
             {
                 // exit navigation mode on mouse press
@@ -18077,7 +19073,7 @@ class UISystemPlugin
                 if (!navigableObjects.includes(uiSystem.navigationObject))
                     uiSystem.navigationObject = undefined;
 
-                if (!isTouchDevice)
+                if (!inputTouchLast)
                 if (uiSystem.navigationMode && !uiSystem.navigationObject)
                 {
                     // select first auto focus object
@@ -18182,7 +19178,7 @@ class UISystemPlugin
                 if (uiSystem.nativeHeight)
                 {
                     // convert to native height
-                    const s = mainCanvasSize.y / uiSystem.nativeHeight;
+                    const s = max(mainCanvasSize.y, 1) / uiSystem.nativeHeight; // a canvas with no height yet
                     context.translate(-s*mainCanvasSize.x/2,0);
                     context.scale(s,s);
                     context.translate(mainCanvasSize.x/2/s,0);
@@ -18244,6 +19240,7 @@ class UISystemPlugin
         false&&ASSERT(isNumber(lineWidth), 'lineWidth must be a number');
         false&&ASSERT(isColor(lineColor), 'lineColor must be a color');
         false&&ASSERT(isNumber(cornerRadius), 'cornerRadius must be a number');
+        cornerRadius = max(0, cornerRadius); // a tween that overshoots past 0, which the canvas would throw on
         
         const context = uiSystem.uiContext;
         if (gradientColor)
@@ -18395,7 +19392,7 @@ class UISystemPlugin
         if (!uiSystem.nativeHeight)
             return pos;
     
-        const s = mainCanvasSize.y / uiSystem.nativeHeight;
+        const s = max(mainCanvasSize.y, 1) / uiSystem.nativeHeight; // a canvas with no height yet
         const sInv = 1/s;
         const p = pos.copy();
         p.x += s*mainCanvasSize.x/2;
@@ -18480,13 +19477,23 @@ class UISystemPlugin
         return objects;
     }
 
+    /** Check if a mouse button's press held now began over the UI, a button or a plain panel, till that button is
+     *  let go, the frame of the release included, so a drag begun on the UI does not drag the world under it, as the 3D camera controls check it
+     *  - The UI sets it when it updates, after gameUpdate: on the frame of the press, gameUpdate reads
+     *    isMouseOverUI() instead, and gameUpdatePost and the objects read this
+     *  @param {number} [button] - 0 left, 1 middle, 2 right
+     *  @return {boolean} */
+    isPressOverUI(button=0) { return !!uiSystem.pressesOverUI[button]; }
+
     /** Check if the mouse is over a visible UI object that can be hovered, or anywhere while the
      *  confirm dialog is open, so a game can leave world clicks on the UI alone, on touch too.
      *  The UI uses up a click before objects update and gameUpdatePost, so read world clicks there,
-     *  or check this in gameUpdate, which runs first. Positions are from the last UI update.
+     *  or check this in gameUpdate, which runs first. Positions are from the last UI update; false while a level
+     *  editor is open, which has the mouse.
      *  @return {boolean} */
     isMouseOverUI()
     {
+        if (levelEditor.isOpen) return false; // the editor has the mouse, the game's UI takes none
         function isOverRecursive(o)
         {
             if (o.destroyed || !o.visible)
@@ -18506,7 +19513,7 @@ class UISystemPlugin
         return uiSystem.uiObjects.some(o=> !o.parent && isOverRecursive(o));
     }
 
-    /** Get navigation direction from gamepad or keyboard
+    /** Get navigation direction from gamepad or keyboard, a stick by its main axis only, once pushed past half
      *  @return {number} */
     getNavigationDirection()
     {
@@ -18514,7 +19521,7 @@ class UISystemPlugin
         const both = uiSystem.navigationDirection === 2;
         if (isUsingGamepad)
         {
-            const stick = gamepadStick(0, gamepadPrimary);
+            const stick = uiNavigationStick();
             const dpad = gamepadDpad(gamepadPrimary);
             if (both)
                 return -(stick.y || dpad.y) || (stick.x || dpad.x);
@@ -18541,7 +19548,7 @@ class UISystemPlugin
         const vertical = uiSystem.navigationDirection === 1;
         if (isUsingGamepad)
         {
-            const stick = gamepadStick(0, gamepadPrimary);
+            const stick = uiNavigationStick();
             const dpad = gamepadDpad(gamepadPrimary);
             return !vertical ? (stick.y || dpad.y) : (stick.x || dpad.x);
         }
@@ -18593,7 +19600,8 @@ class UISystemPlugin
         {
             // not the press that opened it, a game may open it on the same back button, so its first update is skipped
             // (not by frame number, which does not advance while paused, where a confirm is usually shown)
-            if (opened && (keyWasPressed(exitKey) || gamepadWasPressed(1)))
+            // and not while a level editor is open, which has the keys and pads
+            if (opened && !levelEditor.isOpen && (keyWasPressed(exitKey) || gamepadWasPressed(1)))
             {
                 closeMenu(); // the exit key or gamepad B answers no
                 noCallback && noCallback();
@@ -18638,7 +19646,9 @@ class UISystemPlugin
                 uiSystem.navigationDirection = savedNavigationDirection;
             }
             destroy(); // its buttons go, and the one selected clears the selection
-            if (closing && savedNavigationObject && !savedNavigationObject.destroyed)
+            // only while the keys or a pad are still in use: answered with the mouse, it gives no selection back,
+            // or the next Space or A would press the item that opened it again
+            if (closing && savedNavigationObject && !savedNavigationObject.destroyed && uiSystem.navigationMode)
                 uiSystem.navigationObject = savedNavigationObject;
         };
 
@@ -18651,6 +19661,14 @@ class UISystemPlugin
         }
         return confirmMenu;
     }
+}
+
+// the primary gamepad's left stick as the UI reads it: its main axis alone, past half, so a push to the side with a
+// little up or down in it is a push to the side, as the round dead zone lets the wobble through
+function uiNavigationStick()
+{
+    const stick = gamepadStick(0, gamepadPrimary), x = abs(stick.x), y = abs(stick.y);
+    return max(x, y) < .5 ? vec2() : x >= y ? vec2(stick.x, 0) : vec2(0, stick.y);
 }
 
 // whether a UI object can still be used: it and every parent visible, enabled and not destroyed
@@ -18887,9 +19905,10 @@ class UIObject
     {
         if (!mouseInWindow) return false;
 
-        const size = !isTouchDevice ? this.size :
+        const size = !inputTouchLast ? this.size :
                 this.size.add(vec2(this.extraTouchSize || 0));
-        const pos = uiSystem.screenToNative(mousePosScreen);
+        // the middle of the pixel under the mouse, as mousePosScreen is the pixel and the rects draw on their edges
+        const pos = uiSystem.screenToNative(mousePosScreen.add(vec2(.5)));
         return isOverlapping(this.nativePos, size, pos);
     }
 
@@ -18917,7 +19936,8 @@ class UIObject
             // a field being edited is ended by the next UI update, through stopEditing, so onChange keeps its text
         }
 
-        if (uiSystem.keyInputObject)
+        // no mouse while a field is edited, nor while a level editor is open, which has it
+        if (uiSystem.keyInputObject || levelEditor.isOpen)
             return;
 
         const wasHover = uiSystem.lastHoverObject === this;
@@ -18928,7 +19948,7 @@ class UIObject
 
         // a new press while this is still active from the one before means that one was let go of in between, by a
         // second quick tap or a release missed in a hitch: it is clicked and released first, so neither is lost
-        if (isActive && mouseWasPressed(0))
+        if (isActive && uiMousePressed)
         {
             if (!uiSystem.activateOnPress && this.interactive && !disabled)
                 this.click();
@@ -18941,7 +19961,7 @@ class UIObject
         }
         if (this.canBeHover)
         if (!uiSystem.navigationMode) // no mouse hover in navigation mode
-        if (mousePress || isActive || (!mouseDown && !isTouchDevice))
+        if (mousePress || isActive || (!mouseDown && !inputTouchLast))
         if (!uiSystem.hoverObject && this.isMouseOverlapping())
             uiSystem.hoverObject = this;
         if (this.isHoverObject())
@@ -18972,7 +19992,7 @@ class UIObject
                         else
                         {
                             uiSystem.activeObject = this;
-                            uiActiveReleased = !mouseDown;
+                            uiActiveReleased = !mouseDown && !inputPinchReleased; // a pinch's let go is no click
                         }
 
                         if (newPress && uiSystem.activateOnPress)
@@ -18985,7 +20005,7 @@ class UIObject
                 // frame is clicked on the next, with its release, not on both
                 if (!uiSystem.activateOnPress)
                 if (!mouseDown && isActive && this.isActiveObject() && this.interactive)
-                if (mouseWasReleased(0) || uiActiveReleased)
+                if (mouseWasReleased(0) && !inputPinchReleased || uiActiveReleased) // a pinch's let go is no click
                     this.click();
                 if (this.destroyed) return;
             }
@@ -18999,6 +20019,7 @@ class UIObject
             this.onRelease();
             this.soundRelease && this.soundRelease.play();
             uiSystem.activeObject = undefined;
+            if (this.destroyed) return; // its release destroyed it, nothing more is called on it
         }
 
         // call enter/leave events
@@ -19264,7 +20285,8 @@ class UITextInput extends UIObject
      *  @param {KeyboardEvent} e */
     onKeyDown(e)
     {
-        // named keys by key, so numpad Enter works as Enter
+        // named keys by key, so numpad Enter works as Enter; a key of an IME composing a character is its, not text
+        if (e.isComposing || e.keyCode === 229) return;
         const code = e.code, key = e.key || ''; // autofill sends a keydown with no key
         if (e.repeat && (key === 'Enter' || code === 'Space'))
             return; // a key held when editing began repeats, it should not type or stop editing
@@ -19442,7 +20464,7 @@ class UICheckbox extends UIObject
     {
         this.checked = !this.checked;
         super.click(playSound); // the click callback and sound, as every UI object has
-        this.onChange();
+        this.destroyed || this.onChange(); // not after an onClick that destroyed it
     }
     render()
     {
@@ -19484,7 +20506,7 @@ class UISlider extends UIObject
     {
         super(pos, size);
 
-        false&&ASSERT(isNumber(value), 'ui slider value must be a number');
+        false&&ASSERT(isNumber(value) && value >= 0 && value <= 1, 'ui slider value is a number from 0 to 1, scale it to yours', value);
         false&&ASSERT(isStringLike(text), 'ui slider must be a string');
         false&&ASSERT(isColor(color), 'ui slider color must be a color');
         false&&ASSERT(isColor(handleColor), 'ui slider handleColor must be a color');
@@ -19508,14 +20530,16 @@ class UISlider extends UIObject
     }
     update()
     {
-        // held when the frame began, so a release in the same frame as the last move still reads it
-        const wasActive = this.isActiveObject();
+        // held when the frame began, so a release in the same frame as the last move still reads it, but not by a
+        // new press, after a release it missed, which is another widget's or none
+        const wasActive = this.isActiveObject() && !uiMousePressed;
         super.update();
         if (!this.interactive || this.destroyed)
             return; // destroyed by its onUpdate, it no longer follows the mouse or calls onChange
 
         const oldValue = this.value;
-        if (wasActive || this.isActiveObject())
+        // not in the frame a second finger turns the press into a pinch, whose mouse is between the fingers
+        if ((wasActive || this.isActiveObject()) && !inputPinchReleased)
         {
             // handle horizontal or vertical slider
             const isHorizontal = this.size.x > this.size.y;
@@ -19524,13 +20548,24 @@ class UISlider extends UIObject
             const centerPos = isHorizontal ? this.nativePos.x : this.nativePos.y;
 
             // check if value changed
-            const handleWidth = barSize - handleSize;
-            const p1 = centerPos - handleWidth/2;
-            const p2 = centerPos + handleWidth/2;
-            const p = uiSystem.screenToNative(mousePosScreen);
-            this.value = isHorizontal ? 
-                percent(p.x, p1, p2) :
-                percent(p.y, p2, p1);
+            const p = uiSystem.screenToNative(mousePosScreen.add(vec2(.5))); // the pixel's middle, as above
+            if (this.fillMode)
+            {
+                // the fill's edge is under the mouse: it grows from the bar's start, left or bottom, from the
+                // narrowest it draws to the whole bar, as render draws it
+                const minWidth = min(handleSize, max(0, this.cornerRadius) * 2);
+                const along = isHorizontal ? p.x - (centerPos - barSize/2) : centerPos + barSize/2 - p.y;
+                this.value = percent(along, minWidth, barSize);
+            }
+            else
+            {
+                const handleWidth = barSize - handleSize;
+                const p1 = centerPos - handleWidth/2;
+                const p2 = centerPos + handleWidth/2;
+                this.value = isHorizontal ?
+                    percent(p.x, p1, p2) :
+                    percent(p.y, p2, p1);
+            }
         }
         else if (this.isNavigationObject())
         {
@@ -19566,7 +20601,7 @@ class UISlider extends UIObject
         if (this.fillMode)
         {
             // draw progress bar
-            const minWidth = min(handleWidth, this.cornerRadius * 2);
+            const minWidth = min(handleWidth, max(0, this.cornerRadius) * 2);
             const progressWidth = lerp(minWidth, barWidth, this.value);
             const p = (progressWidth - barWidth) * (isHorizontal ? .5 : -.5);
             const pos = this.nativePos.add(isHorizontal ? vec2(p, 0) : vec2(0, p));
@@ -19594,8 +20629,9 @@ class UISlider extends UIObject
         // toggle value between 0 and 1
         this.value = this.value ? 0 : 1;
         this.onChange();
+        if (this.destroyed) return; // a callback that destroyed it ends it
         this.onRelease();
-        super.navigatePressed();
+        this.destroyed || super.navigatePressed();
     }
 }
 
@@ -19636,7 +20672,7 @@ class UIVideo extends UIObject
         /** @property {HTMLVideoElement} - The video player */
         this.video = document.createElement('video');
         this.video.loop = loop;
-        this.video.volume = audioFinite(clamp(volume * soundVolume), 0);
+        this.video.volume = audioFinite(clamp(max(volume, 0) * max(soundVolume, 0)), 0);
         this.video.muted = !soundEnable;
         /** @private */
         this._soundEnabled = soundEnable; // the sound setting the mute last followed
@@ -19645,25 +20681,37 @@ class UIVideo extends UIObject
         this.video.src = src;
         document.body.appendChild(this.video);
         uiVideos.add(this);
-        uiVideosListening || document.addEventListener?.('visibilitychange', uiVideosPageChange);
+        if (!uiVideosListening)
+        {
+            // as the engine's sound does: a hidden page, and a blurred one with soundPauseWhenBlurred
+            document.addEventListener?.('visibilitychange', uiVideosPageChange);
+            globalThis.addEventListener?.('blur', uiVideosPageChange);
+            globalThis.addEventListener?.('focus', uiVideosPageChange);
+            audioPageSettingChange = uiVideosPageChange; // and soundPauseWhenHidden changed while hidden
+        }
         uiVideosListening = true;
         autoplay && this.play();
     }
     
-    /** Play or resume the video
-     *  @return {Promise<boolean>} Resolves true once playback starts, false if the browser refused it */
+    /** Play or resume the video; on a page hidden now it waits, as one paused by the page does, and plays when the
+     *  page shows
+     *  @return {Promise<boolean>} Resolves true once playback starts, false if the browser refused it or it waits */
     async play()
     {
+        // as the page's pause would have it: waiting while hidden, muted while blurred
+        if (soundPauseWhenHidden && document.hidden)
+            return uiVideosPaused.add(this), false;
+        uiVideosBlurred && !this.video.muted && (this.video.muted = true, uiVideosMuted.add(this));
         // try to play the video, catch any errors (autoplay may be blocked)
         try { await this.video.play(); return true; }
         catch(e) { return false; }
     }
     
-    /** Pause the video */
-    pause() { this.video.pause(); }
-    
-    /** Stop and reset the video */
-    stop() { this.video.pause(); this.video.currentTime = 0; }
+    /** Pause the video, it stays paused when a hidden page shows again */
+    pause() { this.video.pause(); uiVideosPaused.delete(this); }
+
+    /** Stop and reset the video, it stays stopped when a hidden page shows again */
+    stop() { this.pause(); this.video.currentTime = 0; }
     
     /** Check if video is currently loading
      *  @return {boolean} */
@@ -19688,7 +20736,7 @@ class UIVideo extends UIObject
     setVolume(volume)
     {
         this.volume = volume;
-        this.video.volume = audioFinite(clamp(volume * soundVolume), 0);
+        this.video.volume = audioFinite(clamp(max(volume, 0) * max(soundVolume, 0)), 0);
     }
     
     /** Set playback speed
@@ -19723,9 +20771,13 @@ class UIVideo extends UIObject
 
         // update volume based on global sound volume, and the mute when sound is turned on or off,
         // so a game's own mute stays until then
-        this.video.volume = audioFinite(clamp(this.volume * soundVolume), 0);
+        this.video.volume = audioFinite(clamp(max(this.volume, 0) * max(soundVolume, 0)), 0);
         if (this._soundEnabled !== soundEnable)
             this.video.muted = !(this._soundEnabled = soundEnable);
+        // the window's blur read each frame, not only from its events, so a video made while it is blurred and a
+        // change of soundPauseWhenBlurred take, and one started blurred is muted as the others are
+        uiVideosBlurredNow() === uiVideosBlurred || uiVideosPageChange();
+        uiVideosBlurred && !this.video.muted && (this.video.muted = true, uiVideosMuted.add(this));
     }
     
     /** Render video to UI canvas */
@@ -19756,26 +20808,41 @@ class UIVideo extends UIObject
         this.video.remove();
         uiVideos.delete(this);
         uiVideosPaused.delete(this);
+        uiVideosMuted.delete(this);
         super.destroy();
     }
 }
 
-// the videos there are, and those paused while the page is hidden, which soundPauseWhenHidden pauses as it does the
-// game's sound, and plays again when the page shows
-const uiVideos = /* @__PURE__ */ new Set, uiVideosPaused = /* @__PURE__ */ new Set;
-let uiVideosListening = false;
+// the videos there are, those paused while the page is hidden, as soundPauseWhenHidden pauses the game's sound, and
+// those muted while the window is blurred, as soundPauseWhenBlurred stops its sound: a blurred window still shows
+// them, so they go on playing and the game sees them play; each comes back when the page does
+const uiVideos = /* @__PURE__ */ new Set, uiVideosPaused = /* @__PURE__ */ new Set, uiVideosMuted = /* @__PURE__ */ new Set;
+let uiVideosListening = false, uiVideosBlurred = false;
+// the window blurred with its sound paused, but not hidden, which pauses the videos instead
+const uiVideosBlurredNow = ()=> !(soundPauseWhenHidden && document.hidden) && audioPagePaused();
 function uiVideosPageChange()
 {
-    if (soundPauseWhenHidden && document.hidden)
+    const hidden = soundPauseWhenHidden && !!document.hidden;
+    uiVideosBlurred = uiVideosBlurredNow();
+    if (hidden)
     {
         for (const video of uiVideos)
-            video.isPaused() || (video.pause(), uiVideosPaused.add(video));
+            video.isPaused() || (video.pause(), uiVideosPaused.add(video)); // added after, so it plays again
     }
     else
     {
         for (const video of uiVideosPaused)
             video.play();
         uiVideosPaused.clear();
+    }
+    if (uiVideosBlurred)
+        for (const video of uiVideos)
+            video.video.muted || (video.video.muted = true, uiVideosMuted.add(video));
+    else
+    {
+        for (const video of uiVideosMuted)
+            video.video.muted = !soundEnable;
+        uiVideosMuted.clear();
     }
 }
 
@@ -20215,9 +21282,28 @@ let box2dPendingBusy = 0;
 function box2dWhenUnlocked(f)
 {
     box2dPending.push(f);
-    if (!box2d.world.IsLocked() && !box2dPendingBusy)
-        box2dRunPending();
+    if (box2d.world.IsLocked() || box2dPendingBusy) return;
+    box2dRunPending();
 }
+// a game's contact callback, run inside the step: an error there would pass out through Box2D's WebAssembly and leave
+// its world locked for good, so it is kept, the first one, and thrown again once the step is done
+let box2dCallbackError, box2dCallbackHolding = 0, box2dStepping = 0;
+function box2dCallback(f)
+{
+    // outside a step and a body's destroy it is called as it is; in either, Box2D is in the middle of its work
+    if (!box2d.world.IsLocked() && !box2dCallbackHolding) return f();
+    try { f(); }
+    catch (error) { box2dCallbackError ||= {error}; }
+}
+
+// the error a contact callback threw, kept until Box2D was done, thrown now and forgotten
+function box2dThrowKept()
+{
+    const kept = box2dCallbackError;
+    box2dCallbackError = undefined;
+    if (kept) throw kept.error;
+}
+
 function box2dRunPending()
 {
     ++box2dPendingBusy;
@@ -20273,6 +21359,11 @@ function box2dUnusedFieldValues(o)
     return values;
 }
 
+// debug builds: where Box2D or a setter last put each object, so a pos or angle the game set itself, which the next
+// step puts back, is said; and the bodies with no shape, said once each
+const box2dPlaced = /* @__PURE__ */ new WeakMap, box2dShapeWarned = /* @__PURE__ */ new WeakSet;
+const box2dPlace = (o)=> false && box2dPlaced.set(o, [o.pos.x, o.pos.y, o.angle]);
+
 // warn once a field
 function box2dUnusedWarn(name, use)
 {
@@ -20302,6 +21393,20 @@ function box2dCheckUnusedFields(o)
         changed && box2dUnusedWarn(name, box2dUnusedFields[name]);
     }
 
+    // pos and angle are Box2D's, set by it each step: one the game set is put back, setPosition and setAngle move it
+    const placed = box2dPlaced.get(o);
+    if (placed && (o.pos.x !== placed[0] || o.pos.y !== placed[1]))
+        box2dUnusedWarn('pos', 'setPosition or setTransform, it is set by Box2D each step');
+    if (placed && o.angle !== placed[2])
+        box2dUnusedWarn('angle', 'setAngle or setTransform, it is set by Box2D each step');
+
+    // a dynamic body with no shape has nothing to collide with, its size is not one, and falls through everything
+    if (!box2dShapeWarned.has(o) && o.body.GetType() === box2d.bodyTypeDynamic && !o.hasFixtures())
+    {
+        box2dShapeWarned.add(o);
+        console.warn('a Box2dObject has no shape, give it one with addBox, addCircle or addPoly, its size is not one');
+    }
+
     // the body's own scale is a call into Box2D, asked only when the field changed since it was last asked,
     // since setGravityScale sets both
     if (o.gravityScale === start[i]) return;
@@ -20310,6 +21415,13 @@ function box2dCheckUnusedFields(o)
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+// in every build, as Box2D itself aborts on it: no fixture is made in a contact callback, make it after the step
+function box2dFixturesAllowed()
+{
+    if (box2d.world.IsLocked())
+        throw new Error('cannot create Box2D fixtures during a contact callback, make them after the step');
+}
+
 /** 
  * Box2D Object - extend with your own custom physics objects
  * - A LittleJS object with Box2D physics, dynamic by default
@@ -20339,7 +21451,9 @@ class Box2dObject extends EngineObject
      *  @param {number}   [renderOrder] */
     constructor(pos=vec2(), size=vec2(), tileInfo, angle=0, color, bodyType=box2d.bodyTypeDynamic, renderOrder=0)
     {
-        false&&ASSERT(!box2d.world.IsLocked(), 'cannot create Box2D bodies during a contact callback');
+        // in every build, a release one too, or the object would be left in engineObjects with no body
+        if (box2d.world.IsLocked())
+            throw new Error('cannot create Box2D bodies during a contact callback, make it after the step');
         super(pos, size, tileInfo, angle, color, renderOrder);
 
         // create physics body, Box2D copies the def
@@ -20374,11 +21488,13 @@ class Box2dObject extends EngineObject
         box2d.objects.push(this); // keep track of all box2d objects
 
         // a debug build notes the engine physics fields Box2D does not read, to warn when one is set
-        debug && box2dUnusedStarts.set(this, box2dUnusedFieldValues(this));
+        false && box2dUnusedStarts.set(this, box2dUnusedFieldValues(this));
+        box2dPlace(this);
     }
 
     /** Destroy this object and its physics body
-     *  @param {boolean} [immediate] - Remove it now, as EngineObject.destroy does, children included */
+     *  @param {boolean} [immediate] - true removes attached effects like particle emitters at once, false lets
+     *  them finish first, as EngineObject.destroy does, children included */
     destroy(immediate=false)
     {
         if (this.destroyed) return;
@@ -20393,12 +21509,22 @@ class Box2dObject extends EngineObject
         const body = this.body;
         box2dWhenUnlocked(()=>
         {
-            if (this.body !== body) return; // destroyed already
-            box2d.world.DestroyBody(body);
-            body.object = undefined;
-            this.body = undefined;
+            if (!body || this.body !== body) return; // destroyed already
+            // the endContact it calls runs inside Box2D: an error there is kept, and the body lets go of this
+            // whatever happens, or it would stay in the world, a wall nothing can destroy
+            ++box2dCallbackHolding;
+            try { box2d.world.DestroyBody(body); }
+            finally
+            {
+                --box2dCallbackHolding;
+                body.object = undefined;
+                this.body = undefined;
+            }
         });
         super.destroy(immediate);
+        // outside a step, an error the body's endContact threw as it went, kept so Box2D could finish, comes out now
+        // the object is destroyed
+        box2dStepping || box2dThrowKept();
     }
 
     /** Box2d objects updated with Box2d world step */
@@ -20517,7 +21643,7 @@ class Box2dObject extends EngineObject
         false&&ASSERT(isNumber(density), 'density must be a number');
         false&&ASSERT(isNumber(friction), 'friction must be a number');
         false&&ASSERT(isNumber(restitution), 'restitution must be a number');
-        false&&ASSERT(!box2d.world.IsLocked(), 'cannot create Box2D fixtures during a contact callback');
+        box2dFixturesAllowed();
 
         // Box2D copies the def and the shape
         const fd = new box2d.instance.b2FixtureDef();
@@ -20553,6 +21679,8 @@ class Box2dObject extends EngineObject
         false&&ASSERT(size.x * size.y > 1e-6 && isFinite(size.x * size.y), 'box is too small or too big for Box2D');
         if (!(size.x * size.y > 1e-6) || !isFinite(size.x * size.y)) return;
 
+        box2dFixturesAllowed(); // before the shape is made, so a refused one leaves none in the heap
+
         const shape = new box2d.instance.b2PolygonShape();
         shape.SetAsBox(size.x/2, size.y/2, box2dTemp(offset), -angle);
         const fixture = this.addShape(shape, density, friction, restitution, isSensor);
@@ -20586,6 +21714,7 @@ class Box2dObject extends EngineObject
             false&&ASSERT(area >= 1e-6, 'Box2D polygons need 3 to 8 points, not all in a line');
             if (!(area >= 1e-6)) return;
 
+            box2dFixturesAllowed(); // before the buffer and the shape are made, so a refused one leaves nothing
             const buffer = box2d.instance._malloc(points.length * 8);
             for (let i=0, offset=0; i<points.length; ++i)
             {
@@ -20663,6 +21792,8 @@ class Box2dObject extends EngineObject
         false&&ASSERT(isVector2(offset), 'offset must be a Vector2');
         if (!isFinite(diameter)) return; // Box2D stops for good on it, no fixture is made
 
+        box2dFixturesAllowed(); // before the shape is made, so a refused one leaves none in the heap
+
         const shape = new box2d.instance.b2CircleShape();
         shape.set_m_p(box2dTemp(offset));
         shape.set_m_radius(diameter/2);
@@ -20683,6 +21814,8 @@ class Box2dObject extends EngineObject
     {
         false&&ASSERT(isVector2(point1), 'point1 must be a Vector2');
         false&&ASSERT(isVector2(point2), 'point2 must be a Vector2');
+
+        box2dFixturesAllowed(); // before the shape is made, so a refused one leaves none in the heap
 
         const shape = new box2d.instance.b2EdgeShape();
         shape.Set(box2dTemp(point1), box2dTemp(point2, 1));
@@ -20707,6 +21840,7 @@ class Box2dObject extends EngineObject
         for (let i=0; i<points.length-1; ++i)
         {
             // the ghost vertices, where there is a neighbor, make the edges one smooth surface
+            box2dFixturesAllowed(); // before the shape is made, so a refused one leaves none in the heap
             const shape = new box2d.instance.b2EdgeShape();
             points[i-1] && shape.set_m_vertex0(box2dTemp(points[i-1]));
             points[i+0] && shape.set_m_vertex1(box2dTemp(points[i+0]));
@@ -20741,6 +21875,7 @@ class Box2dObject extends EngineObject
         const getPoint = i=> points[mod(i,points.length)];
         for (let i=0; i<points.length; ++i)
         {
+            box2dFixturesAllowed(); // before the shape is made, so a refused one leaves none in the heap
             const shape = new box2d.instance.b2EdgeShape();
             shape.set_m_vertex0(box2dTemp(getPoint(i-1)));
             shape.set_m_vertex1(box2dTemp(getPoint(i+0)));
@@ -20847,11 +21982,15 @@ class Box2dObject extends EngineObject
 
     /** Sets the position and angle, from a contact callback the body moves once the step is done
      *  @param {Vector2} pos
-     *  @param {number} angle */
+     *  @param {number} [angle] - Left out, the angle it has when the move happens, as setPosition keeps */
     setTransform(pos, angle)
     {
+        if (angle === undefined)
+            return this.setPosition(pos);
+        false&&ASSERT(isVector2(pos) && isNumber(angle), 'setTransform takes a vec2 and an angle', pos, angle);
         this.pos.set(pos.x, pos.y); // its own pos kept, as an EngineObject's is
         this.angle = angle;
+        box2dPlace(this);
         // box2d uses reverse angle
         const x = pos.x, y = pos.y;
         box2dWhenUnlocked(()=>
@@ -20867,6 +22006,7 @@ class Box2dObject extends EngineObject
     setPosition(pos)
     {
         this.pos.set(pos.x, pos.y); // its own pos kept, as an EngineObject's is
+        box2dPlace(this);
         const x = pos.x, y = pos.y;
         box2dWhenUnlocked(()=>
         {
@@ -20881,6 +22021,7 @@ class Box2dObject extends EngineObject
     setAngle(angle)
     {
         this.angle = angle;
+        box2dPlace(this);
         box2dWhenUnlocked(()=>
         {
             if (!this.body) return;
@@ -21213,10 +22354,15 @@ class Box2dTileLayer extends Box2dStaticObject
     }
     
     /** Create box2d collision fixtures for solid tiles
+    *  - Called from a contact callback, a tile that breaks when hit, it is done once the step is done, as Box2D
+    *    makes no fixtures inside its step
     *  @param {number} [friction]
     *  @param {number} [restitution] */
     buildCollision(friction=.2, restitution=0)
     {
+        if (box2d.world.IsLocked())
+            return void box2dWhenUnlocked(()=> this.destroyed || this.buildCollision(friction, restitution));
+
         // destroy all fixtures and create new ones
         this.destroyAllFixtures();
 
@@ -21316,7 +22462,12 @@ class Box2dJoint
      *  @param {b2JointDef} jointDef - Freed once the joint is made, Box2D copies it */
     constructor(jointDef)
     {
-        false&&ASSERT(!box2d.world.IsLocked(), 'cannot create Box2D joints during a contact callback');
+        // in every build, as Box2D itself aborts on it, with the def freed
+        if (box2d.world.IsLocked())
+        {
+            box2d.instance.destroy(jointDef);
+            throw new Error('cannot create Box2D joints during a contact callback, make them after the step');
+        }
         const bodyA = jointDef.get_bodyA(), bodyB = jointDef.get_bodyB();
         const bothLive = !box2d.isNull(bodyA) && !box2d.isNull(bodyB);
         false&&ASSERT(bothLive, 'a joint needs two objects that are not destroyed');
@@ -22325,8 +23476,8 @@ class Box2dPlugin
 
             const contactA = {point, normal, impulse};
             const contactB = {point: point?.copy(), normal: normal?.scale(-1), impulse};
-            objectA.beginContact(objectB, fixtureA, fixtureB, speed, contactA);
-            objectB.beginContact(objectA, fixtureB, fixtureA, speed, contactB);
+            box2dCallback(()=> objectA.beginContact(objectB, fixtureA, fixtureB, speed, contactA));
+            box2dCallback(()=> objectB.beginContact(objectA, fixtureB, fixtureA, speed, contactB));
         }
         listener.EndContact = function(contactPtr)
         {
@@ -22341,8 +23492,8 @@ class Box2dPlugin
             const objectA  = fixtureA.GetBody().object;
             const objectB  = fixtureB.GetBody().object;
             if (!objectA || !objectB) return;
-            objectA.endContact(objectB, fixtureA, fixtureB);
-            objectB.endContact(objectA, fixtureB, fixtureA);
+            box2dCallback(()=> objectA.endContact(objectB, fixtureA, fixtureB));
+            box2dCallback(()=> objectB.endContact(objectA, fixtureB, fixtureA));
         };
         listener.PreSolve = function(contactPtr)
         {
@@ -22356,7 +23507,7 @@ class Box2dPlugin
             const objectA  = fixtureA.GetBody().object;
             const objectB  = fixtureB.GetBody().object;
             if (!objectA || !objectB) return;
-            box2dPreSolve(contact, contactPtr, objectA, objectB, fixtureA, fixtureB);
+            box2dCallback(()=> box2dPreSolve(contact, contactPtr, objectA, objectB, fixtureA, fixtureB));
         };
         listener.PostSolve = function() {};
         box2d.world.SetContactListener(listener);
@@ -22375,16 +23526,35 @@ class Box2dPlugin
                 b.SetAwake(true);
         }
         box2dPreSolveOn = this.objects.some(box2dWantsPreSolve);
-        for (let i=frames; i--;)
+        ++box2dStepping;
+        let done = false;
+        try
         {
-            box2d.world.Step(timeDelta, this.velocityIterations, this.positionIterations);
-
-            // what a contact callback destroyed or changed, now the world can take it
+            // what waited behind a queued change that threw goes first, or a body destroyed then collides once more;
+            // a callback error it raises skips this frame's steps, as one raised by a step skips the rest, since it
+            // only follows an error of the game's, thrown after
             box2dRunPending();
+            for (let i=frames; i-- && !box2dCallbackError;)
+            {
+                box2d.world.Step(timeDelta, this.velocityIterations, this.positionIterations);
+
+                // what a contact callback destroyed or changed, now the world can take it, a scene set from one too
+                box2dRunPending();
+            }
+            done = true;
+        }
+        finally
+        {
+            --box2dStepping;
+            // a queued change that threw goes out as the error, and a kept one goes with it, not into the next step
+            done || (box2dCallbackError = undefined);
+            // remove destroyed objects, once for all of them
+            this.objects = this.objects.filter(o=>!o.destroyed);
         }
 
-        // remove destroyed objects, once for all of them
-        this.objects = this.objects.filter(o=>!o.destroyed);
+        // a contact callback's error, thrown now the world is unlocked, so the physics goes on after it; an error
+        // of a queued change thrown above goes first, and a kept one does not wait for the next step
+        box2dThrowKept();
     }
 
     ///////////////////////////////////////////////////////////////////////////////
@@ -22718,18 +23888,42 @@ async function box2dInit()
     if (box2d) return box2d;
     return box2dInitLoad ||= (async ()=>
     {
-        // @ts-ignore - Box2D is the global that box2d.wasm.js defines
-        new Box2dPlugin(await Box2D());
+        // a wasm that can not load aborts and Box2D's own promise never settles, so its abort rejects the load with
+        // the file named, as loadFetch names a file, and the usual cause when the page was opened from a file on disk
+        const module = await new Promise((resolve, reject)=>
+        {
+            const onAbort = (what)=> reject(new Error('box2dInit: could not load box2d.wasm.wasm, ' + what +
+                (globalThis.location?.protocol === 'file:' ?
+                ', the page was opened from a file, serve it from a local web server' : '')));
+            // in a page the wasm is fetched here, where any failure, offline, blocked or a 404, rejects the load:
+            // the glue's own streaming fetch has no catch, and a request that fails before an answer never settled
+            let url = 'box2d.wasm.wasm';
+            const options = {onAbort, locateFile: (path, folder)=> url = folder + path};
+            globalThis.process?.versions?.node || Object.assign(options, {instantiateWasm: (imports, receive)=>
+            {
+                (async ()=>
+                {
+                    const response = await fetch(url);
+                    if (!response.ok) throw new Error(url + ' answered ' + response.status);
+                    const {instance} = await WebAssembly.instantiate(await response.arrayBuffer(), imports);
+                    receive(instance);
+                })().catch((error)=> onAbort(error.message));
+                return {}; // made later, by receive
+            }});
+            // @ts-ignore - Box2D is the global that box2d.wasm.js defines
+            Box2D(options).then(resolve, reject);
+        });
+        new Box2dPlugin(module);
         setupDebugDraw();
         engineAddPlugin(box2dUpdate, box2dRender);
         return box2d;
-    })();
+    })().catch((e)=> { box2dInitLoad = undefined; throw e; }); // a load that failed is tried again by the next call
 
     // add the box2d plugin to the engine
     function box2dUpdate()
     {
-        // frozen like the engine objects while paused or time is stopped
-        if (paused || !timeScale)
+        // frozen like the engine objects while paused, time is stopped or a level editor is open
+        if (paused || engineFrozenTick)
         {
             // what was destroyed while frozen leaves the list, the step does it otherwise
             box2d.objects = box2d.objects.filter(o=>!o.destroyed);
@@ -22743,12 +23937,13 @@ async function box2dInit()
         {
             if (o.body)
             {
-                debug && box2dCheckUnusedFields(o);
+                false && box2dCheckUnusedFields(o);
                 // moved in place, as the engine moves an EngineObject's pos, so what holds it follows the body;
                 // box2d uses reverse angle
                 const p = o.body.GetPosition();
                 o.pos.set(p.get_x(), p.get_y());
                 o.angle = -o.body.GetAngle();
+                box2dPlace(o);
             }
         }
     }
@@ -22888,17 +24083,21 @@ function drawNineSlice(pos, size, startTile, color, borderSize, additiveColor, e
         extraSpace = 0; // see through, the overlap that hides a seam would draw twice and show brighter
     // setup nine slice tiles - startTile is the top-left of a 3x3 tile block,
     // so the center tile is one tile down and right from it, stepping over
-    // the padding around each tile the way tile() lays out the grid
+    // the padding around each tile the way tile() lays out the grid, a packed sheet's too, which keeps its image's
+    // layout, and an atlas's group of nine frames, packed as a 3 by 3 block
     const step = startTile.size.add(vec2(startTile.padding*2));
+    const piece = (col, row)=> startTile.offset(step.multiply(vec2(col, row)));
     if (screenSpace && !angle)
     {
         // on whole pixels, the pieces in the screen's rows and columns of the block
-        drawSliceSnapped(pos, size, borderSize, (col, row)=>
-            [startTile.offset(step.multiply(vec2(col, row))), 0], color, additiveColor, useWebGL, context);
+        drawSliceSnapped(pos, size, borderSize, (col, row)=> [piece(col, row), 0], color, additiveColor, useWebGL,
+            context);
         return;
     }
-    borderSize = min(borderSize, abs(size.x)/2, abs(size.y)/2); // a box too small for two borders splits between them
-    const centerTile = startTile.offset(step);
+    // a negative size draws the box of its positive one, as the snapped screen path does
+    size = vec2(abs(size.x), abs(size.y));
+    borderSize = min(borderSize, size.x/2, size.y/2); // a box too small for two borders splits between them
+    const centerTile = piece(1, 1);
     const centerSize = size.add(vec2(extraSpace-borderSize*2));
     const cornerSize = vec2(borderSize);
     const cornerOffset = size.scale(.5).subtract(cornerSize.scale(.5));
@@ -22913,7 +24112,7 @@ function drawNineSlice(pos, size, startTile, color, borderSize, additiveColor, e
         const horizontal = i%2;
         const sidePos = cornerOffset.multiply(vec2(horizontal?i===1?1:-1:0, horizontal?0:i?-1:1));
         const sideSize = vec2(horizontal ? borderSize : centerSize.x, horizontal ? centerSize.y : borderSize);
-        const sideTile = centerTile.offset(step.multiply(vec2(i===1?1:i===3?-1:0,i===0?-flip:i===2?flip:0)))
+        const sideTile = piece(1 + (i===1?1:i===3?-1:0), 1 + (i===0?-flip:i===2?flip:0));
         drawTile(pos.add(sidePos.rotate(rotateAngle)), sideSize, sideTile, color, angle, false, additiveColor, useWebGL, screenSpace, context);
     }
     for (let i=4; i--;)
@@ -22922,7 +24121,7 @@ function drawNineSlice(pos, size, startTile, color, borderSize, additiveColor, e
         const flipX = i>1;
         const flipY = i && i<3;
         const cornerPos = cornerOffset.multiply(vec2(flipX?-1:1, flipY?-1:1));
-        const cornerTile = centerTile.offset(step.multiply(vec2(flipX?-1:1,flipY?flip:-flip)));
+        const cornerTile = piece(1 + (flipX?-1:1), 1 + (flipY?flip:-flip));
         drawTile(pos.add(cornerPos.rotate(rotateAngle)), cornerSize, cornerTile, color, angle, false, additiveColor, useWebGL, screenSpace, context);
     }
 }
@@ -22991,7 +24190,9 @@ function drawThreeSlice(pos, size, startTile, color, borderSize, additiveColor, 
         }, color, additiveColor, useWebGL, context);
         return;
     }
-    borderSize = min(borderSize, abs(size.x)/2, abs(size.y)/2); // a box too small for two borders splits between them
+    // a negative size draws the box of its positive one, as the snapped screen path does
+    size = vec2(abs(size.x), abs(size.y));
+    borderSize = min(borderSize, size.x/2, size.y/2); // a box too small for two borders splits between them
     const centerSize = size.add(vec2(extraSpace-borderSize*2));
     const cornerSize = vec2(borderSize);
     const cornerOffset = size.scale(.5).subtract(cornerSize.scale(.5));
@@ -23297,13 +24498,12 @@ class TextureSheet
         // the source may have its own padding baked in around each frame
         const sourceCellWidth = frameSize.x + sourcePad.x*2;
         const sourceCellHeight = frameSize.y + sourcePad.y*2;
-        false&&ASSERT(imageSize.x % sourceCellWidth === 0 && imageSize.y % sourceCellHeight === 0,
-            'image size must be a multiple of the padded frame size');
 
         const cellWidth = frameSize.x + padding*2;
         const cellHeight = frameSize.y + padding*2;
         const maxColumns = this.size / cellWidth | 0;
-        false&&ASSERT(maxColumns > 0, 'frame is too wide to fit on a texture sheet');
+        if (maxColumns < 1)
+            return undefined; // a frame wider than a sheet fits on none, the caller says so and goes on
 
         // keep the layout of the source image, but narrow it if a row is too wide
         // frames wrap down to the next row, which TileInfo.frame handles via columns
@@ -23447,6 +24647,17 @@ function loadSprite(src, frameSize, padding=textureSheetPadding, sourcePadding=0
             // pack onto a sheet, then fill in the tile that was already handed out,
             // copying every field so nothing is missed if TileInfo gains more of them
             const imageSize = vec2(image.width, image.height);
+            // whole frames are packed, in every build: one that does not divide the image leaves the rest out
+            const pad = isNumber(sourcePadding) ? vec2(/** @type {number} */ (sourcePadding)) :
+                /** @type {Vector2} */ (sourcePadding);
+            const cell = frameSize && /** @type {Vector2} */ (frameSize).add(pad.scale(2));
+            if (cell && (imageSize.x < cell.x || imageSize.y < cell.y))
+            {
+                console.warn('loadSprite image is smaller than one frame:', src, imageSize, frameSize);
+                return;
+            }
+            false && cell && (imageSize.x % cell.x || imageSize.y % cell.y) && console.warn(
+                'loadSprite image is not a whole number of frames, the part past the last whole frame is left out:', src);
             const added = textureSheetAdd(imageSize, frameSize, padding, sourcePadding);
             if (!added)
             {
@@ -23538,9 +24749,14 @@ function loadTiles(sources, tileSize=tileDefaultSize, padding=textureSheetPaddin
  *  - Supports TexturePacker json (hash and array) and Aseprite json
  *  - Returns an empty object which is filled with TileInfos when loaded
  *  - Frames are named by the json, animations are grouped automatically
- *  - Aseprite frame tags become animations, so do names like run_0, run_1
+ *  - Aseprite frame tags become animations, so do names like run_0, run_1, their frames in the file's order
+ *    whichever way the tag plays, which parseAtlas gives as the group's direction
+ *  - Names numbered with no separator, gem1, gem2, are grouped too, and every frame of a group made from names is
+ *    also set under its own name, so atlas.gem2 is atlas.gem.frame(1), as is atlas.run_1 atlas.run.frame(1)
  *  - Trimmed frames are restored to their full source size when packed
  *  - Rotated frames are rotated back upright when packed
+ *  - A group of nine frames, panel_0 to panel_8, is packed as a 3 by 3 block, so it is a drawNineSlice start tile
+ *  - A frame outside the image is left out, with a warning
  *  - The same atlas loaded again by its paths, with the same padding, gives back what the first load did, packed
  *    once, unless that load failed
  *  @param {string} imageSrc - Atlas image path
@@ -23572,7 +24788,7 @@ function loadAtlas(imageSrc, jsonSrc, padding=textureSheetPadding)
 
     // start fetching the json and decoding the image right away, in parallel
     const jsonPromise = typeof jsonSrc === 'object' ? Promise.resolve(jsonSrc) :
-        fetch(jsonSrc).then(r=> r.ok && r.json()).catch(()=> undefined);
+        fetchJSON(jsonSrc).catch((error)=> void console.warn('loadAtlas:', error.message)); // which file and why
     const image = new Image;
     const imagePromise = new Promise(resolve =>
     {
@@ -23588,13 +24804,21 @@ function loadAtlas(imageSrc, jsonSrc, padding=textureSheetPadding)
         await imagePromise;
         if (image.width && data)
         {
+            // a frame's rect lies in the image, turned when it is stored turned
+            const w = image.width, h = image.height;
+            const inImage = (f)=> f.pos.x >= 0 && f.pos.y >= 0 &&
+                f.pos.x + (f.rotated ? f.size.y : f.size.x) <= w && f.pos.y + (f.rotated ? f.size.x : f.size.y) <= h;
             for (const group of parseAtlas(data))
             {
                 // reserve a block of full size cells, one per frame
                 if (!group.frames.length) continue; // a tag with no frames, the groups after it still load
+                if (!group.frames.every(inImage))
+                {
+                    console.warn('loadAtlas frames lie outside the image, left out:', group.name);
+                    continue;
+                }
                 const sourceSize = group.frames[0].sourceSize;
-                const blockSize = vec2(sourceSize.x*group.frames.length, sourceSize.y);
-                const added = textureSheetAdd(blockSize, sourceSize, padding);
+                const added = textureSheetAddGroup(group.frames.length, sourceSize, padding);
                 if (!added)
                 {
                     console.warn('loadAtlas frames are too large to fit on a texture sheet:', group.name);
@@ -23625,7 +24849,14 @@ function loadAtlas(imageSrc, jsonSrc, padding=textureSheetPadding)
                             x, y, f.size.x, f.size.y);
                 });
                 sheet.glDirty = true;
-                atlas[group.name] = tile;
+                // as its own, a frame named __proto__ too, which assigned would set the atlas's prototype; a sprite
+                // packed after a frame took its name takes it back
+                objectPropertySet(atlas, group.name, tile);
+                // each frame of a group made from names under its own name too, gem1 of gem1, gem2 and gem3, separate
+                // sprites in a pack exported by file name, unless a sprite of that name is in the atlas
+                if (group.named)
+                    group.frames.forEach((f, i)=> f.name === group.name || Object.hasOwn(atlas, f.name) ||
+                        objectPropertySet(atlas, f.name, tile.frame(i)));
             }
         }
         else
@@ -23674,25 +24905,49 @@ function textureSheetQueueJob(name, job, failed)
 
 /** Parse atlas json into a list of named frame groups, used by loadAtlas
  *  - Accepts TexturePacker json (hash and array) and Aseprite json
- *  - Frames tagged in Aseprite or named like run_0, run_1 group into animations
+ *  - Frames tagged in Aseprite or named like run_0, run_1, or gem1, gem2, group into animations
+ *  - A tag's frames are in the file's order, and its group keeps how Aseprite plays them, its direction: forward,
+ *    reverse, pingpong or pingpong_reverse, for the game to play them that way
  *  @param {Object} data - Parsed atlas json data
- *  @return {Array<{name: string, frames: Array<AtlasFrame>}>} List of {name, frames} groups in atlas order
+ *  @return {Array<{name: string, frames: Array<AtlasFrame>, direction?: string, named?: boolean}>} List of
+ *    {name, frames} groups in atlas order, a tag's with its direction, one made from its frames' names marked named
  *  @memberof TextureSheets */
 function parseAtlas(data)
 {
     false&&ASSERT(!!data?.frames, 'unrecognized atlas format, expected TexturePacker or Aseprite json');
 
-    // normalize both hash and array frame layouts into a single list
-    const frames = (isArray(data.frames) ?
-        data.frames.map(f=> [f.filename, f]) : Object.entries(data.frames))
-        .map(([name, f])=> ({
-            name: name.replace(/\.[^.\\/]+$/, ''), // strip file extension
-            pos:        vec2(f.frame.x, f.frame.y),
-            size:       vec2(f.frame.w, f.frame.h),
-            offset:     vec2(f.spriteSourceSize?.x ?? 0, f.spriteSourceSize?.y ?? 0),
-            sourceSize: vec2(f.sourceSize?.w ?? f.frame.w, f.sourceSize?.h ?? f.frame.h),
+    // normalize both hash and array frame layouts into a single list; an entry with no frame rect, or no name, is
+    // left out, kept as a gap so a tag's frame numbers still match, and the rest load; the untrimmed size is whole
+    // pixels, as its cells are, or a cell of 6.9 rounds so that the last frame lands outside the block
+    const entries = isArray(data.frames) ? data.frames.map(f=> [f?.filename, f]) : Object.entries(data.frames);
+    let bad = 0;
+    const frames = entries.map(([name, f])=>
+    {
+        // and one whose numbers are not numbers, hand edited, as a NaN would stop the whole atlas in a debug build
+        const finite = (o, keys)=> !o || keys.every((key)=> o[key] === undefined || Number.isFinite(o[key]));
+        if (!f || typeof f.frame != 'object' || !f.frame || (typeof name != 'string' && typeof name != 'number') ||
+            !['x', 'y', 'w', 'h'].every((key)=> Number.isFinite(f.frame[key])) ||
+            !finite(f.spriteSourceSize, ['x', 'y', 'w', 'h']) || !finite(f.sourceSize, ['w', 'h']))
+            return ++bad, undefined;
+        // a frame rect bigger than its sprite: Aseprite's inner padding puts a border inside the rect on each side,
+        // so the sprite is the middle of it, and one a pixel over, a scaled export's rounding, is the sprite's size
+        const sw = f.spriteSourceSize?.w ?? f.frame.w, sh = f.spriteSourceSize?.h ?? f.frame.h;
+        const size = vec2(min(f.frame.w, sw), min(f.frame.h, sh));
+        const inset = (d)=> d >= 2 ? floor(d / 2) : 0, ix = inset(f.frame.w - size.x), iy = inset(f.frame.h - size.y);
+        const offset = vec2(f.spriteSourceSize?.x ?? 0, f.spriteSourceSize?.y ?? 0);
+        const sourceSize = vec2(ceil(f.sourceSize?.w ?? f.frame.w), ceil(f.sourceSize?.h ?? f.frame.h));
+        // and a trimmed part placed a pixel over its untrimmed size, the same rounding, loses that pixel
+        const over = (o, s, source)=> o + s - source > 0 && o + s - source <= 1 ? source - o : s;
+        size.x = over(offset.x, size.x, sourceSize.x), size.y = over(offset.y, size.y, sourceSize.y);
+        return {
+            name: String(name).replace(/\.[^.\\/]+$/, ''), // strip file extension
+            pos:        vec2(f.frame.x + (f.rotated ? iy : ix), f.frame.y + (f.rotated ? ix : iy)), // turned in the image
+            size, offset, sourceSize,
             rotated:    !!f.rotated,
-        }));
+        };
+    });
+    bad && console.warn(`loadAtlas: ${bad} frame entries have no frame rect, no name or a field that is not a ` +
+        'number, left out');
 
     const groups = [];
     const tags = data.meta?.frameTags;
@@ -23704,25 +24959,27 @@ function parseAtlas(data)
         {
             // a tag reaches only frames there are, whatever its numbers say
             const from = max(0, floor(tag.from) || 0), to = min(frames.length - 1, floor(tag.to) || 0);
-            const list = frames.slice(from, to + 1), size = list[0]?.sourceSize;
+            const list = frames.slice(from, to + 1).filter(Boolean), size = list[0]?.sourceSize;
             // its frames are packed in cells of one size, so a tag of frames of other sizes leaves them alone
             if (list.some((f)=> f.sourceSize.x !== size.x || f.sourceSize.y !== size.y))
             {
                 console.warn('loadAtlas: the frames of tag ' + tag.name + ' differ in size, so they stay apart');
                 continue;
             }
-            groups.push({name: tag.name, frames: list});
+            const group = {name: tag.name, frames: list};
+            typeof tag.direction === 'string' && (group.direction = tag.direction);
+            groups.push(group);
             for (let i = from; i <= to; ++i)
                 tagged.add(i);
         }
-        frames.forEach((f, i)=> tagged.has(i) || groups.push({name: f.name, frames: [f]}));
+        frames.forEach((f, i)=> f && !tagged.has(i) && groups.push({name: f.name, frames: [f]}));
         return parseAtlasNamesCheck(groups);
     }
 
     // group frames that share a name stem with contiguous trailing numbers
     // run_0.png and run_1.png become a 2 frame animation named run, and so do the folder style run/0.png and run/1.png
     const stems = new Map;
-    for (const f of frames)
+    for (const f of frames.filter(Boolean))
     {
         let match = f.name.match(/^(.+?)([-_ /])?(\d+)$/);
         if (match && !match[2] && /\d$/.test(match[1]))
@@ -23741,7 +24998,7 @@ function parseAtlas(data)
             list.every(f=> f.sourceSize.x === list[0].sourceSize.x &&
                            f.sourceSize.y === list[0].sourceSize.y);
         if (grouped)
-            groups.push({name: stem, frames: list});
+            groups.push({name: stem, frames: list, named: true});
         else
             list.forEach(f=> groups.push({name: f.name, frames: [f]}));
     }
@@ -23782,6 +25039,14 @@ function textureSheetCreate()
     const sheet = new TextureSheet;
     textureSheets.push(sheet);
     return sheet;
+}
+
+// a block for an atlas group's frames: a row of them, or a group of nine as a 3 by 3 block, as a nine-slice reads
+// one, and as a row when frames that tall do not fit three high; frame(k) is the same frame either way
+function textureSheetAddGroup(count, frameSize, padding)
+{
+    return count === 9 && textureSheetAdd(frameSize.scale(3), frameSize, padding) ||
+        textureSheetAdd(vec2(frameSize.x * count, frameSize.y), frameSize, padding);
 }
 
 // use the first sheet with enough space, or make a new one,
@@ -23865,6 +25130,33 @@ function tweenIsLerpable(v) { return v && typeof v.lerp === 'function'; }
 
 ///////////////////////////////////////////////////////////////////////////////
 
+// debug builds: an ease is a curve, a function of the time from 0 to 1 giving a number, not a modifier that makes
+// one, like Ease.OUT, which written in its place would set NaN every frame
+function tweenEaseCheck(ease, where)
+{
+    const modifiers = [Ease.IN, Ease.OUT, Ease.IN_OUT, Ease.POWER, Ease.PIECEWISE];
+    false&&ASSERT(typeof ease === 'function', where + ': the ease must be a function, like Ease.SINE', ease);
+    false&&ASSERT(!modifiers.includes(ease) && isNumber(ease(.5)), where + ': the ease must be a curve, like Ease.SINE; ' +
+        'Ease.IN, OUT, IN_OUT, POWER and PIECEWISE make one, as Ease.OUT(Ease.SINE) or Ease.POWER(3)');
+}
+
+// debug builds: an option the tween does not have is a slip, said with the one meant
+function tweenOptionsCheck(options)
+{
+    const names = ['ease', 'useRealTime', 'paused'];
+    for (const key in options)
+    {
+        if (names.includes(key)) continue;
+        const lower = key.toLowerCase();
+        const meant = names.find((name)=> // one with its case off, one inside the other, or one starting the same
+            lower.includes(name.toLowerCase()) || name.toLowerCase().includes(lower) ||
+            name.toLowerCase().slice(0, 3) === lower.slice(0, 3));
+        false&&ASSERT(false, 'Tween: no option named ' + key + (meant ? ', did you mean ' + meant + '?' : '') +
+            (['loop', 'pingPong'].includes(key) ? ', ' + key + '() is a method of the tween' : key === 'onComplete' ? ', set it with then()' : '') +
+            '; the options are ' + names.join(', '));
+    }
+}
+
 /** A tween: drives a callback with a value interpolated between
  *  `start` and `end` over `duration` seconds. Pauses with the game by default.
  *  - In TypeScript it is a `Tween<T>` of the type it tweens, which comes from `start` and `end` or
@@ -23906,6 +25198,7 @@ class Tween
             false&&ASSERT(isNumber(end),   'Tween end must be a number when start is a number');
         }
         false&&ASSERT(isNumber(duration) && duration > 0, 'Tween duration must be > 0');
+        false && tweenOptionsCheck(options);
 
         // the callback's type is NonNullable<T>, which is T, so that TypeScript takes the type from start and end
         // first: a typed callback like (v: number)=> with start 10 then makes a Tween<number>, not a Tween<0|10>
@@ -23924,6 +25217,7 @@ class Tween
         this.life = duration;
         /** @property {function(number):number} - Easing curve mapping [0,1] -> [0,1] */
         this.ease = options.ease || Ease.LINEAR;
+        false && tweenEaseCheck(this.ease, 'Tween');
         /** @property {boolean} - If true, advance even when the game is paused */
         this.useRealTime = !!options.useRealTime;
         /** @property {boolean} - If true, stop advancing until cleared */
@@ -23968,6 +25262,7 @@ class Tween
      *  @return {Tween<T>} */
     setEase(easeFn)
     {
+        false && tweenEaseCheck(easeFn, 'setEase');
         this.ease = easeFn;
         return this;
     }
@@ -24318,6 +25613,14 @@ function tweenProperty(target, propertyPath, start, end, duration = 1, options =
 
     const parts = propertyPath.split('.');
     const lastKey = parts.pop();
+    if (false)
+    {
+        // a path that ends on a property nothing has, a typo like 'pos.z' on a vec2, would add one nothing reads
+        let obj = target;
+        for (const k of parts) obj = obj?.[k];
+        false&&ASSERT(obj != null && typeof obj === 'object' && lastKey in obj,
+            'tweenProperty: ' + propertyPath + ' is not a property of the target, set it first to tween a new one');
+    }
     let tween;
     const callback = (value) =>
     {
@@ -24523,21 +25826,49 @@ engineAddPlugin(tweenUpdate);
 
 let sceneCurrent, sceneLeaving = false, scenePluginAdded = false;
 
+// the scene a call during a Box2D step asked for, entered once after it, see setScene
+let sceneQueued, sceneIsQueued = false;
+
 /** Leave the current scene, destroy every object that is not persistent, and enter the next scene
  *  - Setting the current scene again restarts it, and no scene leaves the game with none
- *  - The switch happens at once, it can be called from anywhere but a scene's leave
+ *  - The switch happens at once, it can be called from anywhere but a scene's leave; from a Box2D contact callback it
+ *    happens once the physics step is done, since Box2D can not make bodies during one, and several calls in one
+ *    step, as two fixtures touching spikes make, switch once, to the scene the last one asked for
+ *  - Called while a switch destroys the old scene's objects, from an object's destroy or a Box2D endContact, it is
+ *    dropped with a warning in debug builds, so the scene the switch was asked for wins
+ *  - UI objects and tweens are not objects of the scene and stay, uiSystem.destroyObjects() and tweenStopAll() end them
  *  @param {Scene} [scene] - The scene to enter
  *  @memberof SceneSystem */
 function setScene(scene)
 {
     false&&ASSERT(!sceneLeaving, 'setScene can not be called from a scene leave');
     if (sceneLeaving) return; // a release build, the leave would call itself till the stack runs out
+    if (typeof box2d != 'undefined' && box2d?.world?.IsLocked())
+    {
+        // in a Box2D step, after it, once however many contacts ask
+        sceneQueued = scene;
+        sceneIsQueued || box2dWhenUnlocked(()=>
+        {
+            sceneIsQueued = false;
+            setScene(sceneQueued);
+        });
+        sceneIsQueued = true;
+        return;
+    }
     if (!scenePluginAdded)
     {
         scenePluginAdded = true;
         engineAddPlugin(sceneUpdate, sceneRenderPost, undefined, undefined, sceneRender);
     }
 
+    // one asked for while a switch destroys the old scene's objects, from a destroy or a Box2D endContact, is dropped:
+    // the scene the switch was asked for wins, or a player whose destroy starts game over would take over every
+    // level change; a game that wants game over there asks for it from its update
+    if (sceneSwitching)
+    {
+        false && console.warn('setScene during a scene switch, from an object destroyed by it, is dropped');
+        return;
+    }
     if (sceneCurrent)
     {
         // a leave that throws still lets the next switch through
@@ -24545,10 +25876,19 @@ function setScene(scene)
         try { sceneCurrent.leave?.(); }
         finally { sceneLeaving = false; }
     }
-    engineObjectsDestroy();
-    sceneCurrent = scene;
-    scene?.enter?.();
+    // an object's destroy that throws still lets the next scene in, its error thrown after
+    sceneSwitching = true;
+    try { engineObjectsDestroy(); }
+    finally
+    {
+        sceneSwitching = false;
+        sceneCurrent = scene;
+        scene?.enter?.();
+    }
 }
+
+// a switch destroying the old scene's objects, during which a setScene is dropped
+let sceneSwitching = false;
 
 /** Get the current scene
  *  @return {Scene|undefined}
@@ -24753,6 +26093,41 @@ function parallaxMountains(topColor=hsl(.6, .2, .6), bottomColor=hsl(.6, .3, .25
 const cameraList = [];
 // the camera that drove the view last update
 let cameraDriving;
+// the camera that took the pointer lock, so a camera lets go only of a lock it took, never one the game or the free
+// camera took
+let cameraLockOwner;
+// the camera that asked for the lock last and when, since the browser gives it a frame or more later: one that lands
+// with no camera holding it, after a hand-over that came first, is still the asker's
+let cameraLockAsked, cameraLockAskedTime = 0;
+
+// ask for the pointer lock for a camera, which lets go of it when another drives or it is destroyed
+function cameraLockRequest(camera)
+{
+    pointerLockRequest();
+    cameraLockOwner = cameraLockAsked = camera;
+    cameraLockAskedTime = timeReal;
+}
+
+// hand the lock a camera took on, or let it go, once its camera no longer drives or is gone: a driver that locks the
+// pointer too takes it on, so a new camera made before or after the old one is destroyed in the same update keeps it
+function cameraLockUpdate()
+{
+    const driver = cameraDriver(), active = pointerLockIsActive();
+    if (cameraLockAsked && (active || timeReal - cameraLockAskedTime > 1))
+    {
+        // landed, or never will: landed with no camera holding it, it is the asker's
+        active && !cameraLockOwner && (cameraLockOwner = cameraLockAsked);
+        cameraLockAsked = undefined;
+    }
+    if (!cameraLockOwner || cameraLockOwner === driver) return;
+    if (driver?.lockPointer && (active || cameraLockAsked))
+        cameraLockOwner = driver;
+    else
+    {
+        cameraLockOwner = undefined;
+        active && pointerLockExit();
+    }
+}
 // the plugin hook is added with the first camera
 let cameraPluginAdded = false;
 
@@ -24777,17 +26152,20 @@ function cameraActivate(camera)
 }
 
 // update the camera that drives the view, after the objects moved, called by the engine each update
-// a camera that takes over from another starts from where the view is, one just made from where it snapped
+// a camera that takes over from another starts from where the view is, one just made, or snapped while another
+// drove, from where it snapped
 function cameraUpdatePost()
 {
     for (let i = cameraList.length; i--;)
         cameraList[i].destroyed && cameraList.splice(i, 1);
+    cameraLockUpdate(); // paused too, so a camera destroyed then lets go
     if (paused || engineFrozenTick) return; // held while paused or at time scale 0
     const camera = cameraList[cameraList.length - 1];
-    if (camera && camera !== cameraDriving && !camera.cameraNew)
+    if (camera && camera !== cameraDriving && !camera.cameraNew && !camera.cameraSnapped)
         camera.takeView();
     for (const c of cameraList)
         c.cameraNew = false;
+    camera && (camera.cameraSnapped = false); // the one driving goes on from where it is
     cameraDriving = camera;
     camera?.updateCamera();
 }
@@ -24860,6 +26238,7 @@ class FollowCamera extends EngineObject
         this.scaleSmoothing = .2;
 
         this.cameraNew = true;       // made this update, it starts where it snapped and not from the view
+        this.cameraSnapped = false; // snapped while another drove, see cameraUpdatePost
         this.lookOffset = vec2();    // how far the look moves the view now
         this.lookDirection = vec2(); // which way it looks on each axis, -1, 0 or 1
         this.lookTravel = vec2();    // how far the target has gone back against the look since it last went with it
@@ -24881,8 +26260,10 @@ class FollowCamera extends EngineObject
      *  this camera is the one driving it */
     snap()
     {
-        // a camera not driving keeps its place for later, and leaves the view and its zoom alone
+        // a camera not driving keeps its place for later, and leaves the view and its zoom alone, and starts from it
+        // when it takes over, so the snap is a cut, not a pan from the view
         const driving = cameraDriver() === this;
+        driving || (this.cameraSnapped = true);
         driving && this.scale !== undefined && setCameraScale(this.scale);
         this.lookFrom = undefined; // a teleport is not a move to look along
         this.updateLook(true);
@@ -24983,7 +26364,7 @@ class FollowCamera extends EngineObject
      *  in orange */
     renderDebugInfo()
     {
-        if (!debug) return;
+        if (!false) return;
         const width = debugLineWidth / cameraScale, half = getCameraSize().scale(.5);
         if (this.deadZone.x || this.deadZone.y)
             debugRect(this.pos, this.deadZone, '#ff08', 0, 0, false, false);
@@ -25174,7 +26555,9 @@ class PathFinder
     }
 
     /** Default extra cost for stepping on a cell. Returns 0 (free) by default.
-     *  Override to add cost-weighted terrain (mud, swamp, etc).
+     *  Override to add cost-weighted terrain (mud, swamp, etc); returning nothing for a cell is a cost of 0, so
+     *  `if (mud) return 3;` is enough; a cell a path must not cross is blocked by isWalkable, and a cost of
+     *  Infinity blocks it too
      *  @param {number} x - Tile x
      *  @param {number} y - Tile y
      *  @return {number} */
@@ -25230,8 +26613,11 @@ class PathFinder
         {
             const node = this.nodes[x + y * w];
             node.reset();
-            const walkable = !!this.isWalkable(x, y);
-            const cost = walkable ? max(0, this.getCost(x, y)) : 0;
+            const open = !!this.isWalkable(x, y), extra = open ? this.getCost(x, y) : 0;
+            false&&ASSERT(extra === undefined || isNumber(extra), 'PathFinder getCost must return a number or nothing', extra);
+            // a cost of Infinity is a cell no path crosses, as one isWalkable refuses
+            const walkable = open && extra !== Infinity;
+            const cost = walkable ? max(0, +extra || 0) : 0; // nothing, or not a number, is free ground
             node.walkable = walkable;
             node.cost = cost;
             node.posWorld.set(x + 0.5 + ox, y + 0.5 + oy);
@@ -25824,8 +27210,10 @@ function pathFinderNearestNode(finder, worldPos, searchRange, test)
     // no ring past the one that reaches the grid's farthest cell holds any, so a range of Infinity is the whole grid
     searchRange = min(searchRange, max(centerX, finder.size.x - 1 - centerX, centerY, finder.size.y - 1 - centerY));
 
+    // from outside the grid the rings before the first that reaches it hold nothing, so the search starts there
+    const first = max(0, -centerX, centerX - (finder.size.x - 1), -centerY, centerY - (finder.size.y - 1));
     let nearest = null, nearestDistSq = 0;
-    for (let offset = 0; offset <= searchRange; ++offset)
+    for (let offset = first; offset <= searchRange; ++offset)
     {
         // every cell of this ring is more than offset - .5 away along one axis
         const bound = max(0, offset - .5);
@@ -25877,9 +27265,11 @@ function vec3(x=0, y, z)
 }
 
 /**
- * Check if the object is a valid Vector3
+ * Check if the object is a valid Vector3, a type guard in TypeScript
+ *  - One with a component that is not a number is not valid and reads as not one, and TypeScript takes it as not
+ *    one in the else branch too
  * @param {any} v
- * @return {boolean}
+ * @return {v is Vector3}
  * @memberof Math3D
  */
 function isVector3(v) { return v instanceof Vector3 && v.isValid(); }
@@ -26401,17 +27791,23 @@ class Matrix4
      *  @return {Vector3} */
     getRotation()
     {
-        // the axes at unit length, see Matrix4.rotation for which element is which
+        // the axes at unit length, see Matrix4.rotation for which element is which; one scaled to nothing has no
+        // direction, so it is made again from the other two, as an object hidden by a scale of 0 keeps its turn
         const m = this.m, s = this.getScale();
         const sx = s.x || 1, sy = s.y || 1, sz = s.z || 1;
-        const m1 = m[1] / sx, m5 = m[5] / sy, m8 = m[8] / sz, m9 = m[9] / sz, m10 = m[10] / sz;
+        let x = [m[0] / sx, m[1] / sx, m[2] / sx], y = [m[4] / sy, m[5] / sy, m[6] / sy], z = [m[8] / sz, m[9] / sz, m[10] / sz];
+        const cross = (a, b)=> [a[1]*b[2] - a[2]*b[1], a[2]*b[0] - a[0]*b[2], a[0]*b[1] - a[1]*b[0]];
+        const zeros = (s.x ? 0 : 1) + (s.y ? 0 : 1) + (s.z ? 0 : 1);
+        if (zeros === 1)
+            !s.x ? x = cross(y, z) : !s.y ? y = cross(z, x) : z = cross(x, y);
+        const m1 = x[1], m5 = y[1], m8 = z[0], m9 = z[1], m10 = z[2];
         // the pitch from its cosine as well as its sine, which stays exact near straight up where the sine alone
         // loses its precision
         const c = hypot(m8, m10), pitch = atan2(-m9, c);
         if (c > 1e-9)
             return new Vector3(pitch, atan2(m8, m10), atan2(m1, m5));
         // straight up or down: yaw and roll turn about the same axis, so the roll is zero and yaw takes it all
-        return new Vector3(pitch, atan2(m[4] / sy * -m9, m[0] / sx), 0);
+        return new Vector3(pitch, atan2(y[0] * -m9, x[0]), 0);
     }
 
     /** Returns a string representation of this matrix for debugging
@@ -26987,11 +28383,11 @@ function render3DCanDraw()
  *  @property {number} specular
  *  @property {boolean} pixelated
  *  @property {Shader|undefined} shader
- *  @property {TextureInfo|undefined} normalMap
+ *  @property {TextureInfo|TileInfo|undefined} normalMap
  *  @property {number} normalScale
  *  @property {number} shininess
  *  @property {number} reflectivity
- *  @property {TextureInfo|undefined} emissiveMap
+ *  @property {TextureInfo|TileInfo|undefined} emissiveMap
  *  @property {Color} emissiveMapColor
  *  @property {CubeMap|undefined} environmentMap
  *  @property {boolean} roundLighting
@@ -27003,8 +28399,34 @@ const RENDER3D_STATE_FIELDS = ['blend', 'additive', 'depthTest', 'depthWrite', '
     'emissive', 'receiveShadow', 'specular', 'pixelated', 'shader', 'normalMap', 'normalScale', 'shininess',
     'reflectivity', 'emissiveMap', 'emissiveMapColor', 'environmentMap', 'roundLighting'];
 
+/** The draw state a batch was drawn under, as render3DCaptureBatchState takes it: the fields of RENDER3D_STATE_FIELDS
+ *  and the version it was taken at
+ *  @typedef {Object} Render3DBatchState
+ *  @property {boolean} blend
+ *  @property {boolean} additive
+ *  @property {boolean} depthTest
+ *  @property {boolean} depthWrite
+ *  @property {boolean} cullBackFaces
+ *  @property {boolean} mirrored
+ *  @property {boolean} lighting
+ *  @property {number} emissive
+ *  @property {boolean} receiveShadow
+ *  @property {number} specular
+ *  @property {boolean} pixelated
+ *  @property {Shader|undefined} shader
+ *  @property {TextureInfo|TileInfo|undefined} normalMap
+ *  @property {number} normalScale
+ *  @property {number} shininess
+ *  @property {number} reflectivity
+ *  @property {TextureInfo|TileInfo|undefined} emissiveMap
+ *  @property {Color} emissiveMapColor
+ *  @property {CubeMap|undefined} environmentMap
+ *  @property {boolean} roundLighting
+ *  @property {number} version */
+
 // a copy of the draw state in one fixed shape, the fields of RENDER3D_STATE_FIELDS written out, and the version
 // it was taken at
+/** @return {Render3DBatchState} */
 function render3DCaptureBatchState()
 {
     const r = render3D, d = r.drawState;
@@ -27151,7 +28573,7 @@ function render3DQuadAxes(center, right, up)
 function render3DSetObjectState(o)
 {
     const r = render3D;
-    const transparent = o?.transparent;
+    const transparent = o?.drawOwner ? render3DSetting(o, 'transparent') : o?.transparent;
     const p = o?.drawOwner ? render3DPartSettings(o) : o; // a part draws with its owner's settings
     const emissive = p?.emissive || 0;
     false&&ASSERT(isNumber(emissive) && emissive >= 0, 'emissive must be a number, 0 or more', emissive);
@@ -27531,7 +28953,9 @@ class Render3DPlugin
         /** @property {Function|undefined} - Draw see through things here, like glows, billboards and soft shadows
          *  @type {Function|undefined} */
         this.onRenderTransparent = undefined;
-        /** @property {Mesh|undefined} - Sky dome from buildSky or setSky, drawn around the camera behind everything
+        /** @property {Mesh|undefined} - Sky dome from buildSky or setSky, drawn around the camera behind everything;
+         *  it sits between the clip planes, so an orthographic view wider than about (near + far) across leaves its
+         *  corners the clear color: a far plane further out, a sky box or a clear color of the sky's suits one
          *  @type {Mesh|undefined} */
         this.sky = undefined;
         /** @property {CubeMap|undefined} - A cube map drawn as the sky, behind everything, in place of the sky dome;
@@ -27620,7 +29044,7 @@ class Render3DPlugin
         /** @type {WebGLVertexArrayObject|undefined} */
         this.vao = undefined;
         /** @type {Set<CubeMap>} */
-        this.cubeCaptures = new Set;  // the cube maps capture asked to draw in the next pass
+        this.cubeCaptures = old ? old.cubeCaptures : new Set;  // the cube maps capture asked to draw in the next pass, the old one's kept
         /** @type {CubeMap|undefined} */
         this.capturingCube = undefined; // the cube map being drawn, which nothing may read meanwhile
         /** @type {WebGLFramebuffer|undefined} */
@@ -27650,6 +29074,7 @@ class Render3DPlugin
         this.cameraDepthWidth = 0;
         this.cameraDepthHeight = 0;
         this.depthPass = false; // drawing the camera's depth, a shadow pass seen from the camera
+        /** @type {number} */
         this.contextGeneration = old?.contextGeneration ?? 0; // counts context losses, a mesh uploaded under an
                                                               // older one uploads again
         /** @type {WeakMap<WebGLProgram, Object<string, WebGLUniformLocation|null>>} */
@@ -27680,12 +29105,12 @@ class Render3DPlugin
         this.streamCount = 0;
         /** @type {TextureInfo|undefined} */
         this.streamTileInfo = undefined;
-        /** @type {Object|undefined} */
+        /** @type {Render3DBatchState|undefined} */
         this.streamState = undefined; // captured state the pending batch was drawn under, render3DCaptureBatchState's
         this.streamBillboard = false; // the pending batch is of billboards, lit without a direction
         /** @type {Mesh|undefined} */
         this.capture = undefined;     // the mesh a bake is filling
-        /** @type {Array<{distance: number, state: Object, draw: function(): void}>|undefined} */
+        /** @type {Array<{distance: number, state: Render3DBatchState, draw: function(): void}>|undefined} */
         this.transparentQueue = undefined; // draws queued during the transparent stage, replayed far to near
 
         render3DInitGL();
@@ -27693,6 +29118,9 @@ class Render3DPlugin
             render3DPreRender, render3DGridRelease);
         render3DPluginAdded = true;
         engineObjectsPhysicsDone = render3DGridPhysicsDone;
+        // a level shape moved by its velocity, a lift, moves before what stands on it, whatever the list order
+        engineObjectsMovesFirst = ()=> render3DLevel.filter((level)=> !level.destroyed &&
+            (level.velocity3D.x || level.velocity3D.y || level.velocity3D.z));
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -27751,7 +29179,7 @@ class Render3DPlugin
     set shininess(v) { const d = this.drawState; d.shininess === v || (d.shininess = v, ++this.stateVersion); }
 
     /** Normal map for the next draws, set from each object's normalMap
-     *  @return {TextureInfo|undefined} */
+     *  @return {TextureInfo|TileInfo|undefined} */
     get normalMap() { return this.drawState.normalMap; }
     set normalMap(v) { const d = this.drawState; d.normalMap === v || (d.normalMap = v, ++this.stateVersion); }
 
@@ -27766,7 +29194,7 @@ class Render3DPlugin
     set reflectivity(v) { const d = this.drawState; d.reflectivity === v || (d.reflectivity = v, ++this.stateVersion); }
 
     /** Emissive map for the next draws, set from each object's emissiveMap
-     *  @return {TextureInfo|undefined} */
+     *  @return {TextureInfo|TileInfo|undefined} */
     get emissiveMap() { return this.drawState.emissiveMap; }
     set emissiveMap(v) { const d = this.drawState; d.emissiveMap === v || (d.emissiveMap = v, ++this.stateVersion); }
 
@@ -27867,7 +29295,8 @@ class Render3DPlugin
         const clip = this.worldToClip(pos);
         if (!clip)
             return;
-        return vec2((clip.x + 1) / 2 * canvasSize.x, (1 - clip.y) / 2 * canvasSize.y);
+        // in the pixel convention mousePosScreen has, a pixel's middle at its whole number
+        return vec2((clip.x + 1) / 2 * canvasSize.x - .5, (1 - clip.y) / 2 * canvasSize.y - .5);
     }
 
     /** Get the world ray under a screen position, for clicking on things in 3D
@@ -27883,8 +29312,9 @@ class Render3DPlugin
         const aspect = width / height, camera = this.camera;
         // bring the matrices up to date for this canvas, so worldToScreen and this agree on where things are
         this.updateMatrices(aspect);
-        const clipX = screenPos.x / width * 2 - 1;
-        const clipY = 1 - screenPos.y / height * 2;
+        // through the middle of the pixel, which mousePosScreen gives as a whole number
+        const clipX = (screenPos.x + .5) / width * 2 - 1;
+        const clipY = 1 - (screenPos.y + .5) / height * 2;
         // the screen offset moves a parallel ray's origin, or bends a perspective ray's direction
         const h = camera.orthographic ? camera.orthographic / 2 : tan(camera.fov / 2);
         const offset = this.cameraRight.scale(clipX * h * aspect).add(this.cameraUp.scale(clipY * h));
@@ -27909,20 +29339,26 @@ class Render3DPlugin
     /** Find the nearest object under a screen position or along a ray, for clicking on things
      *  - A mesh is hit on its triangles, the ones that face the ray as they are drawn, both sides of a doubleSided
      *    mesh; a sprite is hit as the quad it draws, and a height map, voxel map or mesh collider on its surface
+     *  - A glTF model or an attached prefab in the list is hit through its parts and is the object given back, with
+     *    the part hit as part; a part is hit only through its owner, so a list that leaves a player out never hits
+     *    its model
      *  - engineObjectsRaycast3D is the other half of this, every object along a ray instead of the nearest
      *  @param {Vector2|Ray3D} from - A screen position like mousePosScreen, or a ray to look along
      *  @param {Array<EngineObject>} [objects] - Defaults to every object; only those with a mesh or a sprite count,
      *    and the height maps, voxel maps and mesh colliders, on their surfaces
-     *  @return {{object: EngineObject3D, distance: number}|undefined} */
+     *  @return {{object: EngineObject3D, distance: number, part: EngineObject3D}|undefined} - part is what was hit,
+     *    the object or a part of it */
     pick(from, objects=engineObjects)
     {
         const ray = from instanceof Ray3D ? from : this.screenToRay(from);
         let nearest;
         for (const o of objects)
         {
-            const distance = render3DRaycastObject(ray, o);
-            if (distance !== undefined && (!nearest || distance < nearest.distance))
-                nearest = {object: /** @type {EngineObject3D} */ (o), distance}; // only a 3D object has a distance
+            if (/** @type {EngineObject3D} */ (o).drawOwner)
+                continue; // a model's part, hit through its model
+            const hit = render3DRaycastOwned(ray, o);
+            if (hit && (!nearest || hit.distance < nearest.distance)) // only a 3D object is hit
+                nearest = {object: /** @type {EngineObject3D} */ (o), distance: hit.distance, part: hit.part};
         }
         return nearest;
     }
@@ -28054,8 +29490,12 @@ class Render3DPlugin
             let x = 0, y = 0, z = 0;
             for (const p of points)
                 x += p.x, y += p.y, z += p.z;
+            // a single normal, uv or color is copied as every other queued draw copies its own, so a scratch value
+            // reused does not replay every strip with its last value; arrays are read as they are, see above
+            const n = isArray(normals) ? normals : normals?.copy(), u = isArray(uvs) ? uvs : uvs?.copy();
+            const c = isArray(colors) ? colors : colors?.copy();
             return this.queueTransparent(vec3(x, y, z).scale(1 / points.length),
-                ()=> this.drawStrip(points, normals, uvs, colors, tileInfo));
+                ()=> this.drawStrip(points, n, u, c, tileInfo));
         }
         false&&ASSERT(isArray(points) && points.length > 2, 'strip needs at least 3 points');
         const n = points.length, count = render3DStripCount(n);
@@ -28134,7 +29574,7 @@ class Render3DPlugin
     {
         const opaque = [], transparent = [];
         for (const o of objects)
-            (o.transparent || render3DSetting(o, 'additive') ? transparent : opaque).push(o);
+            (render3DSetting(o, 'transparent') || render3DSetting(o, 'additive') ? transparent : opaque).push(o);
 
         isDefault && (this.skyBox && this.skyBox !== this.capturingCube || this.sky) && this.drawSky();
 
@@ -28446,6 +29886,7 @@ class Render3DPlugin
      *  @param {Color} [color] */
     drawLine(posA, posB, width=.1, color=WHITE)
     {
+        false&&ASSERT(isNumber(width), 'drawLine: width must be a number, it comes before the color', width);
         this.drawRibbon([posA, posB], width, undefined, color);
     }
 
@@ -28755,7 +30196,8 @@ const RENDER3D_SNIPPET_NAMES =
     '#define ambientGroundColor ambientGround.rgb\n' +
     '#define lightCount extraLightCount\n' +
     '#define lights extraLights\n' +
-    '#define lightColors extraLightColors\n';
+    '#define lightColors extraLightColors\n' +
+    '#define lightCones extraLightCones\n';
 
 // the fragment shader; given a Shader's snippet, its mainImage replaces the texture sample and all else is the same,
 // and a mainNormal in it bends the normal after the normal map, before all the lighting reads it
@@ -28769,7 +30211,8 @@ const RENDER3D_SNIPPET_NAMES =
 //   emissive map is on), skyTop, skyHorizon, skyBottom (what a reflection shows), normalTex, emissiveTex
 function render3DFragmentSource(fragmentCode, declarations='')
 {
-    const hasNormal = /\bmainNormal\s*\(/.test(fragmentCode || '');
+    // named in code, not in a comment, or it would be declared and called with nothing to link
+    const hasNormal = /\bmainNormal\s*\(/.test((fragmentCode || '').replace(/\/\*[\s\S]*?\*\/|\/\/.*/g, ''));
     return '#version 300 es\n' +
         'precision highp float;' +
         'uniform vec4 lightDir,lightColor,ambientFog,ambientGround,fogColor,shadowParams,fogFade;' +
@@ -29046,6 +30489,10 @@ function render3DFreeGL(r)
     r.shadowFramebuffer && gl.deleteFramebuffer(r.shadowFramebuffer);
     r.cameraDepthTexture && gl.deleteTexture(r.cameraDepthTexture);
     r.cameraDepthFramebuffer && gl.deleteFramebuffer(r.cameraDepthFramebuffer);
+    r.skyBoxProgram && gl.deleteProgram(r.skyBoxProgram);
+    r.skyBoxVao && gl.deleteVertexArray(r.skyBoxVao);
+    r.captureFramebuffer && gl.deleteFramebuffer(r.captureFramebuffer);
+    r.captureDepth && gl.deleteRenderbuffer(r.captureDepth);
 }
 
 function render3DInitGL()
@@ -29283,7 +30730,17 @@ function render3DCubeTexture(cube)
                 gl.UNSIGNED_BYTE, null);
         cube.capturePos && render3D.cubeCaptures.add(cube);
     }
-    else cube.faces.forEach((face, i)=> face instanceof Uint8Array ?
+    else
+    {
+        // a face past the GPU's cube size, or faces of different sizes, sample black with nothing said, so it is said
+        // a face that is not square, or data of the wrong length, is no size at all
+        const sizes = cube.faces.map((face)=> face instanceof Uint8Array ?
+            face.length === cube.size * cube.size * 4 ? cube.size : 0 : face?.width === face?.height ? face?.width : 0);
+        const limit = gl.getParameter(gl.MAX_CUBE_MAP_TEXTURE_SIZE);
+        (sizes.some((size)=> !size || size !== sizes[0]) || sizes[0] > limit) && console.warn('LittleJS: a cube ' +
+            'map needs six square faces of one size, at most ' + limit + ' here, and has ' + sizes.join(', '));
+    }
+    cube.faces && cube.faces.forEach((face, i)=> face instanceof Uint8Array ?
         gl.texImage2D(gl.TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, gl.RGBA, cube.size, cube.size, 0, gl.RGBA,
             gl.UNSIGNED_BYTE, face) :
         gl.texImage2D(gl.TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, face));
@@ -29543,6 +31000,9 @@ function render3DSampler(wrap, pixelated, texturePixelated=tilesPixelated)
 // bind the texture of a tile or texture, white when there is none or it is not loaded, with the 3D sampler that
 // matches its wrap mode; the first time a texture is used in 3D it gets its mipmaps; on unit 0, the color texture,
 // or another unit, the material maps, after which unit 0 is active again
+/** @param {TileInfo|TextureInfo|undefined} tileInfo
+ *  @param {Render3DPlugin|Render3DBatchState} [state]
+ *  @param {number} [unit] */
 function render3DBindTexture(tileInfo, state=render3D, unit=0)
 {
     const gl = glContext, r = render3D;
@@ -29551,8 +31011,11 @@ function render3DBindTexture(tileInfo, state=render3D, unit=0)
     unit && gl.activeTexture(gl.TEXTURE0 + unit);
     gl.bindTexture(gl.TEXTURE_2D, texture);
     if (texture === r.whiteTexture || !r.mipmaps && !state.pixelated)
+    {
         gl.bindSampler(unit, null); // the texture's own filtering, as in 2D; the white texel needs no mipmaps
                                     // or anisotropy, and filtering it that way costs every untextured fragment
+        texture === r.whiteTexture || glUpdateMipmaps(texture); // a smooth one's own, drawn into since, as 2D does
+    }
     else
     {
         gl.bindSampler(unit, render3DSampler(textureInfo?.wrap, state.pixelated, textureInfo?.pixelated ?? tilesPixelated));
@@ -29713,6 +31176,11 @@ function render3DGetTileUVs(tileInfo)
 // and the depth shader's cut
 // tileInfo may be a TileInfo, a TextureInfo, or undefined for the white texture
 // state is the plugin's current fields, or the captured state of a stream batch
+/** @param {Matrix4} matrix
+ *  @param {TileInfo|TextureInfo|undefined} tileInfo
+ *  @param {Color} tint
+ *  @param {{x: number, y: number, w: number, h: number}} [uvRect]
+ *  @param {Render3DPlugin|Render3DBatchState} [state] */
 function render3DSetDrawUniforms(matrix, tileInfo, tint, uvRect, state=render3D)
 {
     const gl = glContext, r = render3D;
@@ -29809,17 +31277,20 @@ function render3DShakeBegin()
     const camera = render3D.camera;
     if (!cameraShakeTrauma || camera.align2D) return;
     const offset = cameraShakeOffset();
-    render3DShakeSaved = [camera, camera.pos, camera.rotation];
+    const pos = camera.pos, rotation = camera.rotation;
     camera.pos = camera.pos.add(camera.getRight().scale(offset.pos.x)).add(camera.getUp().scale(offset.pos.y));
     camera.rotation = camera.rotation.add(vec3(0, 0, -offset.angle)); // 2D angles turn the other way
+    render3DShakeSaved = [camera, pos, rotation, camera.pos, camera.rotation];
 }
 
-// give the game its own 3D camera back after the frame's passes, the one that was shaken
+// give the game its own 3D camera back after the frame's passes, the one that was shaken; a place or turn the game
+// set during the frame's render stays, as 2D cameraShakeEnd keeps it, only the shaken values are put back
 function render3DShakeEnd()
 {
     if (!render3DShakeSaved) return;
-    const [camera, pos, rotation] = render3DShakeSaved;
-    camera.pos = pos, camera.rotation = rotation;
+    const [camera, pos, rotation, shakenPos, shakenRotation] = render3DShakeSaved;
+    camera.pos === shakenPos && (camera.pos = pos);
+    camera.rotation === shakenRotation && (camera.rotation = rotation);
     render3DShakeSaved = undefined;
 }
 
@@ -30038,7 +31509,7 @@ function render3DRenderShadowMap()
     {
         // see through objects cast only when textured, their alpha cuts the shadow out
         const casters = render3DLayerObjects(!!r.renderAfter2D).filter(o=>
-            render3DSetting(o, 'castShadow') && !render3DSetting(o, 'additive') && (!o.transparent || o.tileInfo));
+            render3DSetting(o, 'castShadow') && !render3DSetting(o, 'additive') && (!render3DSetting(o, 'transparent') || o.tileInfo));
         render3DDrawObjects(casters);
         r.onRenderOpaque?.();
         r.flush();
@@ -30104,7 +31575,7 @@ function render3DRenderDepth()
     try
     {
         const solids = render3DLayerObjects(!!r.renderAfter2D).filter(o=>
-            !render3DSetting(o, 'additive') && (!o.transparent || o.tileInfo));
+            !render3DSetting(o, 'additive') && (!render3DSetting(o, 'transparent') || o.tileInfo));
         render3DDrawObjects(solids);
         r.onRenderOpaque?.();
         r.flush();
@@ -30417,7 +31888,9 @@ function render3DSmoothNormalSums(points, indices)
 {
     const strip = !indices, triangles = strip ? max(points.length - 2, 0) : indices.length / 3 | 0;
     const {groups, count} = render3DPlaceGroups(points);
-    const sums = new Float64Array(count * 3), touched = new Uint8Array(count);
+    // the weights, each place's corner angles added, say when its sum is a cancel: faces back to back leave a few
+    // parts in 1e17 of them, which made unit length would point anywhere
+    const sums = new Float64Array(count * 3), touched = new Uint8Array(count), weights = new Float64Array(count);
     let nx = 0, ny = 0, nz = 0;
     const addCorner = (a, b, c, group)=>
     {
@@ -30427,6 +31900,7 @@ function render3DSmoothNormalSums(points, indices)
         const angle = Math.acos(clamp(dot / (lengths || 1), -1, 1)), s = group * 3;
         sums[s] += nx * angle, sums[s+1] += ny * angle, sums[s+2] += nz * angle;
         touched[group] = 1;
+        weights[group] += angle;
     };
     for (let t = 0; t < triangles; ++t)
     {
@@ -30442,7 +31916,13 @@ function render3DSmoothNormalSums(points, indices)
         addCorner(b, c, a, groups[i1]);
         addCorner(c, a, b, groups[i2]);
     }
-    return {groups, sums, touched};
+    // touched and not a cancel: a normal to make unit length
+    const kept = (group)=>
+    {
+        const s = group * 3;
+        return !!touched[group] && (sums[s]**2 + sums[s+1]**2 + sums[s+2]**2)**.5 > weights[group] * 1e-9;
+    };
+    return {groups, sums, touched, kept};
 }
 
 /**
@@ -30766,6 +32246,10 @@ class Mesh
      *    hundred milliseconds, so build shapes this way at load time, not every frame; joining several cutters
      *    with union and cutting once is quicker than cutting with each in turn
      *  - Details closer than about 1e-4 are made one, so build a very small part larger and scale it after
+     *  - A known limit: a long chain of cuts, a few dozen on one mesh, can now and then leave a small hole in a face,
+     *    where an earlier cut's thin triangles mislead the next; the next CSG on it then asserts that it is not
+     *    closed. Joining the cutters with union and cutting once, or building the shape again from its parts,
+     *    keeps chains short
      *  @param {Mesh} mesh - Closed, as the builders make them apart from the open ones like buildGrid
      *  @param {Matrix4|Vector3} [matrix] - Places the other mesh, or just a position to move it to
      *  @return {Mesh}
@@ -30887,7 +32371,8 @@ class Mesh
     /** Derive normals from the triangles, of the strip or of the index list
      *  @param {boolean} [smooth] - Round the lighting across faces instead of giving each face a hard edge; flat
      *    normals on an indexed mesh give every corner its own vertex, and a strip that folds, where neighbors share
-     *    vertices that can hold only one normal, is made indexed first
+     *    vertices that can hold only one normal, is made indexed first; smooth normals join points on a grid of
+     *    1e-5 world units, so a mesh much smaller than that is merged, made larger and scaled down by its object
      *  @return {Mesh} */
     computeNormals(smooth=false)
     {
@@ -30899,12 +32384,12 @@ class Mesh
             // smooth again; flat ones need a vertex per corner, so the vertices are split up first
             if (smooth)
             {
-                const {groups, sums, touched} = render3DSmoothNormalSums(this.points, this.indices);
+                const {groups, sums, kept} = render3DSmoothNormalSums(this.points, this.indices);
                 this.normals = this.points.map((p, i)=>
                 {
                     const s = groups[i] * 3, x = sums[s], y = sums[s+1], z = sums[s+2];
-                    const lengthSquared = x**2 + y**2 + z**2, k = 1 / lengthSquared**.5;
-                    return touched[groups[i]] && lengthSquared ? vec3(x * k, y * k, z * k) : RENDER3D_DEFAULT_NORMAL;
+                    const k = 1 / (x**2 + y**2 + z**2)**.5;
+                    return kept(groups[i]) ? vec3(x * k, y * k, z * k) : RENDER3D_DEFAULT_NORMAL;
                 });
                 this.dirty = true;
                 return this;
@@ -30931,11 +32416,12 @@ class Mesh
         const points = this.points, n = points.length;
         if (smooth)
         {
-            const {groups, sums, touched} = render3DSmoothNormalSums(points);
+            const {groups, sums, kept} = render3DSmoothNormalSums(points);
             this.normals = points.map((p, i)=>
             {
                 const s = groups[i] * 3, x = sums[s], y = sums[s+1], z = sums[s+2], l = (x**2 + y**2 + z**2)**.5;
-                return !touched[groups[i]] ? vec3(0, 1, 0) : l ? vec3(x * (1/l), y * (1/l), z * (1/l)) : vec3();
+                // straight up too where the faces cancel, two back to back, as the indexed branch gives
+                return kept(groups[i]) ? vec3(x * (1/l), y * (1/l), z * (1/l)) : vec3(0, 1, 0);
             });
             this.vertexKeys = undefined;
             this.dirty = true;
@@ -31126,19 +32612,19 @@ class Mesh
 // since a fraction is most likely a mistake: a sphere of 7.5 rings would come out open at the top
 function render3DWholeCount(count, name)
 {
-    const whole = floor(count);
-    debug && whole !== count && console.warn(`a mesh builder rounded ${name} ${count} down to ${whole}`);
+    const whole = isFinite(count) ? floor(count) : 0; // not a number, or one with no end, is none
+    false && whole !== count && console.warn(`a mesh builder rounded ${name} ${count} down to ${whole}`);
     return whole;
 }
 
 /**
  * Spin a flat outline around the Y axis to make a round shape, like a vase or a wheel
- * - profile is [[radius, y], ...] from bottom to top
+ * - profile is [[radius, y], ...] from bottom to top, or vec2(radius, y) points
  * - A profile that ends where it starts makes a closed ring like a donut
  * - An end left open, with a radius and no cap, makes the mesh doubleSided so its inside shows
  * - An end on the axis smooth shades as a round pole like a sphere's when its segment is within 45 degrees of
  *   level, and as a point like a cone's tip when it is steeper
- * @param {Array<Array<number>>} profile
+ * @param {Array<Array<number>|Vector2>} points - The profile
  * @param {number} [sides] - Around the axis
  * @param {boolean} [smooth] - Defaults to render3D.smoothShading
  * @param {boolean} [capped] - Close the ends that have a radius with flat discs
@@ -31147,11 +32633,17 @@ function render3DWholeCount(count, name)
  * @example
  * const vase = buildLathe([[0, -1], [.8, -.3], [.9, .2], [.4, .6], [0, 1]], 12);
  */
-function buildLathe(profile, sides=16, smooth=render3D?.smoothShading, capped=true)
+function buildLathe(points, sides=16, smooth=render3D?.smoothShading, capped=true)
 {
-    false&&ASSERT(isArray(profile) && profile.length > 1, 'lathe profile needs at least 2 points');
+    false&&ASSERT(isArray(points) && points.length > 1, 'lathe profile needs at least 2 points');
+    // a point is [radius, y] or a vec2 of them, each a finite number
+    const profile = /** @type {Array<Array<number>>} */ (points.map((p)=> isVector2(p) ? [p.x, p.y] : p));
+    false&&ASSERT(profile.every((p)=> isArray(p) && p.length >= 2 && isFinite(p[0]) && isFinite(p[1])),
+        'a lathe profile point is [radius, y] or vec2(radius, y)', profile.find((p)=> !isArray(p) || !isFinite(p[0]) ||
+        !isFinite(p[1])));
     sides = render3DWholeCount(sides, 'sides');
     false&&ASSERT(sides > 2, 'lathe needs at least 3 sides');
+    sides = max(3, sides);
     false&&ASSERT(sides * profile.length <= 1e6, 'a lathe of more than a million faces', sides, profile.length);
     const mesh = new Mesh;
     const rings = profile.length;
@@ -31266,6 +32758,7 @@ function buildSphere(size=1, sides=16, rings=8, smooth=render3D?.smoothShading)
 {
     rings = render3DWholeCount(rings, 'rings'); // a fraction would leave the sphere open at the top
     false&&ASSERT(rings > 1, 'sphere needs at least 2 rings');
+    rings = max(2, rings); // fewer would divide by nothing, in a release build too
     false&&ASSERT(sides * rings <= 1e6, 'a sphere of more than a million faces', sides, rings);
     const profile = [];
     for (let i = 0; i <= rings; ++i)
@@ -31617,19 +33110,20 @@ class EngineObject3D extends EngineObject
         /** @property {number} - The highlight's exponent, how small and sharp it is: 4 is broad like rubber, 16 the
          *  default, 100 sharp like polished metal; shows only with specular above 0 */
         this.shininess = 16;
-        /** @property {TextureInfo|undefined} - A normal map that bends the surface at each texel so it catches the
-         *  light like bumps and grooves, green pointing up the image as OpenGL and glTF have it; read at the color
-         *  texture's coordinates, see normalMapFromHeight to make one in code
-         *  @type {TextureInfo|undefined} */
+        /** @property {TextureInfo|TileInfo|undefined} - A normal map that bends the surface at each texel so it
+         *  catches the light like bumps and grooves, green pointing up the image as OpenGL and glTF have it; read at
+         *  the color texture's coordinates, see normalMapFromHeight to make one in code; a TileInfo is its whole texture
+         *  @type {TextureInfo|TileInfo|undefined} */
         this.normalMap = undefined;
         /** @property {number} - How strongly the normal map bends the surface, 0 turns it off, as glTF's scale */
         this.normalScale = 1;
         /** @property {number} - How much it reflects the sky, 0 none and 1 a mirror of it; the edges seen at a
          *  glancing angle reflect more either way, as water and glass do */
         this.reflectivity = 0;
-        /** @property {TextureInfo|undefined} - A texture of where it glows, added on top of the lit surface so it
-         *  shows in the dark, like lit windows; read at the color texture's coordinates
-         *  @type {TextureInfo|undefined} */
+        /** @property {TextureInfo|TileInfo|undefined} - A texture of where it glows, added on top of the lit surface
+         *  so it shows in the dark, like lit windows; read at the color texture's coordinates; a TileInfo is its whole
+         *  texture
+         *  @type {TextureInfo|TileInfo|undefined} */
         this.emissiveMap = undefined;
         /** @property {Color} - Multiplies the emissive map, as glTF's emissiveFactor */
         this.emissiveMapColor = WHITE;
@@ -31645,14 +33139,18 @@ class EngineObject3D extends EngineObject
          *  around corners */
         this.collideAsSphere3D = false;
         /** @property {number} - The steepest slope it stands on, in radians from level, PI/4 by default: resting on
-         *  a solid within this of flat sets groundObject and holds it still, steeper it slides down */
+         *  a solid within this of flat sets groundObject and holds it still, steeper it slides down; on a MeshCollider
+         *  or HeightMap a face steeper than this and than 45 degrees, rising past its step, stops a move into it, a
+         *  gentler one or a curb lower than its step is walked up */
         this.groundAngle = PI / 4;
         /** @property {boolean} - Darkened by the shadow map when render3D.shadows is on */
         this.receiveShadow = true;
         /** @property {boolean} - A sprite or particle lit as a ball bulging toward the camera, bright on the side
          *  toward each light, in place of the same all over; a normal map takes its place */
         this.roundLighting = false;
-        /** @property {boolean|undefined} - Draw this object over the 2D scene, undefined uses render3D.renderAfter2D
+        /** @property {boolean|undefined} - Draw this object over the 2D scene, undefined uses render3D.renderAfter2D;
+         *  one that differs from render3D.renderAfter2D draws in a pass of its own: it casts and gets no shadows, is not
+         *  in sceneDepth or a cube capture, and is not depth tested against the objects of the main pass
          *  @type {boolean|undefined} */
         this.renderAfter2D = undefined;
         /** @property {Matrix4|undefined} - The transform from its parent, used in place of pos3D, rotation3D and
@@ -31694,9 +33192,13 @@ class EngineObject3D extends EngineObject
         // object's is the 2D physics'
         const ground = this.groundObject;
         this.sync2D || (this.groundObject = undefined);
+        render3DGroundLast.set(this, ground);
+        // what stood on what is found again each pass, the last pass's let go, a level gone with it
+        render3DRiders.pass === engineObjectsUpdateCount ||
+            (render3DRiders.pass = engineObjectsUpdateCount, render3DRiders.map.clear());
         // each axis within objectMaxSpeed, as in 2D, after gravity so no move is past it; with the push back to the
-        // side it came from, a move that overlaps a solid at all is stopped on its side, so a fast object goes through
-        // only one thinner than its move less its own size, as in 2D, while neither is turned; only for what collides,
+        // side it came from, a move that overlaps a solid at all is stopped on its side, turned or not, so a fast
+        // object goes through only one thinner than its move less its own size, as in 2D; only for what collides,
         // anything else moves as fast as it is told
         // nothing of collision while setEnablePhysicsSolver is off, as in 2D, the game moves them its own way
         const solve = enablePhysicsSolver && !this.sync2D;
@@ -31720,7 +33222,13 @@ class EngineObject3D extends EngineObject
         oldPos && this.collideLevel && solve && render3DCollideLevel(this, oldPos, ground);
         // the engine only runs this for objects that own where they are, a child rides along with its parent
         if (this.collideSolidObjects && solve)
+        {
             render3DCollideSolid(this);
+            // walking down a ramp of a turned solid box, it follows the box down, as the level shapes do theirs, but
+            // not once a pair callback attached it, destroyed it or turned its collision off, as the settles do not
+            oldPos && !this.groundObject && !this.parent && !this.destroyed && this.collideSolidObjects &&
+                render3DFollowSolid(this, ground, oldPos);
+        }
     }
 
     /** Move a child by its own velocities, bring a sync2D object's pos3D up to its 2D pos, then update the children,
@@ -31753,8 +33261,18 @@ class EngineObject3D extends EngineObject
      *  - The boxes turn with rotation3D; against height maps and voxel maps an object is still its upright box, and
      *    against a MeshCollider a capsule
      *  - A sync2D object collides in 2D instead, against the 2D size, so set that as well as size3D
-     *  - A stack of objects with mass sinks into itself a few percent a level, as in 2D; the bottom one fixed, mass
-     *    0, or fewer levels keep it tight
+     *  - A stack of objects with mass at rest holds in any list order: one on something that stands meets it as
+     *    fixed, and one pushed up lifts what stands on it; but each is resolved in turn, once a frame, so listed from
+     *    the top down a stack's boxes keep a small speed down, and a game that zeroes the speed of what stands sinks
+     *    it a little a level, as can a stack made touching on its first frames; more than two or three high wants
+     *    a full physics engine, as Box2D is in 2D; two that both move trade momentum by their masses; a row pushed
+     *    into a wall, a player shoving two crates, is the same: the pusher ends a frame a little inside the crate it
+     *    pushes, in some list orders against a solid wall, in every order against a MeshCollider or VoxelMap wall
+     *  - A door or a lift that closes a gap on a body, against a fixed solid or the level, can not hold it in less room
+     *    than it has: between a still wall and a door that moves it ends in the door, never in the wall, and a gap closed
+     *    all the way, or a lift into a ceiling, can squeeze it into the floor or through; leave a body room
+     *  - A body made inside fixed solids is pushed out of each in turn, so one made deep inside a wall of two boxes
+     *    side by side can stay inside one of them; place bodies clear of the level's solids
      *  @param {boolean} [collideSolidObjects] - Take part in solid collision
      *  @param {boolean} [isSolid] - Block other objects, a pair where neither one blocks passes through;
      *    blocking needs collideSolidObjects, so isSolid on its own is not allowed
@@ -31844,6 +33362,8 @@ class EngineObject3D extends EngineObject
     }
 
     /** Turn the object so its -Z axis points at a world space target, sets pitch and yaw and clears roll
+     *  - It sets rotation3D, which a localMatrix overrides, so an object placed by its localMatrix, as a loaded
+     *    model's parts are, does not turn; aim one of those by its matrix, or by a parent it rides on
      *  @param {Vector3} target */
     lookAt(target)
     {
@@ -31862,10 +33382,13 @@ class EngineObject3D extends EngineObject
      *  @return {T} The child object attached */
     addChild(child, localPos, localAngle)
     {
+        // a 3D child's offset is its pos3D, rotation3D and scale3D, set after, or attach, which keeps where it is
+        false&&ASSERT(!isVector3(localPos), "addChild takes a 2D offset, set a 3D child's pos3D after, or use attach");
+        if (engineObjectAttachRefused(this, child)) return child; // left as it was, as attach leaves it
         // addChild brings the child's transform up to date, which is not a step: it already moved this pass as
         // a root, or moves in the next one, so it must not move by its velocity again here
         if (child instanceof EngineObject3D)
-            child.movePass = engineObjectsUpdateCount;
+            child.movePass = engineObjectsUpdateCount, render3DGroundLast.delete(child); // and stood on nothing
         return super.addChild(child, localPos, localAngle);
     }
 
@@ -31880,6 +33403,7 @@ class EngineObject3D extends EngineObject
     {
         if (!(child instanceof EngineObject3D))
             return super.attach(child); // a 2D child only has the 2D transform to keep
+        if (engineObjectAttachRefused(this, child)) return child; // before it leaves its old parent
         child.parent?.removeChild(child); // keeps its world values, so its own matrix is its world matrix
         const local = render3DObjectMatrix(this).copy().invert().multiply(render3DObjectMatrix(child));
         super.attach(child);
@@ -31901,6 +33425,9 @@ class EngineObject3D extends EngineObject
         if (child instanceof EngineObject3D && child.drawOwner === this)
             child.drawOwner = undefined; // a part taken off draws with its own settings
         super.removeChild(child);
+        render3DGridJoin(child);
+        // a fixed solid let go of mid pass is in the pass's fixed solids from now on, made again when next asked
+        child instanceof EngineObject3D && !child.mass && (render3DFixed.pass = -1);
     }
 
     /** Draw a different mesh and free the GPU buffer of the one it replaces
@@ -31928,17 +33455,18 @@ class EngineObject3D extends EngineObject
     render3D()
     {
         // an opaque draw comes out solid however low its alpha is, so a fade with no flag looks like nothing happened
-        false&&ASSERT(this.transparent || render3DSetting(this, 'additive') || this.color.a >= 1, // a part, its owner's
-            'an object that fades needs its transparent flag, an opaque draw ignores the color alpha', this.color);
+        const color = this.drawOwner ? render3DPartColor(this) : this.color; // a part, its owners' too
+        false&&ASSERT(render3DSetting(this, 'transparent') || render3DSetting(this, 'additive') || color.a >= 1,
+            'an object that fades needs its transparent flag, an opaque draw ignores the color alpha', color);
         // the matrix the object keeps, rebuilt only when it moved, the same one for the shadow pass and the main pass
         const matrix = render3DObjectMatrix(this);
         if (this.mesh)
-            render3D.drawMesh(this.mesh, matrix, this.tileInfo, this.color);
+            render3D.drawMesh(this.mesh, matrix, this.tileInfo, color);
         else if (this.tileInfo)
         {
             // a sprite, at the world size the collect, pick and solid collision helpers measure it at
             const m = matrix.m, size = render3DWorldSize(this, m);
-            render3D.drawBillboard(vec3(m[12], m[13], m[14]), vec2(size.x, size.y), this.tileInfo, this.color,
+            render3D.drawBillboard(vec3(m[12], m[13], m[14]), vec2(size.x, size.y), this.tileInfo, color,
                 this.rotation3D.z, this.upright);
         }
     }
@@ -31949,7 +33477,7 @@ class EngineObject3D extends EngineObject
 const RENDER3D_PART_SETTINGS = {emissive: 0, additive: false, specular: 0, shininess: 16, reflectivity: 0,
     normalMap: undefined, normalScale: 1, emissiveMap: undefined, emissiveMapColor: WHITE, receiveShadow: true,
     castShadow: true, pixelated: false, shader: undefined, environment: undefined, renderAfter2D: undefined,
-    renderOrder: 0, roundLighting: false};
+    renderOrder: 0, roundLighting: false, transparent: false};
 
 // make a part draw with its owner's settings: it draws with the owner's where the owner set it away from the default,
 // and its own otherwise, so a model's unlit or rough part keeps what its file gave it; a link the renderer follows
@@ -31958,17 +33486,36 @@ const RENDER3D_PART_SETTINGS = {emissive: 0, additive: false, specular: 0, shini
 function render3DShareSettings(part, owner) { part.drawOwner = owner; }
 
 // the value of a draw setting an object draws with: for a part, its owner's where that is set, through every owner
-// up, and its own otherwise
+// up, and its own otherwise; null is none, as undefined is, and a color the default's, as the default, so a model
+// whose shader was cleared, or whose emissiveMapColor is a white of its own, leaves its parts theirs
 function render3DSetting(o, name)
 {
     const owner = o.drawOwner;
     if (owner)
     {
-        const value = render3DSetting(owner, name);
-        if (value !== RENDER3D_PART_SETTINGS[name])
+        const value = render3DSetting(owner, name), base = RENDER3D_PART_SETTINGS[name];
+        if (value !== base && !(value === null && base === undefined) && !(base instanceof Color &&
+            value instanceof Color && value.r === base.r && value.g === base.g && value.b === base.b &&
+            value.a === base.a))
             return value;
     }
     return o[name];
+}
+
+// the color an object draws with: a part's own times its owners', so a hit flash or a fade set on a model tints and
+// fades every part; its own when no owner changed it, in a color kept for it otherwise, so nothing is made per draw
+const render3DPartColorScratch = /* @__PURE__ */ new Color;
+function render3DPartColor(o)
+{
+    let color = o.color;
+    for (let owner = o.drawOwner; owner; owner = owner.drawOwner)
+    {
+        const c = owner.color;
+        if (!c || c.r === 1 && c.g === 1 && c.b === 1 && c.a === 1) continue;
+        color === render3DPartColorScratch || (color = render3DPartColorScratch.set(color.r, color.g, color.b, color.a));
+        color.r *= c.r, color.g *= c.g, color.b *= c.b, color.a *= c.a;
+    }
+    return color;
 }
 
 // a part's draw settings gathered for the draw state, in one object kept for it, so nothing is made per draw
@@ -32062,8 +33609,19 @@ function render3DMove(o, cap)
 // ground is what it stood on last frame, which a height map keeps it on going down a slope
 function render3DCollideLevel(o, oldPos, ground)
 {
+    // the one it stood on last frame first, following it down a slope, then every other shape, so a floor the body
+    // walked onto from terrain pushes it out of wherever the terrain took it, whatever the list order
+    const stood = !!ground && render3DLevel.includes(ground);
+    stood && !ground.destroyed && ground.levelCollide3D(o, oldPos, true);
     for (const level of render3DLevel)
-        level.destroyed || level.levelCollide3D(o, oldPos, level === ground);
+        level.destroyed || stood && level === ground || level.levelCollide3D(o, oldPos, false);
+    // then, only when none grounded it, the others follow it down too, as it stood on one level shape and so on each:
+    // walking down from one map onto the next, a chunk of the same terrain, or onto a mesh, stays on the ground as on
+    // one map; after every shape had its turn, so terrain under a floor laid just above it, a building's, does not
+    // follow it down through the floor, nor a deck pull it off a step it climbs onto, whatever the list order
+    if (stood && !o.groundObject)
+        for (const level of render3DLevel)
+            level.destroyed || level === ground || level.levelCollide3D(o, oldPos, true, true);
 }
 
 // where a solid object is in the world and what it collides as: the sphere that fits size3D, or the size3D box,
@@ -32110,6 +33668,143 @@ function render3DSolidReach(o)
     return (x*x + y*y + z*z) ** .5 / 2; // written out, it is asked for every pair each frame
 }
 
+// one that stood on a solid last frame and stands on nothing now, not leaving it upward, follows it down as the level
+// shapes follow theirs: lowered in steps of half its radius, as far as its move across could drop at its groundAngle,
+// it lands on the first step that meets the face of a solid within its groundAngle of level, last frame's or another
+// near it it is not leaving upward, a ramp going down from a flat top, so walking down a ramp of a turned box keeps
+// the ground; a solid it meets any other way, a side, is passed over for the next, as is one the pair does not
+// resolve with, collideWithObject giving false, a platform it drops through, one whose callback moved it, and one
+// whose collision is off, but it does not land deeper into a side than it started, a floor at a ramp's foot not
+// counted; a callback that moves, attaches or destroys it, or sends it up off the solid, a stomp's bounce, has the
+// last word, as in a settle, and a speed a callback set otherwise is kept as it lands, a conveyor's
+function render3DFollowSolid(o, ground, oldPos)
+{
+    // a pair meets when either is solid, as in the pair loop
+    const solid = (b)=> b instanceof EngineObject3D && b !== o && !b.destroyed && !b.parent && !b.sync2D &&
+        (b.isSolid || o.isSolid) && b.collideSolidObjects && !render3DLevel.includes(b);
+    if (!solid(ground) || !o.mass) return;
+    const v = o.velocity3D;
+    if (v.y > ground.velocity3D.y) return; // leaving it upward, a jump
+    const across = ((o.pos3D.x - oldPos.x) ** 2 + (o.pos3D.z - oldPos.z) ** 2) ** .5;
+    const drop = across * tan(o.groundAngle);
+    if (!(drop > 0)) return;
+    const start = o.pos3D.y, startShape = render3DSolidShape(o);
+    const radius = startShape.radius ?? min(startShape.size.x, startShape.size.y, startShape.size.z) / 2;
+    const step = max(radius / 2, 1e-3), cos0 = cos(o.groundAngle);
+    // last frame's first, then the solids that could be within the drop, nearest the list's order, through the grid
+    // when there is one, and not one it is leaving upward
+    const reach = render3DSolidReach(o) + drop, at = o.pos3D.copy();
+    const within = (b)=>
+    {
+        const q = b.pos3D, dx = at.x - q.x, dy = at.y - q.y, dz = at.z - q.z, r = reach + render3DSolidReach(b);
+        return dx*dx + dy*dy + dz*dz <= r*r;
+    };
+    // only where a box leans, a ramp: off the edge of a level box onto another level one it falls, as it always has,
+    // so a crowd of bodies on level floors, each with its floor after it in the list, does none of the work below
+    if (!render3DLeans(ground) && !render3DLeaningSolids().some((b)=> b !== o && within(b))) return;
+    const grid = render3DSolidGrid(), near = [];
+    for (const b of grid ? render3DGridWalk(grid, ()=> reach, ()=> at, Infinity) : engineObjectsCollide)
+    {
+        if (b === ground || !(b instanceof EngineObject3D)) continue;
+        within(b) && solid(b) && v.y <= b.velocity3D.y && near.push(b);
+    }
+    // how deep each is at the start, so a landing never goes deeper into a side than that
+    const candidates = [ground, ...near].map((b)=>
+    {
+        const shape = render3DSolidShape(b), push = render3DSolidPush(startShape, shape);
+        return {b, shape, depth: push ? push.lengthSquared() : 0, skip: false};
+    });
+    // asks the pair, as the settles do: undefined when the callback had the last word, moving, attaching or
+    // destroying the body or sending it up off the solid, which then stands, else whether it resolves; a solid the
+    // callback moved is passed over, as the pair loop makes no push for it
+    const ask = (c, push)=>
+    {
+        const x = o.pos3D.x, y = o.pos3D.y, z = o.pos3D.z, speed = o.velocity3D, vy = speed.y;
+        const b = c.b, bx = b.pos3D.x, by = b.pos3D.y, bz = b.pos3D.z;
+        const resolve = render3DCollideAsk(o, b, push);
+        if (o.parent || o.destroyed)
+        {
+            // attached or destroyed in the callback: back up out of the lowered test place, under a parent it took
+            // by the parent's own axes, so it is held where it stood and not sunk into the solid
+            const lift = vec3(0, start - y, 0), parent = o.parent;
+            o.pos3D = o.pos3D.add(parent instanceof EngineObject3D ?
+                render3DObjectMatrix(parent).copy().invert().transformDirection(lift) : lift);
+            return;
+        }
+        grid && !b.parent && render3DGridPlace(grid, b); // a callback may have moved it
+        if (o.pos3D.x !== x || o.pos3D.y !== y || o.pos3D.z !== z)
+        {
+            grid && render3DGridPlace(grid, o); // sent away by the game, a respawn, its place is the game's
+            return;
+        }
+        // read again, as a callback may give it a new vector
+        if ((o.velocity3D !== speed || o.velocity3D.y !== vy) && o.velocity3D.y > b.velocity3D.y)
+        {
+            o.pos3D.y = start; // a bounce the game gave, from where it was
+            return;
+        }
+        const moved = b.pos3D.x !== bx || b.pos3D.y !== by || b.pos3D.z !== bz;
+        resolve && !moved && !b.destroyed && !b.parent || (c.skip = true); // one it passes through
+        return !c.skip;
+    };
+    for (let down = step; ; down += step)
+    {
+        const d = min(down, drop);
+        o.pos3D.y = start - d;
+        const shapeA = render3DSolidShape(o);
+        for (const c of candidates)
+        {
+            if (c.skip) continue;
+            const push = render3DSolidPush(shapeA, c.shape);
+            if (!push) continue;
+            const lengthSquared = push.lengthSquared(), up = push.y / lengthSquared ** .5;
+            if (up < cos0 || !render3DOnFace(push, c.shape))
+                continue; // a side or an edge, not ground
+            const resolve = ask(c, push);
+            if (resolve === undefined) return;
+            if (!resolve) continue;
+            // on its face, pushed straight up out of it, as standing on a solid is, unless that is deeper into a
+            // side of one it does not pass through
+            o.pos3D.y += lengthSquared / push.y;
+            const shapeLanded = render3DSolidShape(o);
+            for (const other of candidates)
+            {
+                if (other === c || other.skip || other.b.destroyed) continue;
+                const into = render3DSolidPush(shapeLanded, other.shape);
+                if (!into || into.lengthSquared() <= other.depth + 1e-9) continue;
+                if (into.y / into.length() >= cos0) continue; // a floor, a ramp's foot, is no side
+                const blocks = ask(other, into);
+                if (blocks === undefined) return;
+                if (blocks)
+                {
+                    o.pos3D.y = start;
+                    return;
+                }
+            }
+            o.groundObject = c.b;
+            render3DRiderAdd(c.b, o);
+            o.velocity3D.y = c.b.velocity3D.y; // a new vector a callback gave too
+            grid && render3DGridPlace(grid, o);
+            return;
+        }
+        if (d >= drop) break;
+    }
+    o.pos3D.y = start;
+}
+
+// a box that leans, a ramp, and the solids of the engine's list that do, gathered once a pass for the follow-down
+const render3DLeans = (b)=> !b.collideAsSphere3D && !!(b.rotation3D.x || b.rotation3D.z);
+const render3DLeaning = /* @__PURE__ */ (()=> ({pass: -1, list: []}))();
+function render3DLeaningSolids()
+{
+    if (render3DLeaning.pass !== engineObjectsUpdateCount)
+    {
+        render3DLeaning.pass = engineObjectsUpdateCount;
+        render3DLeaning.list = engineObjectsCollide.filter((b)=> b instanceof EngineObject3D && render3DLeans(b));
+    }
+    return render3DLeaning.list;
+}
+
 // what it takes to move shape a clear of shape b, whichever pair of shapes they are, or undefined for no touch
 function render3DSolidPush(a, b)
 {
@@ -32136,6 +33831,10 @@ function render3DCollideAsk(a, b, push, useKept=true)
     if (kept !== undefined) return kept;
     const resolveA = a.collideWithObject(b, push), resolveB = b.collideWithObject(a, push.scale(-1));
     const resolve = !!(resolveA && resolveB);
+    // one a callback set to mass 0 is fixed from now on, the pass's fixed solids made again when next asked for
+    const fixed = render3DFixed;
+    fixed.pass === engineObjectsUpdateCount && (!a.mass && !fixed.set.has(a) || !b.mass && !fixed.set.has(b)) &&
+        (fixed.pass = -1);
     engineObjectsCollidePairAdd(a, b, resolve);
     engineObjectsCollidePairAdd(b, a, resolve);
     useKept && render3DSettleAsked(a, b, true);
@@ -32143,7 +33842,7 @@ function render3DCollideAsk(a, b, push, useKept=true)
 }
 
 // the pairs a settle asked this pass, each object to the others; asked with mark set, it marks the pair
-const render3DSettleAskedPairs = {pass: -1, pairs: new Map};
+const render3DSettleAskedPairs = /* @__PURE__ */ (()=> ({pass: -1, pairs: new Map}))();
 function render3DSettleAsked(a, b, mark=false)
 {
     const kept = render3DSettleAskedPairs;
@@ -32192,7 +33891,7 @@ function render3DPushFrom(shapeA, shapeB, a, b, push)
 
 // the solids that do not move, mass 0, in the order of the engine's list, gathered once a pass for the settles, which
 // would otherwise walk every collider for each push between two movers
-const render3DFixed = {pass: -1, list: [], set: new Set};
+const render3DFixed = /* @__PURE__ */ (()=> ({pass: -1, list: [], set: new Set}))();
 function render3DFixedSolids()
 {
     if (render3DFixed.pass !== engineObjectsUpdateCount)
@@ -32205,22 +33904,107 @@ function render3DFixedSolids()
     return render3DFixed.list;
 }
 
-// push an object pushed by another out of the solids that do not move, mass 0, back to the side it came from;
-// they take the touch as any pair does, so a one way platform still lets it through; not the one that pushed it, which
-// already did, and a push of a rounding error is none, or a box on a turned ramp would be pushed along its slant;
-// from is where it was before the push
+// bounce an object a pair pushed, by its weight in the pair, off the other one along a normal pointing away from it,
+// when moving into it: relative to the other's velocity when that one does not move in the pair, a fixed solid or a
+// platform, so it keeps the platform's speed, as 2D does, or by its own velocity otherwise
+function render3DBounceOff(o, weight, other, normal, restitution)
+{
+    if (!weight) return;
+    const base = other ? other.velocity3D : undefined, v = base ? o.velocity3D.subtract(base) : o.velocity3D;
+    if (v.dot(normal) < 0)
+        o.velocity3D = base ? base.add(v.reflect(normal, restitution)) : v.reflect(normal, restitution);
+}
+
+// what each object stood on last frame, kept at the start of its updatePhysics, for one whose turn has not found
+// its ground yet this frame
+const render3DGroundLast = /* @__PURE__ */ new WeakMap;
+
+// whether o stands on something other than the one above it: what it found this frame, else last frame's, but not
+// for one going up, a jumper, which has left it, so a crate on its head is not thrown as if off a fixed floor
+function render3DStandsOn(o, above)
+{
+    const ground = o.groundObject || o.velocity3D.y <= 0 && render3DGroundLast.get(o);
+    return !!ground && ground !== above && !ground.destroyed;
+}
+
+// the objects standing on each solid this pass, found by the pairs, so one pushed up lifts what stands on it
+const render3DRiders = /* @__PURE__ */ (()=> ({pass: -1, map: new Map}))();
+function render3DRiderAdd(support, rider)
+{
+    const riders = render3DRiders;
+    riders.pass === engineObjectsUpdateCount || (riders.pass = engineObjectsUpdateCount, riders.map.clear());
+    const list = riders.map.get(support);
+    list ? list.includes(rider) || list.push(rider) : riders.map.set(support, [rider]);
+}
+
+// lift what stands on a solid pushed up by an amount, and what stands on those, once each
+function render3DRidersLift(support, amount, grid)
+{
+    if (render3DRiders.pass !== engineObjectsUpdateCount) return;
+    const lifted = new Set([support]), list = [support];
+    for (let i = 0; i < list.length && i < 64; ++i)
+    for (const rider of render3DRiders.map.get(list[i]) ?? [])
+    {
+        if (lifted.has(rider) || rider.groundObject !== list[i] || rider.destroyed || rider.parent) continue;
+        lifted.add(rider), list.push(rider);
+        rider.pos3D = rider.pos3D.add(vec3(0, amount, 0));
+        grid && render3DGridPlace(grid, rider);
+    }
+}
+
+// two movers that meet, a pushed along a normal pointing away from b, when moving toward each other: their speeds
+// along it become the inelastic one, the same for both, lerped toward the elastic ones by restitution, as 2D does
+function render3DTradeMomentum(a, b, normal, restitution)
+{
+    const va = a.velocity3D.dot(normal), vb = b.velocity3D.dot(normal);
+    if (va >= vb) return; // already parting
+    const total = a.mass + b.mass, inelastic = (a.mass * va + b.mass * vb) / total;
+    const elasticA = (va * (a.mass - b.mass) + 2 * b.mass * vb) / total;
+    const elasticB = (vb * (b.mass - a.mass) + 2 * a.mass * va) / total;
+    a.velocity3D = a.velocity3D.add(normal.scale(lerp(inelastic, elasticA, restitution) - va));
+    b.velocity3D = b.velocity3D.add(normal.scale(lerp(inelastic, elasticB, restitution) - vb));
+}
+
+// whether a mover was in a solid where it began its turn, before its own move
+function render3DInAtStart(a, b)
+{
+    const was = a.pos3D;
+    a.pos3D = render3DCollideFrom(a).copy();
+    const shape = render3DSolidShape(a);
+    a.pos3D = was;
+    const push = render3DSolidPush(shape, render3DSolidShape(b));
+    return !!push && push.lengthSquared() > 1e-6;
+}
+
+// whether a solid moved this pass: it has a velocity, or it is not where its turn began
+function render3DMovedThisPass(o)
+{
+    const v = o.velocity3D, p = o.pos3D, f = render3DCollideFrom(o);
+    return !!(v.x || v.y || v.z || p.x !== f.x || p.y !== f.y || p.z !== f.z);
+}
+
+// settles a body pushed by a mover against the fixed solids, mass 0, and the level: pushed out of each, back to the
+// side it came from, from where it was before the push; they take the touch as any pair does, so a one way platform
+// still lets it through; not the one that pushed it, which already did, and a push of a rounding error is none, or a
+// box on a turned ramp would be pushed along its slant; true when a callback it asked moved the
+// body, a respawn or a portal, whose place is then the game's: the caller hands none of it on to another mover
 function render3DSettleFixed(o, pusher, from)
 {
-    if (o.destroyed || !o.collideSolidObjects) return;
+    if (o.destroyed || !o.collideSolidObjects) return false;
     let shape = render3DSolidShape(o), reachO = render3DSolidReach(o);
     // with many solids the ones near where it is, through the grid; the movers there are skipped below
     const grid = render3DSolidGrid(), fixed = render3DFixedSolids();
+    let moved = false;
+    // the door rule: a body squeezed between a wall and a door ends in the door, never in the wall, as a door can
+    // open again and a wall can not, so one a still wall pushed is not pushed back out of a fixed solid that moves
+    const byWall = !!pusher && !pusher.mass && !render3DMovedThisPass(pusher);
     for (const b of grid ? render3DGridWalk(grid, ()=> reachO, ()=> shape.pos, Infinity) : fixed)
     {
         if (grid && !render3DFixed.set.has(b)) continue; // the fixed solids of the pass, as the list has them
+        if (byWall && !b.mass && render3DMovedThisPass(b)) continue;
         // a pair where neither is solid passes through, as in the pair loop; a solid against one that is not still meets
-        if (b === o || b === pusher || b.mass || b.destroyed || !o.isSolid && !b.isSolid)
-            continue;
+        if (b === o || b === pusher || b.mass || b.destroyed || b.parent || !o.isSolid && !b.isSolid)
+            continue; // and one a callback attached since the pass's list was made, it rides along with its parent
         const p = shape.pos, q = b.pos3D, reach = reachO + render3DSolidReach(b);
         const dx = p.x - q.x, dy = p.y - q.y, dz = p.z - q.z;
         if (dx*dx + dy*dy + dz*dz > reach*reach) continue;
@@ -32228,10 +34012,18 @@ function render3DSettleFixed(o, pusher, from)
         let push = render3DSolidPush(shape, shapeB);
         if (!push || push.lengthSquared() < 1e-12) continue;
         push = render3DPushFrom(shape, shapeB, o, b, push);
+        const x = o.pos3D.x, y = o.pos3D.y, z = o.pos3D.z, bx = b.pos3D.x, by = b.pos3D.y, bz = b.pos3D.z;
         const resolve = render3DCollideAsk(o, b, push);
-        grid && (render3DGridPlace(grid, o), render3DGridPlace(grid, b)); // a callback may have moved either
+        if (o.parent) return true; // attached in the callback, it rides along with its parent
+        grid && (render3DGridPlace(grid, o), b.parent || render3DGridPlace(grid, b)); // a callback may have moved either
         shape = render3DSolidShape(o), reachO = render3DSolidReach(o); // or moved or resized this one
-        if (!resolve) continue;
+        if (o.pos3D.x !== x || o.pos3D.y !== y || o.pos3D.z !== z)
+        {
+            moved = true, from = o.pos3D.copy(); // sent away by the game: met from where it was put
+            continue; // and the push, for where it was, is not made
+        }
+        // a solid its own callback moved makes no push for where it was, as in the pair loop
+        if (!resolve || b.parent || b.pos3D.x !== bx || b.pos3D.y !== by || b.pos3D.z !== bz) continue;
         // standing as in a pair: a push off a face within its groundAngle of up holds it there, turned straight up
         const lengthSquared = push.lengthSquared(), up = push.y / lengthSquared ** .5;
         if (up > 0 && o.mass && up >= cos(o.groundAngle) && render3DOnFace(push, shapeB))
@@ -32242,15 +34034,22 @@ function render3DSettleFixed(o, pusher, from)
         }
         o.pos3D = o.pos3D.add(push);
         shape = render3DSolidShape(o);
-        const normal = push.normalize();
-        if (o.velocity3D.dot(normal) < 0)
-            o.velocity3D = o.velocity3D.reflect(normal, o.restitution);
+        render3DBounceOff(o, 1, b, push.normalize(), max(o.restitution, b.restitution));
     }
-    // and out of the level, the voxel and height maps, from where it was before the push, so a move of the game's own,
-    // as a collision callback that sends it away, is not swept back across the level
+    // and out of the level, the voxel and height maps, from where it was before the push, or from where a callback
+    // asked here sent it, so a move of the game's own, a respawn, is not swept across the level from where it was;
+    // a place after the level shapes moved, so a MeshCollider lift's move is not added to it again
     if (o.collideLevel && o.mass)
-        render3DCollideLevel(o, from, undefined);
+    {
+        render3DSettlingLevel = true;
+        try { render3DCollideLevel(o, from, undefined); }
+        finally { render3DSettlingLevel = false; }
+    }
+    return moved;
 }
+
+// while a settle collides a body with the level, from a place after the level shapes moved this pass
+let render3DSettlingLevel = false;
 
 // what moves shape a back clear of shape b to the side it came from: along an axis the two were clear on where they
 // came from, the least of those, as 2D resolves it from where the object was; undefined when they overlapped on every
@@ -32328,11 +34127,20 @@ function render3DCollideSolid(a)
         push = render3DPushFrom(shapeA, shapeB, a, b, push);
 
         // both objects hear about it, and either one can take the touch over
+        const ax = a.pos3D.x, ay = a.pos3D.y, az = a.pos3D.z, bx = b.pos3D.x, by = b.pos3D.y, bz = b.pos3D.z;
         const resolve = render3DCollideAsk(a, b, push, false);
-        grid && (render3DGridPlace(grid, a), render3DGridPlace(grid, b)); // a callback may have moved either
+        // a callback that attached either one, an arrow sticking or a crate picked up, ends the pair: a child rides
+        // along with its parent, and one that is a child now meets no more solids
+        if (a.parent) return;
+        grid && (render3DGridPlace(grid, a), b.parent || render3DGridPlace(grid, b)); // a callback may have moved either
         // so the next solid is tested where a callback put it and at the size it gave it, a teleport too
         shapeA = render3DSolidShape(a), reachA = render3DSolidReach(a);
-        if (!resolve) continue;
+        if (!resolve || b.parent) continue;
+        // a callback that moved either one, a respawn or a portal, has the last word: the push, the bounce and the
+        // standing, worked out for where they were, are not made, as 2D tests the pair again from where they are
+        if (a.pos3D.x !== ax || a.pos3D.y !== ay || a.pos3D.z !== az || b.pos3D.x !== bx || b.pos3D.y !== by ||
+            b.pos3D.z !== bz)
+            continue;
 
         // standing: resting on a box's face within the upper one's groundAngle of level holds it there, the push
         // turned straight up, as far as it takes to leave the surface, so it does not creep down a ramp; only what
@@ -32342,34 +34150,62 @@ function render3DCollideSolid(a)
         const bStands = up < 0 && b.mass && -up >= cos(b.groundAngle) && render3DOnFace(push, shapeA);
         if (aStands || bStands)
         {
-            aStands ? a.groundObject = b : b.groundObject = a;
+            aStands ? (a.groundObject = b, render3DRiderAdd(b, a)) : (b.groundObject = a, render3DRiderAdd(a, b));
             if (push.x || push.z) // one straight up already is used as it is
                 push = vec3(0, lengthSquared / push.y, 0);
         }
 
-        // heavier objects move less, mass 0 stays put; then bounce apart when moving toward each other
+        // heavier objects move less, mass 0 stays put, and as in 2D one landing on one that stands on something this
+        // frame meets it as fixed, so a stack holds and a heavy box on top does not squeeze it out; then bounce apart
+        // when moving toward each other
+        // what it stands on is the one found this frame, or last frame's while its turn has not come to it yet, so a
+        // stack listed top first holds as one listed bottom first does
         const total = a.mass + b.mass;
-        const weightA = !a.mass ? 0 : !b.mass ? 1 : b.mass / total;
-        const weightB = !b.mass ? 0 : !a.mass ? 1 : a.mass / total;
+        const bHeld = aStands && render3DStandsOn(b, a), aHeld = bStands && render3DStandsOn(a, b);
+        const weightA = !a.mass || aHeld ? 0 : !b.mass || bHeld ? 1 : b.mass / total;
+        const weightB = !b.mass || bHeld ? 0 : !a.mass || aHeld ? 1 : a.mass / total;
         const fromA = a.pos3D.copy(), fromB = b.pos3D.copy(); // where the push moves them from, for the settles
         a.pos3D = a.pos3D.add(push.scale(weightA));
         b.pos3D = b.pos3D.subtract(push.scale(weightB));
-        // mass 0 keeps its velocity too, so a moving platform keeps moving, and what hits it bounces by its own
-        // restitution as it would off a static wall
-        const normal = push.normalize();
-        if (weightA && a.velocity3D.dot(normal) < 0)
-            a.velocity3D = a.velocity3D.reflect(normal, a.restitution);
-        if (weightB && b.velocity3D.dot(normal) > 0)
-            b.velocity3D = b.velocity3D.reflect(normal, b.restitution);
+        // what stands on one pushed up goes up with it, as its turn is over, or it would be left in it till next frame
+        push.y * weightA > 0 && render3DRidersLift(a, push.y * weightA, grid);
+        push.y * weightB < 0 && render3DRidersLift(b, -push.y * weightB, grid);
+        // mass 0 keeps its velocity too, so a moving platform keeps moving; what hits one that does not move this
+        // pair bounces off it relative to its velocity, as in 2D, so a body riding a platform down stays on it; two
+        // that both move trade momentum along the push by their masses, as in 2D, so a kicked ball rolls away; the
+        // bounce is by the larger restitution of the two, as 2D and the level shapes take it
+        const normal = push.normalize(), restitution = max(a.restitution, b.restitution);
+        if (weightA && weightB)
+            render3DTradeMomentum(a, b, normal, restitution);
+        else
+        {
+            render3DBounceOff(a, weightA, b, normal, restitution);
+            render3DBounceOff(b, weightB, a, normal.scale(-1), restitution);
+        }
 
         // the settles come after the bounce, so a wall's push is the last word on the velocity
+        if (weightA && !weightB && (b.mass || b.velocity3D.x || b.velocity3D.y || b.velocity3D.z ||
+            render3DInAtStart(a, b)))
+        {
+            // pushed whole by one that does not move in the pair, a door or a lift squeezing it against a wall: it
+            // met the level before, from where it was, so it is settled now, or it would end in the level or go
+            // through a thin wall, as the other list order never lets it; only when that one moves or the body began
+            // its turn in it, a squeeze a door that stopped holds, since a still floor or wall a body only fell onto
+            // pushes it back where it came from, the most common pair of all, which needs no settle
+            render3DSettleFixed(a, b, fromA);
+            if (a.parent) return; // a callback in the settle attached it
+        }
+        let movedA = false; // a callback sent a away, a respawn: its place is the game's, none of it is handed on
         if (weightA && weightB)
         {
             // a met the solids before it in the list already, the fixed ones among them, so a push from something
-            // that moves is settled against those now, and b takes what a could not move, as if a were fixed
+            // that moves is settled against those now, and b takes what a could not move, as if a were fixed: only
+            // the part along this pair's push, since the settle also lifts a out of a floor gravity sank it into,
+            // which is not b's to take, or two pushing over a floor listed after them hand that lift back and forth
             const pushed = a.pos3D.copy();
-            render3DSettleFixed(a, b, fromA);
-            b.pos3D = b.pos3D.add(a.pos3D.subtract(pushed));
+            movedA = render3DSettleFixed(a, b, fromA);
+            if (a.parent) return; // a callback in the settle attached it, its place is an offset now
+            movedA || b.parent || (b.pos3D = b.pos3D.add(normal.scale(a.pos3D.subtract(pushed).dot(normal))));
         }
         if (weightB)
         {
@@ -32377,17 +34213,20 @@ function render3DCollideSolid(a)
             // the frame in the wall, and a hard enough shove would carry it through; then a takes what b could not
             // move, as a pusher stops against a crate held by a wall, and is settled itself, squeezed at worst
             const pushed = b.pos3D.copy();
-            render3DSettleFixed(b, a, fromB);
-            const backX = b.pos3D.x - pushed.x, backY = b.pos3D.y - pushed.y, backZ = b.pos3D.z - pushed.z;
-            if (weightA && (backX || backY || backZ))
+            const movedB = render3DSettleFixed(b, a, fromB);
+            if (a.parent) return; // a callback in the settle attached either one: a child rides along with its parent
+            const back = normal.scale(b.pos3D.subtract(pushed).dot(normal)); // along the push only, as above
+            if (weightA && !movedA && !movedB && !b.parent && (back.x || back.y || back.z))
             {
-                a.pos3D = a.pos3D.add(vec3(backX, backY, backZ));
+                a.pos3D = a.pos3D.add(back);
                 render3DSettleFixed(a, b, fromA);
+                if (a.parent) return;
             }
         }
         if (weightA)
             shapeA = render3DSolidShape(a); // it moved, so the next solid must be tested against where it is now
-        grid && (render3DGridPlace(grid, a), render3DGridPlace(grid, b)); // where the push and the settles left them
+        // where the push and the settles left them
+        grid && (render3DGridPlace(grid, a), b.parent || render3DGridPlace(grid, b));
     }
 }
 
@@ -32418,17 +34257,38 @@ function render3DSolidGrid()
     const kept = render3DGrid;
     if (kept.pass === engineObjectsUpdateCount) return kept.grid;
     kept.pass = engineObjectsUpdateCount;
-    const list = engineObjectsCollide.filter((b)=> b instanceof EngineObject3D && !b.parent && !b.sync2D);
+    const list = engineObjectsCollide.filter(render3DGridSolid);
     if (list.length < engineCollideGridMin * 3) return kept.grid = undefined;
     // cells about twice a typical solid across, so most are in one to eight
     let extent = 0;
     for (const o of list)
         extent += min(2 * render3DSolidReach(o), 16) || 0;
     const index = new Map;
-    const grid = kept.grid = {size: max(2 * extent / list.length, .5), cells: new Map, at: new Map, index,
+    const grid = kept.grid = {size: max(2 * extent / list.length, .5), cells: new Map, at: new Map, index, joins: 0,
         big: new Set, seen: new Map, stamp: 0, byIndex: (a, b)=> index.get(a) - index.get(b)};
-    list.forEach((o, i)=> { index.set(o, i); render3DGridPlace(grid, o); });
+    // by its place in engineObjectsCollide, so a solid let go of mid pass goes in at its place, see render3DGridJoin
+    engineObjectsCollide.forEach((o, i)=> render3DGridSolid(o) && (index.set(o, i), render3DGridPlace(grid, o)));
     return grid;
+}
+
+// what the grid of a pass holds: the 3D solids that are not children or driven by 2D physics
+const render3DGridSolid = (o)=> o instanceof EngineObject3D && !o.parent && !o.sync2D;
+
+// a child let go of during the pass, by a collision callback, joins that pass's grid where it is in the list, so the
+// solids after it meet it as checking every pair does
+function render3DGridJoin(o)
+{
+    const grid = render3DGrid.pass === engineObjectsUpdateCount && engineObjectsPhysicsRunning && render3DGrid.grid;
+    if (!grid || !render3DGridSolid(o)) return;
+    // one attached and let go of in the same pass is in the grid already, at the cells it had before it was attached
+    if (!grid.index.has(o))
+    {
+        const i = engineObjectsCollide.indexOf(o);
+        if (i < 0) return;
+        grid.index.set(o, i);
+    }
+    render3DGridPlace(grid, o);
+    ++grid.joins;
 }
 
 // the cells of the cube around a place out to a reach, first and last along x, y and z, in one kept array; a solid
@@ -32523,14 +34383,15 @@ function render3DGridAdd(grid, other, after, before, stamp, near)
 // found again from where it is whenever the place its center gives has moved, as a push does, or its reach changed
 function* render3DGridWalk(grid, reach, center, before)
 {
-    let after = -1, x, y, z, r, k = 0;
+    let after = -1, x, y, z, r, k = 0, joins = grid.joins;
     const near = [];
     for (;;)
     {
+        // asked again when it moved, or when a solid joined the grid since, let go of by a callback mid pass
         const p = center(), size = reach();
-        if (p.x !== x || p.y !== y || p.z !== z || size !== r)
+        if (p.x !== x || p.y !== y || p.z !== z || size !== r || joins !== grid.joins)
         {
-            x = p.x, y = p.y, z = p.z, r = size;
+            x = p.x, y = p.y, z = p.z, r = size, joins = grid.joins;
             render3DGridNear(grid, p, size, after, before, near);
             k = 0;
         }
@@ -32545,15 +34406,21 @@ function* render3DGridWalk(grid, reach, center, before)
  * Collect the EngineObject3D objects whose boxes overlap a sphere or a box, the 3D twin of engineObjectsCollect
  * - Each object is its size3D box at its world position, turned as it is turned; lights, emitters and trails have no
  *   size and are never collected
- * @param {Vector3} pos - Center of the area
- * @param {Vector3|number} size - Diameter of a sphere if a number, 0 for a point, full size of a box if a Vector3
+ * @param {Vector3} [pos] - Center of the area, or undefined for every 3D object, as in 2D
+ * @param {Vector3|number} [size] - Diameter of a sphere if a number, full size of a box if a Vector3, left out or 0
+ *   the objects whose boxes hold the point at pos
  * @param {Array<EngineObject>} [objects] - Defaults to every object
  * @param {boolean} [testCenters] - Test only each object's center, a little faster, and ignores object sizes
  * @return {Array<EngineObject3D>}
  * @memberof Render3D
  */
-function engineObjectsCollect3D(pos, size, objects=engineObjects, testCenters=false)
+function engineObjectsCollect3D(pos, size=0, objects=engineObjects, testCenters=false)
 {
+    // every one with a body, as the tests below take them: no light, emitter or trail, with no size, and no
+    // InstancedMesh3D, whose copies are not it
+    if (!pos)
+        return /** @type {Array<EngineObject3D>} */ (objects.filter((o)=> o instanceof EngineObject3D && !o.destroyed &&
+            !(o instanceof InstancedMesh3D) && !!(o.size3D.x || o.size3D.y || o.size3D.z)));
     // a size of 0 is a point, tested against each box, since a sphere of no size could never hit
     const radiusSquared = typeof size === 'number' && size > 0 ? (size/2)**2 : undefined;
     const box = radiusSquared ? undefined : typeof size === 'number' ? vec3() : render3DSize3(size);
@@ -32630,6 +34497,37 @@ function render3DRaycastObject(ray, o)
     if (hit === undefined || !ray.direction.lengthSquared())
         return hit; // a ray of no length is where it starts, inside the box
     return render3DRaycastMesh(local, mesh);
+}
+
+// how far along a ray an object is hit and what of it was hit: itself, or for one with nothing of its own to hit, a
+// glTF model or an attached prefab, the nearest of the parts it draws with; undefined for a miss
+function render3DRaycastOwned(ray, o)
+{
+    const distance = render3DRaycastObject(ray, o);
+    if (distance !== undefined) return {distance, part: /** @type {EngineObject3D} */ (o)};
+    let nearest;
+    if (o instanceof EngineObject3D && !o.destroyed && !(o.mesh || o.tileInfo))
+        for (const child of o.children)
+        {
+            const hit = /** @type {EngineObject3D} */ (child).drawOwner === o ? render3DRaycastOwned(ray, child) : undefined;
+            hit && (!nearest || hit.distance < nearest.distance) && (nearest = hit);
+        }
+    return nearest;
+}
+
+
+
+// the nearest of a list of objects a ray hits, the part itself, which pick hands on as its owner
+function render3DPickPart(ray, objects)
+{
+    let nearest;
+    for (const o of objects)
+    {
+        const distance = render3DRaycastObject(ray, o);
+        if (distance !== undefined && (!nearest || distance < nearest.distance)) // only a 3D object has a distance
+            nearest = {object: /** @type {EngineObject3D} */ (o), distance};
+    }
+    return nearest;
 }
 
 // how far along a ray, in the mesh's own space, its nearest triangle is hit, or undefined: the triangles that face
@@ -32718,6 +34616,8 @@ function render3DRaycastDisc(ray, center, radius)
  * Collect every EngineObject3D a ray passes through, nearest first, the 3D twin of engineObjectsRaycast
  * - The ray has no end, so everything along it counts however far away it is
  * - Use render3D.pick for the nearest one on its own, with the distance to it
+ * - A glTF model or an attached prefab in the list is hit through its parts and is what is given back; a part is
+ *   hit only through its owner, so a list that leaves a model out never hits it
  * @param {Ray3D} ray - From render3D.screenToRay, or any ray
  * @param {Array<EngineObject>} [objects] - Defaults to every object; only those with a mesh or a sprite count, and
  *   the height maps, voxel maps and mesh colliders, on their surfaces
@@ -32729,18 +34629,20 @@ function engineObjectsRaycast3D(ray, objects=engineObjects)
     const hits = [];
     for (const o of objects)
     {
-        const distance = render3DRaycastObject(ray, o);
-        if (distance !== undefined) // only a 3D object has a distance
-            hits.push({o: /** @type {EngineObject3D} */ (o), distance});
+        if (/** @type {EngineObject3D} */ (o).drawOwner)
+            continue; // a model's part, hit through its model
+        const hit = render3DRaycastOwned(ray, o);
+        hit && hits.push({o: /** @type {EngineObject3D} */ (o), distance: hit.distance}); // only a 3D object is hit
     }
-    return hits.sort((a, b)=> a.distance - b.distance).map(hit=> hit.o);
+    return hits.sort((a, b)=> a.distance - b.distance).map((hit)=> hit.o);
 }
 
 /**
  * Call a function for each EngineObject3D whose box overlaps a sphere or a box
  * - An object destroyed by an earlier callback is skipped
- * @param {Vector3} pos - Center of the area
- * @param {Vector3|number} size - Diameter of a sphere if a number, 0 for a point, full size of a box if a Vector3
+ * @param {Vector3|undefined} pos - Center of the area, or undefined for every 3D object, see engineObjectsCollect3D
+ * @param {Vector3|number|undefined} size - Diameter of a sphere if a number, 0 or undefined for a point, full size
+ *   of a box if a Vector3
  * @param {function(EngineObject3D): void} callback
  * @param {Array<EngineObject>} [objects] - Defaults to every object
  * @param {boolean} [testCenters] - Test only each object's center, see engineObjectsCollect3D
@@ -32787,7 +34689,8 @@ class InstancedMesh3D extends EngineObject3D
     {
         super(vec3(), mesh, tileInfo, color);
         false&&ASSERT(mesh instanceof Mesh, 'an InstancedMesh3D needs a Mesh');
-        false&&ASSERT(count >= 1, 'an InstancedMesh3D needs room for at least one instance');
+        false&&ASSERT(count >= 1 && count % 1 === 0, 'an InstancedMesh3D needs room for a whole number of instances, one or more',
+            count);
         this.size3D = vec3(); // not a solid thing to pick or collect
         /** @property {number} - How many instances draw, the first ones, up to the count it was made with */
         this.count = count;
@@ -33030,7 +34933,7 @@ class InstancedMesh3D extends EngineObject3D
         false&&ASSERT(this.count >= 0 && this.count <= this.maxCount, 'count must be within the count it was made with');
         if (r.transparentQueue) // sorted as one thing with the other transparent draws
             return r.queueTransparent(this.getWorldPos3D(), ()=> this.render3D());
-        if (!mesh || !this.count || !render3DCanDraw()) return;
+        if (!mesh || !(this.count > 0) || !render3DCanDraw()) return; // a release build's negative count draws none
         if (r.shadowPass && !r.depthPass && !r.lighting) return; // unlit casts no shadow, but is in the depth
         render3DMeshUpload(mesh);
         if (!mesh.bufferCount) return;
@@ -33060,8 +34963,10 @@ class InstancedMesh3D extends EngineObject3D
         }
         else
         {
+            // a range clamped to the instances there are, as a release build does not assert on an index past them
             const upload = (buffer, data, floats, start, end)=>
             {
+                start = max(start, 0), end = min(end, this.maxCount);
                 if (end <= start) return;
                 gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
                 gl.bufferSubData(gl.ARRAY_BUFFER, start * floats * 4, data, start * floats, (end - start) * floats);
@@ -33078,11 +34983,14 @@ class InstancedMesh3D extends EngineObject3D
                 gl.bindBuffer(gl.ARRAY_BUFFER, this.dataBuffer = gl.createBuffer());
                 gl.bufferData(gl.ARRAY_BUFFER, this.dataValues, gl.DYNAMIC_DRAW);
             }
-            else if (this.dataDirtyEnd > this.dataDirtyStart)
+            else
             {
-                gl.bindBuffer(gl.ARRAY_BUFFER, this.dataBuffer);
-                gl.bufferSubData(gl.ARRAY_BUFFER, this.dataDirtyStart * 16, this.dataValues, this.dataDirtyStart * 4,
-                    (this.dataDirtyEnd - this.dataDirtyStart) * 4);
+                const start = max(this.dataDirtyStart, 0), end = min(this.dataDirtyEnd, this.maxCount);
+                if (end > start)
+                {
+                    gl.bindBuffer(gl.ARRAY_BUFFER, this.dataBuffer);
+                    gl.bufferSubData(gl.ARRAY_BUFFER, start * 16, this.dataValues, start * 4, (end - start) * 4);
+                }
             }
             this.dataDirtyStart = Infinity, this.dataDirtyEnd = 0;
         }
@@ -33092,8 +35000,8 @@ class InstancedMesh3D extends EngineObject3D
         render3DFlushBeforeOverlay(); // as in drawMesh, what was drawn before goes under it
         const cullBackFaces = r.cullBackFaces, tileInfo = this.tileInfo;
         r.cullBackFaces = !mesh.doubleSided;
-        render3DDrawInstanced(mesh, this.buffer, this.count, render3DTextureOf(tileInfo), r, this.colorBuffer,
-            this.dataBuffer);
+        render3DDrawInstanced(mesh, this.buffer, min(this.count, this.maxCount), render3DTextureOf(tileInfo), r,
+            this.colorBuffer, this.dataBuffer);
         r.cullBackFaces = cullBackFaces;
     }
 
@@ -33204,6 +35112,11 @@ class Light3D extends EngineObject3D
         old && old.destroy();
         if (flare)
         {
+            // handed over from another light: that one has it no more, and it is this one's child, not that one's
+            const was = flare.light;
+            if (was && was !== this && was.flareObject === flare)
+                was.flareObject = undefined;
+            was && was !== this && flare.parent === was && was.removeChild(flare);
             flare.light = this;
             flare.parent || this.addChild(flare);
         }
@@ -33438,6 +35351,8 @@ function buildCapsule(size=1, height=1, sides=16, rings=4, smooth=render3D?.smoo
     false&&ASSERT(height >= size, 'a capsule is at least as tall as it is wide, the ends take up the size', size, height);
     const profile = [], r = size / 2, straight = max(0, height - size) / 2;
     rings = render3DWholeCount(rings, 'rings');
+    false&&ASSERT(rings > 0, 'a capsule needs at least 1 ring on each end');
+    rings = max(1, rings); // none would divide by nothing, in a release build too
     for (let i = 0; i <= rings; ++i)
     {
         const a = i / rings * PI / 2;
@@ -33466,6 +35381,8 @@ function buildTorus(size=1, tubeSize=.3, sides=16, tubeSides=8, smooth=render3D?
     false&&ASSERT(tubeSize <= size / 2, 'the tube must fit inside the torus, at most half its size, or the ring turns inside out');
     const profile = [], radius = (size - tubeSize) / 2, tubeRadius = tubeSize / 2;
     tubeSides = render3DWholeCount(tubeSides, 'tube sides');
+    false&&ASSERT(tubeSides > 2, 'a torus needs at least 3 tube sides');
+    tubeSides = max(3, tubeSides); // fewer would divide by nothing or flatten it, in a release build too
     for (let i = 0; i <= tubeSides; ++i)
     {
         const a = i / tubeSides * 2 * PI;
@@ -33700,6 +35617,13 @@ function buildText3D(text, size=1, depth=.2, font=engineImageFont)
  * - pos3D is the center of the map, its grid spans mapSize on X and Z around it, and a full value is height above it
  * - getHeight, getNormal, getColor and raycast are in world space, with the map's position taken off
  * - It stays upright and unscaled, its lookups do not turn with it
+ * - A game on a map keeps its bodies on it: one that walks onto it from off its edge is set on the ground there,
+ *   however high the edge stands, so a map that can be left has a wall or lower ground around it
+ * - To be a lift, it moves by its velocity3D, which moves it before the objects and carries what stands on it; one
+ *   moved by setting pos3D, or in its own update, leaves a rider behind, a fast one dropping it through
+ * - A body walking down over a crest keeps the ground from one level shape onto another and from one solid onto
+ *   another, but from a level shape onto a solid ramp going down, or a solid onto one, it hops down, in the air for
+ *   a few frames; join a slope to a level shape with a level shape
  * @extends EngineObject3D
  * @memberof Render3D
  * @example
@@ -33730,14 +35654,16 @@ class HeightMap extends EngineObject3D
         /** @property {Array<Array<Color>>|undefined} - Vertex colors as [row][column], undefined for white
          *  @type {Array<Array<Color>>|undefined} */
         this.colors = /** @type {Array<Array<Color>>|undefined} */ (colors);
-        /** @property {Vector2} - World size along X and Z */
+        /** @property {Vector2} - World size along X and Z, rebuild() after changing it */
         this.mapSize = mapSize.copy();
-        /** @property {number} - World height of a full value */
+        /** @property {number} - World height of a full value, rebuild() after changing it */
         this.height = height;
+        /** @type {Array<number>} */
+        this.heightRange = [0, 1]; // the lowest and highest of the heights, kept by rebuild
+        /** @type {number} */
+        this.steepestFace = 1; // the normal y of its steepest triangle, kept by rebuild
         /** @property {boolean} - Smooth shading, rebuild() after changing it */
         this.smooth = !!smooth;
-        // its box, centered on pos3D, reaches a full height above and below, so it holds the surface rising from it
-        this.size3D = vec3(mapSize.x, 2 * abs(height), mapSize.y);
         this.rebuild();
         render3DLevel.push(this);
     }
@@ -33809,18 +35735,23 @@ class HeightMap extends EngineObject3D
      *    cell diagonal it crosses, and a hill it only grazes is still hit
      *  - A ray that starts under the ground crosses on its way out, so the hit is still on the surface
      *  @param {Ray3D} ray - From screenToRay, or any ray
+     *  @param {number} [maxDistance] - How far along the ray to look, in its own units, as far as the map by default
      *  @return {number|undefined} */
-    raycast(ray)
+    raycast(ray, maxDistance=Infinity)
     {
         // in the map's own space, its position taken off the ray
         const p = this.pos3D, origin = ray.origin.subtract(p), direction = ray.direction;
         const size = this.mapSize, height = this.height, length = direction.length();
         if (!length) return;
 
-        // clip to the box around the terrain, from where the ray enters it to where it leaves the map's footprint
-        const start = raycastBox(new Ray3D(origin, direction), vec3(0, height / 2, 0), vec3(size.x, abs(height) + 1e-3, size.y));
+        // clip to the box around the terrain, from where the ray enters it to where it leaves the map's footprint, as
+        // low and high as its values go, outside 0 to 1 too
+        const [lo, hi] = this.heightRange, bottom = min(lo * height, hi * height, 0), top = max(lo * height, hi * height);
+        const start = raycastBox(new Ray3D(origin, direction), vec3(0, (bottom + top) / 2, 0),
+            vec3(size.x, top - bottom + 1e-3, size.y));
         if (start === undefined || !(size.x > 0 && size.y > 0)) return;
-        let end = start + hypot(size.x, size.y, height) / length;
+        if (start > maxDistance) return;
+        let end = min(maxDistance, start + hypot(size.x, size.y, top - bottom) / length);
         if (direction.x)
             end = min(end, (sign(direction.x) * size.x / 2 - origin.x) / direction.x);
         if (direction.z)
@@ -33879,8 +35810,32 @@ class HeightMap extends EngineObject3D
             (x, z)=> this.getHeight(x + p.x, z + p.z) - p.y, smooth);
     }
 
-    /** Make the mesh again from the heights and colors, after changing them or smooth */
-    rebuild() { this.setMesh(this.buildMesh(this.smooth)); }
+    /** Make the mesh again from the heights and colors, after changing them, smooth, mapSize or height */
+    rebuild()
+    {
+        // the lowest and highest values, which may be outside 0 to 1, for the raycast's box
+        let lo = Infinity, hi = -Infinity;
+        for (const row of this.heights)
+            for (const value of row)
+                lo = min(lo, value), hi = max(hi, value);
+        this.heightRange = [lo, hi];
+        // and the normal y of its steepest triangle, as faceNormal reads them, so a map with nothing steep enough to
+        // be a wall, rolling ground, does none of the wall rule's looking for every body that moves on it
+        const h = this.heights, kx = (this.columns - 1) / this.mapSize.x * this.height;
+        const kz = (this.rows - 1) / this.mapSize.y * this.height;
+        let slope = 0;
+        for (let j = 0; j < this.rows - 1; ++j)
+        for (let i = 0; i < this.columns - 1; ++i)
+        {
+            const a = h[j][i], b = h[j+1][i], c = h[j+1][i+1], d = h[j][i+1];
+            slope = max(slope, ((d - a) * kx) ** 2 + ((b - a) * kz) ** 2, ((c - b) * kx) ** 2 + ((c - d) * kz) ** 2);
+        }
+        this.steepestFace = (slope + 1) ** -.5;
+        // its box, centered on pos3D, reaches a full height above and below, or as far as a value outside 0 to 1, so
+        // it holds the surface rising from it, kept here so a map given a new size or height is found where it is
+        this.size3D = vec3(this.mapSize.x, 2 * abs(this.height) * max(1, abs(lo), abs(hi)), this.mapSize.y);
+        this.setMesh(this.buildMesh(this.smooth));
+    }
 
     /** How far along a ray the surface is, for picking, see raycast
      *  @param {Ray3D} ray
@@ -33897,28 +35852,178 @@ class HeightMap extends EngineObject3D
     levelSegment3D(from, to)
     {
         // a move above the highest the ground goes misses it, which is most particles most of the time
-        const top = this.pos3D.y + max(this.height, 0);
+        const [lo, hi] = this.heightRange, top = this.pos3D.y + max(lo * this.height, hi * this.height, 0);
         if (from.y > top && to.y > top) return undefined;
         if (from.y < this.getHeight(from.x, from.z)) return undefined; // under from the start, let go
         // the ground is flat in each triangle, not between the ends, so a ridge both ends are above is still met:
         // the exact raycast along the move, which walks every triangle it crosses, the first one it goes under
-        const distance = this.raycast(new Ray3D(from, to.subtract(from)));
+        // no further than the move, or a short one would be walked on across the whole map
+        const distance = this.raycast(new Ray3D(from, to.subtract(from)), 1);
         // over the move, and not a touch where it starts on the surface and leaves it
         if (distance === undefined || distance > 1 || !distance && to.y >= this.getHeight(to.x, to.z)) return undefined;
         return {distance, normal: this.getNormal(from.x + (to.x - from.x) * distance, from.z + (to.z - from.z) * distance)};
     }
 
+    /** The normal of the triangle at a place, not smoothed across the cells as getNormal's, so a cliff one cell wide
+     *  is as steep at its edges as in its middle, for the wall rule
+     *  @param {number} x
+     *  @param {number} z
+     *  @return {Vector3}
+     *  @ignore */
+    faceNormal(x, z)
+    {
+        // the slope of the triangle getHeight reads there, from its corners, flat off the map's edges
+        const p = this.pos3D, columns = this.columns, rows = this.rows, h = this.heights, size = this.mapSize;
+        if (columns < 2 || rows < 2) return vec3(0, 1, 0);
+        const u = (x - p.x) / size.x + .5, v = (z - p.z) / size.y + .5;
+        const cu = clamp(u * (columns - 1), 0, columns - 1), cv = clamp(v * (rows - 1), 0, rows - 1);
+        const i = min(floor(cu), columns - 2), j = min(floor(cv), rows - 2), fu = cu - i, fv = cv - j;
+        const a = h[j][i], b = h[j+1][i], c = h[j+1][i+1], d = h[j][i+1];
+        let du = fu + fv <= 1 ? d - a : c - b, dv = fu + fv <= 1 ? b - a : c - d;
+        (u < 0 || u > 1) && (du = 0), (v < 0 || v > 1) && (dv = 0);
+        const gx = du * (columns - 1) / size.x * this.height, gz = dv * (rows - 1) / size.y * this.height;
+        return vec3(-gx, 1, -gz).normalize();
+    }
+
+    /** Where a move across the map first meets a face that rises past its step: ground steeper than a slope, each
+     *  face measured from where its run of steep ground began, or from the foot, a quarter of a cell at a time, so
+     *  each riser of a stair is measured alone and climbs though they add up past the step, while a cliff is met
+     *  whole however slowly it is walked into and at whatever angle; the face's way across, toward higher ground,
+     *  and how far along the move
+     *  @param {Vector3} from
+     *  @param {Vector3} to
+     *  @param {number} foot - The height of its foot at the start, or of the ground under it when that is higher
+     *  @param {number} step - How much a face may rise
+     *  @param {number} steep - The least normal y that is not a wall
+     *  @param {number} ahead - How far past the end it looks at least, so a slow walk up a cliff is a walk into it
+     *  @param {number} [side] - Half its width, how far past the end it looks when that is more
+     *  @return {{nx: number, nz: number, distance: number}|undefined}
+     *  @ignore */
+    wallAhead(from, to, foot, step, steep, ahead, side=0)
+    {
+        const dx = to.x - from.x, dz = to.z - from.z, length = hypot(dx, dz);
+        if (!length) return;
+        const cell = min(this.mapSize.x / (this.columns - 1), this.mapSize.y / (this.rows - 1));
+        const reach = length + max(ahead, side), count = min(ceil(reach / cell * 4), 1e3);
+        // a face's top, the ground the run of steep ground ends on, counts with it, as a sample may step over the
+        // last of the face; its way across is the face's
+        let base = foot, face;
+        for (let i = 1; i <= count; ++i)
+        {
+            const distance = reach * i / count, x = from.x + dx * distance / length, z = from.z + dz * distance / length;
+            const height = this.getHeight(x, z), n = this.faceNormal(x, z), l = hypot(n.x, n.z);
+            const isSteep = n.y < steep && l;
+            isSteep && (face = {nx: n.x / l, nz: n.z / l, distance});
+            if (face && height > base + step)
+                return {...face, distance};
+            if (!isSteep)
+                base = max(foot, height), face = undefined; // ground it can stand on, where the next face starts
+        }
+    }
+
     /** Keep an object above the ground, called by the engine for each object with collideLevel
      *  @param {EngineObject3D} o
      *  @param {Vector3} oldPos - Where it was before it moved
-     *  @param {boolean} [wasOn] - It stood on this map last frame
+     *  @param {boolean} [wasOn] - It stood on this shape last frame, or on another level shape and no shape grounded it
+     *    this frame, a second pass, so it is followed down from a seam
      *  @ignore */
     levelCollide3D(o, oldPos, wasOn)
     {
-        const p = o.pos3D, m = this.pos3D, size = this.mapSize;
-        if (abs(p.x - m.x) > size.x / 2 || abs(p.z - m.z) > size.y / 2) return; // off the map
+        const p = o.pos3D, m = this.pos3D, size = this.mapSize, hx = size.x / 2, hz = size.y / 2;
         const half = o.size3D.y * abs(o.scale3D.y) / 2;
+        if (abs(p.x - m.x) > hx || abs(p.z - m.z) > hz) return; // off the map
         let ground = this.getHeight(p.x, p.z);
+        // the wall rule, as a MeshCollider's: ground steeper than its groundAngle and than about 45 degrees that it
+        // would rise onto, past its step, the quarter of its height the sweep below lets it take, is a wall to walk
+        // into: it goes on till its side is at the wall, and the rest of the move and the speed into it are taken
+        // back, so it slides along the foot of a cliff and does not walk up it, and a curb lower than its step is
+        // walked over; read where the move first rises past the step, looking that quarter of its height ahead, as
+        // a MeshCollider's step ray is, since at a corner or a move at an angle the slope where it ends faces across
+        // the move, or is the flat top, and a slow walk rises less than its step each frame; one that slid along it
+        // and still rises past the step, into an inside corner, goes only as far as its side reaches the wall
+        if (oldPos && this.steepestFace < min(cos(o.groundAngle), .7))
+        {
+            const foot = max(oldPos.y - half, this.getHeight(oldPos.x, oldPos.z)), step = half / 2;
+            const cell = min(size.x / (this.columns - 1), size.y / (this.rows - 1));
+            const side = min(o.size3D.x * abs(o.scale3D.x), o.size3D.z * abs(o.scale3D.z)) / 2;
+            const steep = min(cos(o.groundAngle), .7), wall = this.wallAhead(oldPos, p, foot, step, steep, half / 2, side);
+            // the part of the move from oldPos to p before its side meets a wall found along it, none when that is up
+            // the steep slope itself, a ramp, which it would creep up a little each frame
+            const oldFoot = oldPos.y - half, upTo = (hit)=>
+            {
+                const dx = p.x - oldPos.x, dz = p.z - oldPos.z, f = clamp((hit.distance - side) / hypot(dx, dz), 0, 1);
+                const x = oldPos.x + dx * f, z = oldPos.z + dz * f;
+                return f && this.getHeight(x, z) > oldFoot + 1e-6 && this.getNormal(x, z).y < steep ? 0 : f;
+            };
+            if (wall)
+            {
+                const {nx, nz} = wall, f = upTo(wall), dx = p.x - oldPos.x, dz = p.z - oldPos.z;
+                let rx = dx * (1 - f), rz = dz * (1 - f);
+                const into = rx * nx + rz * nz;
+                if (into < 0)
+                    rx -= nx * into, rz -= nz * into;
+                p.x = oldPos.x + dx * f + rx, p.z = oldPos.z + dz * f + rz;
+                const corner = this.wallAhead(oldPos, p, foot, step, steep, half / 2, side), g = corner ? upTo(corner) : 1;
+                if (g < 1)
+                    p.x = oldPos.x + (p.x - oldPos.x) * g, p.z = oldPos.z + (p.z - oldPos.z) * g;
+                // the speed into it is taken back once it reached the wall, not while the wall is only ahead of a
+                // move it made whole, as a body coasting toward a cliff does
+                const v = o.velocity3D, vInto = v.x * nx + v.z * nz, cut = f < 1 || into < 0 || g < 1;
+                if (cut && vInto < 0)
+                    v.x -= nx * vInto, v.z -= nz * vInto;
+            }
+            // and along the push, as a MeshCollider's step ray looks: with ground too steep to stand on under it or
+            // under its side, rising away from it, a face that rises past its step out that way, looked for through
+            // that place from its other side, so the treads under it set where a face starts, takes back the part of
+            // the move and the speed up it, so a move along a cliff at a shallow angle, which meets the face only as
+            // a gentle rise along the move, does not climb it, and its side stops at the face; looked at along the
+            // move in steps of half a cell, as a MeshCollider cuts its move, so a fast one does not step over a face
+            // one cell wide; at the first place a face stops it the rest of the move goes on across the face, looked
+            // at the same way from there, fifteen times at most, then it stays where the last face stopped it
+            let startX = oldPos.x, startZ = oldPos.z;
+            const ring = 4 * max(2, ceil(PI * side / 2 / max(.5, cell * 2)));
+            for (let pass = 0; pass < 16; ++pass)
+            {
+                const moveX = p.x - startX, moveZ = p.z - startZ;
+                const steps = min(ceil(hypot(moveX, moveZ) / cell * 2), 64);
+                let hit;
+                for (let k = 1; k <= steps && !hit; ++k)
+                {
+                    const t = k / steps, qx = startX + moveX * t, qz = startZ + moveZ * t;
+                    for (let i = 0; i <= ring && !hit; ++i)
+                    {
+                        // round its side no further apart than half a unit or two cells, and its middle last
+                        const a = i * 2 * PI / ring, r = i < ring ? side : 0, ca = cos(a), sa = sin(a);
+                        const sx = qx + (abs(ca) < 1e-9 ? 0 : ca) * r, sz = qz + (abs(sa) < 1e-9 ? 0 : sa) * r;
+                        const n = this.faceNormal(sx, sz), l = hypot(n.x, n.z);
+                        if (n.y >= steep || !l) continue;
+                        const ux = -n.x / l, uz = -n.z / l, into = (moveX * ux + moveZ * uz) * t;
+                        const along = (sx - qx) * ux + (sz - qz) * uz;
+                        const bx = sx - ux * (along + side), bz = sz - uz * (along + side);
+                        if (into > 0 && along >= 0 && this.wallAhead(vec3(bx, 0, bz),
+                            vec3(bx + ux * 1e-3, 0, bz + uz * 1e-3), foot, step, steep, along + side + half / 2))
+                        {
+                            // back only as far as it takes to leave the face, as a MeshCollider's push, at most the
+                            // move into it
+                            let back = 0;
+                            while (back < into && this.faceNormal(sx - ux * back, sz - uz * back).y < steep)
+                                back += cell / 4;
+                            hit = {ux, uz, x: qx - ux * min(back, into), z: qz - uz * min(back, into)};
+                        }
+                    }
+                }
+                if (!hit) break;
+                // the rest of the move from there, but the part of it into the face, and the speed into it
+                const {ux, uz} = hit, restX = p.x - hit.x, restZ = p.z - hit.z;
+                const restInto = pass < 15 ? max(0, restX * ux + restZ * uz) : 0;
+                p.x = pass < 15 ? hit.x + restX - ux * restInto : hit.x;
+                p.z = pass < 15 ? hit.z + restZ - uz * restInto : hit.z;
+                const v = o.velocity3D, vInto = v.x * ux + v.z * uz;
+                vInto > 0 && (v.x -= ux * vInto, v.z -= uz * vInto);
+                startX = hit.x, startZ = hit.z;
+            }
+            ground = this.getHeight(p.x, p.z);
+        }
         // only the ends of a move are kept above the ground, so a ridge it goes over is met by a sweep, as a
         // particle's move is, a quarter of its height up from its foot, from where it was to where it would stand: a
         // bump lower than that is walked over as before, and it goes up on the near side of anything taller
@@ -33934,14 +36039,42 @@ class HeightMap extends EngineObject3D
         {
             // one that stood on it and is not rising keeps to it going downhill, as far down as it moved across, so
             // it stays grounded down a slope as steep as 45 degrees instead of falling in small hops
-            const follow = wasOn && o.velocity3D.y <= 0 ? hypot(p.x - oldPos.x, p.z - oldPos.z) : 0;
+            const follow = wasOn && o.velocity3D.y <= this.velocity3D.y ? hypot(p.x - oldPos.x, p.z - oldPos.z) : 0;
             if (p.y - half > ground + follow) return;
         }
-        p.y = ground + half;
-        const v = o.velocity3D;
-        if (v.y < 0)
-            v.y *= -max(o.restitution, this.restitution);
-        o.groundObject = this;
+        // ground steeper than its groundAngle is not ground, as a MeshCollider's steep face is not: it is not stood
+        // on, so a jump can not climb it, and it is pushed out along the slope's normal, not straight up, so gravity
+        // slides it down whatever speed the game gives it across; one at the foot of a cliff, with gentle ground
+        // within half its width downhill, stands there, looked for along that half width, so on stairs with treads
+        // narrower than it the tread behind it is found and not the riser below that
+        const v = o.velocity3D, n = this.getNormal(p.x, p.z), cosGround = cos(o.groundAngle), l = hypot(n.x, n.z);
+        const reach = min(o.size3D.x * abs(o.scale3D.x), o.size3D.z * abs(o.scale3D.z)) / 2;
+        const gentleNear = ()=> [.25, .5, .75, 1].some((k)=>
+            this.getNormal(p.x + n.x / l * reach * k, p.z + n.z / l * reach * k).y >= cosGround);
+        if (n.y >= cosGround || l && gentleNear())
+        {
+            p.y = ground + half;
+            // its fall stopped relative to the map's own speed, so a body on a map that moves, a lift, goes with it
+            const lift = this.velocity3D.y;
+            if (v.y < lift)
+                v.y = lift - (v.y - lift) * max(o.restitution, this.restitution);
+            o.groundObject = this;
+        }
+        else
+        {
+            const depth = (ground + half - p.y) * n.y, into = v.dot(n), x = p.x, z = p.z;
+            p.set(p.x + n.x * depth, p.y + n.y * depth, p.z + n.z * depth);
+            // never under the ground where the push left it, as a pit or a post's normal, read across its cells, can
+            // push it sideways over higher ground; a push onto ground higher than its step, a ledge's top, is not
+            // made, it is lifted where it is, or the lift would carry it up the ledge
+            const pushedGround = this.getHeight(p.x, p.z);
+            if (pushedGround > ground + half / 2)
+                p.x = x, p.z = z, p.y = max(p.y, ground + half);
+            else
+                p.y = max(p.y, pushedGround + half);
+            if (into < 0)
+                v.set(v.x - n.x * into, v.y - n.y * into, v.z - n.z * into);
+        }
     }
 
     /** Keeps an eye on its placement, called automatically each frame */
@@ -33967,7 +36100,8 @@ class HeightMap extends EngineObject3D
  * - It draws nothing: make an EngineObject3D with the same mesh to see it, or with a mesh of its own to show more
  *   than collides; Debug Physics on the debug overlay draws its edges
  * - An object collides with it as a capsule as tall as its height and as wide as its narrowest side, so it rides up
- *   a step lower than its round foot and over small bumps, and one with collideAsSphere3D as its sphere; a flat
+ *   a step and over small bumps, one up to half its radius at a slow walk and up to most of its radius at a run,
+ *   and one with collideAsSphere3D as its sphere; a flat
  *   wide object, as a plank, is a sphere as thick as it is, at its middle, and its turn is not taken into account
  * - Its triangles are taken from the mesh in world space where it is, through its pos3D, rotation3D and scale3D, and
  *   taken again when it moves; call rebuild() after changing the mesh
@@ -33976,6 +36110,19 @@ class HeightMap extends EngineObject3D
  * - A fast object is moved in steps no longer than half its radius, so it does not go through a thin wall, up to 64
  *   steps a frame, so one moving more than 32 radii a frame may
  * - Particles with collideLevel hit it, render3D.pick and the camera's wall test hit its triangles, both sides
+ * - A V between two steep faces, a gully, holds an object standing in it only when both faces are in one
+ *   MeshCollider: a gully made of two, or of a MeshCollider beside a HeightMap, lets it sink into the sides and is
+ *   never ground, so make a gully one collider, or a HeightMap
+ * - An object walking across a steep gully, into one of its sides, rides a little up that side and drops back, so it
+ *   is on the ground only part of the time and a jump there may not come; walking along a gully holds it, so make
+ *   one wide enough, or its sides gentle enough, that a body is not pushed into a side to cross it
+ * - A gap that closes on an object, a V floor rising under a ceiling, squeezes it through one or the other, as no
+ *   collider can hold a body in less room than it has; leave a level room for its bodies
+ * - To be a lift, it moves by its velocity3D, which moves it before the objects and carries what stands on it; one
+ *   moved by setting pos3D, or in its own update, leaves a rider behind, a fast one dropping it through
+ * - A body walking down over a crest keeps the ground from one level shape onto another and from one solid onto
+ *   another, but from a level shape onto a solid ramp going down, or a solid onto one, it hops down, in the air for
+ *   a few frames; join a slope to a level shape with a level shape
  * @extends EngineObject3D
  * @memberof Render3D
  * @example
@@ -34001,7 +36148,19 @@ class MeshCollider extends EngineObject3D
         /** @type {{size: number, cells: Map<number, Array<number>>, big: Array<number>, min: Vector3, max: Vector3,
          *  seen: Int32Array, stamp: number}|undefined} */
         this.grid = undefined;                // the triangles by the cells they cover, see meshColliderNear
+        this.movedBy = vec3();                // how far its own velocity moved it in the pass movedPass
+        this.movedPass = -1;
         render3DLevel.push(this);
+    }
+
+    /** Move by its velocity, as any object, kept for what collides with it after, a lift's move
+     *  @ignore */
+    updatePhysics()
+    {
+        const x = this.pos3D.x, y = this.pos3D.y, z = this.pos3D.z;
+        super.updatePhysics();
+        this.movedBy.set(this.pos3D.x - x, this.pos3D.y - y, this.pos3D.z - z);
+        this.movedPass = engineObjectsUpdateCount;
     }
 
     /** Take the triangles from the mesh again, after it changed */
@@ -34029,9 +36188,11 @@ class MeshCollider extends EngineObject3D
     /** Keep an object out of the triangles, called by the engine for each object with collideLevel
      *  @param {EngineObject3D} o
      *  @param {Vector3} oldPos - Where it was before it moved
-     *  @param {boolean} [wasOn] - It stood on this one last frame
+     *  @param {boolean} [wasOn] - It stood on this shape last frame, or on another level shape and no shape grounded it
+     *    this frame, a second pass, so it is followed down from a seam
+     *  @param {boolean} [fromOther] - That level shape was another, so it is looked for below as far as it moved
      *  @ignore */
-    levelCollide3D(o, oldPos, wasOn) { meshColliderCollide(this, o, oldPos, wasOn); }
+    levelCollide3D(o, oldPos, wasOn, fromOther) { meshColliderCollide(this, o, oldPos, wasOn, fromOther); }
 
     /** Where a short move first meets a triangle, for a particle's move in one frame: the part of the move made
      *  before it, 0 to 1, and the triangle's normal facing back along the move; undefined when it meets none
@@ -34080,13 +36241,51 @@ class MeshCollider extends EngineObject3D
             const a = (g.min[axis] - o[axis]) / d[axis], b = (g.max[axis] - o[axis]) / d[axis];
             enter = max(enter, min(a, b)), exit = min(exit, max(a, b));
         }
-        if (enter > exit) return;
+        if (enter > exit || exit === Infinity) return; // a ray of no direction hits nothing
+        // then the grid's cells along the ray, nearest first, each triangle tested once, until a hit is nearer than the
+        // next cell, so a pick costs the triangles it passes, not all of them
+        const s = g.size, stamp = ++g.stamp, seen = g.seen, tris = this.triangles;
         let best;
-        for (let i = 0; i < this.triangleCount; ++i)
+        const test = (i)=>
         {
-            const t = meshColliderRayTriangle(this.triangles, i * 9, o.x, o.y, o.z, d.x, d.y, d.z);
+            if (seen[i] === stamp) return;
+            seen[i] = stamp;
+            const t = meshColliderRayTriangle(tris, i * 9, o.x, o.y, o.z, d.x, d.y, d.z);
             if (t !== undefined && !(t >= best))
                 best = t;
+        };
+        // a ray through more cells than there are triangles, across a sparse collider, tests them all instead
+        let cells = 1;
+        for (const axis of ['x', 'y', 'z'])
+            cells += abs(d[axis]) * (exit - enter) / s;
+        if (cells > this.triangleCount)
+        {
+            for (let i = 0; i < this.triangleCount; ++i)
+                test(i);
+            return best;
+        }
+        g.big.forEach(test);
+        // the walk keeps to the grid's cells, and starts one cell back on each axis it moves along, since the point
+        // it enters at can round past a face on a cell border, as a floor at y = 0 always is
+        const cell = [0, 0, 0], step = [0, 0, 0], next = [0, 0, 0], delta = [0, 0, 0], lo = [0, 0, 0], hi = [0, 0, 0];
+        ['x', 'y', 'z'].forEach((axis, j)=>
+        {
+            lo[j] = floor(g.min[axis] / s), hi[j] = floor(g.max[axis] / s);
+            step[j] = sign(d[axis]);
+            cell[j] = clamp(floor((o[axis] + d[axis] * enter) / s) - step[j], lo[j], hi[j]);
+            next[j] = d[axis] ? ((cell[j] + (d[axis] > 0 ? 1 : 0)) * s - o[axis]) / d[axis] : Infinity;
+            delta[j] = d[axis] ? s / abs(d[axis]) : Infinity;
+        });
+        // and stops a cell's worth of the ray past where it leaves the box, more than any rounding, so a shallow
+        // pick leaving a terrain through its top does not walk on along the whole row
+        const stop = exit + min(delta[0], delta[1], delta[2]);
+        for (;;)
+        {
+            g.cells.get(render3DGridKey(cell[0], cell[1], cell[2]))?.forEach(test);
+            const j = next[0] <= next[1] && next[0] <= next[2] ? 0 : next[1] <= next[2] ? 1 : 2;
+            if ((best ?? Infinity) <= next[j] || next[j] > stop) break;
+            cell[j] += step[j], next[j] += delta[j];
+            if (cell[j] < lo[j] || cell[j] > hi[j]) break;
         }
         return best;
     }
@@ -34340,14 +36539,28 @@ function meshColliderPush(collider, i, ax, ay, az, bx, by, bz, radius, push)
     return true;
 }
 
+// whether a collider rises past a capsule's step in a direction across: a ray that way from its foot raised by its
+// radius, the step it rounds onto, meets a face within twice its radius
+function meshColliderRiseAhead(collider, center, half, radius, dx, dz)
+{
+    const origin = vec3(center.x, center.y - half, center.z);
+    const hit = collider.levelRaycast3D(new Ray3D(origin, vec3(dx, 0, dz)));
+    return hit !== undefined && hit >= 0 && hit <= 2 * radius;
+}
+
 // push a capsule standing at a center out of a collider's triangles near it, the deepest touch first each pass, so the
 // face under it is met before the edges of the ones beside it; it stands on what faces within groundAngle of
 // straight up, a face or an edge of one, as a step's, which lifts it onto the step; a push on such a face goes
 // straight up, so it does not creep down a slope; the rest are walls, their unit normals kept for the velocity
+// - moveX and moveZ, the move across this step, say whether it goes into a steep face, see the wall rule below
 const meshColliderPushed = [0, 0, 0];
-function meshColliderResolve(collider, center, half, radius, groundAngle, walls)
+function meshColliderResolve(collider, center, half, radius, groundAngle, walls, moveX=0, moveZ=0)
 {
-    let ground = false;
+    let ground = false, sumX = 0, sumY = 0, sumZ = 0;
+    // the steep faces' pushes: across, their way across, their own normal on the side they push to, their wall
+    // entry, their triangle, and whether the push is on the face, within about 26 degrees of its normal, not off an
+    // edge, so the bend where a ramp in the crease meets the level V still holds it
+    const steep = [];
     const push = meshColliderPushed, cosGround = cos(groundAngle), n = collider.normals;
     for (let pass = 0; pass < 8; ++pass)
     {
@@ -34367,6 +36580,7 @@ function meshColliderResolve(collider, center, half, radius, groundAngle, walls)
                 deepest = i, depth = d, up = faceUp, px = push[0], py = push[1], pz = push[2];
         }
         if (deepest < 0) break;
+        sumX += px, sumY += py, sumZ += pz;
         // the triangle's own normal, on the side it pushes to
         const k = deepest * 3, along = n[k]*px + n[k+1]*py + n[k+2]*pz, length = depth ** .5;
         if (n[k+1] * sign(along) >= cosGround && py > 0)
@@ -34379,9 +36593,95 @@ function meshColliderResolve(collider, center, half, radius, groundAngle, walls)
         }
         else
         {
-            center.x += px, center.y += py, center.z += pz;
-            walls.push(vec3(px / length, py / length, pz / length));
+            // the wall rule: a face too steep to stand on and steeper than about 45 degrees pushes level, as far as
+            // it takes to leave the face, when the move goes into it and it rises past the body's step, a ray across
+            // at its foot plus its radius, so walking into it does not climb it; otherwise along its normal, so a body
+            // in a V between two steep faces is held there and one on a steep face slides down it, a body with a tiny
+            // groundAngle rolls on a ramp, and a curb lower than its step is walked over
+            const level = px*px + pz*pz, l = level ** .5;
+            if (py > 0 && level > depth * .01 && n[k+1] * sign(along) < .7 && px * moveX + pz * moveZ < 0 &&
+                meshColliderRiseAhead(collider, center, half, radius, -px / l, -pz / l))
+            {
+                const s = depth / level;
+                center.x += px * s, center.z += pz * s;
+                steep.push([px * s, pz * s, px / l, pz / l, n[k] * sign(along), n[k+1] * sign(along),
+                    n[k+2] * sign(along), walls.length, deepest, abs(along) > length * .9]);
+                walls.push(vec3(px / l, 0, pz / l));
+            }
+            else
+            {
+                center.x += px, center.y += py, center.z += pz;
+                const l = hypot(px, pz);
+                l && steep.push([px, pz, px / l, pz / l, n[k] * sign(along), n[k+1] * sign(along),
+                    n[k+2] * sign(along), walls.length, deepest, abs(along) > length * .9]);
+                walls.push(vec3(px / length, py / length, pz / length));
+            }
         }
+    }
+    // held by faces whose pushes add up to within groundAngle of up, as a V between two steep faces is, it stands
+    // there, so a game's jump takes it out; one steep face alone still slides
+    if (!ground && sumY > 0 && sumY >= cosGround * hypot(sumX, sumY, sumZ)) ground = true;
+    // in a V, two steep faces facing each other across it whose crease, the line along both, is no steeper than
+    // groundAngle: the pushes along the crease of the faces that hold it are taken back, of its place and of the
+    // speed the walls take, so a V whose floor slopes does not carry it down the crease, standing or walking up it,
+    // as a ground face's push is straight up; across the crease they hold it between the faces; a steeper crease is
+    // a chute, which it slides down, or a corner of walls, which holds it, and a face across the crease, an end wall,
+    // keeps its push
+    for (let i = 0; i < steep.length; ++i)
+    for (let j = i + 1; j < steep.length; ++j)
+    {
+        const A = steep[i], B = steep[j];
+        // both facing up: a V of a roof over it, an A-frame, is no ground to stand on
+        if (A[2] * B[2] + A[3] * B[3] > -.5 || !(A[5] > 0) || !(B[5] > 0)) continue;
+        const x3 = A[5] * B[6] - A[6] * B[5], y3 = A[6] * B[4] - A[4] * B[6], z3 = A[4] * B[5] - A[5] * B[4];
+        const length = hypot(x3, y3, z3);
+        if (!(length > 1e-9) || abs(y3) > sin(groundAngle) * length) continue;
+        // a face holds the crease by a push on the face along it, not off an edge, as a riser across the V's is
+        const holds = (e)=> e[9] && abs(e[4] * x3 + e[5] * y3 + e[6] * z3) <= .2 * length;
+        const level = hypot(x3, z3), cx = x3 / level, cz = z3 / level; // the crease's way across, for the pushes
+        // the faces that hold the crease hold it as ground does: their pushes to the side are taken back and it is
+        // lifted straight up clear of them, so walking up a V whose floor rises it rises with it, not sunk into the
+        // sides by two level pushes that cancel; a face across the crease, an end wall, keeps its push
+        let sideX = 0, sideZ = 0;
+        for (const e of steep)
+            holds(e) && (sideX += e[0], sideZ += e[1]);
+        center.x -= sideX, center.z -= sideZ;
+        // lifted by each face's own normal, how far in it is over how upright it is, a face almost upright too, no
+        // more than its radius all told; a lift that leaves it under something pushing it down, a ceiling,
+        // is undone
+        const fromY = center.y;
+        for (let lift = 0; lift < 4; ++lift)
+        {
+            let up = 0;
+            for (const e of steep)
+            {
+                if (!holds(e) || !(e[5] > 0) || !meshColliderPush(collider, e[8], center.x, center.y - half, center.z,
+                    center.x, center.y + half, center.z, radius, push)) continue;
+                const d = push[0] * e[4] + push[1] * e[5] + push[2] * e[6];
+                d > 0 && (up = max(up, d / e[5]));
+            }
+            if (!up) break;
+            center.y = min(center.y + up, fromY + radius);
+        }
+        for (const i of meshColliderNear(collider, center.x - radius, center.y - half - radius, center.z - radius,
+            center.x + radius, center.y + half + radius, center.z + radius))
+            if (!steep.some((e)=> e[8] === i && holds(e)) && meshColliderPush(collider, i, center.x, center.y - half,
+                center.z, center.x, center.y + half, center.z, radius, push) && push[1] < 0 && center.y > fromY)
+            {
+                center.y = fromY;
+                break;
+            }
+        ground = true;
+        for (const e of steep)
+        {
+            if (!holds(e)) continue;
+            const w = walls[e[7]], into = w.x * cx + w.z * cz;
+            w.x -= cx * into, w.z -= cz * into;
+            const wl = w.length();
+            wl && w.scale(1 / wl);
+        }
+        i = steep.length; // once
+        break;
     }
     return ground;
 }
@@ -34389,7 +36689,7 @@ function meshColliderResolve(collider, center, half, radius, groundAngle, walls)
 // keep an object out of a collider: its move from where it was in steps no longer than half its width, each pushed out
 // of the triangles near it; a fall stopped by ground stands it there and bounces by restitution, a wall takes the
 // speed into it; one that stood on it last frame and is not rising follows it down a slope as far as it moved across
-function meshColliderCollide(collider, o, oldPos, wasOn)
+function meshColliderCollide(collider, o, oldPos, wasOn, fromOther)
 {
     meshColliderBake(collider);
     if (!collider.triangleCount) return;
@@ -34397,12 +36697,21 @@ function meshColliderCollide(collider, o, oldPos, wasOn)
     const radius = o.collideAsSphere3D ? max(sx, sy, sz) / 2 : min(sx, sy, sz) / 2;
     const half = o.collideAsSphere3D ? 0 : max(0, sy / 2 - radius);
     if (!(radius > 0)) return;
-    const p = o.pos3D, from = oldPos || p;
+    // swept from where it was, carried by the collider's own move this pass, a lift's, which moved before it, so the
+    // sweep is its move on the collider and a fast lift does not throw it off or take it through
+    const p = o.pos3D, moved = collider.movedPass === engineObjectsUpdateCount && !render3DSettlingLevel ?
+        collider.movedBy : undefined;
+    const from = oldPos ? moved ? oldPos.add(moved) : oldPos : p;
     const mx = p.x - from.x, my = p.y - from.y, mz = p.z - from.z, move = hypot(mx, my, mz);
-    // nothing near where it went or came from, which is most objects most of the time
+    // nothing near where it went or came from, which is most objects most of the time; one that stood on another
+    // level shape last frame and is not rising is looked for as far below as it moved across, so walking down off a
+    // map onto a mesh stays on the ground, as the follow below looks that far; not the one it stood on, which would
+    // pull it back down as it climbs a step onto another
     const g = collider.grid, reach = radius + half;
+    const lift = collider.velocity3D.y; // its own speed, a lift's, which what stands on it goes with
+    const below = fromOther && o.velocity3D.y <= lift ? hypot(mx, mz) + 1e-3 : 0;
     if (max(p.x, from.x) + radius < g.min.x || min(p.x, from.x) - radius > g.max.x ||
-        max(p.y, from.y) + reach < g.min.y || min(p.y, from.y) - reach > g.max.y ||
+        max(p.y, from.y) + reach < g.min.y || min(p.y, from.y) - reach - below > g.max.y ||
         max(p.z, from.z) + radius < g.min.z || min(p.z, from.z) - radius > g.max.z)
         return;
     const steps = min(64, max(1, ceil(move / (radius / 2))));
@@ -34411,18 +36720,29 @@ function meshColliderCollide(collider, o, oldPos, wasOn)
     for (let step = 1; step <= steps; ++step)
     {
         center.x += mx / steps, center.y += my / steps, center.z += mz / steps;
-        ground = meshColliderResolve(collider, center, half, radius, o.groundAngle, walls); // where it ends up
+        ground = meshColliderResolve(collider, center, half, radius, o.groundAngle, walls, mx, mz); // where it ends up
     }
-    if (!ground && wasOn && o.velocity3D.y <= 0)
+    if (!ground && wasOn && o.velocity3D.y <= lift)
     {
-        // down a slope: try it as far below as it moved across, and keep that if it lands
-        const follow = hypot(mx, mz) + 1e-3, below = center.copy();
-        below.y -= follow;
-        if (meshColliderResolve(collider, below, half, radius, o.groundAngle, []) && below.y < center.y)
-            center.set(below.x, below.y, below.z), ground = true;
+        // down a slope: try it below, as far down as it moved across, in steps of half its radius as the move is,
+        // and keep the first that lands, so a fast one is not pushed through a floor thinner than it or past it
+        const follow = hypot(mx, mz) + 1e-3, down = min(64, ceil(follow / (radius / 2)));
+        for (let i = 1; i <= down; ++i)
+        {
+            const below = vec3(center.x, center.y - follow * i / down, center.z);
+            if (meshColliderResolve(collider, below, half, radius, o.groundAngle, [], mx, mz))
+            {
+                below.y < center.y && (center.set(below.x, below.y, below.z), ground = true);
+                break;
+            }
+        }
     }
     p.set(center.x, center.y, center.z);
     const v = o.velocity3D, restitution = max(o.restitution, collider.restitution);
+    // standing, its fall is stopped first, so the steep faces of a V take back only speed across, and its fall
+    // taken back along them does not leave it a speed down the crease
+    // relative to the collider's own speed, so a body on one that moves, a lift, goes with it
+    ground && v.y < lift && (v.y = lift - (v.y - lift) * restitution);
     for (const n of walls)
     {
         const into = v.dot(n);
@@ -34430,11 +36750,7 @@ function meshColliderCollide(collider, o, oldPos, wasOn)
             v.set(v.x - n.x * into * (1 + restitution), v.y - n.y * into * (1 + restitution), v.z - n.z * into * (1 + restitution));
     }
     if (ground)
-    {
-        if (v.y < 0)
-            v.y *= -restitution;
         o.groundObject = collider;
-    }
 }
 
 // read an image's pixel bytes through the engine's work canvas, as {data, width, height}
@@ -34480,10 +36796,15 @@ function render3DReadPixels(textureInfo)
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+// whether the press held is the UI's, begun on a button, a slider or a plain panel, which the camera controls do
+// not turn by: a button's own press over it, and for the left button, the one the UI takes, a UI object held
+const render3DUIHasPress = (button=0)=> !!(button === 0 && uiSystem?.activeObject || uiSystem?.isPressOverUI(button));
+
 /**
  * CameraControl3D - Drag to turn the camera around a point, roll the wheel to zoom
  * - An EngineObject3D, so move its pos3D to follow something, or parent it to an object
- * - A camera of the camera plugin: the newest made drives the view, after the objects move each update
+ * - A camera of the camera plugin: the newest made drives the view, after the objects move each update, and only
+ *   the one driving reads the mouse
  * - Destroy it to hand the camera back, and it stops driving the camera
  * - Set persistent to keep it when engineObjectsDestroy clears out a level
  * - Every part of it is a field, so a game can change the buttons, speeds and limits
@@ -34522,6 +36843,7 @@ class CameraControl3D extends EngineObject3D
         /** @property {Vector2} - Lowest and highest pitch, so it cannot tip over the top, widened to hold the pitch given */
         this.pitchRange = vec2(min(-.2, pitch), max(1.4, pitch));
         this.cameraNew = true; // made this update, see cameraUpdatePost
+        this.cameraSnapped = false; // snapped while another drove, see cameraUpdatePost
         this.activate();
     }
 
@@ -34537,7 +36859,9 @@ class CameraControl3D extends EngineObject3D
     /** Read the mouse and turn the orbit, called automatically each frame */
     update()
     {
-        if (mouseIsDown(this.dragButton))
+        // only the camera driving the view reads the mouse, so one under a newer camera keeps its orbit
+        const driving = cameraDriver() === this;
+        if (driving && mouseIsDown(this.dragButton) && !render3DUIHasPress(this.dragButton))
         {
             // the scene follows the drag
             this.yaw -= mouseDeltaScreen.x * this.dragSpeed;
@@ -34546,8 +36870,9 @@ class CameraControl3D extends EngineObject3D
         else
             this.yaw += this.idleSpin;
         this.pitch = clamp(this.pitch, this.pitchRange.x, this.pitchRange.y);
-        if (this.zoomSpeed && mouseWheel)
-            this.distance = clamp(this.distance * (1 + sign(mouseWheel) * this.zoomSpeed), this.zoomRange.x, this.zoomRange.y);
+        if (driving && this.zoomSpeed && mouseWheel)
+            // by how far the wheel turned, a notch a step, a pinch a part of one each frame
+            this.distance = clamp(this.distance * (1 + this.zoomSpeed) ** mouseWheel, this.zoomRange.x, this.zoomRange.y);
     }
 
     /** Camera controls draw nothing */
@@ -34617,7 +36942,8 @@ class ThirdPersonCamera3D extends EngineObject3D
         this.manualControl = true;
         /** @property {number} - Mouse button that turns it while held, 0 is left and 2 is right */
         this.dragButton = 2;
-        /** @property {boolean} - Capture the mouse on a press of dragButton, so turning needs no button held */
+        /** @property {boolean} - Capture the mouse on a press of dragButton, so turning needs no button held; let go
+         *  when another camera drives, unless that one captures it too, or when this one is destroyed */
         this.lockPointer = false;
         /** @property {number} - How far a pixel of mouse movement turns it */
         this.lookSpeed = .003;
@@ -34633,6 +36959,7 @@ class ThirdPersonCamera3D extends EngineObject3D
         this.wallSmoothing = .2;
 
         this.cameraNew = true;          // made this update, see cameraUpdatePost
+        this.cameraSnapped = false; // snapped while another drove, see cameraUpdatePost
         this.pivot = vec3();            // where the pole starts now, eased toward the target
         this.poleLength = distance;     // how long the pole is now, shorter at a wall
         /** @type {Vector3|undefined} */
@@ -34679,7 +37006,8 @@ class ThirdPersonCamera3D extends EngineObject3D
         this.pivot = pos.add(this.pivotOffset);
         this.targetFrom = pos.copy();
         this.poleLength = this.getPoleLimit();
-        cameraDriver() === this && this.placeCamera(); // a camera not driving keeps its place for later
+        // a camera not driving keeps its place for later, and starts from it when it takes over, a cut
+        cameraDriver() === this ? this.placeCamera() : this.cameraSnapped = true;
     }
 
     /** Turn, swing and pull in, and set the camera, called by the camera plugin after the objects update */
@@ -34688,10 +37016,10 @@ class ThirdPersonCamera3D extends EngineObject3D
         // by hand, the mouse and a stick
         if (this.manualControl)
         {
-            if (this.lockPointer && mouseWasPressed(this.dragButton))
-                pointerLockRequest();
+            if (this.lockPointer && mouseWasPressed(this.dragButton) && !render3DUIHasPress(this.dragButton))
+                cameraLockRequest(this);
             const d = mouseDeltaScreen, stick = gamepadStick(this.stick);
-            if ((pointerLockIsActive() || mouseIsDown(this.dragButton)) && (d.x || d.y))
+            if ((pointerLockIsActive() || mouseIsDown(this.dragButton) && !render3DUIHasPress(this.dragButton)) && (d.x || d.y))
                 this.turn(-d.x * this.lookSpeed, d.y * this.lookSpeed);
             if (stick.x || stick.y)
                 this.turn(-stick.x * this.stickSpeed * timeDelta, -stick.y * this.stickSpeed * timeDelta);
@@ -34711,8 +37039,12 @@ class ThirdPersonCamera3D extends EngineObject3D
                     hypot(move.x, move.z) > this.swingSpeed * timeDelta ? move : undefined;
                 if (way && (way.x || way.z))
                 {
-                    const turn = atan2(-way.x, -way.z) - this.yaw;
-                    this.yaw += (mod(turn + PI, 2*PI) - PI) * cameraSmoothFactor(this.swingSmoothing);
+                    const turn = mod(atan2(-way.x, -way.z) - this.yaw + PI, 2*PI) - PI;
+                    // moving back toward the camera swings it less, and straight back not at all: there the short
+                    // way round flips side with each wobble, and with keys that move the way the camera faces, each
+                    // swing turns the move, so it shook from side to side; a facing holds still, so it swings fully
+                    const back = this.useFacing ? 1 : clamp((PI * .9 - abs(turn)) / (PI * .3), 0, 1);
+                    this.yaw += turn * back * cameraSmoothFactor(this.swingSmoothing);
                 }
             }
             this.pivot = this.pivot.lerp(pos.add(this.pivotOffset), cameraSmoothFactor(this.smoothing));
@@ -34763,14 +37095,6 @@ class ThirdPersonCamera3D extends EngineObject3D
         this.pos3D = render3D.camera.pos.copy();
     }
 
-    /** Let go of the mouse and stop driving the camera
-     *  @param {boolean} [immediate] */
-    destroy(immediate)
-    {
-        this.lockPointer && pointerLockIsActive() && pointerLockExit();
-        super.destroy(immediate);
-    }
-
     /** Camera controls draw nothing */
     render3D() {}
 }
@@ -34784,7 +37108,8 @@ class ThirdPersonCamera3D extends EngineObject3D
  * - An EngineObject3D that moves by velocity3D, so give it a size3D and call setCollision to walk into solid
  *   objects instead of through them; walking keeps velocity3D.y, so render3D.gravity can pull it down
  * - Starts from wherever render3D.camera is, so it can take over from another camera without a jump
- * - A camera of the camera plugin: the newest made drives the view, after the objects move each update
+ * - A camera of the camera plugin: the newest made drives the view, after the objects move each update; only the
+ *   one driving reads input, so under a newer camera, a cutscene's, it stands still and still falls
  * - As the child of an EngineObject3D, like a player on a ship, its yaw, pitch and walking are relative to the parent,
  *   so it turns and moves with it
  * - Destroy it to hand the camera back
@@ -34819,8 +37144,12 @@ class FirstPersonCamera3D extends EngineObject3D
         this.pitchRange = vec2(-1.5, 1.5);
         /** @property {boolean} - Move the way it looks, up and down included, instead of walking level */
         this.fly = false;
-        /** @property {boolean} - Capture the mouse on a click, so looking needs no button held */
+        /** @property {boolean} - Capture the mouse on a click, so looking needs no button held; let go when another
+         *  camera drives, unless that one captures it too, or when this one is destroyed */
         this.lockPointer = true;
+        /** @property {number} - Mouse button that looks while held, and captures the mouse with lockPointer, 0 is
+         *  left and 2 is right */
+        this.dragButton = 0;
         /** @property {number} - Which gamepad stick looks around, 1 is usually the right one, -1 for none */
         this.stick = 1;
         /** @property {number} - Which gamepad stick moves it, like the keys, 0 is usually the left one, -1 for none */
@@ -34835,6 +37164,7 @@ class FirstPersonCamera3D extends EngineObject3D
          *  outside the body and sees through a ceiling it stands under */
         this.eyeHeight = 0;
         this.cameraNew = true; // made this update, see cameraUpdatePost
+        this.cameraSnapped = false; // snapped while another drove, see cameraUpdatePost
         this.activate();
     }
 
@@ -34873,36 +37203,32 @@ class FirstPersonCamera3D extends EngineObject3D
         // only a root moves by its own physics, a child follows its parent, so gravity would still pull one that flies
         false&&ASSERT(!this.fly || !this.parent, 'a flying FirstPersonCamera3D moves on its own, it cannot be a child');
 
+        // only the camera driving the view reads input, so one under a newer camera, a cutscene's, stands still and
+        // still falls
+        const driving = cameraDriver() === this;
+
         // a click captures the mouse, then it looks around while captured or while a button is held
-        if (this.lockPointer && mouseWasPressed(0))
-            pointerLockRequest();
-        if (pointerLockIsActive() || mouseIsDown(0))
+        if (driving && this.lockPointer && mouseWasPressed(this.dragButton) && !render3DUIHasPress(this.dragButton))
+            cameraLockRequest(this);
+        if (driving && (pointerLockIsActive() || mouseIsDown(this.dragButton) && !render3DUIHasPress(this.dragButton)))
         {
             this.yaw -= mouseDeltaScreen.x * this.lookSpeed;
             this.pitch -= mouseDeltaScreen.y * this.lookSpeed;
         }
         // a gamepad stick looks too, the touch gamepad's included, its y up
-        const look = gamepadStick(this.stick);
+        const look = driving ? gamepadStick(this.stick) : vec2();
         this.yaw -= look.x * this.stickSpeed * timeDelta;
         this.pitch += look.y * this.stickSpeed * timeDelta;
         this.pitch = clamp(this.pitch, this.pitchRange.x, this.pitchRange.y);
 
         // the keys or a stick move it level, or the way it looks when flying, and walking keeps its fall
-        const input = keyDirection().add(gamepadStick(this.moveStick));
+        const input = driving ? keyDirection().add(gamepadStick(this.moveStick)) : vec2();
         const move = vec3(input.x, 0, -input.y).clampLength(1).scale(this.moveSpeed)
             .rotateX(this.fly ? this.pitch : 0).rotateY(this.yaw);
         this.velocity3D = this.fly ? move : vec3(move.x, this.velocity3D.y, move.z);
         // a jump from the ground, level collision sets what it stands on
-        if (this.jumpSpeed && !this.fly && this.groundObject && (keyWasPressed('Space') || gamepadWasPressed(0)))
+        if (driving && this.jumpSpeed && !this.fly && this.groundObject && (keyWasPressed('Space') || gamepadWasPressed(0)))
             this.velocity3D.y = this.jumpSpeed;
-    }
-
-    /** Let go of the mouse and stop driving the camera
-     *  @param {boolean} [immediate] */
-    destroy(immediate)
-    {
-        this.lockPointer && pointerLockIsActive() && pointerLockExit();
-        super.destroy(immediate);
     }
 
     /** Camera controls draw nothing */
@@ -34964,6 +37290,9 @@ function render3DParticleView(emitter)
  * @memberof Render3D
  */
 
+// the emitters told their trailTime is past the 10 seconds a trail keeps, once each
+const render3DTrailWarned = /* @__PURE__ */ new WeakSet;
+
 /**
  * ParticleEmitter3D - Spawns camera facing particles, the 3D twin of ParticleEmitter
  * - Each particle is a flat square facing the camera, with a soft round dot when no tile is given
@@ -34987,6 +37316,7 @@ function render3DParticleView(emitter)
  * // fire: a stream upward, yellow fading to transparent red, additive
  * new ParticleEmitter3D(vec3(), .5, 0, 100, .3, undefined, hsl(.12, 1, .6), hsl(.08, 1, .5), hsl(0, 1, .5, 0), hsl(0, 1, .25, 0), 1, .5, 1.5, .05, .95, 0, .3, .2, true);
  */
+
 class ParticleEmitter3D extends EngineObject3D
 {
     /** Create a particle emitter
@@ -35061,7 +37391,7 @@ class ParticleEmitter3D extends EngineObject3D
         /** @property {boolean} - Additive blending */
         this.additive = additive;
         /** @property {number} - Seconds of each particle's path to draw as a ribbon behind it, 0 draws billboards;
-         *  with engineVariableStep it keeps trailTime * frameRate updates of path */
+         *  with engineVariableStep it keeps trailTime * frameRate updates of path; at most 10 seconds of it */
         this.trailTime = 0;
         /** @property {number} - Radians per frame each particle turns in the camera plane, either way; 0 is no spin */
         this.angleSpeed = 0;
@@ -35113,6 +37443,26 @@ class ParticleEmitter3D extends EngineObject3D
         /** @type {Vector3|undefined} */
         this.emitFrom = undefined;
         this.emitBehind = 0;
+        // how far it moved the update before, so a fast emitter moving steadily is told from one that jumped
+        this.previousMove = 0;
+    }
+
+    /** Move by its own velocity, with no damping: damping and angleDamping are its particles', not its own */
+    updatePhysics() { this.undamped(()=> super.updatePhysics()); }
+
+    /** Bring its transform up to date, a child moving by its own velocity with no damping as a root does
+     *  @param {boolean} [updateChildren] */
+    updateTransforms(updateChildren=true) { this.undamped(()=> super.updateTransforms(updateChildren)); }
+
+    /** Run a move with its damping set aside, which is its particles'
+     *  @param {function(): void} move
+     *  @ignore */
+    undamped(move)
+    {
+        const damping = this.damping, angleDamping = this.angleDamping;
+        this.damping = this.angleDamping = 1;
+        try { move(); }
+        finally { this.damping = damping, this.angleDamping = angleDamping; }
     }
 
     /** Spawn new particles, move the live ones, and go away when done */
@@ -35122,6 +37472,10 @@ class ParticleEmitter3D extends EngineObject3D
         const matrix = render3DObjectMatrix(this); // the object's own, read only
         this.emitFrom = this.worldPos3D;
         this.worldPos3D = matrix.getTranslation(); // remembered for when the parent is destroyed
+        // a teleport or a respawn, as 2D's: a move past twice objectMaxSpeed and four times its move the update before
+        const move = this.emitFrom ? this.worldPos3D.distance(this.emitFrom) : 0;
+        const jumped = move > 2 * objectMaxSpeed && move > 4 * this.previousMove;
+        this.previousMove = move;
         const scale = render3DMaxScale(matrix.m);
         this.particleView.scale = scale; // the callbacks read it from the view instead of working it out each time
 
@@ -35138,9 +37492,8 @@ class ParticleEmitter3D extends EngineObject3D
             {
                 // the update that ends the emit time adds a hair, as the steps' sum comes out a rounding under it
                 this.emitTimeBuffer += rate * step + (this.emitTime && this.emitElapsed >= this.emitTime ? 1e-6 : 0);
-                // spread along the move since the last update, the last one where it is now; a jump further than
-                // anything travels in an update, twice objectMaxSpeed, a teleport or a respawn, spreads nothing
-                const travelled = this.emitFrom && this.worldPos3D.distance(this.emitFrom) <= 2 * objectMaxSpeed;
+                // spread along the move since the last update, the last one where it is now; a jump spreads nothing
+                const travelled = this.emitFrom && !jumped;
                 const count = floor(this.emitTimeBuffer);
                 try
                 {
@@ -35157,12 +37510,18 @@ class ParticleEmitter3D extends EngineObject3D
             this.destroy();
 
         // the trail storage follows trailTime at the fixed rate, a change starts every trail over, so a varying
-        // timeDelta can not; with engineVariableStep a trail keeps that many updates
-        const trailMax = this.trailTime ? max(1, round(this.trailTime * frameRate)) : 0;
+        // timeDelta can not; with engineVariableStep a trail keeps that many updates, at most ten seconds of them, so
+        // a library file's huge trailScale can not take all the memory; the count is kept once its storage is made
+        const trailMax = this.trailTime ? clamp(round(this.trailTime * frameRate), 1, 600) : 0;
+        if (false && this.trailTime * frameRate > 600 && !render3DTrailWarned.has(this))
+        {
+            render3DTrailWarned.add(this);
+            console.warn('ParticleEmitter3D: trailTime is at most 10 seconds, the trail is cut there');
+        }
         if (trailMax !== this.trailMax)
         {
-            this.trailMax = trailMax;
             this.trailData = trailMax ? new Float32Array(this.particleData.length / RENDER3D_PARTICLE_FLOATS * trailMax * 3) : undefined;
+            this.trailMax = trailMax;
             for (let k = 20; k < this.particleData.length; k += RENDER3D_PARTICLE_FLOATS)
                 this.particleData[k] = 0;
         }
@@ -35628,6 +37987,18 @@ function render3DFlareTile(shape)
  * @memberof Render3D
  */
 
+// what can hide a flare, in one pass over the objects: the 3D objects that are not see through, the voxel maps among
+// them, which say block by block what is, and the rest; a flare is none, it has no mesh to hit
+function render3DFlareBlockers()
+{
+    const maps = [], others = [];
+    for (const o of engineObjects)
+        if (o instanceof EngineObject3D && !(o instanceof LensFlare3D) && !o.destroyed &&
+            !render3DSetting(o, 'transparent') && !render3DSetting(o, 'additive'))
+            (typeof VoxelMap != 'undefined' && o instanceof VoxelMap ? maps : others).push(o);
+    return {maps, others};
+}
+
 /**
  * LensFlare3D - The sun's lens flare, the old kind: a glow at the sun and a row of discs and rings of different
  * sizes along the line from the sun through the middle of the screen
@@ -35700,6 +38071,8 @@ class LensFlare3D extends EngineObject3D
          *  plain view, eased; the first update sets it at once, so a sun hidden from the start never shows */
         this.visible = 0;
         this.visibleFound = false; // the first update has found it
+        /** @type {Camera3D|undefined} */
+        this.visibleCamera = undefined; // the camera visible was last found from
         this.renderOrder = 1e9; // over the game's sprites, it is light in the lens
         this.madeKey = '';
         /** @type {Array<LensFlareElement>} */
@@ -35762,11 +38135,12 @@ class LensFlare3D extends EngineObject3D
      *  @ignore */
     flareLook()
     {
-        const source = this.flareSource(), center = mainCanvasSize.scale(.5);
+        // the screen's middle in the pixel convention worldToScreen gives, half a pixel back from half its size
+        const source = this.flareSource(), half = mainCanvasSize.scale(.5), center = half.subtract(vec2(.5));
         const sun = source && render3D.worldToScreen(source.pos);
-        if (!sun || !center.x || !center.y) return;
+        if (!sun || !half.x || !half.y) return;
         // it fades as the sun leaves the screen, gone .3 of half the screen past the edge
-        const off = max(abs(sun.x - center.x) / center.x, abs(sun.y - center.y) / center.y);
+        const off = max(abs(sun.x - center.x) / half.x, abs(sun.y - center.y) / half.y);
         const strength = clamp((1.3 - off) / .5) * this.intensity;
         if (!(strength > 0)) return;
         let tint = this.color.multiply(render3D.sunColor), height = mainCanvasSize.y * this.flareSize;
@@ -35800,16 +38174,21 @@ class LensFlare3D extends EngineObject3D
      *      tileInfo: TileInfo|undefined, angle: number}>} */
     getScreenElements()
     {
-        // one made while the game is paused, as the 3D editor makes them, has had no update to find it, and while
-        // paused nothing updates it, so it is found at once each time it is drawn, as the camera turns
-        if (!this.visibleFound || paused)
+        // one made while the game is held, paused or under a level editor, as the 3D editor makes them, has had no
+        // update to find it, and while held nothing updates it, so it is found at once each time it is drawn, as the
+        // camera turns
+        if (!this.visibleFound || engineIsFrozen())
         {
             this.visibleFound = false;
             this.updateVisible(0);
         }
-        const look = this.visible > 0 && this.flareLook();
+        // drawn from another camera than the update judged it from, the free camera's, it is judged from that one
+        // for this draw, leaving the game's fade as it is
+        const visible = this.visibleCamera === render3D.camera ? this.visible :
+            +(!!this.flareLook() && !(this.occlusion && this.isHidden()));
+        const look = visible > 0 && this.flareLook();
         if (!look) return [];
-        const {sun, center, tint, height} = look, strength = look.strength * this.visible;
+        const {sun, center, tint, height} = look, strength = look.strength * visible;
         return this.getElements().map((e)=>
         {
             const c = e.color.multiply(tint);
@@ -35829,12 +38208,7 @@ class LensFlare3D extends EngineObject3D
         const source = this.flareSource();
         if (!source) return true;
         const ray = new Ray3D(render3D.camera.pos, source.direction), reach = source.distance;
-        const blockers = engineObjects.filter((o)=> o !== this && o instanceof EngineObject3D && !o.destroyed &&
-            !o.transparent && !render3DSetting(o, 'additive'));
-        // a voxel map says block by block what is see through: glass, water and leaves let the sun by, and the
-        // ray goes on to the blocks behind them
-        const maps = /** @type {Array<VoxelMap>} */ (typeof VoxelMap == 'undefined' ? [] :
-            blockers.filter((o)=> o instanceof VoxelMap));
+        const {maps, others} = render3DFlareBlockers();
         for (const map of maps)
             if (map.raycast(ray, reach, (type)=> !map.blockType(type).seeThrough))
                 return true;
@@ -35853,10 +38227,10 @@ class LensFlare3D extends EngineObject3D
                 p.z >= b.min.z && p.z <= b.max.z;
         };
         const near = this.light && reach < Infinity ? min(2, this.light.radius * .4) : 0;
-        let candidates = blockers.filter((o)=> !maps.some((map)=> map === o));
+        let candidates = others;
         for (let tries = 5; tries--;)
         {
-            const hit = render3D.pick(ray, candidates);
+            const hit = render3DPickPart(ray, candidates); // the part, a lamp may be a model's
             if (!hit || hit.distance >= reach) return false;
             if (!(reach - hit.distance <= near && inside(hit.object))) return true;
             candidates = candidates.filter((o)=> o !== hit.object); // its lamp, look past it
@@ -35882,9 +38256,12 @@ class LensFlare3D extends EngineObject3D
     {
         this.visibleFound || render3D.updateMatrices();
         const shows = !!this.flareLook() && !(this.occlusion && this.isHidden());
-        const step = this.fadeTime > 0 && this.visibleFound ? seconds / this.fadeTime : 1;
+        // it eases only from what this camera saw, so after the level editor's camera it is set at once
+        const step = this.fadeTime > 0 && this.visibleFound && this.visibleCamera === render3D.camera ?
+            seconds / this.fadeTime : 1;
         this.visible = clamp(this.visible + (shows ? step : -step));
         this.visibleFound = true;
+        this.visibleCamera = render3D.camera;
     }
 
     /** Draw the flare over the 3D scene, added onto it, called automatically in the 2D pass */
@@ -36253,7 +38630,8 @@ function render3DCSGPolygons(mesh, matrix)
     false&&ASSERT(mesh instanceof Mesh, 'CSG takes a Mesh');
     false&&ASSERT(!mesh.doubleSided, 'CSG needs closed meshes, a doubleSided one like buildGrid has no inside');
     const list = new Mesh().combine(mesh, matrix).toIndexed();
-    false&&ASSERT(!list.points.length || render3DMeshIsClosed(list), 'CSG needs closed meshes, every edge shared by two triangles');
+    false&&ASSERT(!list.points.length || render3DMeshIsClosed(list), 'CSG needs closed meshes, every edge shared by two ' +
+        'triangles; a long chain of cuts can leave a small hole, see Mesh.subtract');
     const vertex = (i)=> new Render3DCSGVertex(list.points[i], list.normals[i], list.uvs[i], list.colors[i]);
     const polygons = [];
     for (let t = 0; t < list.indices.length; t += 3)
@@ -36265,19 +38643,52 @@ function render3DCSGPolygons(mesh, matrix)
     return polygons;
 }
 
+// the meshes CSG made, whose edges meet their neighbors at every point, see render3DCSGMesh, each with its counts of
+// points and indices, so one changed since by combine or an add is not trusted, and how many open edges it has
+const render3DCSGResults = /* @__PURE__ */ new WeakMap;
+const render3DCSGCounts = (mesh)=> mesh.points.length + ',' + mesh.indices?.length;
+
+// how many edges of a CSG mesh have no edge back along them, a crack, by where its points are
+function render3DCSGOpen(mesh)
+{
+    const p = mesh.points, ids = mesh.indices, key = (i)=> p[i].x + ',' + p[i].y + ',' + p[i].z;
+    const edges = new Map, count = (edge, add)=> edges.set(edge, (edges.get(edge) || 0) + add);
+    for (let t = 0; t < ids.length; t += 3)
+    for (let e = 0; e < 3; ++e)
+    {
+        const a = key(ids[t + e]), b = key(ids[t + (e + 1) % 3]);
+        a === b || (count(a + '|' + b, 1), count(b + '|' + a, -1));
+    }
+    let open = 0;
+    for (const n of edges.values())
+        n > 0 && (open += n);
+    return open;
+}
+
 // a mesh from CSG polygons: points close together made one, and each edge given the points other polygons have
-// along it, so neighbors meet at every point with no crack between them; each polygon then as a fan of triangles
-function render3DCSGMesh(polygons)
+// along it, so neighbors meet at every point with no crack between them; each polygon then as a fan of triangles;
+// an edge the first mesh had, when that mesh came from CSG and so met its neighbors already, takes only points this
+// operation made, since putting an earlier cut's sliver points into every edge near them again grew the mesh with
+// each cut, even one that missed it; any other edge takes every point on it, one joining two of the first mesh's
+// points too, as the second mesh's edge along a row of them does
+// - originals: the first mesh's points, oldEdges: each of them to the points it has an edge to
+function render3DCSGMesh(polygons, originals=new Set, oldEdges=new Map)
 {
     // points within the epsilon made one, the first found standing for the rest; moving one any farther would take
     // it off its plane by more than the epsilon, and the next cut through it would split it again; a point on an
     // edge, whose ends may each have moved that far, is looked for a few times that far from its line
     const reach = RENDER3D_CSG_EPSILON * 4, placer = render3DCSGPlacer(RENDER3D_CSG_EPSILON), placed = new Set;
     const cellKey = (x, y, z)=> x + ',' + y + ',' + z;
+    // polygons share points, so one is placed once and the same place given it after, with no grid search
+    const placedAt = new Map;
     const place = (p)=>
     {
-        const q = placer(p);
-        placed.add(q); // polygons share points, so one can be placed more than once
+        let q = placedAt.get(p);
+        if (!q)
+        {
+            placedAt.set(p, q = placer(p));
+            placed.add(q);
+        }
         return q;
     };
     const loops = polygons.map(polygon=>
@@ -36292,6 +38703,24 @@ function render3DCSGMesh(polygons)
         loop.length > 1 && loop[0].pos === loop[loop.length - 1].pos && loop.pop();
         return loop;
     });
+
+    // the first mesh's points and edges by where they were placed, as a corner it has once for each face's normal
+    // is one place; one no polygon kept is no place
+    const oldPlaces = new Set, oldPlaceEdges = new Map;
+    for (const p of originals)
+        placedAt.has(p) && oldPlaces.add(placedAt.get(p));
+    for (const [p, others] of oldEdges)
+    {
+        const a = placedAt.get(p);
+        if (a)
+        for (const q of others)
+        {
+            const b = placedAt.get(q);
+            if (!b || b === a) continue;
+            oldPlaceEdges.has(a) || oldPlaceEdges.set(a, new Set);
+            oldPlaceEdges.get(a).add(b);
+        }
+    }
 
     // the places in a coarser grid, sized so a cell holds a few, to find the ones lying along each edge
     const places = [...placed];
@@ -36312,8 +38741,10 @@ function render3DCSGMesh(polygons)
     }
     const onEdge = (a, b)=>
     {
-        // the places strictly between a and b, within reach of the line, in order from a
-        const found = [], ab = b.subtract(a), length2 = ab.lengthSquared();
+        // the places strictly between a and b, within reach of the line, in order from a; an edge the first mesh had
+        // takes only new ones
+        if (!places.length) return [];
+        const old = !!oldPlaceEdges.get(a)?.has(b), found = [], ab = b.subtract(a), length2 = ab.lengthSquared();
         const x0 = floor((min(a.x, b.x) - lo.x - reach) / size), x1 = floor((max(a.x, b.x) - lo.x + reach) / size);
         const y0 = floor((min(a.y, b.y) - lo.y - reach) / size), y1 = floor((max(a.y, b.y) - lo.y + reach) / size);
         const z0 = floor((min(a.z, b.z) - lo.z - reach) / size), z1 = floor((max(a.z, b.z) - lo.z + reach) / size);
@@ -36322,7 +38753,7 @@ function render3DCSGMesh(polygons)
         for (let z = z0; z <= z1; ++z)
             for (const p of grid.get(cellKey(x, y, z)) || [])
             {
-                if (p === a || p === b) continue;
+                if (p === a || p === b || old && oldPlaces.has(p)) continue;
                 const t = p.subtract(a).dot(ab) / length2;
                 if (t <= 0 || t >= 1) continue;
                 if (a.add(ab.scale(t)).distanceSquared(p) < reach ** 2)
@@ -36410,7 +38841,43 @@ function render3DCSGMesh(polygons)
 function render3DMeshCSG(a, b, matrix, operation)
 {
     const polygonsA = render3DCSGPolygons(a), polygonsB = render3DCSGPolygons(b, matrix);
+    // the points and edges of the first mesh as given, when CSG made it and they met already, see render3DCSGMesh
+    const originals = new Set, oldEdges = new Map;
+    const mark = render3DCSGResults.get(a), trusted = mark?.counts === render3DCSGCounts(a);
+    if (trusted)
+    for (const polygon of polygonsA)
+    {
+        const vertices = polygon.vertices;
+        for (let i = 0; i < vertices.length; ++i)
+        {
+            const p = vertices[i].pos, q = vertices[(i + 1) % vertices.length].pos;
+            originals.add(p);
+            oldEdges.has(p) || oldEdges.set(p, new Set);
+            oldEdges.has(q) || oldEdges.set(q, new Set);
+            oldEdges.get(p).add(q);
+            oldEdges.get(q).add(p);
+        }
+    }
+    const result = (polygons)=>
+    {
+        let mesh = render3DCSGMesh(polygons, originals, oldEdges);
+        // trusting the first mesh's edges can leave a crack where a cut took away what was between two runs of them
+        // nearly in a line, the long edge then skipping points now on it; that is made again with every point, kept
+        // when it has fewer, since a crack of rounding an earlier cut left shows in both and the full step grows
+        // only when it has more than its input had, so a crack the full step can not close either is not made twice
+        // at every later cut
+        let open = render3DCSGOpen(mesh);
+        if (trusted && open > mark.open)
+        {
+            const full = render3DCSGMesh(polygons), fullOpen = render3DCSGOpen(full);
+            fullOpen < open && (mesh = full, open = fullOpen);
+        }
+        render3DCSGResults.set(mesh, {counts: render3DCSGCounts(mesh), open});
+        return mesh;
+    };
     const [nearA, farA] = render3DCSGNear(polygonsA, polygonsB), [nearB, farB] = render3DCSGNear(polygonsB, polygonsA);
+    if (!nearA.length && !nearB.length) // the boxes do not meet: both whole, a whole, or nothing
+        return result(operation === 0 ? [...polygonsA, ...polygonsB] : operation === 1 ? polygonsA : []);
     const treeA = new Render3DCSGNode, treeB = new Render3DCSGNode;
     render3DCSGBuild(treeA, polygonsA);
     render3DCSGBuild(treeB, polygonsB);
@@ -36434,7 +38901,7 @@ function render3DMeshCSG(a, b, matrix, operation)
         render3DCSGInvert(treeB);
         polygons = [...flip(clip(treeB, flip(nearA))), ...flip(clip(treeA, flip(clip(treeA, nearB))))];
     }
-    return render3DCSGMesh(polygons);
+    return result(polygons);
 }
 
 /*
@@ -36486,6 +38953,10 @@ const RENDER3D_VOXEL_ORDER = [0, 1, 2, 3], RENDER3D_VOXEL_FLIPPED = [1, 3, 0, 2]
  *   when a block in or beside it changes
  * - Objects with collideLevel collide with it, see EngineObject3D.collideWithVoxel, and raycast finds the block a ray
  *   hits and the face it comes in through
+ * - Its blocks are walls: a body walking into one stops however low it stands over the ground beside it, there is no
+ *   step up onto it as a HeightMap or a MeshCollider has, so a game jumps onto blocks or lays its floors level
+ * - To be a lift, it moves by its velocity3D, which moves it before the objects and carries what stands on it; one
+ *   moved by setting pos3D, or in its own update, leaves a rider behind, a fast one dropping it through
  * @extends EngineObject3D
  * @memberof Render3D
  * @example
@@ -36611,7 +39082,8 @@ class VoxelMap extends EngineObject3D
         const f = /** @type {any} */ (faces);
         const list = isNumber(f) ? [f, f, f, f, f, f] : isArray(f) ? f :
             [f.side, f.side, f.top ?? f.side, f.bottom ?? f.side, f.side, f.side];
-        false&&ASSERT(list.length === 6 && list.every(isNumber), 'faces is a tile index, six of them, or {top, side, bottom}');
+        false&&ASSERT(list.length === 6 && list.every(isNumber),
+            'faces is a tile index, the number, not a tile(), six of them, or {top, side, bottom}');
         this.blockTypes[type] = {faces: list, seeThrough: seeThrough || transparent, transparent, doubleSided};
         this.rebuild();
     }
@@ -36780,7 +39252,7 @@ class VoxelMap extends EngineObject3D
             if (up && !this.boxBlocked(up, size, o))
             {
                 p.set(up.x, up.y, up.z);
-                v.y = max(v.y, 0);
+                v.y = max(v.y, this.velocity3D.y); // relative to its own speed, a lift's, as the others land
                 o.groundObject = this;
                 return;
             }
@@ -36834,7 +39306,9 @@ class VoxelMap extends EngineObject3D
             }
             if (axis === 'y' && move < 0)
                 o.groundObject = this;
-            v[axis] *= -restitution;
+            // bounced relative to the map's own speed, a lift's, so what lands on one going down goes with it
+            const base = this.velocity3D[axis];
+            v[axis] = base - (v[axis] - base) * restitution;
         }
         p.set(place.x, place.y, place.z);
     }
@@ -36994,15 +39468,44 @@ const level3DTypes = /* @__PURE__ */ level3DBuiltInTypes();
 // the scale each object had when it was made, the level's scale multiplies it
 const level3DBaseScale = /* @__PURE__ */ new WeakMap;
 
+// how far from the place it was given each object put itself when it was made, unturned, as a type that lifts its
+// body to stand on the ground does, so the loader, the editor and a prefab keep that offset, scaled and turned with
+// the object
+const level3DBaseOffset = /* @__PURE__ */ new WeakMap;
+
+// an object's constructor offset scaled and turned as it is, so it is the same part of its body whatever its turn and
+// size: a type that stands by its feet has them under it turned and scaled too, and a prefab unpacked moves nothing
+function level3DOffsetOf(o, rotation=o.rotation3D)
+{
+    let offset = level3DBaseOffset.get(o);
+    if (!offset) return vec3();
+    // by the scale it has over the one it was made with, along its own axes
+    const base = level3DBaseScale.get(o), scale = o.scale3D;
+    const by = (n, b)=> b ? n / b : 1;
+    if (base && (scale.x !== base.x || scale.y !== base.y || scale.z !== base.z))
+        offset = vec3(offset.x * by(scale.x, base.x), offset.y * by(scale.y, base.y), offset.z * by(scale.z, base.z));
+    return rotation.x || rotation.y || rotation.z ? buildMatrix(undefined, rotation).transformDirection(offset) :
+        offset.copy();
+}
+
 /** Add a type of object, so level3DLoad makes one wherever a level has an object of that type
  *  - The name is a string because minified builds rename classes
  *  - A class, or any function with a prototype, is made with new make(pos3D, properties); an arrow function is
  *    called as make(pos3D, properties), for what is not an object, like a player start
  *  - properties is the defaults with the object's own values over them, and each of the type's own is also set on
  *    what was made; a property the type has no default for is in properties and is not set
+ *  - An object default, plain or of a class, takes a level's object member by member, so a member the level leaves
+ *    out keeps the default's and {} is the whole default, as 2D's class properties are
+ *  - A list over a list default is read item by item as the default's item there, its last past its end, so a list
+ *    of vectors or Colors needs a default with one item of that kind, [vec3()], and an empty default, [], takes the
+ *    items as written, a vector as a plain array
  *  - Give a class a constructor of its own that takes the position: one that hands every argument on to
  *    EngineObject3D would hand it the properties as its mesh
  *  - An EngineObject3D then gets the object's rotation, and its scale times the scale it was made with
+ *  - A constructor may put the body away from the position it is given, lifted by half its height to stand on its
+ *    feet: that offset is kept, scaled and turned with the object, through a reload, the 3D editor's moves and
+ *    landing, and a prefab; one worked out from where it ends up, as sticking itself to the ground, is kept as the offset it had
+ *    when made, so the editor shows it where a move puts it, not where a reload would
  *  - Adding a name again replaces it, Box, Sphere, Cylinder and Light too
  *  @param {string} name - The type the objects have in the level
  *  @param {(function(Vector3, ObjectProperties): unknown)|(function(new: unknown, Vector3, ObjectProperties))} make - A
@@ -37019,6 +39522,7 @@ function level3DAddType(name, make, defaults={}, tileInfo)
     false&&ASSERT(typeof make === 'function', 'make must be a class or function');
     false&&ASSERT(!!defaults && typeof defaults === 'object', 'defaults must be an object');
     level3DTypes.set(String(name), {make, defaults, tileInfo});
+    level3DPrefabs.delete(String(name)); // no longer a prefab, so a level's load does not take it away or replace it
 }
 
 /** Add a type that is a mesh and nothing more, a static prop with no class to write, for a built mesh or a model
@@ -37053,6 +39557,10 @@ function level3DAddMesh(name, mesh, tileInfo, color=WHITE, meshCollision=false)
  *  - A Color property is a #rrggbb or #rrggbbaa string, a Vector2 or Vector3 an array, as the default says
  *  - An object whose type was not added is skipped, with a warning in debug builds
  *  - What a file written by hand gets wrong uses the default: a value that is not of its default's type
+ *  - An object over an object default is merged into it member by member, so {} is the whole default, and a vector
+ *    member in it is written as an array too
+ *  - A list over a list default is read item by item as the default's item there, its last past its end, an item of
+ *    another kind keeping the default's with a warning; an empty default takes the items as written
  *  - An object its type can not make is skipped with an error in debug builds, where asserts throw, and the rest
  *    of the level is made
  *  - A level may hold a map of blocks, in a voxels block: pos, its corner, size, its cells along x, y and z, and
@@ -37068,15 +39576,26 @@ function level3DAddMesh(name, mesh, tileInfo, color=WHITE, meshCollision=false)
  *    horizon and straight down, ambient, how much of them lights the scene, .5 when not given, sunDirection and
  *    sunColor, fog, its start and end, fogColor, the horizon color when not given, shadows, lensFlare, the
  *    sun's lens flare, and skyBox and environment, each six image urls as loadCubeMap takes them, which load in
- *    the background and are set when they have; what the block leaves out stays as the game set it, and a level
- *    with no block changes nothing
+ *    the background and are set when they have; what the block leaves out stays as the game set it, and the
+ *    next level, with a block or none, puts back what this block set, each setting the game has not changed since
+ *  - The 3D editor keeps the HeightMap and VoxelMap made here through its edits, so a game may hold them, but a voxel
+ *    resize or a terrain of another shape is a new map, and a map whose block is taken out is out of the world
+ *    until an undo: a game that holds one takes it again in onRestart, or looks it up when the one it holds is
+ *    destroyed or not in engineObjects, as examples/3d does
+ *  - In a 3D editing session what the editor places or makes again, its maps too, joins the list this gives back,
+ *    and leaves it when taken out, so a game that unloads the level by its list takes the editor's objects with it:
+ *    keep this array as given, not a filtered or spread copy, for the editor to add to and take from; an object made
+ *    again takes its old one's place in it and one taken out is spliced, so look an object up again rather than
+ *    keep its index
  *  @param {Level3D} level - The level, the level editor edits this same object
- *  @return {Array<any>} - What each object's type made, a function that made nothing is left out
+ *  @return {Array<any>} - What each object's type made, an object of the game's, so the level can be unloaded by
+ *    it; a function that made nothing, or gave back a value of the engine's, as a marker's position, is left out
  *  @memberof Level3D */
 function level3DLoad(level)
 {
     false&&ASSERT(!!level && typeof level === 'object', 'a level is an object, {} for a new one');
     false&&ASSERT(!(level.littlejs3D > LEVEL3D_VERSION), 'the level was made by a newer LittleJS');
+    level3DSceneUndo(); // the last level's scene block goes first, what the game set itself stays
     editor3DLevelLoaded(level); // debug builds: the 3D editor takes the level, its autosaved edits go in first
     // the last level's own prefabs it does not have are no longer types; a prefab the editor opens as a level of its
     // own keeps them, its instances are of the level's prefabs
@@ -37094,6 +39613,7 @@ function level3DLoad(level)
         editor3DObjectMade(object, result); // debug builds link it for the 3D editor
         result && made.push(result);
     }
+    editor3DLevelMade(level, made); // debug builds: the 3D editor keeps what it makes for the level in this list
     return made;
 }
 
@@ -37197,6 +39717,10 @@ function level3DTerrainShape(terrain)
 function level3DHexColor(hex)
 { return typeof hex === 'string' && /^#([0-9a-f]{6}|[0-9a-f]{8})$/i.test(hex) ? new Color().setHex(hex) : undefined; }
 
+// a member's text as a 3D level file writes it, a color as #rrggbb or #rrggbbaa, where Tiled puts the alpha first
+const level3DFromText = (value, fallback)=> isColor(fallback) ? level3DHexColor(value) :
+    objectPropertyFromText(value, fallback);
+
 // a number of a level that is a real one, not NaN or Infinity, which JSON writes as 1e999
 const level3DFinite = (v)=> typeof v === 'number' && isFinite(v);
 
@@ -37271,14 +39795,57 @@ function level3DTerrainMake(terrain)
 // itself is left whole, for the game to put back
 const level3DSkies = /* @__PURE__ */ new WeakSet;
 
+// what the last level's scene block set: each renderer field it changed, the value before, the value it set, a copy
+// of that when it is a color or vector, and the flare; the next level puts back only a field that still holds the
+// block's value, so what the game set itself, before or since, stays as it set it
+const level3DSceneSet = /* @__PURE__ */ new Map;
+let level3DSceneFlareBefore;
+
+// a field still holds the block's value: the very dome, cube map, color or vector the block set, a color or vector
+// unchanged since, as a game's day cycle changes the sun's in place; a number or flag the game set back to the
+// block's value counts as the block's, there is no telling them apart
+function level3DSceneSame(value, kept)
+{
+    const was = kept.copy;
+    return value === kept.after && (!was || (isColor(was) ? value.r === was.r && value.g === was.g &&
+        value.b === was.b && value.a === was.a : value.x === was.x && value.y === was.y && value.z === was.z));
+}
+
+// set a renderer field for a scene block, kept so the next level can put it back
+function level3DSceneSetField(field, value)
+{
+    const r = render3D, copy = isColor(value) || isVector3(value) ? value.copy() : undefined;
+    const kept = level3DSceneSet.get(field);
+    kept ? (kept.after = value, kept.copy = copy) : level3DSceneSet.set(field, {before: r[field], after: value, copy});
+    r[field] = value;
+}
+
+// put back what the last level's block set and is still as it set it; a sky box or environment still loading for it
+// lands no more
+function level3DSceneUndo()
+{
+    const r = render3D;
+    ++level3DSceneCubeLoads.skyBox, ++level3DSceneCubeLoads.environment;
+    if (r)
+        for (const [field, kept] of level3DSceneSet)
+        {
+            const {before, after} = kept;
+            if (!level3DSceneSame(r[field], kept)) continue; // the game set it since
+            field === 'sky' && level3DSkies.has(after) && after !== before && after.dispose(); // a dome a level made
+            r[field] = before;
+        }
+    level3DSceneSet.clear();
+    level3DSceneFlareBefore === undefined || level3DSceneFlare(level3DSceneFlareBefore);
+    level3DSceneFlareBefore = undefined;
+}
+
 // set the scene a level's scene block gives: sky as its top, horizon and bottom colors, with ambient how much of
 // them lights the scene, sunDirection and sunColor, fog as its start and end with fogColor, the horizon without one,
 // and shadows; a setting the block does not have, or has wrong, stays as it is
 function level3DSceneApply(scene)
 {
-    // a sky box or environment an earlier scene is still loading does not land on this one's
-    ++level3DSceneCubeLoads.skyBox, ++level3DSceneCubeLoads.environment;
-    const r = render3D;
+    level3DSceneUndo(); // the last level's block goes, and a sky box or environment it still loads lands no more
+    const r = render3D, set = level3DSceneSetField;
     if (!r || !scene || typeof scene !== 'object') return;
     const color = level3DHexColor;
     const sky = isArray(scene.sky) && scene.sky.length === 3 ? scene.sky.map(color) : [];
@@ -37286,24 +39853,28 @@ function level3DSceneApply(scene)
     {
         // as setSky does, without disposing a dome that is the game's own
         const [top, horizon, bottom] = sky, ambient = level3DFinite(scene.ambient) ? scene.ambient : .5;
-        level3DSkies.has(r.sky) && r.sky.dispose();
-        level3DSkies.add(r.sky = buildSky(top, horizon, bottom));
-        r.fogColor = horizon.copy();
-        r.ambientColor = top.scale(ambient, 1);
-        r.ambientGroundColor = bottom.scale(ambient, 1);
+        const dome = buildSky(top, horizon, bottom);
+        level3DSkies.add(dome);
+        set('sky', dome);
+        set('fogColor', horizon.copy());
+        set('ambientColor', top.scale(ambient, 1));
+        set('ambientGroundColor', bottom.scale(ambient, 1));
     }
     const sun = level3DVector(scene.sunDirection);
     if (sun && sun.lengthSquared())
-        r.sunDirection = sun;
-    r.sunColor = color(scene.sunColor) || r.sunColor;
+        set('sunDirection', sun);
+    color(scene.sunColor) && set('sunColor', color(scene.sunColor));
     const fog = scene.fog;
     if (isArray(fog) && fog.length === 2 && fog.every(level3DFinite))
-        r.fogStart = fog[0], r.fogEnd = fog[1];
-    r.fogColor = color(scene.fogColor) || r.fogColor;
+        set('fogStart', fog[0]), set('fogEnd', fog[1]);
+    color(scene.fogColor) && set('fogColor', color(scene.fogColor));
     if (typeof scene.shadows === 'boolean')
-        r.shadows = scene.shadows;
+        set('shadows', scene.shadows);
     if (typeof scene.lensFlare === 'boolean')
+    {
+        level3DSceneFlareBefore = !!level3DSunFlare && !level3DSunFlare.destroyed;
         level3DSceneFlare(scene.lensFlare);
+    }
     level3DSceneCubeMap('skyBox', scene.skyBox);
     level3DSceneCubeMap('environment', scene.environment);
 }
@@ -37339,7 +39910,8 @@ function level3DSceneCubeMap(field, urls)
         old.then((map)=> map !== render3D.skyBox && map !== render3D.environment && map.dispose(), ()=> {});
     }
     // set when it has loaded, unless a newer scene came, or the game set the field itself meanwhile
-    const landed = (map)=> load === level3DSceneCubeLoads[field] && render3D[field] === before && (render3D[field] = map);
+    const landed = (map)=> load === level3DSceneCubeLoads[field] && render3D[field] === before &&
+        level3DSceneSetField(field, map); // kept, so the next level puts the game's back
     cube.then(landed, (error)=>
     {
         level3DSceneCubeMaps.get(key) === cube && level3DSceneCubeMaps.delete(key);
@@ -37374,23 +39946,33 @@ function level3DVector(value, fallback)
 // one the type has no default for is kept as it is
 function level3DProperties(type, object)
 {
-    const properties = {}, own = object.properties;
+    const properties = {}, own = object.properties, set = (key, value)=> objectPropertySet(properties, key, value);
     for (const [key, value] of Object.entries(type.defaults))
-        properties[key] = objectPropertyCopy(value);
+        set(key, objectPropertyCopy(value));
     for (const [key, value] of Object.entries(own && typeof own === 'object' ? own : {}))
     {
-        const d = type.defaults[key];
+        const d = objectPropertyDefault(type.defaults, key); // the type's own, not one every object has
+        // a color or a vector as a level file writes it, or as code has it, given to level3DSpawn, copied
         if (isColor(d))
-            level3DHexColor(value) && (properties[key] = level3DHexColor(value));
+            isColor(value) ? set(key, value.copy()) : level3DHexColor(value) && set(key, level3DHexColor(value));
         else if (isVector3(d))
-            properties[key] = level3DVector(value, properties[key]);
+            set(key, isVector3(value) ? value.copy() : level3DVector(value, properties[key]));
         else if (isVector2(d))
-            isArray(value) && value.length === 2 && value.every(level3DFinite) &&
-                (properties[key] = vec2(value[0], value[1]));
+            isVector2(value) ? set(key, value.copy()) :
+                isArray(value) && value.length === 2 && value.every(level3DFinite) && set(key, vec2(value[0], value[1]));
         else if (typeof d === 'number')
-            level3DFinite(value) && (properties[key] = value);
-        else if (d === undefined || typeof value === typeof d && (d === null || value !== null))
-            properties[key] = objectPropertyCopy(value); // null is an object to typeof, but not a default's object
+            level3DFinite(value) && set(key, value);
+        else if (d && typeof d === 'object' && (isArray(d) ? isArray(value) : objectPropertyPlain(value)))
+            // a plain object, as a file has, over its default member by member, as 2D's class properties are, so a
+            // member the file left out keeps the default's; an instance given from code, to level3DSpawn, is copied
+            // as itself below; a list over a list with each item read as the default's, so a list of vectors comes
+            // back vectors
+            set(key, objectLayersMergeClass(d, value, (text)=> objectLayersWarnOnce(undefined, 'level3D ' + object.type +
+                ' ' + key + text, `level3DLoad: ${object.type} ${object.id}'s ${key}${text}`), '', level3DFromText));
+        else if (d === undefined ||
+            typeof value === typeof d && (d === null || value !== null && isArray(value) === isArray(d)))
+            set(key, objectPropertyCopy(value)); // null and a list are objects to typeof, but neither is a
+                                                 // default's object, nor an object a default's list
     }
     return properties;
 }
@@ -37410,7 +39992,7 @@ function level3DMakeAt(object, pos, rotation, scale)
     const type = level3DTypes.get(object.type);
     if (!type)
     {
-        debug && console.warn(`level3DLoad: no type added for ${object.type}, skipped`);
+        false && console.warn(`level3DLoad: no type added for ${object.type}, skipped`);
         return;
     }
     const properties = level3DProperties(type, object);
@@ -37421,23 +40003,29 @@ function level3DMakeAt(object, pos, rotation, scale)
     {
         // a value the type can not be made with: in debug builds, where asserts throw, the object is skipped with
         // what it made so far, so the rest of the level loads and the level editor can put the value right
-        if (!debug) throw error;
+        if (!false) throw error;
         console.error(`level3DLoad: ${object.type} ${object.id} could not be made, skipped:`, error);
         for (const o of engineObjects.slice(count))
             o.destroy();
         return;
     }
-    if (!result || typeof result !== 'object') return;
+    // what it made is an object of the game's, and not a marker's position given back, as in 2D
+    if (!objectLayersIsMade(result) || result instanceof Vector3)
+        return;
     if (result instanceof EngineObject3D)
     {
         level3DBaseScale.set(result, result.scale3D.copy());
+        result instanceof Prefab3D || level3DBaseOffset.set(result, result.pos3D.subtract(pos));
         result.rotation3D = rotation.copy();
         result.scale3D = result.scale3D.multiply(scale);
+        // its offset scaled and turned with it
+        result instanceof Prefab3D || (result.pos3D = pos.add(level3DOffsetOf(result)));
     }
 
     // the type's own properties are set on it, one the type has no default for could be a field of the engine's
+    // as a 2D level's are, so one named as a method, or a getter with no setter, is left out and not a throw
     for (const key in type.defaults)
-        result[key] = properties[key];
+        objectPropertyAssign(result, key, properties[key], object.type + ' ' + object.id, 'level3DLoad');
     // a prefab's instance makes its parts now that it is where it goes
     result instanceof Prefab3D && result.placeAt(pos);
     return result;
@@ -37449,15 +40037,26 @@ function level3DMakeAt(object, pos, rotation, scale)
  *  @param {Vector3} [pos3D]
  *  @param {Vector3} [rotation3D] - In radians, as an object has it
  *  @param {Vector3} [scale3D] - Times the scale the type makes it with
- *  @param {ObjectProperties} [properties] - Over the type's defaults
- *  @return {any} - What the type made, a Prefab3D for a prefab, undefined when there is no such type
+ *  @param {ObjectProperties} [properties] - Over the type's defaults; a color or a vector may be a Color or a vector,
+ *    or written as a level file has it, a hex string or an array; a value not of its default's type keeps the default;
+ *    each is copied for the object, a list or a plain object with what is in it, as a level file's are, so the object
+ *    has its own and not the one passed; a plain object over an object default is merged into it member by member,
+ *    and a list over a list default item by item, as a level file's are, and an instance of a class, at any depth,
+ *    is copied with its copy method, or shared when it has none; keep defaults to numbers, text, true or false,
+ *    Colors, vectors, and lists and plain objects of those
+ *  @return {any} - What the type made, a Prefab3D for a prefab, undefined when there is no such type or it made no
+ *    object of the game's
  *  @memberof Level3D
  *  @example
  *  level3DAddPrefab('House', await fetchJSON('house.json'));
- *  level3DSpawn('House', vec3(10, 0, 0), vec3(0, PI/2, 0)); */
+ *  level3DSpawn('House', vec3(10, 0, 0), vec3(0, PI/2, 0));
+ *  level3DSpawn('Crate', vec3(0, 1, 0), undefined, undefined, {color: RED}); */
 function level3DSpawn(type, pos3D=vec3(), rotation3D=vec3(), scale3D=vec3(1), properties)
 {
     false&&ASSERT(isVector3(pos3D) && isVector3(rotation3D) && isVector3(scale3D), 'pos3D, rotation3D and scale3D are vec3');
+    // from code a type that is not there is a slip, where a level file may hold one of an older build
+    false&&ASSERT(level3DTypes.has(type), 'level3DSpawn: no type named ' + type + ', add it with level3DAddType, ' +
+        'level3DAddMesh or level3DAddPrefab');
     return level3DMakeAt(properties ? {type, properties} : {type}, pos3D.copy(), rotation3D, scale3D);
 }
 
@@ -37567,7 +40166,9 @@ function level3DPrefabPartTransform(instance, object)
  * prefab's objects made
  * - Parts of a prefab that is not attached are objects of their own in the world: moving, turning or sizing the
  *   handle puts them where it now says with its next update, or call placeParts; destroying it destroys them
- * - Parts of an attached prefab are its children and move with it as one body
+ * - Parts of an attached prefab are its children and move with it as one body; its color multiplies the color of
+ *   the parts that draw their mesh, Box, Sphere, Cylinder, a mesh type and a glTF model, while a part that draws
+ *   itself, a class of the game's own, a light's glow or particles, keeps its own
  * @extends EngineObject3D
  * @memberof Level3D
  */
@@ -37623,7 +40224,7 @@ class Prefab3D extends EngineObject3D
             part.rotation3D = to.rotation;
             part.scale3D = (level3DBaseScale.get(part) ?? vec3(1)).multiply(to.scale);
             // a prefab inside this one goes by its origin, which is not where an attached one's handle is
-            part instanceof Prefab3D ? part.placeAt(to.pos) : part.pos3D = to.pos;
+            part instanceof Prefab3D ? part.placeAt(to.pos) : part.pos3D = to.pos.add(level3DOffsetOf(part));
         });
     }
 
@@ -37641,7 +40242,7 @@ class Prefab3D extends EngineObject3D
         if (!prefab) return;
         if (level3DPrefabMaking.includes(this.prefabName) || level3DPrefabDepth >= 8)
         {
-            debug && console.error(`level3DLoad: the prefab ${this.prefabName} holds itself, left out there`);
+            false && console.error(`level3DLoad: the prefab ${this.prefabName} holds itself, left out there`);
             return;
         }
         level3DPrefabDepth || (level3DPrefabParts = 0); // an instance of its own, not a part of another
@@ -37655,7 +40256,7 @@ class Prefab3D extends EngineObject3D
             {
                 if (++level3DPrefabParts > LEVEL3D_PREFAB_PARTS)
                 {
-                    level3DPrefabParts == LEVEL3D_PREFAB_PARTS + 1 && debug && console.error('level3DLoad: the prefab ' +
+                    level3DPrefabParts == LEVEL3D_PREFAB_PARTS + 1 && false && console.error('level3DLoad: the prefab ' +
                         this.prefabName + ' makes more than ' + LEVEL3D_PREFAB_PARTS + ' parts, the rest left out');
                     break;
                 }
@@ -37667,8 +40268,13 @@ class Prefab3D extends EngineObject3D
                 this.parts.push(part);
                 this.partObjects.push(object);
                 if (!this.attached || !(part instanceof EngineObject3D)) continue;
-                // a child rides with its parent and has no collision of its own
+                // a child rides with its parent and has no collision of its own, nor do the level shapes under it, a
+                // mesh collision type's MeshCollider, which collide as the level whatever their parents' flags
                 part.setCollision(false, false, false);
+                /** @type {Array<EngineObject>} */
+                const shapes = [part];
+                for (const o of shapes)
+                    shapes.push(...o.children), o instanceof EngineObject3D && render3DLevelLeave(o);
                 children.push(part);
                 // the corners of its box as it is turned; its place is its middle, a prefab inside this one too
                 const box = buildMatrix(part.pos3D, part.rotation3D, part.size3D.multiply(part.scale3D));
@@ -37999,10 +40605,10 @@ const particleEffectShapes = ['dot', 'soft', 'glow', 'smoke', 'spark', 'square',
 ///////////////////////////////////////////////////////////////////////////////
 // effects
 
-// a color from an [r,g,b,a] array or a Color, undefined if it is neither
+// a color from an [r,g,b,a] array, a Color, or a Color as JSON writes it, {r,g,b,a}, undefined if it is none of them
 function particleEffectColor(value)
 {
-    if (value instanceof Color)
+    if (value instanceof Color || value && typeof value === 'object' && !isArray(value) && 'r' in value)
         value = [value.r, value.g, value.b, value.a];
     if (isArray(value) && value.length === 4 && value.every(isNumber))
         return value.map(c=> clamp(c));
@@ -38015,8 +40621,9 @@ function particleEffectColor(value)
  *  @memberof ParticleEffects */
 function particleEffectSanitize(raw)
 {
-    // one line of text, line breaks and control characters made spaces
-    const text = typeof raw?.name === 'string' ? raw.name.replace(/[\x00-\x1f\x7f]+/g, ' ').trim() : '';
+    // one line of text, line breaks and control characters made spaces, from a few hundred characters at most, as
+    // only 60 are kept and a name of megabytes would be split into characters whole
+    const text = typeof raw?.name === 'string' ? raw.name.slice(0, 600).replace(/[\x00-\x1f\x7f]+/g, ' ').trim() : '';
     // whole characters, and no space left where it was cut
     const name = text ? textGraphemes(text).slice(0, 60).join('').trim() : 'Effect';
     const input = raw?.settings && typeof raw.settings === 'object' ? {...raw.settings} : {};
@@ -38060,11 +40667,13 @@ function particleEffectSanitize(raw)
         behaviors.push({name:b.name, strength});
     }
 
-    // behaviors not known yet stay, a game may add them after the effect is loaded
+    // behaviors not known yet stay, a game may add them after the effect is loaded; each name once, and a few
+    // dozen at most, a file of thousands is not an effect
+    const names = new Set(behaviors.map(b=> b.name));
     for (const x of list)
-        if (typeof x?.name === 'string' && x.name && !particleEffectBehavior(x.name) &&
-            !behaviors.some(b=> b.name === x.name))
-            behaviors.push({name:x.name, strength: isNumber(x.strength) ? x.strength : 1});
+        if (typeof x?.name === 'string' && x.name && !names.has(x.name) && names.size < 64 &&
+            !particleEffectBehavior(x.name))
+            names.add(x.name), behaviors.push({name:x.name, strength: isNumber(x.strength) ? x.strength : 1});
     return {name, settings, behaviors};
 }
 
@@ -38132,7 +40741,8 @@ function particleEffectsFromData(data)
  *  @param {Array<ParticleEffect>} effects
  *  @return {string}
  *  @memberof ParticleEffects */
-function particleEffectsText(effects) { return JSON.stringify({version:1, effects}, undefined, 1); }
+function particleEffectsText(effects)
+{ return JSON.stringify({version:1, effects: effects.map(particleEffectSanitize)}, undefined, 1); } // colors as lists
 
 /** Load a library file the particle designer saved and add its effects
  *  @param {string} url
@@ -38285,13 +40895,19 @@ function particleEffectsAddBehavior(name, update, update3D, min=-2, max=2, value
     particleEffectBehaviors.push({name, update, update3D, min, max, value, description});
 }
 
-// the update callback that runs an effect's behaviors, in 2D or 3D, undefined when it has none for that
+// the update callback that runs an effect's behaviors, in 2D or 3D, undefined when it has none for that; a strength
+// is clamped to its behavior's range here, as one loaded before the game added the behavior was not
 function particleEffectUpdateCallback(behaviors, is3D)
 {
-    const calls = behaviors.map(b=> [particleEffectBehavior(b.name)?.[is3D ? 'update3D' : 'update'], b.strength])
-        .filter(c=> c[0]);
-    if (calls.length)
-        return (p)=> { for (const [update, strength] of calls) update(p, strength); };
+    const calls = behaviors.map(b=>
+    {
+        const behavior = particleEffectBehavior(b.name);
+        return [behavior?.[is3D ? 'update3D' : 'update'], behavior && clamp(b.strength, behavior.min, behavior.max)];
+    }).filter(c=> c[0]);
+    if (!calls.length) return;
+    const callback = /** @type {any} */ ((p)=> { for (const [update, strength] of calls) update(p, strength); });
+    callback.behaviors = behaviors.map((b)=> ({...b})); // what it runs, for particleEffectFromEmitter
+    return callback;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -38363,7 +40979,7 @@ function particleEffectResolve(nameOrEffect, options)
     if (isVector2(options.emitSize))
         options = {...options, emitSize: options.emitSize.x, emitHeight: options.emitSize.y,
             emitRect: options.emitRect ?? true};
-    if (debug)
+    if (false)
         for (const key in options)
             if (!PARTICLE_EFFECT_OPTIONS.includes(key) && !particleEffectSettings.some((setting)=> setting.name === key))
             {
@@ -38374,6 +40990,12 @@ function particleEffectResolve(nameOrEffect, options)
                 false&&ASSERT(false, 'particleEffect: no option named ' + key + (meant ? ', did you mean ' + meant + '?' : '') +
                     '\nOptions:', ...names);
             }
+    // the play's own options: 0, a negative or not a number made empty, mirrored or NaN particles
+    false&&ASSERT(options.scale === undefined || isNumber(options.scale) && options.scale > 0,
+        'particleEffect: scale must be a number above 0', options.scale);
+    false&&ASSERT(options.hue === undefined || isNumber(options.hue), 'particleEffect: hue must be a number', options.hue);
+    false&&ASSERT(options.saturation === undefined || isNumber(options.saturation) && options.saturation >= 0,
+        'particleEffect: saturation must be a number, 0 or more', options.saturation);
     // any setting in the options replaces the effect's own for this play, emitTime for a burst or a loop; one that is
     // not a value of its kind keeps the effect's own, where the sanitizing would put the library's default
     const settings = {...found.settings};
@@ -38439,12 +41061,17 @@ function particleEffectFromEmitter(emitter, name='Effect')
             settings[setting.name] = emitter[setting.name]; // a Color is taken as its channels by the sanitizer
     if (emitter.emitTime < 0) // destroyed, its last particles going: as long as it emitted, not 0, for ever
         settings.emitTime = emitter.emitElapsed;
+    // a child emitter's angle is the world's, so its effect's is taken from its parent's, as particleEffectSet adds it
+    if (emitter.parent)
+        settings.angle = emitter.parent.getMirrorSign() * (emitter.angle - emitter.parent.angle);
     settings.emitRect = !emitter.emitCircle;
     settings.emitSize = emitter.emitSize.x;
     settings.emitHeight = emitter.emitSize.y;
     settings.shape = '';
     settings.tileIndex = -1;
-    return particleEffectSanitize({name, settings});
+    // the behaviors the effect it was made from runs, kept on its update callback
+    const behaviors = /** @type {any} */ (emitter.particleUpdateCallback)?.behaviors;
+    return particleEffectSanitize({name, settings, behaviors: behaviors?.map((b)=> ({...b})) ?? []});
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -38944,6 +41571,11 @@ class GLTFModel
  * - model.createObject makes one; move, turn and scale it like any EngineObject3D and the parts follow
  * - play starts an animation by name or number, and the object moves its parts each frame as it runs
  * - The parts' meshes stay where they rest, an animation moves the child objects that draw them
+ * - Its color multiplies every part's own and transparent makes them all blend, so a hit flash or a fade, by the
+ *   color's alpha, is set on the object; the other draw settings it sets away from the default, emissive or shader,
+ *   take the parts' place
+ * - A see through object casts a shadow only where it is textured, so with transparent set its untextured parts
+ *   cast none, whatever the alpha; set it only while it fades
  * @extends EngineObject3D
  * @memberof GLTF
  * @example
@@ -38975,6 +41607,7 @@ class GLTFObject extends EngineObject3D
         this.animationLoop = true;
         /** @property {boolean} - Whether it is moving through the animation now */
         this.animationPlaying = false;
+        this.blendPlayFrame = -2; // the update a play with a blend was last called in, see play
         // what a cross-fade comes from: an animation going on as it was, or a pose held, and how far it is
         /** @type {{animation?: GLTFAnimation, time?: number, speed?: number, loop?: boolean,
          *  nodes?: Map<number, GLTFNodeTRS>}|undefined} */
@@ -39029,7 +41662,14 @@ class GLTFObject extends EngineObject3D
 
     /** Play an animation from its start, at once or cross-faded from the pose it is in
      *  - A play with a blend of the animation already playing goes on with it, so state code may call it each
-     *    frame; without a blend it starts the animation again
+     *    update, and so does one of an animation that played to its end and stopped while it was called each
+     *    update, a death held on its last pose; without a blend it starts the animation again
+     *  - Each update means from update code, every update: one called from render, or missed for an update, starts it
+     *    again with the fade
+     *  - Called each update with a loop or speed that moves the held pose, played backward from its end or set to
+     *    loop, it goes on from there, a door closing; the same way again holds it, so an attack held down plays
+     *    once, and plays again on a play without a blend or after an update with no play. After stop() it starts
+     *    again
      *  @param {string|number|GLTFAnimation} [animation] - Its name, its number in model.animations, or itself
      *  @param {boolean} [loop] - Start again at the end, or stop there
      *  @param {number} [speed] - 1 is as made, negative plays it backward from its end
@@ -39040,8 +41680,14 @@ class GLTFObject extends EngineObject3D
         const found = this.model.getAnimation(animation);
         false&&ASSERT(found, 'the model has no animation ' + animation, this.model.animations.map(a=> a.name));
         if (!found) return;
-        if (blend > 0 && found === this.animation && this.animationPlaying)
+        // called on the update before too, it is the same play going on, even once a clip that does not loop ended
+        const going = this.animationPlaying || this.blendPlayFrame >= frame - 1;
+        this.blendPlayFrame = blend > 0 ? frame : -2;
+        if (blend > 0 && found === this.animation && going)
         {
+            // held at an end, it goes on when the loop or speed now moves it from there
+            const t = this.animationTime;
+            this.animationPlaying ||= loop || (speed < 0 ? t > 0 : speed > 0 && t < found.duration);
             this.animationLoop = loop, this.animationSpeed = speed;
             return;
         }
@@ -39064,7 +41710,7 @@ class GLTFObject extends EngineObject3D
     }
 
     /** Stop the animation where it is, the parts hold that pose; a cross-fade going on stops too, holding the mix */
-    stop() { this.animationPlaying = false; this.blendFrom = undefined; }
+    stop() { this.animationPlaying = false; this.blendFrom = undefined; this.blendPlayFrame = -2; }
 
     /** Put the parts where the animation has them at a time, playing or not
      *  @param {number} time - Seconds into the animation */
@@ -39216,12 +41862,15 @@ async function parseGLTF(data, baseUrl='', files)
         json = JSON.parse(json);
     if (!json.asset || !String(json.asset.version).startsWith('2'))
         throw new Error('only glTF 2.0 is read'); // a file problem, not a code one, so it throws in every build
-    // compressed geometry has no plain accessors to read; the other extensions add to what is here, and can be left out
+    // compressed geometry has no plain accessors to read; a required extension the loader does not read refuses the
+    // file, as the format says, or it would load wrong with nothing said, as one instanced copy for many
     for (const name of json.extensionsRequired || [])
         if (name === 'KHR_draco_mesh_compression' || name === 'EXT_meshopt_compression')
             throw new Error(`glTF with ${name} is not read, export it uncompressed`);
         else if (name === 'KHR_texture_basisu')
             throw new Error('glTF with KHR_texture_basisu textures is not read, export them as png or jpeg');
+        else if (!GLTF_EXTENSIONS_READ.includes(name))
+            throw new Error(`glTF needs ${name}, which is not read, export without it`);
     // one that only may use them has other images to fall back on, or none: said, since it loads with them left out
     if (json.extensionsUsed?.includes('KHR_texture_basisu') && !json.extensionsRequired?.includes('KHR_texture_basisu'))
         console.warn('glTF: KHR_texture_basisu textures are not read and are left out, export them as png or jpeg');
@@ -39557,7 +42206,7 @@ function gltfSkinApply(skin, worldOf, modelMatrix, mesh)
     mesh.dirty = true;
 }
 // a joint's matrix and its normal matrix, as it is worked out; pure, so a game that loads no glTF does not keep Matrix4
-const gltfSkinScratch = [/* @__PURE__ */ new Matrix4, /* @__PURE__ */ new Matrix4];
+const gltfSkinScratch = /* @__PURE__ */ (()=> [new Matrix4, new Matrix4])();
 
 // a node's translation, rotation and scale as arrays to animate, copies so the file's stay as they rest
 function gltfNodeTRS(node)
@@ -39709,7 +42358,7 @@ function gltfFetch(uri, baseUrl, files)
         return Promise.reject(new Error('glTF needs ' + path + (named.size ? ', and more than one file has its name' :
             ', which is not among the files given')));
     }
-    if (uri.startsWith('data:'))
+    if (/^data:/i.test(uri)) // the scheme in any case, as the files branch takes it
     {
         const comma = uri.indexOf(','), bytes = atob(uri.slice(comma + 1)), data = new Uint8Array(bytes.length);
         for (let i = 0; i < bytes.length; ++i)
@@ -39743,9 +42392,16 @@ function gltfNodeMatrix(node)
 
 // an accessor's values as floats, one row per element, normalized integer types brought to 0 to 1; a sparse one
 // starts from its bufferView, or from zeros without one, and then has the listed elements replaced
+// the extensions it reads, which a file may require
+// KHR_mesh_quantization is the small integer accessors gltfpack writes, which it lists as required
+const GLTF_EXTENSIONS_READ = ['KHR_mesh_quantization', 'KHR_materials_emissive_strength', 'KHR_materials_unlit',
+    'KHR_texture_transform', 'KHR_materials_transmission', 'EXT_texture_webp', 'EXT_texture_avif'];
+
 function gltfAccessor(json, buffers, index)
 {
-    const a = json.accessors[index], view = json.bufferViews?.[a.bufferView];
+    const a = json.accessors?.[index];
+    if (!a) throw new Error('glTF accessor ' + index + ' is not in the file');
+    const view = json.bufferViews?.[a.bufferView];
     const components = {SCALAR: 1, VEC2: 2, VEC3: 3, VEC4: 4, MAT4: 16}[a.type];
     const types = {5120: Int8Array, 5121: Uint8Array, 5122: Int16Array, 5123: Uint16Array, 5125: Uint32Array, 5126: Float32Array};
     const Type = types[a.componentType];
@@ -39772,8 +42428,13 @@ function gltfAccessor(json, buffers, index)
         if (stride === components * size)
             out.set(new Type(buffer, offset, a.count * components)); // packed, one view over all of it
         else
-            for (let i = 0; i < a.count; ++i) // interleaved with other attributes, an element at each stride
-                out.set(new Type(buffer, offset + i * stride, components), i * components);
+        {
+            // interleaved with other attributes, an element at each stride, read through one view over them all
+            const step = stride / size, all = new Type(buffer, offset, (a.count - 1) * step + components);
+            for (let i = 0; i < a.count; ++i)
+            for (let c = 0; c < components; ++c)
+                out[i * components + c] = all[i * step + c];
+        }
     }
     const sparse = a.sparse;
     if (sparse)
@@ -39826,8 +42487,12 @@ function gltfPart(json, buffers, textures, copies, primitive, matrix, name)
     // as the extension's text says and as Khronos's sample renderer and three.js turn it, which models are made to
     // look right in; the GLSL sample in the extension's readme, read column major, turns the other way
     const material = json.materials?.[primitive.material] || {}, pbr = material.pbrMetallicRoughness || {};
-    const textureRef = pbr.baseColorTexture, uvTransform = textureRef?.extensions?.KHR_texture_transform;
-    const uvAccessor = attributes['TEXCOORD_' + (uvTransform?.texCoord ?? textureRef?.texCoord ?? 0)];
+    // with no base color texture, the normal or emissive map's, which the same uvs are read for
+    // the base color texture is the part's color; with none, the normal or emissive map lends its uvs, never its image
+    const textureRef = pbr.baseColorTexture;
+    const uvRef = textureRef ?? material.normalTexture ?? material.emissiveTexture;
+    const uvTransform = uvRef?.extensions?.KHR_texture_transform;
+    const uvAccessor = attributes['TEXCOORD_' + (uvTransform?.texCoord ?? uvRef?.texCoord ?? 0)];
     const [ox, oy] = uvTransform?.offset || [0, 0], [sx, sy] = uvTransform?.scale || [1, 1], r = uvTransform?.rotation || 0;
     const c = cos(r), s = sin(r);
     const uvs = uvAccessor !== undefined ? read(uvAccessor, (d, k)=>
@@ -39839,6 +42504,11 @@ function gltfPart(json, buffers, textures, copies, primitive, matrix, name)
         indices = indices.flatMap((_, i, s)=> i < 2 ? [] : i & 1 ? [s[i-1], s[i-2], s[i]] : [s[i-2], s[i-1], s[i]]);
     else if (mode === 6) // a fan around the first entry
         indices = indices.flatMap((_, i, s)=> i < 2 ? [] : [s[0], s[i-1], s[i]]);
+    // indices past its points, or a list that is not of whole triangles, are a file problem, so it throws in every
+    // build, as a release build would load it and fail at every pick
+    if (indices.length % 3 || indices.some((i)=> !(Number.isInteger(i) && i >= 0 && i < points.length)))
+        throw new Error('glTF primitive of ' + name +
+            ' has indices past its vertices or not in triangles');
     const mesh = new Mesh().addTriangles(points, indices, normals, uvs, colors);
     // flat when the file gives none, as the format says, which gives each corner a vertex of its own: which of the
     // file's each one is, kept for a skin
@@ -40004,6 +42674,7 @@ class ThreeJSPlugin
      *  called automatically when cameraAlign2D is set */
     alignCamera2D()
     {
+        false&&ASSERT(isNumber(this.camera.fov), 'cameraAlign2D needs a THREE.PerspectiveCamera, it reads its fov');
         const halfHeight = mainCanvasSize.y / 2 / cameraScale; // half visible height in world units
         const distance = halfHeight / tan(this.camera.fov/2 * PI/180);
 
@@ -40033,11 +42704,13 @@ class ThreeJSPlugin
         const dpr = getCanvasPixelRatio();
         const bufferSizeX = mainCanvasSize.x * dpr | 0;
         const bufferSizeY = mainCanvasSize.y * dpr | 0;
-        if (threeCanvas.width != bufferSizeX || threeCanvas.height != bufferSizeY)
+        // the camera too, as a canvas already three's default 300 by 150 has the right buffer and an aspect of 1
+        const aspect = mainCanvasSize.x / mainCanvasSize.y;
+        if (threeCanvas.width != bufferSizeX || threeCanvas.height != bufferSizeY || this.camera.aspect != aspect)
         {
             this.renderer.setPixelRatio(dpr);
             this.renderer.setSize(mainCanvasSize.x, mainCanvasSize.y, false);
-            this.camera.aspect = mainCanvasSize.x / mainCanvasSize.y;
+            this.camera.aspect = aspect;
             this.camera.updateProjectionMatrix();
         }
         if (threeCanvas.style.cssText != mainCanvas.style.cssText)
@@ -40052,7 +42725,8 @@ class ThreeJSPlugin
 ///////////////////////////////////////////////////////////////////////////////
 /**
  * ThreeJS Object - EngineObject that drives a three.js mesh
- * - LittleJS physics moves the object and the mesh follows automatically
+ * - LittleJS physics moves the object and the mesh follows automatically: its position and angle only, the size,
+ *   color, mirror and renderOrder of the object do nothing to the mesh, set those on the mesh itself
  * - Destroying the object removes the mesh from the scene
  * @extends EngineObject
  * @memberof ThreeJS

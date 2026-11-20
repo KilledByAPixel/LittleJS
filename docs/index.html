@@ -18,7 +18,7 @@ if(location.hash.indexOf('#.')==0)location.replace('#'+location.hash.slice(2))</
 <body>
 <header class="top">
 <button class="menu" aria-label="Menu"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
-<a class="brand" href="index.html"><img src="examples/logo.png" alt="" width="36" height="36"> LittleJS <span class="ver">1.30.1</span></a>
+<a class="brand" href="index.html"><img src="examples/logo.png" alt="" width="36" height="36"> LittleJS <span class="ver">1.31.0</span></a>
 <nav class="links"><a href="https://github.com/KilledByAPixel/LittleJS">GitHub</a><a href="https://killedbyapixel.github.io/LittleJS/examples/">Examples</a><a href="https://github.com/KilledByAPixel/LittleJS/blob/main/REFERENCE.md">Reference</a><a href="https://github.com/KilledByAPixel/LittleJS/blob/main/FAQ.md">FAQ</a></nav>
 <div class="search"><input type="search" placeholder="Search" aria-label="Search"><ul class="results" hidden></ul></div>
 <button class="theme" aria-label="Toggle theme"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M12 3a9 9 0 1 0 9 9c0-.5 0-1-.1-1.4A6 6 0 0 1 12 3z" fill="currentColor"/></svg></button>
@@ -47,7 +47,7 @@ The code is very clean and well documented with many examples to get you started
 <h2 id="littlejs-features">LittleJS Features</h2>
 <h3 id="%E2%9C%A8-graphics">✨ Graphics</h3>
 <ul>
-<li>Blazing fast WebGL2 + Canvas2D hybrid rendering system</li>
+<li>Blazing fast WebGL2 + Canvas2D hybrid rendering system, measured against PixiJS, Three.js, PlayCanvas and more in the <a href="https://github.com/KilledByAPixel/webgl-engine-bench">WebGL Engine Bench</a></li>
 <li>Apply <a href="https://www.shadertoy.com">Shadertoy</a> style shaders for post-processing effects, or on any object or draw, with values the game sets each frame</li>
 <li>2D lights with soft shadows, tinted glass and emissive objects, a sun with long shadows, spotlight cones and gels, and normal maps</li>
 <li>Robust particle effect system with a library of ready made effects and an <a href="https://killedbyapixel.github.io/LittleJS/examples/particles/">effect design tool</a></li>
@@ -103,7 +103,7 @@ The code is very clean and well documented with many examples to get you started
 <ul>
 <li>Compatible with all modern web browsers and mobile devices</li>
 <li>Full TypeScript and Module support with example projects for both</li>
-<li><a href="https://vite.dev">Vite</a> starter template for instant dev server with hot reload</li>
+<li><a href="https://vite.dev">Vite</a> starter template for instant dev server that reloads the page when you save</li>
 <li>Great for size coding competitions like <a href="https://js13kgames.com/">Js13kGames</a></li>
 <li>Open Source and <a href="https://github.com/KilledByAPixel/LittleJS/blob/main/LICENSE">MIT licensed</a></li>
 </ul>
@@ -159,7 +159,7 @@ npm run dev
 </code></pre>
 <pre class="prettyprint source lang-javascript"><code>import * as LJS from 'littlejsengine';
 </code></pre>
-<p><strong>With a script tag and no build step</strong>: clone this repository, or use Download ZIP on its GitHub page, and copy <a href="https://github.com/KilledByAPixel/LittleJS/tree/main/examples/starter">examples/starter</a>. Every engine name is a global, as in the example above. The examples are only in the repository; the npm package and the release zip hold the engine alone.</p>
+<p><strong>With a script tag and no build step</strong>: clone this repository, or use Download ZIP on its GitHub page, and copy <a href="https://github.com/KilledByAPixel/LittleJS/tree/main/examples/starter">examples/starter</a>. Its page and build load the engine from <code>../../dist/</code>, so a copy kept outside the repository needs that path changed to where <code>littlejs.js</code> and <code>littlejs.release.js</code> are, and its build tools installed: <code>npm install --save-dev google-closure-compiler@20230502 uglify-js@3.17 bestzip@2</code>, and <code>roadroller@2.1</code> with <code>USE_ROADROLLER</code>, the versions it was made for. Every engine name is a global, as in the example above. The examples are only in the repository; the npm package and the release zip hold the engine alone.</p>
 <p>A page that loads images or modules needs a local web server, since browsers block them from a file on disk. Vite brings its own. For the repository, serve its root, for example with <code>npx http-server</code>, then open <code>http://localhost:8080/examples/starter/</code>. The <a href="https://github.com/KilledByAPixel/LittleJS/blob/main/FAQ.md#do-i-need-a-local-server-to-run-littlejs-games-and-how-do-i-set-one-up">FAQ</a> has more.</p>
 <h2 id="learn">Learn</h2>
 <ul>
