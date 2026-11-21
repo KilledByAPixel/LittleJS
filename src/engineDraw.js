@@ -413,10 +413,13 @@ class TextureInfo
  * - loop, play and pingPong each start over from the first frame; stop holds the current one
  * - play(onEnd) calls onEnd once the play ends, on the first read after it, since there is no update to call it
  * - Frames follow each other along the row and on into the next row of the sheet, as tileInfo.frame counts them
+ * - Each frame can show for a time of its own, a list of seconds, as Aseprite times them; atlasAnimation makes one
+ * - At a negative speed it plays backward from the last frame, in every mode
  * - SpriteAnimator switches between a character's animations by name
  * @example
  * const walk = new SpriteAnimation(tile(0, 16), 4, .1); // four frames, a tenth of a second each
  * const attack = new SpriteAnimation(tile(4, 16), 3, .05).play(); // once, then holds the last frame
+ * const swing = new SpriteAnimation(tile(8, 16), 3, [.3, .05, .2]); // a long wind up, a quick hit
  * // in update: this.tileInfo = (attack.isDone ? walk : attack).tileInfo;
  * @memberof Draw
  */
@@ -425,16 +428,18 @@ class SpriteAnimation
     /** Create an animation over a run of frames, looping from the start
      *  @param {TileInfo} tileInfo - The first frame
      *  @param {number} frameCount - How many frames, one or more
-     *  @param {number} [frameTime] - Seconds each frame shows for */
+     *  @param {number|Array<number>} [frameTime] - Seconds each frame shows for, or a list of them, one a frame */
     constructor(tileInfo, frameCount, frameTime=.1)
     {
         ASSERT(tileInfo instanceof TileInfo, 'the first frame must be a TileInfo');
-        ASSERT(frameCount >= 1 && frameTime > 0, 'an animation needs at least one frame and a positive frame time');
+        ASSERT(frameCount >= 1 && (isArray(frameTime) ? frameTime.length === frameCount && frameTime.every((t)=> t > 0) :
+            frameTime > 0), 'an animation needs at least one frame and a positive frame time, or one for each frame');
         /** @property {TileInfo} - The first frame, the others follow it as tileInfo.frame counts them */
         this.firstTile = tileInfo;
         /** @property {number} - How many frames */
         this.frameCount = frameCount;
-        /** @property {number} - Seconds each frame shows for */
+        /** @property {number|Array<number>} - Seconds each frame shows for, or a list of them, one a frame
+         *  @type {number|Array<number>} */
         this.frameTime = frameTime;
         /** @property {number} - Rate multiplier, 2 plays twice as fast; set it before starting */
         this.speed = 1;
@@ -489,9 +494,34 @@ class SpriteAnimation
      *  @return {number} */
     get elapsedFrames()
     {
+        const t = (time - this.startTime) * this.speed, times = this.frameTime;
+        let f;
+        if (!isArray(times))
+            f = t / times;
+        else
+        {
+            // frames of their own times: whole runs of the mode, then the steps of this one gone by, each as long as
+            // the frame it shows, so pingPong's way back and a backward play time each frame as it shows
+            const n = this.frameCount, steps = this.mode == 'pingPong' ? max(2 * n - 2, 1) : n;
+            const s = this.speed < 0 ? -1 : 1, step = (k)=> times[spriteAnimationFrame(this, s * k)];
+            let run = 0, k = 0;
+            for (let i = 0; i < steps; ++i) run += step(i);
+            const runs = floor(abs(t) / run);
+            let rest = abs(t) - runs * run;
+            while (k < steps - 1 && rest >= step(k)) rest -= step(k++);
+            f = s * (runs * steps + k + rest / step(k));
+        }
         // time steps by 1/60, so a whole number of frames can come out a hair under it, snapped so each lasts the same
-        const f = (time - this.startTime) * this.speed / this.frameTime, r = round(f);
+        const r = round(f);
         return abs(f - r) < 1e-6 ? r : f;
+    }
+
+    /** Seconds to show each frame once, at a speed of 1
+     *  @return {number} */
+    get duration()
+    {
+        const times = this.frameTime;
+        return isArray(times) ? times.reduce((a, b)=> a + b, 0) : times * this.frameCount;
     }
 
     /** The frame showing now, 0 to frameCount-1
@@ -503,13 +533,7 @@ class SpriteAnimation
             return this.heldFrame;
         // backward a frame shows from when the count reaches it until the next, as forward, so the first shows
         // for as long as the rest
-        const n = this.frameCount, f = this.speed < 0 ? ceil(this.elapsedFrames) : floor(this.elapsedFrames);
-        if (this.mode == 'once') // backward it counts down from the last frame, showing it from the start
-            return clamp(this.speed < 0 ? n - 1 + f : f, 0, n - 1);
-        if (this.mode == 'loop')
-            return mod(f, n);
-        const period = max(2 * n - 2, 1), k = mod(f, period); // there and back, the ends once each
-        return k < n ? k : period - k;
+        return spriteAnimationFrame(this, this.speed < 0 ? ceil(this.elapsedFrames) : floor(this.elapsedFrames));
     }
 
     /** The tile of the frame showing now
@@ -531,9 +555,21 @@ class SpriteAnimation
     }
 }
 
+// the frame an animation shows a whole number of frames in, counted down from the last frame at a negative speed
+function spriteAnimationFrame(animation, f)
+{
+    const n = animation.frameCount, start = animation.speed < 0 ? n - 1 : 0;
+    if (animation.mode == 'once')
+        return clamp(start + f, 0, n - 1);
+    if (animation.mode == 'loop')
+        return mod(start + f, n);
+    const period = max(2 * n - 2, 1), k = mod(start + f, period); // there and back, the ends once each
+    return k < n ? k : period - k;
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 /**
- * SpriteAnimator - A character's animations by name, like idle, walk and attack, and the one showing now
+ * SpriteAnimator -A character's animations by name, like idle, walk and attack, and the one showing now
  * - Each clip is a SpriteAnimation and keeps its own mode, loop, play or pingPong
  * - set starts a clip over only when it changes or a play of it has ended, so it can be called every update
  * - Read tileInfo each frame for the frame to draw, as with a SpriteAnimation

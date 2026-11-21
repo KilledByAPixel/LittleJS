@@ -79,8 +79,10 @@ first frame and returning the animation, so they chain onto `new`:
 - `pingPong()` runs there and back, forever.
 
 `sweep` has 7 frames from tile 5. `oneShot` has 4 frames from tile 8 at
-`.2` seconds each, so a play takes `.8` seconds. They are made in
-`gameInit` because `tile` needs the tile sheet to be loaded.
+`.2` seconds each, so a play takes `.8` seconds, its `duration`. The
+frame time can also be a list with a time for each frame, as Aseprite
+times them. They are made in `gameInit` because `tile` needs the tile
+sheet to be loaded.
 
 ### SpriteAnimator
 A `SpriteAnimator` holds several animations by name and shows one of
@@ -115,9 +117,12 @@ wraps it to two frames and `|0` drops the fraction, so it is 0 or 1.
 - Change `vec2(.05, 0)` to `vec2(.15, 0)`: the walker moves three times
   as fast while its steps keep their pace.
 - Change `time*4%2` to `time*12%2` to speed up the one done by hand.
+- Change the one-shot's `4, .2` to `4, [.6, .1, .1, .6]`: it holds its
+  first and last frames and hurries through the two between.
 
 ## See also
 Sprite Atlas names the tiles of a sheet, Texture Sheet and Texture
 Atlas load frames from other images, and Tween animates numbers. Look
-up `SpriteAnimation`, `SpriteAnimator` and `TileInfo`.
+up `SpriteAnimation`, `SpriteAnimator`, `TileInfo` and `atlasAnimation`,
+which plays an Aseprite tag with its own frame times.
 */

@@ -379,13 +379,15 @@ TileInfo.textureInfo    // The texture info for this tile
 
 // Sprite Animation Object - steps a tile through the frames along its row over time, paused with the game
 new SpriteAnimation(tileInfo, frameCount, frameTime=.1) // first frame, how many, seconds each; loops from the start
+new SpriteAnimation(tileInfo, 3, [.3, .05, .2]) // or a time for each frame, as Aseprite has; see atlasAnimation
 animation.loop() .play() .pingPong()  // start over from the first frame: repeat, run once and hold the last
                                       // frame, or there and back; each returns the animation
 animation.stop()        // hold the current frame, a mode call starts it again
 animation.tileInfo      // the frame to draw now, read it in update or before a drawTile
 animation.frame         // its index, 0 to frameCount-1
 animation.isDone        // true once a play has run through
-animation.speed = 1     // rate multiplier, set before starting
+animation.speed = 1     // rate multiplier, set before starting; below 0 plays backward from the last frame
+animation.duration      // seconds to show each frame once, at a speed of 1
 animation.play(onEnd)   // onEnd is called once when the play ends, on the first read after it
 
 // Sprite Animator - a character's animations by name and the one showing now
@@ -2647,6 +2649,8 @@ tileInfo.tiles                        // a tile set's tiles, each where it was p
 loadSprite(src, frameSize, padding=1, sourcePadding=0) // Load an image and pack it, returns a TileInfo
 loadAtlas(imageSrc, jsonSrc, padding=1) // Load a TexturePacker or Aseprite atlas, returns name->TileInfo object;
                                       // numbered names, run_0 or gem1, group into an animation, each frame also under its own name
+atlasAnimation(atlas, name, frameTime=.1) // A new SpriteAnimation of an atlas animation once loaded: Aseprite frame
+                                      // times and tag direction, or frameTime each for other atlases
 parseAtlas(data)                      // Parse atlas json into named frame groups, used by loadAtlas, a tag's group with its direction,
                                       // one grouped from its frames' names marked named
 spritesReady()                        // Promise resolved when all sprites are packed

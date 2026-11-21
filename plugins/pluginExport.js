@@ -236,6 +236,7 @@ export
     loadSprite,
     loadTiles,
     loadAtlas,
+    atlasAnimation,
     parseAtlas,
     spritesReady,
 

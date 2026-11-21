@@ -39,6 +39,8 @@ const textureSheetLoaded = /* @__PURE__ */ new Map;
 const textureSheetLoadKey = (...parts)=> parts.map((p)=> isVector2(p) ? p.x + ',' + p.y : String(p)).join('|');
 // a load whose file failed is forgotten, so loading it again tries again, as when the server comes back
 const textureSheetLoadFailed = (key, loaded)=> textureSheetLoaded.get(key) === loaded && textureSheetLoaded.delete(key);
+// how each animation of an atlas plays, by the atlas loadAtlas handed back, then by name, for atlasAnimation
+const textureSheetAtlasAnimations = /* @__PURE__ */ new WeakMap;
 
 /**
  * Texture Sheet - A texture that images are packed into as they load
@@ -451,6 +453,11 @@ function loadAtlas(imageSrc, jsonSrc, padding=textureSheetPadding)
                 // as its own, a frame named __proto__ too, which assigned would set the atlas's prototype; a sprite
                 // packed after a frame took its name takes it back
                 objectPropertySet(atlas, group.name, tile);
+                // how it plays, for atlasAnimation: its frames, their times when every frame has one, and its direction
+                const times = group.frames.every((f)=> f.duration) ? group.frames.map((f)=> f.duration) : undefined;
+                textureSheetAtlasAnimations.has(atlas) || textureSheetAtlasAnimations.set(atlas, new Map);
+                textureSheetAtlasAnimations.get(atlas).set(group.name,
+                    {frameCount: group.frames.length, times, direction: group.direction});
                 // each frame of a group made from names under its own name too, gem1 of gem1, gem2 and gem3, separate
                 // sprites in a pack exported by file name, unless a sprite of that name is in the atlas
                 if (group.named)
@@ -469,7 +476,32 @@ function loadAtlas(imageSrc, jsonSrc, padding=textureSheetPadding)
     return atlas;
 }
 
-// run a load in the queue: a load that throws is reported, let go of so the next call loads it again (failed), as
+/** Make a SpriteAnimation of an animation in an atlas from loadAtlas, once it has loaded
+ *  - Each frame shows for its time in an Aseprite sheet, the frames of other atlases for frameTime
+ *  - An Aseprite tag plays its way: pingpong as pingPong, reverse and pingpong_reverse at a speed of -1
+ *  - A new animation each call, as each character needs its own; a single sprite is an animation of one frame
+ *  @param {Object<string, TileInfo>} atlas - What loadAtlas handed back
+ *  @param {string} name - The animation's name, its Aseprite tag or a name like run of run_0, run_1
+ *  @param {number} [frameTime] - Seconds each frame shows for, when the atlas gives no times
+ *  @return {SpriteAnimation}
+ *  @example
+ *  const atlas = loadAtlas('hero.png', 'hero.json');
+ *  await spritesReady();
+ *  const attack = atlasAnimation(atlas, 'attack').play();
+ *  @memberof TextureSheets */
+function atlasAnimation(atlas, name, frameTime=.1)
+{
+    const tileInfo = Object.hasOwn(atlas, name) ? atlas[name] : undefined;
+    ASSERT(tileInfo instanceof TileInfo, 'atlasAnimation: the atlas has no sprite of that name, or has not loaded yet; ' +
+        'await spritesReady() first', name);
+    const group = textureSheetAtlasAnimations.get(atlas)?.get(name), direction = group?.direction;
+    const animation = new SpriteAnimation(tileInfo, group?.frameCount || 1, group?.times || frameTime);
+    direction?.startsWith('pingpong') && animation.pingPong();
+    direction?.endsWith('reverse') && (animation.speed = -1);
+    return animation;
+}
+
+// run a load in the queue:a load that throws is reported, let go of so the next call loads it again (failed), as
 // one whose file did not load is, and the loads after it carry on; the pending count always comes back down, and the
 // sheets upload to webgl once per batch, when the last pending load finishes
 function textureSheetQueueJob(name, job, failed)
@@ -500,6 +532,7 @@ function textureSheetQueueJob(name, job, failed)
  *  @property {Vector2} sourceSize - Its size before it was trimmed
  *  @property {boolean} rotated - The packer turned it
  *  @property {number} [groupIndex] - Its number in an animation named like run_0, run_1
+ *  @property {number} [duration] - Seconds it shows for in an animation, from an Aseprite sheet
  *  @memberof TextureSheets */
 
 /** Parse atlas json into a list of named frame groups, used by loadAtlas
@@ -538,12 +571,15 @@ function parseAtlas(data)
         // and a trimmed part placed a pixel over its untrimmed size, the same rounding, loses that pixel
         const over = (o, s, source)=> o + s - source > 0 && o + s - source <= 1 ? source - o : s;
         size.x = over(offset.x, size.x, sourceSize.x), size.y = over(offset.y, size.y, sourceSize.y);
-        return {
+        const frame = {
             name: String(name).replace(/\.[^.\\/]+$/, ''), // strip file extension
             pos:        vec2(f.frame.x + (f.rotated ? iy : ix), f.frame.y + (f.rotated ? ix : iy)), // turned in the image
             size, offset, sourceSize,
             rotated:    !!f.rotated,
         };
+        // Aseprite times each frame in milliseconds
+        Number.isFinite(f.duration) && f.duration > 0 && (frame.duration = f.duration / 1e3);
+        return frame;
     });
     bad && console.warn(`loadAtlas: ${bad} frame entries have no frame rect, no name or a field that is not a ` +
         'number, left out');

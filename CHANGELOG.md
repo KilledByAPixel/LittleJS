@@ -5,7 +5,12 @@ What changed in each release, newest first. Releases before 1.20.0 are on the
 
 ## Unreleased
 
-Nothing yet.
+### New Changes
+- A `SpriteAnimation` frame time can be a list, a time for each frame, and `animation.duration` is the seconds to show each frame once
+- `atlasAnimation(atlas, name)` makes a `SpriteAnimation` of an atlas animation, with an Aseprite sheet's frame times and the tag's direction; `parseAtlas` gives each Aseprite frame its `duration` in seconds
+
+### Breaking Changes
+- A `SpriteAnimation` that loops or ping pongs at a negative speed starts on its last frame and counts down, as a play backward did, where it showed the first frame before the last
 
 ## 1.31.0 - 2026-11-19
 

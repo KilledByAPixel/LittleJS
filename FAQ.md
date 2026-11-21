@@ -579,6 +579,14 @@ const {walk, attack} = this;
 this.tileInfo = (attack.isDone ? walk : attack).tileInfo;
 ```
 
+The frame time can also be a list, one time for each frame. For art from Aseprite, `atlasAnimation` makes the animation from the sheet loaded with `loadAtlas`, with each frame's time and the tag's direction as drawn:
+
+```javascript
+const atlas = loadAtlas('hero.png', 'hero.json'); // in gameInit
+await spritesReady();
+this.attack = atlasAnimation(atlas, 'attack').play(); // in the constructor
+```
+
 To do it by hand, use the `TileInfo.frame(n)` method to offset along the row of frames from a base sprite:
 
 ```javascript

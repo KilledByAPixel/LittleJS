@@ -69,6 +69,48 @@ test('a SpriteAnimation needs a TileInfo, at least one frame and a positive fram
     assert.throws(()=> new LJS.SpriteAnimation(undefined, 4, .1));
     assert.throws(()=> new LJS.SpriteAnimation(first, 0, .1));
     assert.throws(()=> new LJS.SpriteAnimation(first, 4, 0));
+    assert.throws(()=> new LJS.SpriteAnimation(first, 3, [.1, .1]), 'a time for each frame');
+    assert.throws(()=> new LJS.SpriteAnimation(first, 2, [.1, 0]));
+});
+
+// the checks are at .05, .15, .35, .45 and .55 s
+const unevenSteps = [3, 6, 12, 6, 6];
+
+test('a list of frame times shows each frame for its own time, and duration adds them', () =>
+{
+    const swing = new LJS.SpriteAnimation(first, 3, [.1, .3, .1]);
+    assert.deepEqual(framesOver(swing, unevenSteps), [0, 1, 1, 2, 0]);
+    assert.ok(Math.abs(swing.duration - .5) < 1e-9);
+    assert.ok(Math.abs(new LJS.SpriteAnimation(first, 4, .1).duration - .4) < 1e-9);
+
+    const attack = new LJS.SpriteAnimation(first, 3, [.1, .3, .1]).play();
+    LJS.engineStep(27); // .45 s, on the last frame
+    assert.deepEqual([attack.frame, attack.isDone], [2, false]);
+    LJS.engineStep(6); // .55 s, past the duration
+    assert.deepEqual([attack.frame, attack.isDone], [2, true]);
+});
+
+test('pingPong with a list of times shows a frame for its time on the way back too', () =>
+{
+    // 0 for .1, 1 for .2, 2 for .1, then 1 again for .2, from .4 to .6
+    const idle = new LJS.SpriteAnimation(first, 3, [.1, .2, .1]).pingPong();
+    assert.deepEqual(framesOver(idle, [3, 9, 9, 6, 6, 6]), [0, 1, 2, 1, 1, 0]);
+});
+
+test('at a negative speed every mode plays from the last frame down, each frame for its own time', () =>
+{
+    const back = (mode, times)=>
+    {
+        const animation = new LJS.SpriteAnimation(first, times.length || 4, times).restart(mode);
+        animation.speed = -1;
+        return animation;
+    };
+    assert.deepEqual(framesOver(back('loop', .1), [3, 6, 6, 6, 6]), [3, 2, 1, 0, 3]);
+    assert.deepEqual(framesOver(back('pingPong', [.1, .1, .1]), [3, 6, 6, 6, 6]), [2, 1, 0, 1, 2]);
+    assert.deepEqual(framesOver(back('loop', [.1, .3, .1]), unevenSteps), [2, 1, 1, 0, 2]);
+    const once = back('once', [.1, .3, .1]);
+    assert.deepEqual(framesOver(once, unevenSteps), [2, 1, 1, 0, 0]);
+    assert.equal(once.isDone, true);
 });
 
 test('play(onEnd) calls it once, on the first read after the play ends', () =>
