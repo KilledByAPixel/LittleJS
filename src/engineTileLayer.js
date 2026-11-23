@@ -81,8 +81,17 @@
 /** A custom property of a Tiled map, layer or object
  *  @typedef {Object} TiledProperty
  *  @property {string} name
- *  @property {string} [type] - string, int, float, bool, color, file or object, string when left out
- *  @property {string|number|boolean} value - a color is a string, an object an id
+ *  @property {string} [type] - string, int, float, bool, color, file, object, class or list, string when left out
+ *  @property {string|number|boolean|ObjectProperties|Array<TiledListItem>} value - a color is a string, an object an
+ *  id, a class its members by name and a list its items
+ *  @property {string} [propertytype] - A class property's class
+ *  @memberof TileLayers */
+
+/** An item of a Tiled list property, which Tiled 1.11 and on keep with its type, read as its value
+ *  @typedef {Object} TiledListItem
+ *  @property {string} type - As a property's type
+ *  @property {string|number|boolean|ObjectProperties|Array<TiledListItem>} value
+ *  @property {string} [propertytype] - A class item's class
  *  @memberof TileLayers */
 
 /** The properties of an object type, its defaults or the values an object was made with, by name
@@ -821,6 +830,23 @@ function objectLayersMergeMember(before, member, warn, name, fromText)
     return objectLayersMergeClass(before, member, warn, name, fromText);
 }
 
+// a Tiled property's value as a game writes it: a list, from Tiled 1.11, keeps each item as {type, value}, read as
+// its value, and a list inside a class or another list is read the same way; an item not kept so, as a map written
+// by hand has, is taken as it is
+function objectLayersTiledValue(type, value)
+{
+    const kept = (item)=> objectPropertyPlain(item) && typeof item.type == 'string' && 'value' in item;
+    if (type === 'list' && isArray(value))
+        return value.map((item)=> kept(item) ? objectLayersTiledValue(item.type, item.value) : item);
+    if (type !== 'class' || !objectPropertyPlain(value))
+        return value;
+    const members = {};
+    for (const [key, member] of Object.entries(value))
+        objectPropertySet(members, key, isArray(member) && member.every(kept) ?
+            objectLayersTiledValue('list', member) : objectLayersTiledValue('class', member));
+    return members;
+}
+
 // the defaults of an object's type, each copied for it, then its properties in Tiled over them
 function objectLayersProperties(type, object, tileMapData)
 {
@@ -835,7 +861,7 @@ function objectLayersProperties(type, object, tileMapData)
     let name;
     for (const property of list)
     {
-        const {value} = property;
+        const value = objectLayersTiledValue(property.type, property.value);
         name = property.name;
         const fallback = objectPropertyDefault(type.defaults, name);
         if (property.type === 'color' && (fallback == null || isColor(fallback)))

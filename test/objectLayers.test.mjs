@@ -159,6 +159,33 @@ test('a Vector2 string must be exactly two numbers, anything else keeps the defa
     assert.deepEqual(JSON.parse(JSON.stringify(values)), [[1, 2], [1, 2], [1, 2], [1, 2], [2, 3]]);
 });
 
+test('a Tiled list, its items kept as {type, value}, is read as a list, in a class and a list too', () =>
+{
+    // as Tiled 1.11 writes a list property, issue 188
+    const { run, warnings } = engine();
+    const item = (type, value, extra={})=> ({ type, value, ...extra });
+    const r = JSON.parse(run(`(()=>
+    {
+        const defaults = { counts: [0], tints: [hsl(0, 0, 1)], spots: [vec2()], grid: [[0]], waves: [{ n: 1, k: 2 }],
+            cfg: { hp: 5, drops: ['a'] }, raw: [1] };
+        objectLayersAddType('Unit', class { constructor(pos) { this.pos = pos; } }, defaults);
+        const [unit] = objectLayersLoad(${map([{ id: 1, type: 'Unit', x: 0, y: 0, properties: [
+            { name: 'counts', type: 'list', value: [item('int', 3), item('int', 4)] },
+            { name: 'tints', type: 'list', value: [item('color', '#ff00ff00')] },
+            { name: 'spots', type: 'list', value: [item('string', '2,3')] },
+            { name: 'grid', type: 'list', value: [item('list', [item('int', 7), item('int', 8)])] },
+            { name: 'waves', type: 'list', value: [item('class', { n: 6 }, { propertytype: 'Wave' })] },
+            { name: 'cfg', type: 'class', value: { drops: [item('string', 'b'), item('string', 'c')] } },
+            { name: 'raw', type: 'float', value: [5, 6] }] }])});
+        return JSON.stringify({ counts: unit.counts, tint: [unit.tints[0].r, unit.tints[0].g, unit.tints[0] instanceof Color],
+            spot: [unit.spots[0].x, unit.spots[0].y, unit.spots[0] instanceof Vector2], grid: unit.grid,
+            waves: unit.waves, cfg: unit.cfg, raw: unit.raw });
+    })()`));
+    assert.deepEqual(r, { counts: [3, 4], tint: [0, 1, true], spot: [2, 3, true], grid: [[7, 8]],
+        waves: [{ n: 6, k: 2 }], cfg: { hp: 5, drops: ['b', 'c'] }, raw: [5, 6] });
+    assert.deepEqual(warnings, []);
+});
+
 test('a Tiled property named as a method of the object is left out, so update still runs', () =>
 {
     for (const file of [undefined, 'littlejs.release.js'])

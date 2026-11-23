@@ -12,6 +12,9 @@ What changed in each release, newest first. Releases before 1.20.0 are on the
 ### Breaking Changes
 - A `SpriteAnimation` that loops or ping pongs at a negative speed starts on its last frame and counts down, as a play backward did, where it showed the first frame before the last
 
+### Fixes
+- `objectLayersLoad` reads a Tiled list property, which Tiled 1.11 and on write with each item as `{type, value}`, as a plain list of the values, in a class property or a list too, each item read against its default's item as before (issue 188)
+
 ## 1.31.0 - 2026-11-19
 
 ### New Changes
