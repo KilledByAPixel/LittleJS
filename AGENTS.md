@@ -396,7 +396,7 @@ npm run build-docs
 
 ### Debug features
 - Press `Esc` to toggle debug overlay
-- Number keys toggle visualizations; `9` shows the tweakables panel and `0` opens the level editor, the 3D one when the game loaded a 3D level, after which `Esc` switches between playing and editing until the editor's Exit. A debug plugin adds a line to the overlay's key list through `debugOverlayKeys`
+- Number keys toggle visualizations; `9` shows the tweakables panel and `0` opens the level editor, the 3D one when the game loaded a 3D level or is a 3D game with no tile layers, after which `Esc` switches between playing and editing until the editor's Exit. A debug plugin adds a line to the overlay's key list through `debugOverlayKeys`
 - `C` on the debug overlay is the free camera of a 3D game: the mouse looks, WASD and QE fly, the game runs on under it and reads no keyboard or mouse (`inputCapture`)
 - `+`/`-` keys control time scale
 - Debug functions: `debugRect()`, `debugCircle()`, `debugLine()`, `debugText()`, and in 3D `debugBox3D()`, `debugSphere3D()`, `debugLine3D()`, `debugPoint3D()`

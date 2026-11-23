@@ -213,7 +213,7 @@ class LevelEditor
          *  @type {Array<number>|undefined} */
         this.paletteTiles = undefined;
         /** @property {boolean|undefined} - Which level editor opens: true the 3D one, false the 2D one, undefined the
-         *  3D one when a level was loaded with level3DLoad and there is a Render3DPlugin
+         *  3D one when there is a Render3DPlugin and a level was loaded with level3DLoad or the game has no tile layers
          *  @type {boolean|undefined} */
         this.use3D = undefined;
         /** @property {string|undefined} - The tool of the game's own that is on, one added with addTool, undefined
@@ -282,7 +282,8 @@ class LevelEditor
      *  @return {boolean} */
     get isOpen() { return editorIsOpen || !!editorOther?.isOpen(); }
 
-    /** True when the editor in use is the 3D one, as use3D says or since a 3D level was loaded
+    /** True when the editor in use is the 3D one, as use3D says, since a 3D level was loaded, or in a 3D
+     *  game with no tile layers
      *  @return {boolean} */
     get is3D() { return !!editorOther?.wanted(); }
 

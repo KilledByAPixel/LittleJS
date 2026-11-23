@@ -150,7 +150,7 @@ levelEditor.onUpdate = ()=> {};        // each frame while it is open
 levelEditor.onDraw = ()=> {};          // while it draws the level, for overlays of your own
 levelEditor.onPanel = (box)=> {};      // once, when the panel is made: a box in it for your own controls
 levelEditor.onSave = (text, name)=> false;     // Save: return true when you kept the file yourself
-levelEditor.use3D = true;              // force the 3D editor (false, the 2D one); undefined picks by the level
+levelEditor.use3D = true;              // force the 3D editor (false, the 2D one); undefined picks by the level, 3D in a 3D game with no tile layers
 levelEditor.onTile = (layer, pos, tile)=> {};  // 2D: a tile was painted, tile undefined when erased
 levelEditor.paletteTiles = [0, 1, 10]; // 2D: the tiles the palette shows, undefined for the whole sheet; set it for
                                        // a tile set packed by loadSprite, whose sheet holds other sprites below it

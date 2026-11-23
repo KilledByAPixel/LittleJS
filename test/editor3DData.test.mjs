@@ -194,11 +194,15 @@ test('closing gives back the pause the game had, and a second session keeps the 
     near(run('editor3DCamera.pos.x'), 0, 'a new session starts at the game\'s camera');
 });
 
-test('the level editor is the 3D one with a 3D level, and the 2D one without or when told', async ()=>
+test('the level editor is the 3D one with a 3D level or no 2D one, and the 2D one with tile layers or when told', async ()=>
 {
     let engine = await loadGame();
     engine.run('levelEditor.open()');
-    assert.deepEqual([...engine.run('[editor3DIsOpen, editorIsOpen]')], [false, true], 'no 3D level');
+    assert.deepEqual([...engine.run('[editor3DIsOpen, editorIsOpen, typeof editor3DLevel]')], [true, false, 'object'],
+        'no level of either kind, a new 3D level');
+    engine = await loadGame();
+    engine.run('new TileLayer(vec2(), vec2(4)); levelEditor.open()');
+    assert.deepEqual([...engine.run('[editor3DIsOpen, editorIsOpen]')], [false, true], 'a 2D tile layer, no 3D level');
     engine = await loadGame();
     engine.run(levelCode + 'levelEditor.use3D = false; levelEditor.open()');
     assert.deepEqual([...engine.run('[editor3DIsOpen, editorIsOpen]')], [false, true], 'told to be 2D');
@@ -269,6 +273,20 @@ test('edits are autosaved and come back when the same file loads again', async (
     near(engine.run('live(2).pos3D.x'), 3);
     engine.run('editor3DUndoList.length = 0; move(2, vec3(1, 1.5, 0)); editor3DStrokeEnd()');
     assert.deepEqual(JSON.parse(storage.items['LittleJS editor 3D /game/']), {}, 'back to the file, nothing to keep');
+});
+
+test('the empty level the editor makes for a game with no level has no autosave, so the next game does not get it',
+    async ()=>
+{
+    const storage = makeStorage();
+    let engine = await loadGame({ localStorage: storage });
+    engine.run(`levelEditor.open(); editor3DChange((list)=> list.push({ id: 1, type: 'Box', pos: [0, 1, 0] }));
+        editor3DStrokeEnd(); levelEditor.close()`);
+    assert.equal(engine.run('editor3DLevel.objects.length'), 1, 'placed');
+    assert.equal(storage.items['LittleJS editor 3D /game/'], undefined, 'nothing kept');
+    engine = await loadGame({ localStorage: storage });
+    engine.run('levelEditor.open()');
+    assert.equal(engine.run('editor3DLevel.objects?.length ?? 0'), 0, 'the next game\'s editor starts empty');
 });
 
 test('a file that changed under its autosave waits for Apply or Drop', async ()=>

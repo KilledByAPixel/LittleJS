@@ -8,6 +8,7 @@ What changed in each release, newest first. Releases before 1.20.0 are on the
 ### New Changes
 - A `SpriteAnimation` frame time can be a list, a time for each frame, and `animation.duration` is the seconds to show each frame once
 - `atlasAnimation(atlas, name)` makes a `SpriteAnimation` of an atlas animation, with an Aseprite sheet's frame times and the tag's direction; `parseAtlas` gives each Aseprite frame its `duration` in seconds
+- The level editor key in a 3D game with no level and no tile layers opens the 3D editor, a camera to fly around the game with and an empty level to place things in, kept by Save and not autosaved, where it opened the 2D editor with nothing to show
 
 ### Breaking Changes
 - A `SpriteAnimation` that loops or ping pongs at a negative speed starts on its last frame and counts down, as a play backward did, where it showed the first frame before the last

@@ -594,7 +594,8 @@ function editor3DLevelLoaded(level)
     editor3DRedoList = record.redo;
     // an autosave the file already has, from a Save, goes; one of this file, or of the file a Save wrote, comes back
     // a prefab being edited has no autosave, and one of a level with the same objects is not its
-    let saved = editor3DPrefabLevels.has(level) ? undefined : editor3DSaves()[record.key];
+    let saved = editor3DPrefabLevels.has(level) || editor3DScratchLevels.has(level) ? undefined :
+        editor3DSaves()[record.key];
     // one whose objects are not all objects, edited by hand or written by something else, would fail on open
     if (saved && !(isArray(saved.objects) && saved.objects.every((o)=> !!o && typeof o === 'object' && !isArray(o))))
     {
@@ -1828,8 +1829,10 @@ function editor3DDuplicate()
 ///////////////////////////////////////////////////////////////////////////////
 // the session: opening, playing and closing
 
-// if the level editor is the 3D one: as levelEditor.use3D says, or when a 3D level was loaded
-function editor3DWanted() { return !!render3D && (levelEditor.use3D ?? !!editor3DLevel); }
+// if the level editor is the 3D one: as levelEditor.use3D says, or when a 3D level was loaded, or the game has no
+// 2D level, where the 3D one is a camera to look around with and the 2D one would show nothing
+function editor3DWanted()
+    { return !!render3D && (levelEditor.use3D ?? (!!editor3DLevel || !editorLayers().length)); }
 
 // put every object back where the level has it, and make one the game destroyed again, so what is on screen is
 // what Save writes; a type made by an arrow function made nothing to put back
@@ -1863,7 +1866,7 @@ function editor3DSetOpen(open)
     {
         editor3DSetFreeCamera(false);
         pointerLockIsActive() && pointerLockExit(); // the game's captured mouse is let go, the editor needs it
-        editor3DLevel || level3DLoad({}); // a new level, with nothing loaded, and its autosave made
+        editor3DLevel || level3DLoad(levelEditor.use3D ? {} : editor3DScratchLevel()); // a new level, nothing loaded
         editor3DCamera || editor3DCameraStart();
         editor3DGamePaused = paused;
         setPaused(true);
@@ -2177,6 +2180,17 @@ function editor3DLevelJSON(level=editor3DLevel)
     return '{\n  ' + lines.join(',\n  ') + '\n}\n';
 }
 
+// the empty level the editor makes for a 3D game with no level has no autosave: every such level has the same key,
+// so on a page that runs many games, as the example browser does, one game's edits would come back in the next;
+// Save still writes it, and a game that set use3D, to make its levels from nothing, keeps its autosave
+const editor3DScratchLevels = new WeakSet;
+function editor3DScratchLevel()
+{
+    const level = {};
+    editor3DScratchLevels.add(level);
+    return level;
+}
+
 // every page keeps its own autosaves, one for each level by its key
 function editor3DSaveName() { return 'LittleJS editor 3D ' + (globalThis.location?.pathname ?? ''); }
 const editor3DSaves = ()=> readSaveData(editor3DSaveName(), {});
@@ -2207,7 +2221,8 @@ function editor3DAutosave(level=editor3DLevel, known)
     }
     editor3DAutosaveWaiting.delete(level); // written now
     const record = known ?? editor3DRecords.get(level);
-    if (!record || record.pending) return; // edits waiting to be applied keep their autosave
+    // edits waiting to be applied keep their autosave, and the editor's own empty level has none
+    if (!record || record.pending || editor3DScratchLevels.has(level)) return;
     const saves = editor3DSaves(), objects = isArray(level.objects) ? level.objects : [];
     const parts = editor3DLevelParts(level);
     // the level as it was loaded has nothing to keep; one a Save wrote is kept until a reload shows the file has it,

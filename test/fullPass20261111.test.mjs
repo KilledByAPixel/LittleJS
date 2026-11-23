@@ -23,17 +23,18 @@ async function load3D(localStorage=storage())
 
 test('a level the 3D editor made, with no level loaded, comes back from its autosave with its scene and prefabs', async () =>
 {
+    // a game that set use3D, to make its levels in the editor from nothing
     const saves = storage();
     {
         const { run } = await load3D(saves);
-        run(`editor3DSetOpen(true);
+        run(`levelEditor.use3D = true; editor3DSetOpen(true);
             editor3DChangeScene(()=> ({sunColor: '#ff0000'})); editor3DStrokeEnd();
             editor3DChangePart('prefabs', ()=> ({P: {objects: [{id: 1, type: 'Box'}]}})); editor3DStrokeEnd();
             editor3DPlace('P', vec3(0, 0, 0)); editor3DStrokeEnd();
             editor3DSetOpen(false);`);
     }
     const { run } = await load3D(saves);
-    run('editor3DSetOpen(true)');
+    run('levelEditor.use3D = true; editor3DSetOpen(true)');
     assert.equal(run('render3D.sunColor.toString()'), '#ff0000ff', 'its scene is applied');
     assert.equal(run(`level3DPrefabs.has('P')`), true, 'its prefab is a type');
     assert.equal(run('editor3DInstances.size'), 1, 'and its instance is made');
